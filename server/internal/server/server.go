@@ -175,6 +175,17 @@ func Run(configPath string) error {
 	app.Use(cors.New(corsConfig))
 
 	api := app.Group("/api")
+
+	// Health & readiness
+	api.Get("/health", func(c *fiber.Ctx) error {
+		return c.JSON(fiber.Map{"status": "healthy", "time": time.Now().Unix()})
+	})
+	api.Get("/ready", func(c *fiber.Ctx) error {
+		return c.JSON(fiber.Map{"status": "ready", "time": time.Now().Unix()})
+	})
+	app.Get("/health", func(c *fiber.Ctx) error { return c.Redirect("/api/health") })
+	app.Get("/ready", func(c *fiber.Ctx) error { return c.Redirect("/api/ready") })
+
 	userRepo := repository.NewUserRepository(database.GetDB())
 	passkeyRepo := repository.NewPasskeyRepository(database.GetDB())
 	settingsRepo := repository.NewSettingsRepository(database.GetDB())
@@ -243,6 +254,7 @@ func Run(configPath string) error {
 	// Admin routes
 	usersHandler := handlers.NewUsersHandler(userRepo, roomRepo)
 	adminHandler := handlers.NewAdminHandler(settingsRepo, inviteTokenRepo)
+	certHandler := handlers.NewCertHandler(cfg)
 	adminGroup := api.Group("/admin",
 		middleware.Protected(),
 		middleware.RequireAccess(models.AccessSuperAdmin),
@@ -261,6 +273,7 @@ func Run(configPath string) error {
 	adminGroup.Post("/rooms/:roomId/participants/:identity/kick", roomHandler.AdminKickParticipant)
 	adminGroup.Post("/rooms/:roomId/participants/:identity/mute", roomHandler.AdminMuteParticipant)
 	api.Get("/auth/settings", adminHandler.GetPublicSettings)
+	api.Get("/cert", certHandler.GetCert)
 	adminGroup.Get("/settings", adminHandler.GetSettings)
 	adminGroup.Put("/settings", adminHandler.UpdateSettings)
 	adminGroup.Get("/invite-tokens", adminHandler.ListInviteTokens)
