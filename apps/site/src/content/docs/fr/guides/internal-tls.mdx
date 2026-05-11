@@ -10,6 +10,26 @@ Les navigateurs nécessitent un HTTPS de confiance pour la caméra/micro via Web
 
 ## Générer une autorité de certification privée et un certificat de serveur
 
+Les navigateurs modernes exigent des Subject Alternative Names (SANs) dans les certificats. L'installateur gère cela automatiquement.
+
+### Option 1 : Utiliser l'installateur (recommandé)
+
+La commande `bedrud install` génère des certificats auto-signés avec les SANs appropriés pour les IPs et domaines donnés :
+
+```bash
+sudo bedrud install --tls --ip VOTRE_ADRESSE_IP_SERVEUR
+```
+
+Pour inclure également un nom de domaine :
+
+```bash
+sudo bedrud install --tls --ip VOTRE_ADRESSE_IP_SERVEUR --domain your.domain.com
+```
+
+### Option 2 : Génération manuelle de certificats
+
+Si la génération intégrée de l'installateur ne correspond pas à votre flux de travail, ajoutez les flags `-addext` aux commandes openssl :
+
 ```bash
 openssl genrsa -out ca.key 4096
 openssl req -new -x509 -days 3650 -key ca.key -out ca.crt \
@@ -17,9 +37,11 @@ openssl req -new -x509 -days 3650 -key ca.key -out ca.crt \
 
 openssl genrsa -out server.key 2048
 openssl req -new -key server.key -out server.csr \
-  -subj "/CN=<votre-adresse-ip-ou-nom-d'hôte>"
+  -subj "/CN=<votre-adresse-ip-ou-nom-d'hôte>" \
+  -addext "subjectAltName=IP:VOTRE_ADRESSE_IP_SERVEUR"
 openssl x509 -req -days 365 -in server.csr \
-  -CA ca.crt -CAkey ca.key -CAcreateserial -out server.crt
+  -CA ca.crt -CAkey ca.key -CAcreateserial -out server.crt \
+  -addext "subjectAltName=IP:VOTRE_ADRESSE_IP_SERVEUR"
 
 sudo ./bedrud install --tls --cert server.crt --key server.key --ip VOTRE_ADRESSE_IP_SERVEUR
 ```
@@ -65,6 +87,7 @@ Redémarrez les navigateurs, puis ouvrez `https://VOTRE_ADRESSE_IP_SERVEUR` (rem
 | Caméra/micro bloqués | Vérifiez que l'AC est dans les AC racines de confiance, pas intermédiaire |
 | Certificat expiré | Régénérez avec une valeur `-days` plus longue |
 | Inadéquation CN | Assurez-vous que le CN du certificat de serveur correspond à l'IP ou au nom d'hôte dans l'URL |
+| SANs manquants | Les navigateurs modernes ignorent le champ CN. Utilisez la génération intégrée de certificats de l'installateur (recommandé) ou ajoutez `-addext 'subjectAltName=...'` à la commande openssl |
 
 ---
 

@@ -10,6 +10,26 @@ order: 30
 
 ## تولید CA خصوصی و گواهی سرور
 
+مرورگرهای مدرن به Subject Alternative Names (SANs) در گواهی‌ها نیاز دارند. نصب‌کننده به طور خودکار این کار را انجام می‌دهد.
+
+### گزینه ۱: استفاده از نصب‌کننده (توصیه می‌شود)
+
+دستور `bedrud install` گواهی‌های self-signed با SANهای مناسب برای IPها و دامنه‌های داده شده تولید می‌کند:
+
+```bash
+sudo bedrud install --tls --ip YOUR_SERVER_IP
+```
+
+برای شامل کردن نام دامنه نیز:
+
+```bash
+sudo bedrud install --tls --ip YOUR_SERVER_IP --domain your.domain.com
+```
+
+### گزینه ۲: تولید دستی گواهی
+
+اگر تولید داخلی نصب‌کننده با گردش کار شما سازگار نیست، پرچم‌های `-addext` را به دستورات openssl اضافه کنید:
+
 ```bash
 openssl genrsa -out ca.key 4096
 openssl req -new -x509 -days 3650 -key ca.key -out ca.crt \
@@ -17,9 +37,11 @@ openssl req -new -x509 -days 3650 -key ca.key -out ca.crt \
 
 openssl genrsa -out server.key 2048
 openssl req -new -key server.key -out server.csr \
-  -subj "/CN=<your-server-ip-or-hostname>"
+  -subj "/CN=<your-server-ip-or-hostname>" \
+  -addext "subjectAltName=IP:YOUR_SERVER_IP"
 openssl x509 -req -days 365 -in server.csr \
-  -CA ca.crt -CAkey ca.key -CAcreateserial -out server.crt
+  -CA ca.crt -CAkey ca.key -CAcreateserial -out server.crt \
+  -addext "subjectAltName=IP:YOUR_SERVER_IP"
 
 sudo ./bedrud install --tls --cert server.crt --key server.key --ip YOUR_SERVER_IP
 ```
@@ -65,6 +87,7 @@ sudo update-ca-trust
 | دوربین/میکروفون مسدود شده | تأیید کنید CA در CAهای ریشه مورد اعتماد است، نه واسطه |
 | گواهی منقضی شده | با مقدار `-days` طولانی‌تر دوباره تولید کنید |
 | ناهماهنگی CN | اطمینان حاصل کنید CN گواهی سرور با IP یا نام میزبان در URL مطابقت دارد |
+| SANs گم‌شده | مرورگرهای مدرن فیلد CN را نادیده می‌گیرند. از تولید گواهی داخلی نصب‌کننده استفاده کنید (توصیه می‌شود) یا `-addext 'subjectAltName=...'` را به دستور openssl اضافه کنید |
 
 ---
 

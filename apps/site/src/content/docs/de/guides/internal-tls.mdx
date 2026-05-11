@@ -10,6 +10,26 @@ Browser erfordern vertrauenswürdiges HTTPS für Kamera/Mikrofon über WebRTC. S
 
 ## Private CA und Serverzertifikat generieren
 
+Moderne Browser erfordern Subject Alternative Names (SANs) in Zertifikaten. Der Installer handhabt dies automatisch.
+
+### Option 1: Installer verwenden (empfohlen)
+
+Der Befehl `bedrud install` erzeugt selbstsignierte Zertifikate mit korrekten SANs für die angegebenen IPs und Domains:
+
+```bash
+sudo bedrud install --tls --ip YOUR_SERVER_IP
+```
+
+Um auch einen Domainnamen einzuschließen:
+
+```bash
+sudo bedrud install --tls --ip YOUR_SERVER_IP --domain your.domain.com
+```
+
+### Option 2: Manuelle Zertifikatserstellung
+
+Falls die integrierte Erzeugung nicht zu Ihrem Workflow passt, fügen Sie die `-addext`-Flags zu den openssl-Befehlen hinzu:
+
 ```bash
 openssl genrsa -out ca.key 4096
 openssl req -new -x509 -days 3650 -key ca.key -out ca.crt \
@@ -17,9 +37,11 @@ openssl req -new -x509 -days 3650 -key ca.key -out ca.crt \
 
 openssl genrsa -out server.key 2048
 openssl req -new -key server.key -out server.csr \
-  -subj "/CN=<your-server-ip-or-hostname>"
+  -subj "/CN=<your-server-ip-or-hostname>" \
+  -addext "subjectAltName=IP:YOUR_SERVER_IP"
 openssl x509 -req -days 365 -in server.csr \
-  -CA ca.crt -CAkey ca.key -CAcreateserial -out server.crt
+  -CA ca.crt -CAkey ca.key -CAcreateserial -out server.crt \
+  -addext "subjectAltName=IP:YOUR_SERVER_IP"
 
 sudo ./bedrud install --tls --cert server.crt --key server.key --ip YOUR_SERVER_IP
 ```
@@ -65,6 +87,7 @@ Starten Sie die Browser neu und öffnen Sie dann `https://YOUR_SERVER_IP` (erset
 | Kamera/Mikrofon blockiert | Prüfen Sie, ob sich die CA in den Vertrauenswürdigen Stammzertifikaten befindet, nicht als Zwischenzertifikat |
 | Zertifikat abgelaufen | Mit längerem `-days`-Wert neu generieren |
 | CN-Konflikt | Stellen Sie sicher, dass das Serverzertifikat-CN mit der IP oder dem Hostnamen in der URL übereinstimmt |
+| Fehlende SANs | Moderne Browser ignorieren das CN-Feld. Verwenden Sie die integrierte Zertifikatserstellung des Installers (empfohlen) oder fügen Sie `-addext 'subjectAltName=...'` zum openssl-Befehl hinzu |
 
 ---
 

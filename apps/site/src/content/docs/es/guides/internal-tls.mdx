@@ -10,6 +10,26 @@ Los navegadores requieren HTTPS de confianza para cámara/micrófono mediante We
 
 ## Generar CA privada y certificado de servidor
 
+Los navegadores modernos requieren Subject Alternative Names (SANs) en los certificados. El instalador maneja esto automáticamente.
+
+### Opción 1: Usar el instalador (recomendado)
+
+El comando `bedrud install` genera certificados autofirmados con las SANs adecuadas para las IPs y dominios indicados:
+
+```bash
+sudo bedrud install --tls --ip TU_IP_DEL_SERVIDOR
+```
+
+Para incluir también un nombre de dominio:
+
+```bash
+sudo bedrud install --tls --ip TU_IP_DEL_SERVIDOR --domain your.domain.com
+```
+
+### Opción 2: Generación manual de certificados
+
+Si la generación integrada del instalador no se ajusta a tu flujo de trabajo, añade las banderas `-addext` a los comandos de openssl:
+
 ```bash
 openssl genrsa -out ca.key 4096
 openssl req -new -x509 -days 3650 -key ca.key -out ca.crt \
@@ -17,9 +37,11 @@ openssl req -new -x509 -days 3650 -key ca.key -out ca.crt \
 
 openssl genrsa -out server.key 2048
 openssl req -new -key server.key -out server.csr \
-  -subj "/CN=<tu-ip-o-nombre-de-host-del-servidor>"
+  -subj "/CN=<tu-ip-o-nombre-de-host-del-servidor>" \
+  -addext "subjectAltName=IP:TU_IP_DEL_SERVIDOR"
 openssl x509 -req -days 365 -in server.csr \
-  -CA ca.crt -CAkey ca.key -CAcreateserial -out server.crt
+  -CA ca.crt -CAkey ca.key -CAcreateserial -out server.crt \
+  -addext "subjectAltName=IP:TU_IP_DEL_SERVIDOR"
 
 sudo ./bedrud install --tls --cert server.crt --key server.key --ip TU_IP_DEL_SERVIDOR
 ```
@@ -65,6 +87,7 @@ Reinicia los navegadores y luego abre `https://TU_IP_DEL_SERVIDOR` (reemplaza co
 | Cámara/micrófono bloqueado | Verifica que la CA esté en las CA raíz de confianza, no en intermedias |
 | Certificado caducado | Regenera con un valor de `-days` mayor |
 | Desajuste de CN | Asegúrate de que el CN del certificado del servidor coincida con la IP o el nombre de host en la URL |
+| SANs faltantes | Los navegadores modernos ignoran el campo CN. Usa la generación integrada de certificados del instalador (recomendado) o añade `-addext 'subjectAltName=...'` al comando openssl |
 
 ---
 

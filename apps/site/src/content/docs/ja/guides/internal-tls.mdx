@@ -10,6 +10,26 @@ order: 30
 
 ## プライベート CA とサーバー証明書の生成
 
+最新のブラウザでは証明書に Subject Alternative Names (SANs) が必要です。インストーラーが自動的に処理します。
+
+### オプション 1：インストーラーを使用（推奨）
+
+`bedrud install` コマンドは、指定された IP とドメインに対して適切な SAN を持つ自己署名証明書を生成します：
+
+```bash
+sudo bedrud install --tls --ip YOUR_SERVER_IP
+```
+
+ドメイン名も含める場合：
+
+```bash
+sudo bedrud install --tls --ip YOUR_SERVER_IP --domain your.domain.com
+```
+
+### オプション 2：手動による証明書生成
+
+インストーラーの組み込み生成がワークフローに合わない場合は、openssl コマンドに `-addext` フラグを追加します：
+
 ```bash
 openssl genrsa -out ca.key 4096
 openssl req -new -x509 -days 3650 -key ca.key -out ca.crt \
@@ -17,9 +37,11 @@ openssl req -new -x509 -days 3650 -key ca.key -out ca.crt \
 
 openssl genrsa -out server.key 2048
 openssl req -new -key server.key -out server.csr \
-  -subj "/CN=<your-server-ip-or-hostname>"
+  -subj "/CN=<your-server-ip-or-hostname>" \
+  -addext "subjectAltName=IP:YOUR_SERVER_IP"
 openssl x509 -req -days 365 -in server.csr \
-  -CA ca.crt -CAkey ca.key -CAcreateserial -out server.crt
+  -CA ca.crt -CAkey ca.key -CAcreateserial -out server.crt \
+  -addext "subjectAltName=IP:YOUR_SERVER_IP"
 
 sudo ./bedrud install --tls --cert server.crt --key server.key --ip YOUR_SERVER_IP
 ```
@@ -65,6 +87,7 @@ sudo update-ca-trust
 | カメラ/マイクがブロックされる | CA が中間 CA ではなく信頼済みルート CA にあることを確認 |
 | 証明書の有効期限切れ | より長い `-days` 値で再生成 |
 | CN の不一致 | サーバー証明書の CN が URL の IP またはホスト名と一致していることを確認 |
+| SANs 不足 | 最新のブラウザは CN フィールドを無視します。インストーラーの組み込み証明書生成（推奨）を使用するか、openssl コマンドに `-addext 'subjectAltName=...'` を追加してください |
 
 ---
 

@@ -10,6 +10,26 @@ Browsers require trusted HTTPS for camera/mic via WebRTC. Self-signed certs work
 
 ## Generate Private CA and Server Certificate
 
+Modern browsers require Subject Alternative Names (SANs) on certificates. The installer handles this automatically.
+
+### Option 1: Use the Installer (Recommended)
+
+The `bedrud install` command generates self-signed certificates with proper SANs for the given IPs and domains:
+
+```bash
+sudo bedrud install --tls --ip YOUR_SERVER_IP
+```
+
+To also include a domain name:
+
+```bash
+sudo bedrud install --tls --ip YOUR_SERVER_IP --domain your.domain.com
+```
+
+### Option 2: Manual Certificate Generation
+
+If the installer's built-in generation doesn't fit your workflow, add `-addext` flags to the openssl commands:
+
 ```bash
 openssl genrsa -out ca.key 4096
 openssl req -new -x509 -days 3650 -key ca.key -out ca.crt \
@@ -17,9 +37,11 @@ openssl req -new -x509 -days 3650 -key ca.key -out ca.crt \
 
 openssl genrsa -out server.key 2048
 openssl req -new -key server.key -out server.csr \
-  -subj "/CN=<your-server-ip-or-hostname>"
+  -subj "/CN=<your-server-ip-or-hostname>" \
+  -addext "subjectAltName=IP:YOUR_SERVER_IP"
 openssl x509 -req -days 365 -in server.csr \
-  -CA ca.crt -CAkey ca.key -CAcreateserial -out server.crt
+  -CA ca.crt -CAkey ca.key -CAcreateserial -out server.crt \
+  -addext "subjectAltName=IP:YOUR_SERVER_IP"
 
 sudo ./bedrud install --tls --cert server.crt --key server.key --ip YOUR_SERVER_IP
 ```
@@ -82,6 +104,16 @@ sudo cp ca.crt /etc/pki/ca-trust/source/anchors/bedrud-ca.crt
 sudo update-ca-trust
 ```
 
+## Distributing the Certificate
+
+After enabling TLS, clients can fetch the server's PEM certificate directly via the API:
+
+```bash
+curl -o bedrud-cert.pem https://YOUR_SERVER_IP/api/cert
+```
+
+This endpoint returns the server certificate currently in use. Combine with the CA distribution steps above for a complete trusted setup.
+
 Restart browsers, then open `https://YOUR_SERVER_IP` (replace with the server's actual IP address, e.g. `192.168.1.100`). After restarting, the certificate will be trusted and camera/microphone access will work without warnings.
 
 ## Troubleshooting
@@ -92,6 +124,7 @@ Restart browsers, then open `https://YOUR_SERVER_IP` (replace with the server's 
 | Camera/mic blocked | Verify CA is in Trusted Root CAs, not intermediate |
 | Certificate expired | Regenerate with longer `-days` value |
 | CN mismatch | Ensure server certificate CN matches IP or hostname in URL |
+| Missing SANs | Modern browsers ignore the CN field. Use the installer's built-in cert generation (recommended) or add `-addext 'subjectAltName=...'` to the openssl command |
 
 ---
 
