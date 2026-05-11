@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { createFileRoute } from '@tanstack/react-router'
-import { Ban, Check, Clock, Copy, Globe, KeyRound, Loader2, RefreshCw, Save, Trash2 } from 'lucide-react'
+import { AlertCircle, Ban, Check, Clock, Copy, Globe, KeyRound, Loader2, RefreshCw, Save, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { api } from '#/lib/api'
 import { cn } from '@/lib/utils'
@@ -126,7 +126,7 @@ function Section({ title, description, children }: { title: string; description?
 function Field({ label, children, hint }: { label: string; children: React.ReactNode; hint?: string }) {
   return (
     <div className="space-y-1">
-      <label className="text-xs font-medium text-muted-foreground">{label}</label>
+      <span className="text-xs font-medium text-muted-foreground">{label}</span>
       {children}
       {hint && <p className="text-[10px] text-muted-foreground/60">{hint}</p>}
     </div>
@@ -162,8 +162,9 @@ function TextInput({
 
 function Toggle({ checked, onChange, label }: { checked: boolean; onChange: (v: boolean) => void; label: string }) {
   return (
-    <label className="flex cursor-pointer items-center gap-2">
-      <div
+    <span className="flex cursor-pointer items-center gap-2">
+      <button
+        type="button"
         className={cn(
           'flex h-4 w-7 shrink-0 items-center rounded-full p-px transition-colors',
           checked ? 'bg-primary justify-end' : 'bg-muted',
@@ -171,9 +172,9 @@ function Toggle({ checked, onChange, label }: { checked: boolean; onChange: (v: 
         onClick={() => onChange(!checked)}
       >
         <div className="h-3 w-3 rounded-full bg-white transition-transform" />
-      </div>
+      </button>
       <span className="text-xs">{label}</span>
-    </label>
+    </span>
   )
 }
 
@@ -197,6 +198,7 @@ function GeneralTab({
             const active = currentMode === id
             return (
               <button
+                type="button"
                 key={id}
                 onClick={() => onPatch({ ...settings, ...modeToSettings(id) })}
                 disabled={saving}
@@ -384,6 +386,46 @@ function LiveKitTab({ settings, setSettings }: { settings: SystemSettings; setSe
   )
 }
 
+function CertStatusIndicator() {
+  const { data: cert } = useQuery({
+    queryKey: ['admin', 'cert-info'],
+    queryFn: () =>
+      api.get<{ enabled: boolean; status: string; daysRemaining?: number; notAfter?: string; error?: string }>(
+        '/api/admin/cert-info',
+      ),
+  })
+
+  if (!cert?.enabled) return null
+
+  const status = cert.status
+  const isError = status === 'error' || status === 'expired'
+  const isExpiring = status === 'expiring'
+
+  return (
+    <div
+      className={cn(
+        'flex items-center gap-2 px-3 py-2 text-xs',
+        isError
+          ? 'border border-destructive/30 bg-destructive/10 text-destructive'
+          : isExpiring
+            ? 'border border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400'
+            : 'border border-emerald-500/20 bg-emerald-500/5 text-emerald-600 dark:text-emerald-400',
+      )}
+    >
+      {isError ? <AlertCircle className="h-3 w-3 shrink-0" /> : <Check className="h-3 w-3 shrink-0" />}
+      {isError && cert.error && <span>{cert.error}</span>}
+      {status === 'expired' && <span>Certificate has expired</span>}
+      {isExpiring && cert.daysRemaining != null && <span>Expires in {cert.daysRemaining} days</span>}
+      {status === 'valid' && cert.daysRemaining != null && (
+        <span>
+          Valid — expires in {cert.daysRemaining} days (
+          {cert.notAfter ? new Date(cert.notAfter).toLocaleDateString() : ''})
+        </span>
+      )}
+    </div>
+  )
+}
+
 function ServerTab({ settings, setSettings }: { settings: SystemSettings; setSettings: (s: SystemSettings) => void }) {
   return (
     <Section title="Server" description="Requires restart to take effect">
@@ -456,6 +498,7 @@ function ServerTab({ settings, setSettings }: { settings: SystemSettings; setSet
           />
         </Field>
       </div>
+      {settings.serverEnableTls && <CertStatusIndicator />}
     </Section>
   )
 }
@@ -692,6 +735,7 @@ function InviteTokensSection() {
               <option value={720}>30 days</option>
             </select>
             <button
+              type="button"
               onClick={() => setConfirmGenerate(true)}
               disabled={createToken.isPending}
               className="inline-flex h-8 flex-1 shrink-0 items-center justify-center gap-1.5 bg-primary px-3 text-xs font-medium text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-50 sm:flex-none"
@@ -717,12 +761,14 @@ function InviteTokensSection() {
             </p>
             <div className="flex shrink-0 items-center gap-1.5">
               <button
+                type="button"
                 onClick={() => setConfirmGenerate(false)}
                 className="px-2 py-1 text-xs text-muted-foreground hover:text-foreground"
               >
                 Cancel
               </button>
               <button
+                type="button"
                 onClick={() => {
                   setConfirmGenerate(false)
                   createToken.mutate()
@@ -741,7 +787,7 @@ function InviteTokensSection() {
             <p className="flex-1 break-all font-mono text-[11px] text-emerald-600 dark:text-emerald-400">
               {newToken.token}
             </p>
-            <button onClick={() => copyToken(newToken)} className="shrink-0 p-1 hover:bg-muted">
+            <button type="button" onClick={() => copyToken(newToken)} className="shrink-0 p-1 hover:bg-muted">
               {copiedId === newToken.id ? (
                 <Check className="h-3.5 w-3.5 text-emerald-500" />
               ) : (
@@ -749,6 +795,7 @@ function InviteTokensSection() {
               )}
             </button>
             <button
+              type="button"
               onClick={() => setNewToken(null)}
               className="shrink-0 text-xs text-muted-foreground hover:text-foreground"
             >
@@ -814,6 +861,7 @@ function InviteTokensSection() {
 
                 <div className="flex shrink-0 items-center gap-0.5 opacity-100 sm:opacity-0 sm:transition-opacity sm:group-hover:opacity-100">
                   <button
+                    type="button"
                     onClick={() => copyToken(tok)}
                     disabled={isInert}
                     className="p-1.5 hover:bg-muted disabled:pointer-events-none"
@@ -828,6 +876,7 @@ function InviteTokensSection() {
                   {confirmDeleteId === tok.id ? (
                     <div className="flex items-center gap-1">
                       <button
+                        type="button"
                         onClick={() => {
                           deleteToken.mutate(tok.id)
                           setConfirmDeleteId(null)
@@ -838,6 +887,7 @@ function InviteTokensSection() {
                         Del
                       </button>
                       <button
+                        type="button"
                         onClick={() => setConfirmDeleteId(null)}
                         className="px-1.5 py-0.5 text-xs text-muted-foreground hover:text-foreground"
                       >
@@ -846,6 +896,7 @@ function InviteTokensSection() {
                     </div>
                   ) : (
                     <button
+                      type="button"
                       onClick={() => setConfirmDeleteId(tok.id)}
                       className="p-1.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
                       title="Revoke"
@@ -901,6 +952,7 @@ function AdminSettingsPage() {
       <div className="flex gap-1 overflow-x-auto border-b pb-px">
         {TABS.map((tab) => (
           <button
+            type="button"
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
             className={cn(
@@ -938,6 +990,7 @@ function AdminSettingsPage() {
           {activeTab !== 'general' && localSettings && (
             <div className="flex items-center gap-3 pt-2">
               <button
+                type="button"
                 onClick={() => handlePatch(localSettings)}
                 disabled={saveSettings.isPending}
                 className="inline-flex items-center gap-1.5 bg-primary px-4 py-1.5 text-xs font-medium text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-50"
@@ -947,6 +1000,7 @@ function AdminSettingsPage() {
               </button>
               {saveSettings.isSuccess && <span className="text-xs text-emerald-600">Saved</span>}
               <button
+                type="button"
                 onClick={() => setLocalSettings(null)}
                 className="px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground"
               >
