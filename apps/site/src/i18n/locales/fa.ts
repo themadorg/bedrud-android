@@ -741,6 +741,7 @@
       "guides/makefile": "مرجع Makefile",
       "guides/packages": "نصب پکیج",
       "guides/appliance": "حالت دستگاه",
+      "guides/behind-proxy": "پشت یک پروکسی/CDN",
       contributing: "مشارکت",
     },
   },

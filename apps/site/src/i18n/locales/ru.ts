@@ -686,6 +686,7 @@
       "guides/makefile": "Справочник Makefile",
       "guides/packages": "Установка пакетов",
       "guides/appliance": "Режим Appliance",
+      "guides/behind-proxy": "За прокси/CDN",
       contributing: "Участие в разработке",
     },
   },

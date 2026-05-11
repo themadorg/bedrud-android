@@ -504,6 +504,7 @@
       "guides/makefile": "Referencia del Makefile",
       "guides/packages": "Instalación de paquetes",
       "guides/appliance": "Modo appliance",
+      "guides/behind-proxy": "Detrás de un proxy/CDN",
       contributing: "Contribuir",
     },
   },

@@ -504,6 +504,7 @@
       "guides/makefile": "مرجع Makefile",
       "guides/packages": "تثبيت الحزم",
       "guides/appliance": "وضع الجهاز",
+      "guides/behind-proxy": "خلف بروكسي/CDN",
       contributing: "المساهمة",
     },
     mdx: {

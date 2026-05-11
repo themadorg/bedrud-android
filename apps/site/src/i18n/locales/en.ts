@@ -724,6 +724,7 @@
       "guides/makefile": "Makefile Reference",
       "guides/packages": "Package Installation",
       "guides/appliance": "Appliance Mode",
+      "guides/behind-proxy": "Behind a Proxy/CDN",
       contributing: "Contributing",
     },
   },

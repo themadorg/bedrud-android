@@ -531,6 +531,7 @@
       "guides/makefile": "Makefile 参考",
       "guides/packages": "包安装",
       "guides/appliance": "一体机模式",
+      "guides/behind-proxy": "在代理/CDN 后面",
       contributing: "贡献",
     },
   },
