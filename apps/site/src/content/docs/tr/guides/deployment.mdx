@@ -165,6 +165,17 @@ journalctl -u bedrud -f
 tail -f /var/log/bedrud/bedrud.log
 ```
 
+### Health Checks
+
+The server exposes two endpoints for load balancer and orchestration probes:
+
+| Endpoint | Returns | Use |
+|----------|---------|-----|
+| `GET /api/health` | `{"status":"healthy","time":<unix>}` | Liveness check |
+| `GET /api/ready` | `{"status":"ready","time":<unix>}` | Readiness check |
+
+Root-level redirects (`/health` → `/api/health`, `/ready` → `/api/ready`) exist for backward compatibility.
+
 ---
 
 ## Dosya Konumları (Üretim)
