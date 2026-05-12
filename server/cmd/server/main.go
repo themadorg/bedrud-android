@@ -148,8 +148,8 @@ func run() error {
 	// Create new Fiber instance
 	app := fiber.New(fiber.Config{
 		AppName:      "Bedrud API",
-		ReadTimeout:  time.Duration(cfg.Server.ReadTimeout) * time.Second,
-		WriteTimeout: time.Duration(cfg.Server.WriteTimeout) * time.Second,
+		ReadTimeout:  time.Duration(cfg.Server.ReadTimeout.Int()) * time.Second,
+		WriteTimeout: time.Duration(cfg.Server.WriteTimeout.Int()) * time.Second,
 		BodyLimit:    2 * 1024 * 1024,
 		// Enable custom error handling
 		ErrorHandler: func(c *fiber.Ctx, err error) error {
@@ -240,7 +240,7 @@ func run() error {
 		AllowMethods:     cfg.Cors.AllowedMethods,
 		AllowCredentials: cfg.Cors.AllowCredentials,
 		ExposeHeaders:    cfg.Cors.ExposeHeaders,
-		MaxAge:           cfg.Cors.MaxAge,
+		MaxAge:           cfg.Cors.MaxAge.Int(),
 	}))
 
 	// ===============================

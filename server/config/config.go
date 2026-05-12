@@ -7,6 +7,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/rs/zerolog/log"
 	"gopkg.in/yaml.v3"
 )
 
@@ -22,20 +23,20 @@ type Config struct {
 }
 
 type ServerConfig struct {
-	Port           string   `yaml:"port"`
-	HTTPPort       string   `yaml:"httpPort"`
-	Host           string   `yaml:"host"`
-	ReadTimeout    int      `yaml:"readTimeout"`
-	WriteTimeout   int      `yaml:"writeTimeout"`
-	EnableTLS      bool     `yaml:"enableTLS" env:"SERVER_ENABLE_TLS"`
-	DisableTLS     bool     `yaml:"disableTLS"`
-	CertFile       string   `yaml:"certFile" env:"SERVER_CERT_FILE"`
-	KeyFile        string   `yaml:"keyFile" env:"SERVER_KEY_FILE"`
-	Domain         string   `yaml:"domain" env:"SERVER_DOMAIN"`
-	Email          string   `yaml:"email" env:"SERVER_EMAIL"`
-	UseACME        bool     `yaml:"useACME" env:"SERVER_USE_ACME"`
-	TrustedProxies []string `yaml:"trustedProxies"`
-	ProxyHeader    string   `yaml:"proxyHeader"`
+	Port           string    `yaml:"port"`
+	HTTPPort       string    `yaml:"httpPort"`
+	Host           string    `yaml:"host"`
+	ReadTimeout    ConfigInt `yaml:"readTimeout"`
+	WriteTimeout   ConfigInt `yaml:"writeTimeout"`
+	EnableTLS      bool      `yaml:"enableTLS" env:"SERVER_ENABLE_TLS"`
+	DisableTLS     bool      `yaml:"disableTLS"`
+	CertFile       string    `yaml:"certFile" env:"SERVER_CERT_FILE"`
+	KeyFile        string    `yaml:"keyFile" env:"SERVER_KEY_FILE"`
+	Domain         string    `yaml:"domain" env:"SERVER_DOMAIN"`
+	Email          string    `yaml:"email" env:"SERVER_EMAIL"`
+	UseACME        bool      `yaml:"useACME" env:"SERVER_USE_ACME"`
+	TrustedProxies []string  `yaml:"trustedProxies"`
+	ProxyHeader    string    `yaml:"proxyHeader"`
 	// BehindProxy enables trusted-proxy mode. Set to true when running
 	// behind Cloudflare, nginx, or any reverse proxy that terminates TLS.
 	BehindProxy bool `yaml:"behindProxy"`
@@ -70,11 +71,16 @@ type LiveKitConfig struct {
 	// External skips the embedded LiveKit server and /livekit proxy.
 	// Set to true when using a separate LiveKit deployment (e.g. lk.bedrud.org).
 	External bool `yaml:"external"`
+	// NodeIP is the explicit IP address for embedded LiveKit's RTC node_ip.
+	// When set, LiveKit uses this IP directly (use_external_ip=false) instead of
+	// STUN-based detection. Required for air-gapped, Docker, or firewalled environments.
+	// Env: LIVEKIT_NODE_IP
+	NodeIP string `yaml:"nodeIP"`
 }
 
 type AuthConfig struct {
 	JWTSecret     string       `yaml:"jwtSecret"`
-	TokenDuration int          `yaml:"tokenDuration"` // in hours
+	TokenDuration ConfigInt    `yaml:"tokenDuration"` // in hours
 	Google        OAuth2Config `yaml:"google"`
 	Github        OAuth2Config `yaml:"github"`
 	Twitter       OAuth2Config `yaml:"twitter"`
@@ -94,12 +100,12 @@ type LoggerConfig struct {
 }
 
 type CorsConfig struct {
-	AllowedOrigins   string `yaml:"allowedOrigins"`
-	AllowedHeaders   string `yaml:"allowedHeaders"`
-	AllowedMethods   string `yaml:"allowedMethods"`
-	AllowCredentials bool   `yaml:"allowCredentials"`
-	ExposeHeaders    string `yaml:"exposeHeaders"`
-	MaxAge           int    `yaml:"maxAge"`
+	AllowedOrigins   string    `yaml:"allowedOrigins"`
+	AllowedHeaders   string    `yaml:"allowedHeaders"`
+	AllowedMethods   string    `yaml:"allowedMethods"`
+	AllowCredentials bool      `yaml:"allowCredentials"`
+	ExposeHeaders    string    `yaml:"exposeHeaders"`
+	MaxAge           ConfigInt `yaml:"maxAge"`
 }
 
 // ChatConfig holds settings for in-room chat, including image upload storage.
@@ -115,10 +121,10 @@ type ChatUploadConfig struct {
 	// Backend is "disk" (default), "s3", or "inline".
 	Backend string `yaml:"backend"`
 	// MaxBytes is the hard upload size limit (default 10 MB).
-	MaxBytes int64 `yaml:"maxBytes"`
+	MaxBytes ConfigInt `yaml:"maxBytes"`
 	// InlineMaxBytes: images smaller than this are returned as data: URIs instead
 	// of stored on disk / S3. Set to 0 to disable inline encoding. Default 512000 (500 KB).
-	InlineMaxBytes int64 `yaml:"inlineMaxBytes"`
+	InlineMaxBytes ConfigInt `yaml:"inlineMaxBytes"`
 	// DiskDir is the directory for disk-backend uploads. Default: ./data/uploads/chat
 	DiskDir string `yaml:"diskDir"`
 	// S3 holds connection info for the S3-compatible storage backend.
@@ -142,6 +148,38 @@ type RateLimitConfig struct {
 	GuestMaxRequests *int `yaml:"guestMaxRequests"`
 	GuestWindowSecs  *int `yaml:"guestWindowSecs"`
 }
+
+// ConfigInt accepts YAML int or quoted-string numeric values.
+// Logs warning when string path triggered to encourage migration to bare int.
+type ConfigInt int64
+
+func (f *ConfigInt) UnmarshalYAML(unmarshal func(any) error) error {
+	var i int64
+	if err := unmarshal(&i); err == nil {
+		*f = ConfigInt(i)
+		return nil
+	}
+
+	var s string
+	if err := unmarshal(&s); err != nil {
+		return err
+	}
+	if s == "" {
+		*f = 0
+		return nil
+	}
+	n, err := strconv.ParseInt(s, 10, 64)
+	if err != nil {
+		return err
+	}
+	log.Warn().Str("value", s).Msg("config field uses quoted string, use bare integer instead")
+	*f = ConfigInt(n)
+	return nil
+}
+
+func (f ConfigInt) MarshalYAML() (any, error) { return int64(f), nil }
+func (f ConfigInt) Int() int                  { return int(f) }
+func (f ConfigInt) Int64() int64              { return int64(f) }
 
 var (
 	config *Config
@@ -251,6 +289,9 @@ func Load(configPath string) (*Config, error) {
 		if livekitConfigPath := os.Getenv("LIVEKIT_CONFIG_PATH"); livekitConfigPath != "" {
 			config.LiveKit.ConfigPath = livekitConfigPath
 		}
+		if livekitNodeIP := os.Getenv("LIVEKIT_NODE_IP"); livekitNodeIP != "" {
+			config.LiveKit.NodeIP = livekitNodeIP
+		}
 		if jwtSecret := os.Getenv("JWT_SECRET"); jwtSecret != "" {
 			config.Auth.JWTSecret = jwtSecret
 		}
@@ -278,7 +319,7 @@ func Load(configPath string) (*Config, error) {
 		}
 		if corsMaxAge := os.Getenv("CORS_MAX_AGE"); corsMaxAge != "" {
 			if i, err := strconv.Atoi(corsMaxAge); err == nil {
-				config.Cors.MaxAge = i
+				config.Cors.MaxAge = ConfigInt(i)
 			}
 		}
 

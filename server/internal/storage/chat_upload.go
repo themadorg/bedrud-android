@@ -76,7 +76,7 @@ func contentHash(data []byte) string {
 // NewChatUploadStore creates the appropriate backend from config.
 // Selection rule: if data size < InlineMaxBytes → inline base64; else use configured backend.
 func NewChatUploadStore(cfg *config.ChatUploadConfig) ChatUploadStore {
-	inlineMax := cfg.InlineMaxBytes
+	inlineMax := cfg.InlineMaxBytes.Int64()
 	if inlineMax == 0 {
 		inlineMax = 512_000 // 500 KB default
 	}

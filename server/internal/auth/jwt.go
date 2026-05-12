@@ -81,7 +81,7 @@ type Claims struct {
 }
 
 func GenerateToken(userID, email, name, provider string, accesses []string, cfg *config.Config) (string, error) {
-	expirationTime := time.Now().Add(time.Duration(cfg.Auth.TokenDuration) * time.Hour)
+	expirationTime := time.Now().Add(time.Duration(cfg.Auth.TokenDuration.Int()) * time.Hour)
 
 	claims := &Claims{
 		UserID:   userID,

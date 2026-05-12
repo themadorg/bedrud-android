@@ -50,7 +50,7 @@ func setAuthCookies(c *fiber.Ctx, cfg *config.Config, accessToken, refreshToken 
 	c.Cookie(&fiber.Cookie{
 		Name:     "access_token",
 		Value:    accessToken,
-		MaxAge:   cfg.Auth.TokenDuration * 3600,
+		MaxAge:   cfg.Auth.TokenDuration.Int() * 3600,
 		HTTPOnly: true,
 		Secure:   secure,
 		SameSite: sameSite,

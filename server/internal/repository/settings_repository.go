@@ -80,7 +80,7 @@ func mergeFromConfig(s *models.SystemSettings, cfg *config.Config) {
 		s.JWTSecret = cfg.Auth.JWTSecret
 	}
 	if s.TokenDuration == 0 && cfg.Auth.TokenDuration != 0 {
-		s.TokenDuration = cfg.Auth.TokenDuration
+		s.TokenDuration = cfg.Auth.TokenDuration.Int()
 	}
 	if s.SessionSecret == "" {
 		s.SessionSecret = cfg.Auth.SessionSecret
@@ -146,7 +146,7 @@ func mergeFromConfig(s *models.SystemSettings, cfg *config.Config) {
 		s.CORSAllowCredentials = cfg.Cors.AllowCredentials
 	}
 	if s.CORSMaxAge == 0 && cfg.Cors.MaxAge != 0 {
-		s.CORSMaxAge = cfg.Cors.MaxAge
+		s.CORSMaxAge = cfg.Cors.MaxAge.Int()
 	}
 
 	// Chat uploads
@@ -154,10 +154,10 @@ func mergeFromConfig(s *models.SystemSettings, cfg *config.Config) {
 		s.ChatUploadBackend = cfg.Chat.Uploads.Backend
 	}
 	if s.ChatUploadMaxBytes == 0 && cfg.Chat.Uploads.MaxBytes != 0 {
-		s.ChatUploadMaxBytes = cfg.Chat.Uploads.MaxBytes
+		s.ChatUploadMaxBytes = cfg.Chat.Uploads.MaxBytes.Int64()
 	}
 	if s.ChatUploadInlineMax == 0 && cfg.Chat.Uploads.InlineMaxBytes != 0 {
-		s.ChatUploadInlineMax = cfg.Chat.Uploads.InlineMaxBytes
+		s.ChatUploadInlineMax = cfg.Chat.Uploads.InlineMaxBytes.Int64()
 	}
 	if s.ChatUploadDiskDir == "" {
 		s.ChatUploadDiskDir = cfg.Chat.Uploads.DiskDir
