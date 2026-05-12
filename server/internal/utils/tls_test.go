@@ -387,11 +387,11 @@ func TestValidateTLSCertPair_ExpiredCert(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	certOut, _ := os.Create(certFile)
+	certOut, _ := SafeCreate(certFile, 0o644)
 	_ = pem.Encode(certOut, &pem.Block{Type: "CERTIFICATE", Bytes: derBytes})
 	certOut.Close()
 
-	keyOut, _ := os.OpenFile(keyFile, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o600)
+	keyOut, _ := SafeCreate(keyFile, 0o600)
 	privBytes, _ := x509.MarshalECPrivateKey(priv)
 	_ = pem.Encode(keyOut, &pem.Block{Type: "EC PRIVATE KEY", Bytes: privBytes})
 	keyOut.Close()
@@ -431,11 +431,11 @@ func TestValidateTLSCertPair_ExpiringSoon(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	certOut, _ := os.Create(certFile)
+	certOut, _ := SafeCreate(certFile, 0o644)
 	_ = pem.Encode(certOut, &pem.Block{Type: "CERTIFICATE", Bytes: derBytes})
 	certOut.Close()
 
-	keyOut, _ := os.OpenFile(keyFile, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o600)
+	keyOut, _ := SafeCreate(keyFile, 0o600)
 	privBytes, _ := x509.MarshalECPrivateKey(priv)
 	_ = pem.Encode(keyOut, &pem.Block{Type: "EC PRIVATE KEY", Bytes: privBytes})
 	keyOut.Close()

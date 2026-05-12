@@ -64,7 +64,7 @@ func GenerateSelfSignedCert(certFile, keyFile string, hosts ...string) error {
 		return err
 	}
 
-	certOut, err := os.Create(certFile)
+	certOut, err := SafeCreate(certFile, 0o644)
 	if err != nil {
 		return err
 	}
@@ -74,7 +74,7 @@ func GenerateSelfSignedCert(certFile, keyFile string, hosts ...string) error {
 	}
 	certOut.Close()
 
-	keyOut, err := os.OpenFile(keyFile, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o600)
+	keyOut, err := SafeCreate(keyFile, 0o600)
 	if err != nil {
 		return err
 	}

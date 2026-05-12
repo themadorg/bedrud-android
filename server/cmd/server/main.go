@@ -93,9 +93,11 @@ func init() {
 
 	output := os.Stdout
 	if cfg.Logger.OutputPath != "" {
-		file, err := os.OpenFile(cfg.Logger.OutputPath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o666)
+		file, err := utils.SafeOpenAppend(cfg.Logger.OutputPath, 0o644)
 		if err == nil {
 			output = file
+		} else {
+			log.Warn().Err(err).Str("path", cfg.Logger.OutputPath).Msg("Failed to create log file, falling back to stdout")
 		}
 	}
 
