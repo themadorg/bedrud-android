@@ -11,6 +11,7 @@ import (
 	"os"
 	"os/exec"
 	"runtime"
+	"strconv"
 	"strings"
 	"time"
 
@@ -256,18 +257,38 @@ func LinuxInstall(cfg *InstallConfig) error {
 		}
 
 		var lkYAML livekit.ConfigYAML
-		lkYAML.Port = cfg.LKPort
+		lkPort, err := strconv.Atoi(cfg.LKPort)
+		if err != nil || lkPort < 1 || lkPort > 65535 {
+			return fmt.Errorf("invalid livekit port %q: must be 1-65535", cfg.LKPort)
+		}
+		lkYAML.Port = lkPort
 		lkYAML.BindAddresses = []string{lkBindAddr}
 		lkYAML.Keys = map[string]string{apiKey: apiSecret}
-		lkYAML.RTC.TCPPort = cfg.LKTcpPort
+		lkTcpPort, err := strconv.Atoi(cfg.LKTcpPort)
+		if err != nil || lkTcpPort < 1 || lkTcpPort > 65535 {
+			return fmt.Errorf("invalid livekit TCP port %q: must be 1-65535", cfg.LKTcpPort)
+		}
+		lkYAML.RTC.TCPPort = lkTcpPort
 		lkYAML.RTC.UseExternalIP = false
 		lkYAML.RTC.NodeIP = lkNodeIP
 
 		if cfg.LKUDPPortRangeStart != "" && cfg.LKUDPPortRangeEnd != "" {
-			lkYAML.RTC.PortRangeStart = cfg.LKUDPPortRangeStart
-			lkYAML.RTC.PortRangeEnd = cfg.LKUDPPortRangeEnd
+			prStart, err := strconv.Atoi(cfg.LKUDPPortRangeStart)
+			if err != nil || prStart < 1 || prStart > 65535 {
+				return fmt.Errorf("invalid livekit UDP port range start %q: must be 1-65535", cfg.LKUDPPortRangeStart)
+			}
+			prEnd, err := strconv.Atoi(cfg.LKUDPPortRangeEnd)
+			if err != nil || prEnd < 1 || prEnd > 65535 {
+				return fmt.Errorf("invalid livekit UDP port range end %q: must be 1-65535", cfg.LKUDPPortRangeEnd)
+			}
+			lkYAML.RTC.PortRangeStart = prStart
+			lkYAML.RTC.PortRangeEnd = prEnd
 		} else {
-			lkYAML.RTC.UDPPort = cfg.LKUdpPort
+			lkUdpPort, err := strconv.Atoi(cfg.LKUdpPort)
+			if err != nil || lkUdpPort < 1 || lkUdpPort > 65535 {
+				return fmt.Errorf("invalid livekit UDP port %q: must be 1-65535", cfg.LKUdpPort)
+			}
+			lkYAML.RTC.UDPPort = lkUdpPort
 		}
 		lkYAML.TURN.Enabled = true
 		lkYAML.TURN.Domain = turnDomain

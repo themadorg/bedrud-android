@@ -35,6 +35,7 @@ import (
 	"net/url"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"strings"
 	"syscall"
 	"time"
@@ -109,12 +110,17 @@ func Run(configPath string) error {
 			keyFile = cfg.Server.KeyFile
 			if certFile == "" {
 				certFile = "/etc/bedrud/cert.pem"
+			} else if abs, err := filepath.Abs(certFile); err == nil {
+				certFile = abs
 			}
 			if keyFile == "" {
 				keyFile = "/etc/bedrud/key.pem"
+			} else if abs, err := filepath.Abs(keyFile); err == nil {
+				keyFile = abs
 			}
 		}
-		if err := livekit.StartInternalServer(context.Background(), cfg.LiveKit.APIKey, cfg.LiveKit.APISecret, 7880, certFile, keyFile, cfg.LiveKit.ConfigPath); err != nil {
+		nodeIP := livekit.ResolveNodeIP(cfg.LiveKit.NodeIP, cfg.Server.Host)
+		if err := livekit.StartInternalServer(context.Background(), cfg.LiveKit.APIKey, cfg.LiveKit.APISecret, 7880, certFile, keyFile, cfg.LiveKit.ConfigPath, nodeIP, cfg.Server.Host); err != nil {
 			log.Error().Err(err).Msg("Failed to start internal LiveKit server")
 		}
 	} else if cfg.LiveKit.External {
@@ -212,6 +218,9 @@ func Run(configPath string) error {
 		return c.JSON(fiber.Map{"status": "healthy", "time": time.Now().Unix()})
 	})
 	api.Get("/ready", func(c *fiber.Ctx) error {
+		if sqlDB, err := database.GetDB().DB(); err != nil || sqlDB.Ping() != nil {
+			return c.Status(503).JSON(fiber.Map{"status": "not_ready", "error": "database unavailable"})
+		}
 		return c.JSON(fiber.Map{"status": "ready", "time": time.Now().Unix()})
 	})
 	app.Get("/health", func(c *fiber.Ctx) error { return c.Redirect("/api/health") })
@@ -302,6 +311,7 @@ func Run(configPath string) error {
 	adminGroup.Get("/online-count", roomHandler.GetOnlineCount)
 	adminGroup.Get("/livekit/stats", roomHandler.AdminLiveKitStats)
 	adminGroup.Get("/users/:id", usersHandler.GetUserDetail)
+	adminGroup.Delete("/users/:id", usersHandler.DeleteUser)
 	adminGroup.Get("/rooms/:roomId/participants", roomHandler.AdminGetRoomParticipants)
 	adminGroup.Post("/rooms/:roomId/participants/:identity/kick", roomHandler.AdminKickParticipant)
 	adminGroup.Post("/rooms/:roomId/participants/:identity/mute", roomHandler.AdminMuteParticipant)

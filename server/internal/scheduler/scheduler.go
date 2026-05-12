@@ -48,10 +48,20 @@ func Initialize(roomRepo *repository.RoomRepository, lkCfg *config.LiveKitConfig
 		if serverCfg.Domain != "" {
 			hosts = append(hosts, serverCfg.Domain)
 		}
-		// Include the server's IP from config (set by installer as cfg.OverrideIP).
-		// Without this, renewal drops the IP SAN → browser warnings for IP-based access.
 		if ip := net.ParseIP(serverCfg.Host); ip != nil && !ip.IsLoopback() && !ip.IsUnspecified() {
 			hosts = append(hosts, serverCfg.Host)
+		}
+		if outIP := utils.OutboundIP(); outIP != nil && !outIP.IsLoopback() && !outIP.IsUnspecified() {
+			found := false
+			for _, h := range hosts {
+				if h == outIP.String() {
+					found = true
+					break
+				}
+			}
+			if !found {
+				hosts = append(hosts, outIP.String())
+			}
 		}
 		hosts = append(hosts, "localhost", "127.0.0.1", "::1")
 		certHosts = hosts
@@ -133,9 +143,15 @@ func checkIdleRooms(roomRepo *repository.RoomRepository, cfg *config.LiveKitConf
 		if time.Since(room.CreatedAt) < grace {
 			continue
 		}
+		if room.Settings.IsPersistent {
+			log.Debug().Str("room", room.Name).Msg("Skipping idle check for persistent room")
+			continue
+		}
 		count, exists := lkRooms[room.Name]
 		if !exists || count == 0 {
-			if err := roomRepo.SetRoomIdle(room.ID); err == nil {
+			if err := roomRepo.SetRoomIdle(room.ID); err != nil {
+				log.Error().Err(err).Str("room", room.Name).Msg("Scheduler: failed to set room idle")
+			} else {
 				log.Info().Str("room", room.Name).Msg("Room set to idle (no participants)")
 			}
 		}
@@ -183,9 +199,25 @@ func renewSelfSignedCert() {
 	certMu.Lock()
 	defer certMu.Unlock()
 
-	if err := utils.RenewSelfSignedCert(certFile, keyFile, certHosts...); err != nil {
+	hosts := make([]string, len(certHosts))
+	copy(hosts, certHosts)
+	if outIP := utils.OutboundIP(); outIP != nil && !outIP.IsLoopback() && !outIP.IsUnspecified() {
+		found := false
+		for _, h := range hosts {
+			if h == outIP.String() {
+				found = true
+				break
+			}
+		}
+		if !found {
+			hosts = append(hosts, outIP.String())
+		}
+	}
+
+	if err := utils.RenewSelfSignedCert(certFile, keyFile, hosts...); err != nil {
 		log.Error().Err(err).Str("certFile", certFile).Msg("Scheduler: failed to renew self-signed TLS certificate")
 		return
 	}
+	certHosts = hosts
 	log.Info().Strs("hosts", certHosts).Msg("Scheduler: self-signed TLS certificate renewed successfully")
 }

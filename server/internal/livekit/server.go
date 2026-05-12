@@ -3,10 +3,13 @@ package livekit
 import (
 	"context"
 	"fmt"
+	"net"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"time"
+
+	"bedrud/internal/utils"
 
 	"github.com/rs/zerolog/log"
 	"gopkg.in/yaml.v3"
@@ -112,15 +115,33 @@ func RunLiveKit(configPath string) error {
 }
 
 // StartInternalServer starts a LiveKit server using the provided config file
-func generateTempConfig(apiKey, apiSecret string, port int, certFile, keyFile string) (string, error) {
+func generateTempConfig(apiKey, apiSecret string, port int, nodeIP, certFile, keyFile, serverHost string) (string, error) {
 	cfg := ConfigYAML{}
-	cfg.Port = fmt.Sprintf("%d", port)
+	cfg.Port = port
 	cfg.Keys = map[string]string{apiKey: apiSecret}
-	cfg.RTC.UseExternalIP = true
-	cfg.TURN.Enabled = true
-	cfg.TURN.TLSPort = 5349
-	cfg.TURN.CertFile = certFile
-	cfg.TURN.KeyFile = keyFile
+
+	if nodeIP != "" {
+		if net.ParseIP(nodeIP) == nil {
+			return "", fmt.Errorf("invalid NodeIP %q: not a valid IP address", nodeIP)
+		}
+		cfg.RTC.UseExternalIP = false
+		cfg.RTC.NodeIP = nodeIP
+		log.Info().Str("nodeIP", nodeIP).Msg("LiveKit: using explicit NodeIP (STUN disabled)")
+	} else {
+		cfg.RTC.UseExternalIP = true
+		log.Warn().Msg("LiveKit: no NodeIP configured, using STUN-based IP detection (may fail on air-gapped/firewalled networks)")
+	}
+
+	if certFile != "" && keyFile != "" {
+		cfg.TURN.Enabled = true
+		cfg.TURN.TLSPort = 5349
+		cfg.TURN.UDPPort = 3478
+		cfg.TURN.CertFile = certFile
+		cfg.TURN.KeyFile = keyFile
+		if serverHost != "" {
+			cfg.TURN.Domain = serverHost
+		}
+	}
 
 	data, err := yaml.Marshal(&cfg)
 	if err != nil {
@@ -142,7 +163,22 @@ func generateTempConfig(apiKey, apiSecret string, port int, certFile, keyFile st
 	return tmpFile.Name(), nil
 }
 
-func StartInternalServer(ctx context.Context, apiKey, apiSecret string, port int, certFile, keyFile, externalConfigPath string) error {
+func ResolveNodeIP(explicitIP, serverHost string) string {
+	if explicitIP != "" {
+		return explicitIP
+	}
+	if serverHost != "" {
+		if ip := net.ParseIP(serverHost); ip != nil && !ip.IsLoopback() && !ip.IsUnspecified() {
+			return ip.String()
+		}
+	}
+	if ip := utils.OutboundIP(); ip != nil && !ip.IsLoopback() && !ip.IsUnspecified() {
+		return ip.String()
+	}
+	return ""
+}
+
+func StartInternalServer(ctx context.Context, apiKey, apiSecret string, port int, certFile, keyFile, externalConfigPath, nodeIP, serverHost string) error {
 	if os.Getenv("LIVEKIT_MANAGED") == "true" {
 		log.Info().Msg("➜ Skipping internal LiveKit management (managed by system service)")
 		return nil
@@ -154,8 +190,8 @@ func StartInternalServer(ctx context.Context, apiKey, apiSecret string, port int
 	configPath := externalConfigPath
 	cleanupTemp := ""
 
-	if configPath == "" && certFile != "" && keyFile != "" {
-		tmpPath, err := generateTempConfig(apiKey, apiSecret, port, certFile, keyFile)
+	if configPath == "" {
+		tmpPath, err := generateTempConfig(apiKey, apiSecret, port, nodeIP, certFile, keyFile, serverHost)
 		if err != nil {
 			log.Warn().Err(err).Msg("Failed to generate temp LiveKit config, falling back to inline args")
 		} else {

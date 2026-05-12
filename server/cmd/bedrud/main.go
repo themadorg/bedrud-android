@@ -276,9 +276,20 @@ func runCertRenew(configPath, algoStr string) {
 	if cfg.Server.Domain != "" {
 		hosts = append(hosts, cfg.Server.Domain)
 	}
-	// Preserve server IP from config to avoid SAN drift on renewal.
 	if ip := net.ParseIP(cfg.Server.Host); ip != nil && !ip.IsLoopback() && !ip.IsUnspecified() {
 		hosts = append(hosts, cfg.Server.Host)
+	}
+	if outIP := utils.OutboundIP(); outIP != nil && !outIP.IsLoopback() && !outIP.IsUnspecified() {
+		found := false
+		for _, h := range hosts {
+			if h == outIP.String() {
+				found = true
+				break
+			}
+		}
+		if !found {
+			hosts = append(hosts, outIP.String())
+		}
 	}
 	hosts = append(hosts, "localhost", "127.0.0.1", "::1")
 
