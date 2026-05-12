@@ -1,0 +1,98 @@
+---
+title: "Pourquoi nous avons abandonné RSA pour Ed25519 (et pourquoi vous devriez aussi)"
+description: "Le TLS auto-hébergé n'a pas besoin de clés RSA 4096 bits. Voici pourquoi Bedrud est passé à Ed25519 — et ce que cela signifie pour vos certificats auto-signés."
+date: "2026-05-12"
+author: "Équipe Bedrud"
+tags: ["engineering", "security", "self-hosting"]
+---
+
+Vous avez déjà vu l'avertissement du navigateur. « Votre connexion n'est pas sécurisée. » Les certificats auto-signés sont une réalité quand on auto-héberge. Mais la clé à l'intérieur de ce certificat compte plus que vous ne le pensez — et la plupart des tutoriels vous donnent encore la mauvaise valeur par défaut.
+
+## L'habitude RSA
+
+Chaque guide d'auto-hébergement sur internet dit la même chose :
+
+```bash
+openssl req -x509 -newkey rsa:4096 -keyout key.pem -out cert.pem -days 365
+```
+
+RSA 4096. Parce que des chiffres plus grands signifient plus de sécurité, non ? Plus maintenant. Les clés RSA 4096 pèsent 3,2 Ko. Elles mettent des secondes à se générer sur un VPS à 5 €. Et elles offrent à peu près le même niveau de sécurité qu'une clé de courbe elliptique 256 bits.
+
+RSA reste le défaut par inertie historique, pas par mérite technique. Il fonctionne partout, et pour les certificats émis par une autorité publique, cette compatibilité universelle compte encore. Mais pour les certificats auto-signés dans une pile que vous contrôlez ? Vous payez un coût en performance pour une compatibilité dont vous n'avez pas besoin.
+
+## Ed25519 en bref
+
+Ed25519 est un schéma de signature EdDSA construit sur Curve25519. Il produit des clés de 256 bits, compactes et de taille fixe. Conçu exclusivement pour les signatures numériques — pas de chiffrement, pas d'échange de clés, juste la signature. Cette spécialisation le rend plus simple, plus rapide et plus difficile à mal configurer.
+
+En Go, c'est un citoyen de première classe. Le paquet [`crypto/ed25519`](https://pkg.go.dev/crypto/ed25519) fait partie de la bibliothèque standard depuis Go 1.13. La génération de clés tient en deux lignes. La sérialisation utilise [`x509.MarshalPKCS8PrivateKey`](https://pkg.go.dev/crypto/x509#MarshalPKCS8PrivateKey). Pas de dépendances externes, pas de CGo, pas de tags de build spéciaux.
+
+## Comparaison
+
+| Aspect | RSA 4096 / 2048 | ECDSA P-256 | Ed25519 |
+|--------|-----------------|-------------|---------|
+| Sécurité | ~112–128 bits. Mature, bien étudiée. | ~128 bits. Courbe NIST. | ~128 bits. Conçu pour résister aux attaques par canal auxiliaire. |
+| Performance | Le plus lent. Opérations sur grands nombres. | Vérification ~10x plus rapide que RSA. | Le plus rapide. 30k+ signatures/sec en Go. Clés minuscules. |
+| Taille de clé | 2048 ou 4096 bits. Volumineux sur disque. | 256 bits. Compact. | 256 bits fixe. Empreinte minimale. |
+| Compatibilité | Universelle. Fonctionne partout. | Bonne. Tous les navigateurs/clients modernes. | Croissante. Pleinement supporté en Go, SSH, TLS moderne. |
+| Format | PKCS#8 standard. | PKCS#8 sur SEC1. | PKCS#8 natif. |
+| Durée de vie | Rotation plus fréquente. | Plus longue acceptable. | Identique aux autres courbes EC. |
+| Simplicité Go | Support x509 complet. | Risque de bug KeyEncipherment (voir ci-dessous). | Pur. Pas d'options de chiffrement. |
+
+Sources : [types de clés expliqués](https://getacert.com/learn/key-types-explained), [benchmarks Go : RSA vs ECDSA vs Ed25519](https://dev.to/kanywst/digital-signatures-mechanics-and-go-benchmarks-rsa-vs-ecdsa-vs-ed25519-2d36), [comparaison d'algorithmes SSH](https://mmdc.net/comparing-ssh-key-algorithms-rsa-dsa-ecdsa-and-ed25519/)
+
+## Le piège ECDSA KeyUsage
+
+Voici un bug qui piège presque tous ceux qui passent de RSA à ECDSA. Dans le paquet `crypto/x509` de Go, les clés RSA nécessitent à la fois `KeyUsageDigitalSignature` et `KeyUsageKeyEncipherment` dans le modèle de certificat. Si vous copiez ce motif pour ECDSA — en ajoutant `KeyUsageKeyEncipherment` à une clé EC — certains clients TLS rejetteront le certificat. Les clés EC ne font pas de chiffrement de clé. L'extension est inutile et activement nocive.
+
+Voici la correction dans la génération de certificats de Bedrud (`server/internal/utils/tls.go`) :
+
+```go
+func keyUsageForAlgo(algo KeyAlgorithm) x509.KeyUsage {
+    switch algo {
+    case KeyRSA2048, KeyRSA4096:
+        return x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment
+    default:
+        return x509.KeyUsageDigitalSignature
+    }
+}
+```
+
+Ed25519 tombe dans la branche par défaut. Signature numérique pure. Pas d'option `KeyEncipherment` à mal configurer. Un piège en moins.
+
+## Ce que ça change sur un VPS à 5 €
+
+Sur un Hetzner CX22 (2 vCPU, 4 Go RAM), la différence est mesurable :
+
+- **Génération de clés** : RSA 4096 prend ~1–2 secondes. Ed25519 prend moins d'1 ms. Ça compte quand votre serveur génère un certificat auto-signé au premier démarrage.
+- **Handshake TLS** : Ed25519 signe et vérifie plus vite, réduisant la latence du handshake. Sur un serveur chargé gérant des dizaines de connexions WebRTC, ces millisecondes s'accumulent.
+- **Empreinte disque** : Une clé privée Ed25519 fait 48 octets en PEM. Une clé RSA 4096 fait 3,2 Ko. Pour un seul certificat, la différence est faible, mais elle reflète l'écart de complexité computationnelle.
+
+## Ce que fait Bedrud
+
+Bedrud génère désormais des certificats auto-signés Ed25519 par défaut. La fonction `GenerateSelfSignedCert` utilise `KeyEd25519` sauf indication contraire.
+
+Si vous avez besoin d'un algorithme différent — pour la compatibilité avec d'anciens clients ou des politiques internes — utilisez l'option `--key-algorithm` :
+
+```bash
+bedrud run --key-algorithm rsa4096
+bedrud run --key-algorithm ecdsa256
+```
+
+Valeurs supportées : `ed25519` (par défaut), `ecdsa256`, `rsa2048`, `rsa4096`.
+
+## Quand rester avec RSA
+
+RSA n'est pas mort. Vous en avez encore besoin pour :
+
+- **Les anciens clients Java** qui ne supportent pas les handshakes TLS Ed25519
+- **Les appareils Android antérieurs à 7.0** (Nougat), qui manquent du support Ed25519 dans leur pile TLS
+- **Les appareils embarqués** avec d'anciennes versions d'OpenSSL ou mbedTLS
+- **Les environnements d'entreprise** avec des middleboxes d'inspection TLS qui ne comprennent que RSA
+
+Si votre pile est moderne — backend Go, navigateurs Chromium, applications mobiles récentes — Ed25519 fonctionne partout où ça compte.
+
+## En résumé
+
+L'infrastructure auto-hébergée ne devrait pas traîner des clés RSA 4096 bits juste parce qu'un tutoriel de 2013 le recommande. Ed25519 est plus rapide, plus compact et moins sujet aux erreurs. C'est ce pour quoi la bibliothèque standard de Go est optimisée. Et pour les certificats auto-signés dans une pile contrôlée, l'argument de compatibilité de RSA ne tient pas.
+
+Auto-hébergez avec de meilleurs défauts. [Installez Bedrud](https://bedrud.org/install.sh) et essayez par vous-même.

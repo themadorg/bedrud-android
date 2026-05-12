@@ -1,0 +1,98 @@
+---
+title: "Warum wir RSA durch Ed25519 ersetzt haben (und Sie das auch tun sollten)"
+description: "Self-Hosted TLS braucht keine 4096-Bit-RSA-Schlüssel. Warum Bedrud auf Ed25519 umgestiegen ist — und was das für Ihre selbstsignierten Zertifikate bedeutet."
+date: "2026-05-12"
+author: "Bedrud Team"
+tags: ["engineering", "security", "self-hosting"]
+---
+
+Sie kennen die Browser-Warnung. „Ihre Verbindung ist nicht sicher." Selbstsignierte Zertifikate gehören zum Alltag, wenn Sie selbst hosten. Aber der Schlüssel in diesem Zertifikat ist wichtiger, als die meisten denken — und die meisten Anleitungen empfehlen immer noch das falsche Standardverfahren.
+
+## Die RSA-Gewohnheit
+
+Jede Self-Hosting-Anleitung im Internet sagt dasselbe:
+
+```bash
+openssl req -x509 -newkey rsa:4096 -keyout key.pem -out cert.pem -days 365
+```
+
+RSA 4096. Weil größere Zahlen mehr Sicherheit bedeuten, oder? Nicht mehr. RSA-4096-Schlüssel sind 3,2 KB groß. Auf einem 5-Euro-VPS dauert die Generierung Sekunden. Und sie bieten ungefähr die gleiche Sicherheitsstufe wie ein 256-Bit-Schlüssel auf elliptischer Kurve.
+
+RSA ist der Standard aus historischer Trägheit, nicht aus technischen Gründen. Es funktioniert überall, und bei CA-signierten Zertifikaten ist diese Kompatibilität wichtig. Aber bei selbstsignierten Zertifikaten in einem Stack, den Sie kontrollieren? Sie zahlen einen Performance-Aufschlag für Kompatibilität, die Sie nicht brauchen.
+
+## Ed25519 im Überblick
+
+Ed25519 ist ein EdDSA-Signaturverfahren auf Basis der Curve25519. Es erzeugt kleine, feste 256-Bit-Schlüssel. Es wurde ausschließlich für digitale Signaturen entwickelt — keine Verschlüsselung, kein Schlüsselaustausch, nur Signaturen. Diese Konzentration macht es einfacher, schneller und fehlerresistenter.
+
+In Go ist es ein gleichberechtigter Bürger. Das Paket [`crypto/ed25519`](https://pkg.go.dev/crypto/ed25519) gehört seit Go 1.13 zur Standardbibliothek. Schlüsselgenerierung in zwei Zeilen. Serialisierung über [`x509.MarshalPKCS8PrivateKey`](https://pkg.go.dev/crypto/x509#MarshalPKCS8PrivateKey). Keine externen Abhängigkeiten, kein CGo, keine speziellen Build-Tags.
+
+## Im Vergleich
+
+| Aspekt | RSA 4096 / 2048 | ECDSA P-256 | Ed25519 |
+|--------|-----------------|-------------|---------|
+| Sicherheit | ~112–128 Bit. Ausgereift, gut erforscht. | ~128 Bit. NIST-Kurve. | ~128 Bit. Entwickelt zur Resistenz gegen Seitenkanalangriffe. |
+| Performance | Am langsamsten. Große Zahlenoperationen. | ~10x schnellere Verifikation als RSA. | Am schnellsten. 30k+ Signaturen/Sek. in Go. Winzige Schlüssel. |
+| Schlüsselgröße | 2048 oder 4096 Bit. Groß auf der Festplatte. | 256 Bit. Kompakt. | 256 Bit fix. Kleinster Footprint. |
+| Kompatibilität | Universell. Funktioniert überall. | Gut. Alle modernen Browser/Clients. | Wachsend. Volle Unterstützung in Go, SSH, modernem TLS. |
+| Format | PKCS#8-Standard. | PKCS#8 über SEC1. | PKCS#8 nativ. |
+| Schlüssellebensdauer | Kürzere Rotationsrichtlinien. | Länger akzeptabel. | Wie andere EC-Kurven. |
+| Go-Einfachheit | Volle x509-Unterstützung. | KeyEncipherment-Bugrisiko (siehe unten). | Rein. Keine Verschlüsselungsoptionen. |
+
+Quellen: [Schlüsseltypen erklärt](https://getacert.com/learn/key-types-explained), [Go-Benchmarks: RSA vs ECDSA vs Ed25519](https://dev.to/kanywst/digital-signatures-mechanics-and-go-benchmarks-rsa-vs-ecdsa-vs-ed25519-2d36), [SSH-Schlüsselalgorithmus-Vergleich](https://mmdc.net/comparing-ssh-key-algorithms-rsa-dsa-ecdsa-and-ed25519/)
+
+## Die ECDSA-KeyUsage-Falle
+
+Hier ist ein Fehler, der fast jeden trifft, der von RSA auf ECDSA umsteigt. In Go's `crypto/x509` benötigen RSA-Schlüssel sowohl `KeyUsageDigitalSignature` als auch `KeyUsageKeyEncipherment` im Zertifikats-Template. Wenn Sie dieses Muster auf ECDSA übertragen — also `KeyUsageKeyEncipherment` zu einem EC-Schlüssel hinzufügen —, lehnen einige TLS-Clients das Zertifikat ab. EC-Schlüssel führen keine Schlüsselverschlüsselung durch. Die Erweiterung ist bedeutungslos und aktiv schädlich.
+
+So sieht die Lösung in Bedruds Zertifikatserstellung aus (`server/internal/utils/tls.go`):
+
+```go
+func keyUsageForAlgo(algo KeyAlgorithm) x509.KeyUsage {
+    switch algo {
+    case KeyRSA2048, KeyRSA4096:
+        return x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment
+    default:
+        return x509.KeyUsageDigitalSignature
+    }
+}
+```
+
+Ed25519 fällt in den Default-Zweig. Reine digitale Signatur. Keine `KeyEncipherment`-Option zum Fehlkonfigurieren. Eine Fehlerquelle weniger.
+
+## Was das auf einem 5-Euro-VPS bedeutet
+
+Auf einem Hetzner CX22 (2 vCPU, 4 GB RAM) ist der Unterschied messbar:
+
+- **Schlüsselgenerierung**: RSA 4096 dauert ~1–2 Sekunden. Ed25519 dauert unter 1 ms. Das zählt, wenn Ihr Server beim ersten Start ein selbstsigniertes Zertifikat erstellt.
+- **TLS-Handshake**: Ed25519 signiert und verifiziert schneller, was die Handshake-Latenz reduziert. Auf einem ausgelasteten Server mit dutzenden WebRTC-Verbindungen summieren sich diese Millisekunden.
+- **Speicherbedarf**: Ein Ed25519-Privatschlüssel ist PEM-kodiert 48 Bytes. Ein RSA-4096-Schlüssel 3,2 KB. Für ein Zertifikat kein großer Unterschied, aber er spiegelt den rechnerischen Gewichtsunterschied wider.
+
+## Was Bedrud macht
+
+Bedrud generiert standardmäßig Ed25519-selbstsignierte Zertifikate. Die Funktion `GenerateSelfSignedCert` verwendet `KeyEd25519`, sofern nichts anderes angegeben wird.
+
+Wenn Sie einen anderen Algorithmus benötigen — für Legacy-Client-Kompatibilität oder interne Richtlinien — verwenden Sie das Flag `--key-algorithm`:
+
+```bash
+bedrud run --key-algorithm rsa4096
+bedrud run --key-algorithm ecdsa256
+```
+
+Unterstützte Werte: `ed25519` (Standard), `ecdsa256`, `rsa2048`, `rsa4096`.
+
+## Wann Sie bei RSA bleiben sollten
+
+RSA ist nicht tot. Sie brauchen es weiterhin für:
+
+- **Ältere Java-Clients**, die Ed25519-TLS-Handshakes nicht unterstützen
+- **Android-Geräte vor 7.0** (Nougat), denen Ed25519 im TLS-Stack fehlt
+- **Eingebettete Geräte** mit älteren OpenSSL- oder mbedTLS-Versionen
+- **Unternehmensumgebungen** mit TLS-Inspektions-Middleboxes, die nur RSA verstehen
+
+Wenn Ihr Stack modern ist — Go-Backend, Chromium-basierte Browser, aktuelle mobile Apps — funktioniert Ed25519 überall, wo es darauf ankommt.
+
+## Fazit
+
+Self-Hosted-Infrastruktur sollte nicht mit 4096-Bit-RSA-Schlüsseln belastet werden, nur weil eine Anleitung aus dem Jahr 2013 das empfiehlt. Ed25519 ist schneller, kleiner und fehlerresistenter. Es ist das, wofür Gos Standardbibliothek optimiert ist. Und bei selbstsignierten Zertifikaten in einem kontrollierten Stack überzeugt das RSA-Kompatibilitätsargument nicht.
+
+Selbst hosten mit besseren Standards. [Bedrud installieren](https://bedrud.org/install.sh) und selbst ausprobieren.

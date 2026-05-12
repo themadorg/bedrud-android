@@ -1,0 +1,98 @@
+---
+title: "Why We Dropped RSA for Ed25519 (and You Should Too)"
+description: "Self-hosted TLS doesn't need 4096-bit RSA keys. Here's why Bedrud switched to Ed25519 — and what it means for your self-signed certificates."
+date: "2026-05-12"
+author: "Bedrud Team"
+tags: ["engineering", "security", "self-hosting"]
+---
+
+You've seen the browser warning. "Your connection is not private." Self-signed certificates are a fact of life when you self-host. But the key inside that certificate matters more than you think — and most tutorials still give you the wrong default.
+
+## The RSA Habit
+
+Every self-hosting guide on the internet says the same thing:
+
+```bash
+openssl req -x509 -newkey rsa:4096 -keyout key.pem -out cert.pem -days 365
+```
+
+RSA 4096. Because bigger numbers mean more security, right? Not anymore. RSA 4096 keys are 3.2 KB. They take seconds to generate on a $5 VPS. And they provide roughly the same security level as a 256-bit elliptic curve key.
+
+RSA is the default because of historical momentum, not technical merit. It works everywhere, and for public CA-issued certificates, that universal compatibility still matters. But for self-signed certs in a stack you control? You're paying a performance tax for compatibility you don't need.
+
+## Enter Ed25519
+
+Ed25519 is an EdDSA signature scheme built on Curve25519. It produces tiny, fixed-size 256-bit keys. It's purpose-built for digital signatures — no encryption, no key exchange, just signing. That focus makes it simpler, faster, and harder to get wrong.
+
+In Go, it's a first-class citizen. The [`crypto/ed25519`](https://pkg.go.dev/crypto/ed25519) package has been in the standard library since Go 1.13. Key generation is two lines. Marshaling uses standard [`x509.MarshalPKCS8PrivateKey`](https://pkg.go.dev/crypto/x509#MarshalPKCS8PrivateKey). No external dependencies, no CGo, no special build tags.
+
+## How They Compare
+
+| Aspect | RSA 4096 / 2048 | ECDSA P-256 | Ed25519 |
+|--------|-----------------|-------------|---------|
+| Security | ~112–128 bit. Mature, well-studied. | ~128 bit. NIST curve. | ~128 bit. Designed to resist side-channel attacks. |
+| Performance | Slowest. Large-number operations. | ~10x faster verify than RSA. | Fastest. 30k+ signs/sec in Go. Tiny keys. |
+| Key Size | 2048 or 4096 bit. Huge on disk. | 256 bit. Compact. | 256 bit fixed. Smallest footprint. |
+| Compatibility | Universal. Works everywhere. | Good. All modern browsers/clients. | Growing. Full support in Go, SSH, modern TLS. |
+| Format | PKCS#8 standard. | PKCS#8 over SEC1. | PKCS#8 native. |
+| Key Lifetime | Shorter rotation policies. | Longer acceptable. | Same as other EC curves. |
+| Go Ease | Full x509 support. | KeyEncipherment bug risk (see below). | Pure. No encipherment options. |
+
+Sources: [key types explained](https://getacert.com/learn/key-types-explained), [Go benchmarks: RSA vs ECDSA vs Ed25519](https://dev.to/kanywst/digital-signatures-mechanics-and-go-benchmarks-rsa-vs-ecdsa-vs-ed25519-2d36), [SSH key algorithm comparison](https://mmdc.net/comparing-ssh-key-algorithms-rsa-dsa-ecdsa-and-ed25519/)
+
+## The ECDSA KeyUsage Trap
+
+Here's a bug that catches almost everyone who switches from RSA to ECDSA. In Go's `crypto/x509`, RSA keys need both `KeyUsageDigitalSignature` and `KeyUsageKeyEncipherment` in the certificate template. If you copy that pattern to ECDSA — adding `KeyUsageKeyEncipherment` to an EC key — some TLS clients will reject the certificate entirely. EC keys don't do key encipherment. The extension is meaningless and actively harmful.
+
+This is what the fix looks like in Bedrud's cert generation (`server/internal/utils/tls.go`):
+
+```go
+func keyUsageForAlgo(algo KeyAlgorithm) x509.KeyUsage {
+    switch algo {
+    case KeyRSA2048, KeyRSA4096:
+        return x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment
+    default:
+        return x509.KeyUsageDigitalSignature
+    }
+}
+```
+
+Ed25519 falls into the default branch. Pure digital signature. No `KeyEncipherment` option to misconfigure. One less footgun.
+
+## What This Means on a $5 VPS
+
+On a Hetzner CX22 (2 vCPU, 4 GB RAM), the difference is measurable:
+
+- **Key generation**: RSA 4096 takes ~1–2 seconds. Ed25519 takes under 1ms. That matters when your server generates a self-signed cert on first boot.
+- **TLS handshake**: Ed25519 signs and verifies faster, reducing handshake latency. On a busy server handling dozens of WebRTC connections, those milliseconds add up.
+- **Disk footprint**: An Ed25519 private key is 48 bytes PEM-encoded. An RSA 4096 key is 3.2 KB. Not a huge deal for one cert, but it reflects the overall computational weight difference.
+
+## What Bedrud Does
+
+As of today, Bedrud generates Ed25519 self-signed certificates by default. The `GenerateSelfSignedCert` function uses `KeyEd25519` unless you specify otherwise.
+
+If you need a different algorithm — for legacy client compatibility or internal policy — use the `--key-algorithm` flag:
+
+```bash
+bedrud run --key-algorithm rsa4096
+bedrud run --key-algorithm ecdsa256
+```
+
+Supported values: `ed25519` (default), `ecdsa256`, `rsa2048`, `rsa4096`.
+
+## When to Stick with RSA
+
+RSA isn't dead. You still need it for:
+
+- **Old Java clients** that don't support Ed25519 TLS handshakes
+- **Android devices before 7.0** (Nougat), which lack Ed25519 support in their TLS stack
+- **Embedded devices** with older OpenSSL or mbedTLS builds
+- **Corporate environments** with TLS inspection middleboxes that only understand RSA
+
+If your stack is modern — Go backend, Chromium-based browsers, recent mobile apps — Ed25519 works everywhere that matters.
+
+## The Bottom Line
+
+Self-hosted infrastructure shouldn't carry the weight of 4096-bit RSA keys just because a 2013 tutorial said so. Ed25519 is faster, smaller, and less error-prone. It's what Go's standard library is optimized for. And for self-signed certificates in a controlled stack, the compatibility argument for RSA doesn't hold.
+
+Self-host with better defaults. [Install Bedrud](https://bedrud.org/install.sh) and try it yourself.
