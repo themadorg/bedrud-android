@@ -7,9 +7,11 @@ import (
 	"context"
 	"crypto/tls"
 	"encoding/pem"
+	"net"
 	"net/http"
 	"os"
 	"strings"
+	"sync"
 	"time"
 
 	"crypto/x509"
@@ -23,16 +25,36 @@ import (
 var scheduler *gocron.Scheduler
 
 var certFile string
+var keyFile string
+var certHosts []string
+var certMu sync.Mutex
 
 func Initialize(roomRepo *repository.RoomRepository, lkCfg *config.LiveKitConfig, serverCfg *config.ServerConfig) {
 	scheduler = gocron.NewScheduler(time.Local)
 
 	certFile = ""
+	keyFile = ""
+	certHosts = nil
 	if serverCfg.EnableTLS && !serverCfg.DisableTLS && !serverCfg.UseACME {
 		certFile = serverCfg.CertFile
+		keyFile = serverCfg.KeyFile
 		if certFile == "" {
 			certFile = "/etc/bedrud/cert.pem"
 		}
+		if keyFile == "" {
+			keyFile = "/etc/bedrud/key.pem"
+		}
+		var hosts []string
+		if serverCfg.Domain != "" {
+			hosts = append(hosts, serverCfg.Domain)
+		}
+		// Include the server's IP from config (set by installer as cfg.OverrideIP).
+		// Without this, renewal drops the IP SAN → browser warnings for IP-based access.
+		if ip := net.ParseIP(serverCfg.Host); ip != nil && !ip.IsLoopback() && !ip.IsUnspecified() {
+			hosts = append(hosts, serverCfg.Host)
+		}
+		hosts = append(hosts, "localhost", "127.0.0.1", "::1")
+		certHosts = hosts
 	}
 
 	apiHost := lkCfg.InternalHost
@@ -121,7 +143,7 @@ func checkIdleRooms(roomRepo *repository.RoomRepository, cfg *config.LiveKitConf
 }
 
 func checkCertExpiry() {
-	if certFile == "" {
+	if certFile == "" || keyFile == "" {
 		return
 	}
 
@@ -143,10 +165,27 @@ func checkCertExpiry() {
 		return
 	}
 
-	daysRemaining := int(time.Until(cert.NotAfter).Hours() / 24)
+	daysRemaining := int((time.Until(cert.NotAfter).Hours() + 23) / 24)
 	if daysRemaining <= 0 {
-		log.Error().Int("daysRemaining", daysRemaining).Str("expires", cert.NotAfter.Format(time.RFC3339)).Msg("TLS certificate has EXPIRED")
+		log.Error().Int("daysRemaining", daysRemaining).Str("expires", cert.NotAfter.Format(time.RFC3339)).Msg("TLS certificate has EXPIRED — attempting renewal")
+		renewSelfSignedCert()
 	} else if daysRemaining <= utils.CertWarnDays {
-		log.Warn().Int("daysRemaining", daysRemaining).Str("expires", cert.NotAfter.Format(time.RFC3339)).Msg("TLS certificate is expiring soon")
+		log.Warn().Int("daysRemaining", daysRemaining).Str("expires", cert.NotAfter.Format(time.RFC3339)).Msg("TLS certificate is expiring soon — attempting renewal")
+		renewSelfSignedCert()
 	}
+}
+
+func renewSelfSignedCert() {
+	if certFile == "" || keyFile == "" || len(certHosts) == 0 {
+		return
+	}
+
+	certMu.Lock()
+	defer certMu.Unlock()
+
+	if err := utils.RenewSelfSignedCert(certFile, keyFile, certHosts...); err != nil {
+		log.Error().Err(err).Str("certFile", certFile).Msg("Scheduler: failed to renew self-signed TLS certificate")
+		return
+	}
+	log.Info().Strs("hosts", certHosts).Msg("Scheduler: self-signed TLS certificate renewed successfully")
 }
