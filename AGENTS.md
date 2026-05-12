@@ -190,7 +190,8 @@ Regen: `make swagger-gen` (needs `swag` CLI).
 - **Frontend not embedded:** `go build` without `make build` → no frontend → 404.
 - **Hot reload:** Only `make dev-server-hot` (Air). `make dev-server` no reload.
 - **Path aliases:** Use `#/*` not `../src/*`. Vite resolves via `vite-tsconfig-paths`.
-- **Config:** Dev config auto-copied. Override: `CONFIG_PATH` env var.
+- **Config:** Dev config auto-copied. Override: `CONFIG_PATH` env var. LiveKit config override: `LIVEKIT_CONFIG_PATH` env var or `livekit.configPath` in config.yaml.
+- **Embedded LiveKit TLS:** When server TLS is enabled (`enableTLS: true`), the embedded LiveKit process auto-generates a temp config with TURN/TLS (port 5349) using the server's certificate. For custom LiveKit YAML, set `livekit.configPath` or `LIVEKIT_CONFIG_PATH`.
 - **Privileged ports:** HTTP listener defaults to `:80`. Non-root can't bind. Fix: set `httpPort: "8080"` in config / `SERVER_HTTP_PORT=8080` env, or `sudo setcap 'cap_net_bind_service=+ep' $(which bedrud)` (re-run after each binary update).
 - **Site search index:** Auto-generated before dev/build. Don't edit `public/search-index-*.json`.
 - **Site sidebar:** Manual in `src/content/docs/sidebar.ts`. Adding doc page? Add sidebar entry too.

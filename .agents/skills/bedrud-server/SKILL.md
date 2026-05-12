@@ -478,11 +478,16 @@ DTOs: `ErrorResponse`, `RegisterRequest`, `LoginRequest`, `GuestLoginRequest`, `
 
 `Bin embed.FS` — contains `bin/livekit-server`. Build-tagged `!windows`.
 
+### `config.go`
+
+`ConfigYAML` — shared LiveKit YAML config struct. Used by both the installer (`internal/install/linux.go`) and the embedded server startup. Fields: `Port`, `BindAddresses`, `Keys`, `RTC` (tcp/udp ports, port range, node_ip), `TURN` (enabled, domain, udp/tls ports, cert/key), `Logging`.
+
 ### `server.go`
 
 `ExportBinary(destPath)` — Write embedded binary with 0755. Remove existing first (avoid ETXTBSY).
 `RunLiveKit(configPath)` — Run synchronously.
-`StartInternalServer(ctx, apiKey, apiSecret, port, cert, key, externalConfig)` — Background goroutine, 3s startup sleep. Skip if `LIVEKIT_MANAGED=true`.
+`generateTempConfig(apiKey, apiSecret, port, certFile, keyFile)` — Generate temp YAML with TURN/TLS for embedded mode. Returns temp file path.
+`StartInternalServer(ctx, apiKey, apiSecret, port, cert, key, externalConfig)` — Background goroutine, 3s startup sleep. Skip if `LIVEKIT_MANAGED=true`. When cert/key provided and no external config, generates temp LiveKit YAML with TURN/TLS (port 5349) using server's certificate. Falls back to inline `--port`/`--keys` args if no TLS.
 
 ---
 
@@ -510,7 +515,18 @@ Validation: MIME must be png/jpeg/gif/webp. SHA256 content hash filename.
 
 ## `internal/utils/tls.go`
 
-`GenerateSelfSignedCert(certFile, keyFile)` — ECDSA P256, 365 days, CN=localhost, Org="Bedrud Open Source".
+- `const CertWarnDays = 30` — days before expiry to warn and auto-renew.
+- `const SelfSignedCertDays = 1825` — self-signed cert validity (~5 years).
+- `KeyAlgorithm` — string enum: `KeyEd25519` (default), `KeyECDSA256`, `KeyRSA2048`, `KeyRSA4096`.
+- `GenerateSelfSignedCert(certFile, keyFile, hosts...)` — wrapper, generates **Ed25519** (~128-bit security, deterministic, 32B pub key), PKCS8-encoded (RFC5958, generic for any algo). KeyUsage: DigitalSignature only. Default SANs: localhost + 127.0.0.1 + ::1, CN=localhost, Org="Bedrud Open Source". Errors clean up partial files.
+- `GenerateSelfSignedCertWithAlgo(certFile, keyFile, algo, hosts...)` — explicit algo variant.
+- `RenewSelfSignedCert(certFile, keyFile, hosts...)` — calls `detectCertAlgorithm()` to read existing cert's public key type, preserves it. Overwrites atomically via `.new` temp files + `os.Rename`. SANs from `hosts` parameter (not old cert).
+- `RenewSelfSignedCertWithAlgo(certFile, keyFile, algo, hosts...)` — explicit algo override.
+- `detectCertAlgorithm(certFile)` — PEM-decode + parse x509 → maps `PublicKeyAlgorithm` (Ed25519/ECDSA/RSA) to `KeyAlgorithm`. ECDSA → P256, RSA → 2048 (safest subset of supported types).
+- `keyUsageForAlgo(algo)` — RSA → `DigitalSignature | KeyEncipherment` (RFC 3279). Ed25519/ECDSA → `DigitalSignature` only.
+- `generateKey(algo)` — dispatch: `ed25519.GenerateKey`, `ecdsa.GenerateKey(elliptic.P256)`, `rsa.GenerateKey(2048/4096)`. All return `crypto.Signer`.
+- `ValidateTLSCertPair(certFile, keyFile)` — reads, decodes PEM, parses x509, checks expiry/validity range, verifies key match. Returns `(*CertInfo, error)`.
+- `CertInfo` — struct: Subject, Issuer, NotBefore, NotAfter, DaysRemaining, SANs, Status.
 
 ---
 
