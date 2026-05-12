@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"bytes"
 	"os"
 
 	"bedrud/config"
@@ -21,8 +22,12 @@ func NewCertHandler(cfg *config.Config) *CertHandler {
 // GetCert returns the server's TLS certificate in PEM format.
 // Only available when TLS is enabled.
 //
+// This endpoint is intentionally unauthenticated — TLS certificates are
+// public by nature (sent to every client during the TLS handshake).
+// Clients may fetch this endpoint to pin or trust the certificate.
+//
 // @Summary Download server certificate
-// @Description Get the server's TLS certificate in PEM format. Only available when TLS is enabled.
+// @Description Get the server's TLS certificate in PEM format. Only available when TLS is enabled. Public endpoint — certs are transmitted during TLS handshake.
 // @Tags system
 // @Produce application/x-pem-file
 // @Success 200 {file} binary
@@ -44,6 +49,11 @@ func (h *CertHandler) GetCert(c *fiber.Ctx) error {
 		return c.Status(404).JSON(fiber.Map{"error": "Certificate not found"})
 	}
 
+	if !bytes.Contains(pemData, []byte("-----BEGIN CERTIFICATE-----")) {
+		log.Error().Str("path", certPath).Msg("File does not contain a valid PEM certificate")
+		return c.Status(500).JSON(fiber.Map{"error": "Certificate file is invalid"})
+	}
+
 	c.Set("Content-Type", "application/x-pem-file")
 	c.Set("Content-Disposition", "attachment; filename=bedrud-cert.pem")
 	return c.Send(pemData)
@@ -56,7 +66,7 @@ func (h *CertHandler) GetCert(c *fiber.Ctx) error {
 // @Tags admin
 // @Produce json
 // @Success 200 {object} utils.CertInfo
-// @Failure 200 {object} map[string]interface{}
+// @Failure 503 {object} map[string]interface{}
 // @Router /api/admin/cert-info [get]
 func (h *CertHandler) GetCertInfo(c *fiber.Ctx) error {
 	if !h.cfg.Server.EnableTLS || h.cfg.Server.DisableTLS {
@@ -77,7 +87,7 @@ func (h *CertHandler) GetCertInfo(c *fiber.Ctx) error {
 
 	info, err := utils.ValidateTLSCertPair(certFile, keyFile)
 	if err != nil {
-		return c.JSON(fiber.Map{
+		return c.Status(503).JSON(fiber.Map{
 			"enabled": true,
 			"status":  "error",
 			"error":   err.Error(),
@@ -85,13 +95,7 @@ func (h *CertHandler) GetCertInfo(c *fiber.Ctx) error {
 	}
 
 	return c.JSON(fiber.Map{
-		"enabled":       true,
-		"subject":       info.Subject,
-		"issuer":        info.Issuer,
-		"notBefore":     info.NotBefore,
-		"notAfter":      info.NotAfter,
-		"daysRemaining": info.DaysRemaining,
-		"sans":          info.SANs,
-		"status":        info.Status,
+		"enabled": true,
+		"cert":    info,
 	})
 }

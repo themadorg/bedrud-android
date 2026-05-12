@@ -1,9 +1,12 @@
 package utils
 
 import (
+	"crypto"
 	"crypto/ecdsa"
+	"crypto/ed25519"
 	"crypto/elliptic"
 	"crypto/rand"
+	"crypto/rsa"
 	"crypto/tls"
 	"crypto/x509"
 	"crypto/x509/pkix"
@@ -12,31 +15,57 @@ import (
 	"math/big"
 	"net"
 	"os"
+	"path/filepath"
 	"time"
 )
 
 const CertWarnDays = 30
+const SelfSignedCertDays = 1825
 
-// GenerateSelfSignedCert creates a self-signed certificate and key for development.
-// hosts may include IP addresses and DNS names; they are added as SANs.
+type KeyAlgorithm string
+
+const (
+	KeyEd25519  KeyAlgorithm = "ed25519"
+	KeyECDSA256 KeyAlgorithm = "ecdsa256"
+	KeyRSA2048  KeyAlgorithm = "rsa2048"
+	KeyRSA4096  KeyAlgorithm = "rsa4096"
+)
+
 func GenerateSelfSignedCert(certFile, keyFile string, hosts ...string) error {
-	priv, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	return GenerateSelfSignedCertWithAlgo(certFile, keyFile, KeyEd25519, hosts...)
+}
+
+func GenerateSelfSignedCertWithAlgo(certFile, keyFile string, algo KeyAlgorithm, hosts ...string) error {
+	return generateCertToFiles(certFile, keyFile, algo, hosts...)
+}
+
+func RenewSelfSignedCert(certFile, keyFile string, hosts ...string) error {
+	algo, err := detectCertAlgorithm(certFile)
+	if err != nil {
+		return fmt.Errorf("failed to detect cert algorithm: %w", err)
+	}
+	return RenewSelfSignedCertWithAlgo(certFile, keyFile, algo, hosts...)
+}
+
+func RenewSelfSignedCertWithAlgo(certFile, keyFile string, algo KeyAlgorithm, hosts ...string) error {
+	dnsNames, ipAddrs := ParseSanHosts(hosts...)
+	if len(dnsNames) == 0 && len(ipAddrs) == 0 {
+		dnsNames = []string{"localhost"}
+		ipAddrs = []net.IP{net.ParseIP("127.0.0.1"), net.ParseIP("::1")}
+	}
+
+	priv, err := generateKey(algo)
 	if err != nil {
 		return err
 	}
 
 	notBefore := time.Now()
-	notAfter := notBefore.Add(365 * 24 * time.Hour)
+	notAfter := notBefore.Add(time.Duration(SelfSignedCertDays) * 24 * time.Hour)
 
 	serialNumberLimit := new(big.Int).Lsh(big.NewInt(1), 128)
 	serialNumber, err := rand.Int(rand.Reader, serialNumberLimit)
 	if err != nil {
-		return err
-	}
-
-	dnsNames, ipAddrs := ParseSanHosts(hosts...)
-	if len(dnsNames) == 0 && len(ipAddrs) == 0 {
-		dnsNames = []string{"localhost"}
+		return fmt.Errorf("failed to generate serial number: %w", err)
 	}
 
 	commonName := "localhost"
@@ -52,48 +81,215 @@ func GenerateSelfSignedCert(certFile, keyFile string, hosts ...string) error {
 		},
 		NotBefore:             notBefore,
 		NotAfter:              notAfter,
-		KeyUsage:              x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature,
+		KeyUsage:              keyUsageForAlgo(algo),
 		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
 		BasicConstraintsValid: true,
 		DNSNames:              dnsNames,
 		IPAddresses:           ipAddrs,
 	}
 
-	derBytes, err := x509.CreateCertificate(rand.Reader, &template, &template, &priv.PublicKey, priv)
+	derBytes, err := x509.CreateCertificate(rand.Reader, &template, &template, priv.Public(), priv)
+	if err != nil {
+		return fmt.Errorf("failed to create certificate: %w", err)
+	}
+
+	certTmp := certFile + ".new"
+	keyTmp := keyFile + ".new"
+
+	certDir := filepath.Dir(certFile)
+	if err := os.MkdirAll(certDir, 0o755); err != nil {
+		return fmt.Errorf("failed to create cert directory %s: %w", certDir, err)
+	}
+
+	certOut, err := os.OpenFile(certTmp, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o644)
+	if err != nil {
+		return fmt.Errorf("failed to create temp cert file: %w", err)
+	}
+	if err := pem.Encode(certOut, &pem.Block{Type: "CERTIFICATE", Bytes: derBytes}); err != nil {
+		certOut.Close()
+		os.Remove(certTmp)
+		return fmt.Errorf("failed to write certificate PEM: %w", err)
+	}
+	certOut.Close()
+
+	keyOut, err := os.OpenFile(keyTmp, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o600)
+	if err != nil {
+		os.Remove(certTmp)
+		return fmt.Errorf("failed to create temp key file: %w", err)
+	}
+	privBytes, err := x509.MarshalPKCS8PrivateKey(priv)
+	if err != nil {
+		keyOut.Close()
+		os.Remove(certTmp)
+		os.Remove(keyTmp)
+		return fmt.Errorf("failed to marshal private key: %w", err)
+	}
+	if err := pem.Encode(keyOut, &pem.Block{Type: "PRIVATE KEY", Bytes: privBytes}); err != nil {
+		keyOut.Close()
+		os.Remove(certTmp)
+		os.Remove(keyTmp)
+		return fmt.Errorf("failed to write key PEM: %w", err)
+	}
+	keyOut.Close()
+
+	if err := os.Rename(certTmp, certFile); err != nil {
+		os.Remove(certTmp)
+		os.Remove(keyTmp)
+		return fmt.Errorf("failed to rename cert file: %w", err)
+	}
+	if err := os.Rename(keyTmp, keyFile); err != nil {
+		os.Remove(keyTmp)
+		return fmt.Errorf("failed to rename key file: %w", err)
+	}
+
+	return nil
+}
+
+func generateCertToFiles(certFile, keyFile string, algo KeyAlgorithm, hosts ...string) error {
+	priv, err := generateKey(algo)
 	if err != nil {
 		return err
 	}
 
+	notBefore := time.Now()
+	notAfter := notBefore.Add(time.Duration(SelfSignedCertDays) * 24 * time.Hour)
+
+	serialNumberLimit := new(big.Int).Lsh(big.NewInt(1), 128)
+	serialNumber, err := rand.Int(rand.Reader, serialNumberLimit)
+	if err != nil {
+		return fmt.Errorf("failed to generate serial number: %w", err)
+	}
+
+	dnsNames, ipAddrs := ParseSanHosts(hosts...)
+	if len(dnsNames) == 0 && len(ipAddrs) == 0 {
+		dnsNames = []string{"localhost"}
+		ipAddrs = []net.IP{net.ParseIP("127.0.0.1"), net.ParseIP("::1")}
+	}
+
+	commonName := "localhost"
+	if len(dnsNames) > 0 {
+		commonName = dnsNames[0]
+	}
+
+	template := x509.Certificate{
+		SerialNumber: serialNumber,
+		Subject: pkix.Name{
+			Organization: []string{"Bedrud Open Source"},
+			CommonName:   commonName,
+		},
+		NotBefore:             notBefore,
+		NotAfter:              notAfter,
+		KeyUsage:              keyUsageForAlgo(algo),
+		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
+		BasicConstraintsValid: true,
+		DNSNames:              dnsNames,
+		IPAddresses:           ipAddrs,
+	}
+
+	derBytes, err := x509.CreateCertificate(rand.Reader, &template, &template, priv.Public(), priv)
+	if err != nil {
+		return fmt.Errorf("failed to create certificate: %w", err)
+	}
+
 	certOut, err := SafeCreate(certFile, 0o644)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to create cert file: %w", err)
 	}
 	if err := pem.Encode(certOut, &pem.Block{Type: "CERTIFICATE", Bytes: derBytes}); err != nil {
 		certOut.Close()
-		return err
+		os.Remove(certFile)
+		return fmt.Errorf("failed to write certificate PEM: %w", err)
 	}
 	certOut.Close()
 
 	keyOut, err := SafeCreate(keyFile, 0o600)
 	if err != nil {
-		return err
+		os.Remove(certFile)
+		return fmt.Errorf("failed to create key file: %w", err)
 	}
-	privBytes, err := x509.MarshalECPrivateKey(priv)
+	privBytes, err := x509.MarshalPKCS8PrivateKey(priv)
 	if err != nil {
 		keyOut.Close()
-		return err
+		os.Remove(certFile)
+		os.Remove(keyFile)
+		return fmt.Errorf("failed to marshal private key: %w", err)
 	}
-	if err := pem.Encode(keyOut, &pem.Block{Type: "EC PRIVATE KEY", Bytes: privBytes}); err != nil {
+	if err := pem.Encode(keyOut, &pem.Block{Type: "PRIVATE KEY", Bytes: privBytes}); err != nil {
 		keyOut.Close()
-		return err
+		os.Remove(certFile)
+		os.Remove(keyFile)
+		return fmt.Errorf("failed to write key PEM: %w", err)
 	}
 	keyOut.Close()
 
 	return nil
 }
 
-// ParseSanHosts splits a list of hostnames into DNS names and IP addresses
-// suitable for use as Subject Alternative Names on a certificate.
+func generateKey(algo KeyAlgorithm) (crypto.Signer, error) {
+	switch algo {
+	case KeyEd25519:
+		_, priv, err := ed25519.GenerateKey(rand.Reader)
+		if err != nil {
+			return nil, fmt.Errorf("failed to generate Ed25519 key: %w", err)
+		}
+		return priv, nil
+	case KeyECDSA256:
+		priv, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+		if err != nil {
+			return nil, fmt.Errorf("failed to generate ECDSA P256 key: %w", err)
+		}
+		return priv, nil
+	case KeyRSA2048:
+		priv, err := rsa.GenerateKey(rand.Reader, 2048)
+		if err != nil {
+			return nil, fmt.Errorf("failed to generate RSA 2048 key: %w", err)
+		}
+		return priv, nil
+	case KeyRSA4096:
+		priv, err := rsa.GenerateKey(rand.Reader, 4096)
+		if err != nil {
+			return nil, fmt.Errorf("failed to generate RSA 4096 key: %w", err)
+		}
+		return priv, nil
+	default:
+		return nil, fmt.Errorf("unsupported key algorithm: %s", algo)
+	}
+}
+
+func keyUsageForAlgo(algo KeyAlgorithm) x509.KeyUsage {
+	switch algo {
+	case KeyRSA2048, KeyRSA4096:
+		return x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment
+	default:
+		return x509.KeyUsageDigitalSignature
+	}
+}
+
+func detectCertAlgorithm(certFile string) (KeyAlgorithm, error) {
+	data, err := os.ReadFile(certFile)
+	if err != nil {
+		return "", fmt.Errorf("cannot read cert file: %w", err)
+	}
+	block, _ := pem.Decode(data)
+	if block == nil {
+		return "", fmt.Errorf("no PEM data in cert file")
+	}
+	cert, err := x509.ParseCertificate(block.Bytes)
+	if err != nil {
+		return "", fmt.Errorf("cannot parse certificate: %w", err)
+	}
+	switch cert.PublicKeyAlgorithm {
+	case x509.Ed25519:
+		return KeyEd25519, nil
+	case x509.ECDSA:
+		return KeyECDSA256, nil
+	case x509.RSA:
+		return KeyRSA2048, nil
+	default:
+		return "", fmt.Errorf("unsupported cert key algorithm: %v", cert.PublicKeyAlgorithm)
+	}
+}
+
 func ParseSanHosts(hosts ...string) (dnsNames []string, ipAddrs []net.IP) {
 	for _, host := range hosts {
 		if ip := net.ParseIP(host); ip != nil {
@@ -168,7 +364,7 @@ func ValidateTLSCertPair(certFile, keyFile string) (*CertInfo, error) {
 		return nil, fmt.Errorf("certificate is not valid until %s", x509Cert.NotBefore.Format(time.RFC3339))
 	}
 
-	daysRemaining := int(time.Until(x509Cert.NotAfter).Hours() / 24)
+	daysRemaining := int((time.Until(x509Cert.NotAfter).Hours() + 23) / 24)
 
 	var sans []string
 	sans = append(sans, x509Cert.DNSNames...)
