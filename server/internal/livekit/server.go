@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/rs/zerolog/log"
+	"gopkg.in/yaml.v3"
 )
 
 // ExportBinary writes the embedded LiveKit server binary to the specified path
@@ -111,8 +112,37 @@ func RunLiveKit(configPath string) error {
 }
 
 // StartInternalServer starts a LiveKit server using the provided config file
+func generateTempConfig(apiKey, apiSecret string, port int, certFile, keyFile string) (string, error) {
+	cfg := ConfigYAML{}
+	cfg.Port = fmt.Sprintf("%d", port)
+	cfg.Keys = map[string]string{apiKey: apiSecret}
+	cfg.RTC.UseExternalIP = true
+	cfg.TURN.Enabled = true
+	cfg.TURN.TLSPort = 5349
+	cfg.TURN.CertFile = certFile
+	cfg.TURN.KeyFile = keyFile
+
+	data, err := yaml.Marshal(&cfg)
+	if err != nil {
+		return "", fmt.Errorf("failed to marshal temp LiveKit config: %w", err)
+	}
+
+	tmpFile, err := os.CreateTemp("", "bedrud-livekit-*.yaml")
+	if err != nil {
+		return "", fmt.Errorf("failed to create temp LiveKit config: %w", err)
+	}
+
+	if _, err := tmpFile.Write(data); err != nil {
+		tmpFile.Close()
+		os.Remove(tmpFile.Name())
+		return "", fmt.Errorf("failed to write temp LiveKit config: %w", err)
+	}
+	tmpFile.Close()
+
+	return tmpFile.Name(), nil
+}
+
 func StartInternalServer(ctx context.Context, apiKey, apiSecret string, port int, certFile, keyFile, externalConfigPath string) error {
-	// Skip if we are running in a mode where external LiveKit is preferred (managed by systemd)
 	if os.Getenv("LIVEKIT_MANAGED") == "true" {
 		log.Info().Msg("➜ Skipping internal LiveKit management (managed by system service)")
 		return nil
@@ -121,8 +151,21 @@ func StartInternalServer(ctx context.Context, apiKey, apiSecret string, port int
 	lkPath := resolveLiveKitPath()
 
 	args := []string{}
-	if externalConfigPath != "" {
-		args = append(args, "--config", externalConfigPath)
+	configPath := externalConfigPath
+	cleanupTemp := ""
+
+	if configPath == "" && certFile != "" && keyFile != "" {
+		tmpPath, err := generateTempConfig(apiKey, apiSecret, port, certFile, keyFile)
+		if err != nil {
+			log.Warn().Err(err).Msg("Failed to generate temp LiveKit config, falling back to inline args")
+		} else {
+			configPath = tmpPath
+			cleanupTemp = tmpPath
+		}
+	}
+
+	if configPath != "" {
+		args = append(args, "--config", configPath)
 	} else {
 		args = append(args, "--port", fmt.Sprintf("%d", port), "--keys", fmt.Sprintf("%s: %s", apiKey, apiSecret))
 	}
@@ -135,6 +178,9 @@ func StartInternalServer(ctx context.Context, apiKey, apiSecret string, port int
 		log.Info().Str("path", lkPath).Msg("➜ Starting internal LiveKit process")
 		if err := cmd.Run(); err != nil {
 			log.Error().Err(err).Msg("LiveKit process exited")
+		}
+		if cleanupTemp != "" {
+			os.Remove(cleanupTemp)
 		}
 	}()
 
