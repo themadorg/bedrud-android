@@ -339,6 +339,7 @@ func run() error {
 	// Initialize handlers
 	usersHandler := handlers.NewUsersHandler(userRepo, roomRepo)
 	adminHandler := handlers.NewAdminHandler(settingsRepo, inviteTokenRepo)
+	certHandler := handlers.NewCertHandler(cfg)
 
 	// Admin routes
 	adminGroup := api.Group("/admin",
@@ -359,11 +360,13 @@ func run() error {
 	adminGroup.Post("/rooms/:roomId/participants/:identity/kick", roomHandler.AdminKickParticipant)
 	adminGroup.Post("/rooms/:roomId/participants/:identity/mute", roomHandler.AdminMuteParticipant)
 	api.Get("/auth/settings", adminHandler.GetPublicSettings)
+	api.Get("/cert", certHandler.GetCert)
 	adminGroup.Get("/settings", adminHandler.GetSettings)
 	adminGroup.Put("/settings", adminHandler.UpdateSettings)
 	adminGroup.Get("/invite-tokens", adminHandler.ListInviteTokens)
 	adminGroup.Post("/invite-tokens", adminHandler.CreateInviteToken)
 	adminGroup.Delete("/invite-tokens/:id", adminHandler.DeleteInviteToken)
+	adminGroup.Get("/cert-info", certHandler.GetCertInfo)
 
 	// ------------------------------
 	// Serve static files
