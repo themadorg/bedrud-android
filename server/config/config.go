@@ -11,13 +11,14 @@ import (
 )
 
 type Config struct {
-	Server   ServerConfig   `yaml:"server"`
-	Database DatabaseConfig `yaml:"database"`
-	LiveKit  LiveKitConfig  `yaml:"livekit"`
-	Auth     AuthConfig     `yaml:"auth"`
-	Logger   LoggerConfig   `yaml:"logger"`
-	Cors     CorsConfig     `yaml:"cors"`
-	Chat     ChatConfig     `yaml:"chat"`
+	Server    ServerConfig    `yaml:"server"`
+	Database  DatabaseConfig  `yaml:"database"`
+	LiveKit   LiveKitConfig   `yaml:"livekit"`
+	Auth      AuthConfig      `yaml:"auth"`
+	Logger    LoggerConfig    `yaml:"logger"`
+	Cors      CorsConfig      `yaml:"cors"`
+	Chat      ChatConfig      `yaml:"chat"`
+	RateLimit RateLimitConfig `yaml:"rateLimit"`
 }
 
 type ServerConfig struct {
@@ -38,6 +39,11 @@ type ServerConfig struct {
 	// BehindProxy enables trusted-proxy mode. Set to true when running
 	// behind Cloudflare, nginx, or any reverse proxy that terminates TLS.
 	BehindProxy bool `yaml:"behindProxy"`
+	// CertAlgorithm selects the key algorithm for self-signed certificate generation.
+	// Supported: "ed25519" (default), "ecdsa256", "rsa2048", "rsa4096".
+	// Renewal auto-detects and preserves the existing cert's algorithm.
+	// Env: SERVER_CERT_ALGORITHM
+	CertAlgorithm string `yaml:"certAlgorithm" env:"SERVER_CERT_ALGORITHM"`
 }
 
 type DatabaseConfig struct {
@@ -128,6 +134,15 @@ type ChatUploadS3Config struct {
 	PublicBaseURL string `yaml:"publicBaseUrl"`
 }
 
+// RateLimitConfig controls rate limiting for auth and guest endpoints.
+// Nil fields = use defaults. Set to 0 to disable.
+type RateLimitConfig struct {
+	AuthMaxRequests  *int `yaml:"authMaxRequests"`
+	AuthWindowSecs   *int `yaml:"authWindowSecs"`
+	GuestMaxRequests *int `yaml:"guestMaxRequests"`
+	GuestWindowSecs  *int `yaml:"guestWindowSecs"`
+}
+
 var (
 	config *Config
 	once   sync.Once
@@ -197,6 +212,9 @@ func Load(configPath string) (*Config, error) {
 		if envProxyHeader := os.Getenv("SERVER_PROXY_HEADER"); envProxyHeader != "" {
 			config.Server.ProxyHeader = envProxyHeader
 		}
+		if envCertAlgorithm := os.Getenv("SERVER_CERT_ALGORITHM"); envCertAlgorithm != "" {
+			config.Server.CertAlgorithm = envCertAlgorithm
+		}
 		if dbHost := os.Getenv("DB_HOST"); dbHost != "" {
 			config.Database.Host = dbHost
 		}
@@ -230,6 +248,9 @@ func Load(configPath string) (*Config, error) {
 		if livekitApiSecret := os.Getenv("LIVEKIT_API_SECRET"); livekitApiSecret != "" {
 			config.LiveKit.APISecret = livekitApiSecret
 		}
+		if livekitConfigPath := os.Getenv("LIVEKIT_CONFIG_PATH"); livekitConfigPath != "" {
+			config.LiveKit.ConfigPath = livekitConfigPath
+		}
 		if jwtSecret := os.Getenv("JWT_SECRET"); jwtSecret != "" {
 			config.Auth.JWTSecret = jwtSecret
 		}
@@ -258,6 +279,28 @@ func Load(configPath string) (*Config, error) {
 		if corsMaxAge := os.Getenv("CORS_MAX_AGE"); corsMaxAge != "" {
 			if i, err := strconv.Atoi(corsMaxAge); err == nil {
 				config.Cors.MaxAge = i
+			}
+		}
+
+		// Rate limit environment variable overrides
+		if v := os.Getenv("RATELIMIT_AUTH_MAX"); v != "" {
+			if i, err := strconv.Atoi(v); err == nil {
+				config.RateLimit.AuthMaxRequests = &i
+			}
+		}
+		if v := os.Getenv("RATELIMIT_AUTH_WINDOW"); v != "" {
+			if i, err := strconv.Atoi(v); err == nil {
+				config.RateLimit.AuthWindowSecs = &i
+			}
+		}
+		if v := os.Getenv("RATELIMIT_GUEST_MAX"); v != "" {
+			if i, err := strconv.Atoi(v); err == nil {
+				config.RateLimit.GuestMaxRequests = &i
+			}
+		}
+		if v := os.Getenv("RATELIMIT_GUEST_WINDOW"); v != "" {
+			if i, err := strconv.Atoi(v); err == nil {
+				config.RateLimit.GuestWindowSecs = &i
 			}
 		}
 	})

@@ -6,6 +6,11 @@ server:
   host: "0.0.0.0"
   readTimeout: 30
   writeTimeout: 30
+  # Self-signed cert key algorithm: "ed25519" (default, recommended),
+  # "ecdsa256", "rsa2048", or "rsa4096". Only applies to cert generation;
+  # renewal auto-detects and preserves the existing cert's algorithm.
+  # Env: SERVER_CERT_ALGORITHM
+  certAlgorithm: "ed25519"
 
 database:
   type: "sqlite"
@@ -20,6 +25,8 @@ livekit:
   internalHost: "http://127.0.0.1:7880"
   apiKey: "devkey"
   apiSecret: "CHANGE_ME_LIVEKIT_SECRET"
+  # configPath: "/etc/bedrud/livekit.yaml"  # External LiveKit YAML. Env: LIVEKIT_CONFIG_PATH
+  # When TLS is enabled (enableTLS: true), TURN/TLS is auto-configured using server certs.
 
 auth:
   jwtSecret: "CHANGE_ME_32_CHAR_RANDOM_STRING"
@@ -38,6 +45,12 @@ auth:
     clientId: ""
     clientSecret: ""
     redirectUrl: "http://localhost:8090/api/auth/twitter/callback"
+
+rateLimit:
+  authMaxRequests: 10    # Max auth requests per window (login, register, refresh, passkey). 0 = disable
+  authWindowSecs: 60     # Auth rate limit window in seconds
+  guestMaxRequests: 5    # Max guest join requests per window. 0 = disable
+  guestWindowSecs: 60    # Guest rate limit window in seconds
 
 cors:
   allowedOrigins: "http://localhost:8090,http://localhost:3000,http://localhost:5173"
