@@ -75,6 +75,12 @@ cors:
   allowedHeaders: "Origin, Content-Type, Accept, Authorization"
   allowedMethods: "GET, POST, PUT, DELETE, OPTIONS"
   allowCredentials: true
+
+rateLimit:
+  authMaxRequests: 10       # Max auth requests per window (login, register, refresh, passkey). 0 = disable
+  authWindowSecs: 60         # Auth rate limit window in seconds
+  guestMaxRequests: 5        # Max guest join requests per window. 0 = disable
+  guestWindowSecs: 60        # Guest rate limit window in seconds
 ```
 
 ### 关键设置
@@ -98,6 +104,15 @@ database:
 #### CORS
 
 `allowedOrigins` 字符串（逗号分隔）必须包含前端服务的 URL。开发环境中为 `http://localhost:3000`。生产环境中设置为你的域名（如 `https://meet.example.com`）。
+
+#### 速率限制
+
+速率限制保护认证端点免受暴力破解和拒绝服务攻击。两个类别：
+
+- **认证端点**（登录、注册、刷新、Passkey登录/注册）— 默认：每IP每60秒10次请求
+- **访客加入** — 默认：每IP每60秒5次请求
+
+省略 `rateLimit` 部分以保持默认值。设置 `authMaxRequests: 0` 或 `guestMaxRequests: 0` 以禁用。
 
 ---
 
@@ -217,6 +232,10 @@ export LIVEKIT_API_SECRET=prodsecret
 | `CORS_ALLOW_CREDENTIALS` | `cors.allowCredentials` | 允许凭证（`true`/`false`） |
 | `CORS_EXPOSE_HEADERS` | `cors.exposeHeaders` | 暴露给浏览器的头 |
 | `CORS_MAX_AGE` | `cors.maxAge` | 预检缓存时长（秒） |
+| `RATELIMIT_AUTH_MAX` | `rateLimit.authMaxRequests` | 每个窗口的最大认证请求数 |
+| `RATELIMIT_AUTH_WINDOW` | `rateLimit.authWindowSecs` | 认证速率限制窗口（秒） |
+| `RATELIMIT_GUEST_MAX` | `rateLimit.guestMaxRequests` | 每个窗口的最大访客加入请求数 |
+| `RATELIMIT_GUEST_WINDOW` | `rateLimit.guestWindowSecs` | 访客速率限制窗口（秒） |
 
 ---
 

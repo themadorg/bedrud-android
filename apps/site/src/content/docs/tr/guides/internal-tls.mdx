@@ -31,6 +31,45 @@ sudo bedrud install --tls --ip YOUR_SERVER_IP --domain your.domain.com
 Yükleyicinin dahili oluşturma özelliği iş akışınıza uymuyorsa, openssl komutlarına `-addext` bayraklarını ekleyin:
 
 ```bash
+#### Ed25519 (matches Bedrud's built-in generation, recommended)
+
+```bash
+openssl genpkey -algorithm ed25519 -out ca.key
+openssl req -new -x509 -days 3650 -key ca.key -out ca.crt \
+  -subj "/CN=Bedrud Internal CA"
+
+openssl genpkey -algorithm ed25519 -out server.key
+openssl req -new -key server.key -out server.csr \
+  -subj "/CN=<your-server-ip-or-hostname>" \
+  -addext "subjectAltName=IP:YOUR_SERVER_IP"
+openssl x509 -req -days 1825 -in server.csr \
+  -CA ca.crt -CAkey ca.key -CAcreateserial -out server.crt \
+  -addext "subjectAltName=IP:YOUR_SERVER_IP"
+
+sudo ./bedrud install --tls --cert server.crt --key server.key --ip YOUR_SERVER_IP
+```
+
+#### ECDSA P256 (alternative)
+
+```bash
+openssl ecparam -genkey -name prime256v1 -out ca.key
+openssl req -new -x509 -days 3650 -key ca.key -out ca.crt \
+  -subj "/CN=Bedrud Internal CA"
+
+openssl ecparam -genkey -name prime256v1 -out server.key
+openssl req -new -key server.key -out server.csr \
+  -subj "/CN=<your-server-ip-or-hostname>" \
+  -addext "subjectAltName=IP:YOUR_SERVER_IP"
+openssl x509 -req -days 1825 -in server.csr \
+  -CA ca.crt -CAkey ca.key -CAcreateserial -out server.crt \
+  -addext "subjectAltName=IP:YOUR_SERVER_IP"
+
+sudo ./bedrud install --tls --cert server.crt --key server.key --ip YOUR_SERVER_IP
+```
+
+#### RSA (legacy compatibility, larger keys)
+
+```bash
 openssl genrsa -out ca.key 4096
 openssl req -new -x509 -days 3650 -key ca.key -out ca.crt \
   -subj "/CN=Bedrud Internal CA"
@@ -85,8 +124,8 @@ Tarayıcıları yeniden başlatın, ardından `https://YOUR_SERVER_IP` adresini 
 |--------------------------------------------|---------------------------------------------------------------|
 | Tarayıcı hâlâ sertifika güvenilir değil uyarısı veriyor | Tarayıcı önbelleğini temizleyin, CA kurulumundan sonra tarayıcıyı yeniden başlatın |
 | Kamera/mikrofon engellendi                 | CA'nın ara sertifika değil, Güvenilir Kök CA'lar içinde olduğunu doğrulayın |
-| Sertifikanın süresi dolmuş                 | Daha uzun `-days` değeriyle yeniden oluşturun                 |
-| CN uyuşmazlığı | Sunucu sertifikası CN'sinin URL'deki IP veya ana bilgisayar adıyla eşleştiğinden emin olun |
+| Sertifikanın süresi dolmuş                 | `sudo bedrud cert renew` komutunu çalıştırarak yeniden oluşturun (her 24 saatte bir 09:00'da otomatik yenileme) |
+| CN uyuşmazlığı | Modern tarayıcılar CN alanını yok sayar — SAN yetkilidir. Yükleyicinin dahili sertifika oluşturmasını kullanın (önerilen) veya openssl komutuna `-addext 'subjectAltName=...'` ekleyin |
 | Eksik SANs | Modern tarayıcılar CN alanını yok sayar. Yükleyicinin dahili sertifika oluşturmasını kullanın (önerilen) veya openssl komutuna `-addext 'subjectAltName=...'` ekleyin |
 
 ---

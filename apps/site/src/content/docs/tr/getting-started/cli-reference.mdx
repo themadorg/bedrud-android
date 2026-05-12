@@ -206,6 +206,47 @@ bedrud user [--config <yol>] demote --email <e-posta>
 
 ---
 
+### `cert`
+
+TLS sertifikalarını yönetin. Yalnızca kendi imzalı sertifikalar kullanılırken geçerlidir (`bedrud install --self-signed` tarafından oluşturulur).
+
+```bash
+bedrud cert [--config <path>] <subcommand>
+```
+
+| Genel Bayrak | Varsayılan                  | Açıklama                               |
+|--------------|-----------------------------|----------------------------------------|
+| `--config`   | `/etc/bedrud/config.yaml`   | Bedrud yapılandırma dosyasının yolu    |
+| `--algo`     | `""`                         | Anahtar algoritması: ed25519, ecdsa256, rsa2048, rsa4096 (varsayılan: mevcut sertifikadan algıla) |
+
+#### `renew`
+
+Kendi imzalı TLS sertifikasını elle yenileyin. Mevcut sertifikanın anahtar algoritmasını algılar ve aynı türle yeniden oluşturur (varsayılan: Ed25519). Yeni sertifika 1825 gün (~5 yıl) geçerlidir.
+
+```bash
+bedrud cert renew [--config <path>]
+```
+
+Sunucu ayrıca, sürenin dolmasına 30 günden az kaldığında, yerleşik zamanlayıcısı aracılığıyla sertifikayı günlük olarak otomatik yeniler. Bu komut, manuel veya olağan dışı yenileme içindir.
+
+**SAN'ler:** Sunucu yapılandırmasından türetilir — `domain` (ayarlanmışsa), artı `localhost`, `127.0.0.1` ve `::1`.
+
+**Uygulama:** `server/internal/utils/tls.go` (`RenewSelfSignedCert`)
+
+#### `info`
+
+TLS sertifika meta verilerini stdout'a yazdırın.
+
+```bash
+bedrud cert info [--config <path>]
+```
+
+**Çıktı alanları:** subject, issuer, notBefore, notAfter, daysRemaining, status (valid/expiring/error), SAN'ler.
+
+**Uygulama:** `server/internal/utils/tls.go` (`ValidateTLSCertPair`)
+
+---
+
 ### `help`
 
 Tüm komutlar ve bayraklarla kullanım mesajını gösterir.

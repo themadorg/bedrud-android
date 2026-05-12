@@ -31,6 +31,45 @@ sudo bedrud install --tls --ip YOUR_SERVER_IP --domain your.domain.com
 إذا كان الإنشاء المدمج للمثبت لا يتناسب مع سير عملك، أضف علامات `-addext` إلى أوامر openssl:
 
 ```bash
+#### Ed25519 (matches Bedrud's built-in generation, recommended)
+
+```bash
+openssl genpkey -algorithm ed25519 -out ca.key
+openssl req -new -x509 -days 3650 -key ca.key -out ca.crt \
+  -subj "/CN=Bedrud Internal CA"
+
+openssl genpkey -algorithm ed25519 -out server.key
+openssl req -new -key server.key -out server.csr \
+  -subj "/CN=<your-server-ip-or-hostname>" \
+  -addext "subjectAltName=IP:YOUR_SERVER_IP"
+openssl x509 -req -days 1825 -in server.csr \
+  -CA ca.crt -CAkey ca.key -CAcreateserial -out server.crt \
+  -addext "subjectAltName=IP:YOUR_SERVER_IP"
+
+sudo ./bedrud install --tls --cert server.crt --key server.key --ip YOUR_SERVER_IP
+```
+
+#### ECDSA P256 (alternative)
+
+```bash
+openssl ecparam -genkey -name prime256v1 -out ca.key
+openssl req -new -x509 -days 3650 -key ca.key -out ca.crt \
+  -subj "/CN=Bedrud Internal CA"
+
+openssl ecparam -genkey -name prime256v1 -out server.key
+openssl req -new -key server.key -out server.csr \
+  -subj "/CN=<your-server-ip-or-hostname>" \
+  -addext "subjectAltName=IP:YOUR_SERVER_IP"
+openssl x509 -req -days 1825 -in server.csr \
+  -CA ca.crt -CAkey ca.key -CAcreateserial -out server.crt \
+  -addext "subjectAltName=IP:YOUR_SERVER_IP"
+
+sudo ./bedrud install --tls --cert server.crt --key server.key --ip YOUR_SERVER_IP
+```
+
+#### RSA (legacy compatibility, larger keys)
+
+```bash
 openssl genrsa -out ca.key 4096
 openssl req -new -x509 -days 3650 -key ca.key -out ca.crt \
   -subj "/CN=Bedrud Internal CA"
@@ -85,8 +124,8 @@ sudo update-ca-trust
 |---------|-----|
 | المتصفح لا يزال يحذر من عدم ثقة الشهادة | امسح ذاكرة التخزين المؤقت للمتصفح، أعد التشغيل بعد تثبيت CA |
 | الكاميرا/الميكروفون محظوران | تحقق أن CA في Trusted Root CAs، وليس وسيطًا |
-| الشهادة منتهية الصلاحية | أعد التوليد بقيمة `-days` أطول |
-| عدم تطابق CN | تأكد أن CN في شهادة الخادم يطابق IP أو اسم المضيف في URL |
+| الشهادة منتهية الصلاحية | شغل `sudo bedrud cert renew` لإعادة التوليد (تجديد تلقائي كل 24 ساعة عند 09:00) |
+| عدم تطابق CN | المتصفحات الحديثة تتجاهل حقل CN — SAN هو المرجع. استخدم إنشاء الشهادات المدمج في المثبت (موصى به) أو أضف `-addext 'subjectAltName=...'` إلى أمر openssl |
 | SANs مفقودة | المتصفحات الحديثة تتجاهل حقل CN. استخدم إنشاء الشهادات المدمج في المثبت (موصى به) أو أضف `-addext 'subjectAltName=...'` إلى أمر openssl |
 
 ---

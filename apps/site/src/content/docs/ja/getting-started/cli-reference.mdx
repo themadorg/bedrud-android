@@ -206,6 +206,47 @@ bedrud user [--config <path>] demote --email <email>
 
 ---
 
+### `cert`
+
+TLS証明書を管理します。自己署名証明書（`bedrud install --self-signed`によって生成）を使用する場合に関連します。
+
+```bash
+bedrud cert [--config <path>] <subcommand>
+```
+
+| グローバルフラグ | デフォルト                  | 説明                                |
+|------------------|-----------------------------|-------------------------------------|
+| `--config`       | `/etc/bedrud/config.yaml`   | Bedrud設定ファイルへのパス          |
+| `--algo`         | `""`                         | 鍵アルゴリズム: ed25519, ecdsa256, rsa2048, rsa4096 (デフォルト: 既存の証明書から検出) |
+
+#### `renew`
+
+自己署名TLS証明書を手動で更新します。既存の証明書の鍵アルゴリズムを検出し、同じタイプで再生成します（デフォルト: Ed25519）。新しい証明書は1825日間（約5年）有効です。
+
+```bash
+bedrud cert renew [--config <path>]
+```
+
+サーバーは有効期限が30日未満になると、内蔵スケジューラーを介して毎日自動的に証明書を更新します。このコマンドは手動または臨時の更新用です。
+
+**SANs:** サーバー設定から導出されます — `domain`（設定されている場合）、および`localhost`、`127.0.0.1`、`::1`。
+
+**実装:** `server/internal/utils/tls.go` (`RenewSelfSignedCert`)
+
+#### `info`
+
+TLS証明書のメタデータをstdoutに出力します。
+
+```bash
+bedrud cert info [--config <path>]
+```
+
+**出力フィールド:** subject, issuer, notBefore, notAfter, daysRemaining, status (valid/expiring/error), SANs。
+
+**実装:** `server/internal/utils/tls.go` (`ValidateTLSCertPair`)
+
+---
+
 ### `help`
 
 すべてのコマンドとフラグを含む使用方法メッセージを表示します。

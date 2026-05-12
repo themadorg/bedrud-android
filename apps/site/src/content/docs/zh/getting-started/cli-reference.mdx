@@ -206,6 +206,47 @@ bedrud user [--config <path>] demote --email <email>
 
 ---
 
+### `cert`
+
+管理 TLS 证书。仅在使用自签名证书（由 `bedrud install --self-signed` 生成）时相关。
+
+```bash
+bedrud cert [--config <path>] <subcommand>
+```
+
+| 全局标志 | 默认值                     | 描述                         |
+|----------|----------------------------|------------------------------|
+| `--config` | `/etc/bedrud/config.yaml` | Bedrud 配置文件路径          |
+| `--algo`   | `""`                       | 密钥算法: ed25519, ecdsa256, rsa2048, rsa4096（默认：从现有证书检测） |
+
+#### `renew`
+
+强制续订自签名 TLS 证书。检测现有证书的密钥算法并使用相同类型重新生成（默认：Ed25519）。新证书有效期为 1825 天（约 5 年）。
+
+```bash
+bedrud cert renew [--config <path>]
+```
+
+服务器还会在证书到期前 30 天内通过内置调度器每天自动续订证书。此命令用于手动或计划外续订。
+
+**SANs：** 从服务器配置中派生 — `domain`（如果已设置），以及 `localhost`、`127.0.0.1` 和 `::1`。
+
+**实现：** `server/internal/utils/tls.go`（`RenewSelfSignedCert`）
+
+#### `info`
+
+将 TLS 证书元数据输出到标准输出。
+
+```bash
+bedrud cert info [--config <path>]
+```
+
+**输出字段：** subject、issuer、notBefore、notAfter、daysRemaining、status（valid/expiring/error）、SANs。
+
+**实现：** `server/internal/utils/tls.go`（`ValidateTLSCertPair`）
+
+---
+
 ### `help`
 
 显示包含所有命令和标志的使用说明。

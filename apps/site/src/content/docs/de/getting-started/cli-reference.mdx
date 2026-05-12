@@ -206,6 +206,47 @@ bedrud user [--config <path>] demote --email <email>
 
 ---
 
+### `cert`
+
+TLS-Zertifikate verwalten. Nur relevant bei selbstsignierten Zertifikaten (erzeugt durch `bedrud install --self-signed`).
+
+```bash
+bedrud cert [--config <path>] <subcommand>
+```
+
+| Globales Flag | Standard                   | Beschreibung                                   |
+|---------------|----------------------------|------------------------------------------------|
+| `--config`    | `/etc/bedrud/config.yaml`  | Pfad zur Bedrud-Konfigurationsdatei            |
+| `--algo`      | `""`                        | Schlüsselalgorithmus: ed25519, ecdsa256, rsa2048, rsa4096 (Standard: aus vorhandenem Zertifikat erkennen) |
+
+#### `renew`
+
+Selbstsigniertes TLS-Zertifikat manuell erneuern. Erkennt den Schlüsselalgorithmus des vorhandenen Zertifikats und generiert mit demselben Typ neu (Standard: Ed25519). Das neue Zertifikat ist 1825 Tage (~5 Jahre) gültig.
+
+```bash
+bedrud cert renew [--config <path>]
+```
+
+Der Server erneuert das Zertifikat automatisch täglich über den integrierten Scheduler, wenn weniger als 30 Tage verbleiben. Dieser Befehl ist für manuelle oder außerplanmäßige Erneuerungen gedacht.
+
+**SANs:** Werden aus der Serverkonfiguration abgeleitet — `domain` (falls gesetzt), sowie `localhost`, `127.0.0.1` und `::1`.
+
+**Implementierung:** `server/internal/utils/tls.go` (`RenewSelfSignedCert`)
+
+#### `info`
+
+TLS-Zertifikat-Metadaten auf stdout ausgeben.
+
+```bash
+bedrud cert info [--config <path>]
+```
+
+**Ausgabefelder:** subject, issuer, notBefore, notAfter, daysRemaining, status (valid/expiring/error), SANs.
+
+**Implementierung:** `server/internal/utils/tls.go` (`ValidateTLSCertPair`)
+
+---
+
 ### `help`
 
 Zeigt die Verwendungsnachricht mit allen Befehlen und Flags an.

@@ -31,6 +31,45 @@ sudo bedrud install --tls --ip VOTRE_ADRESSE_IP_SERVEUR --domain your.domain.com
 Si la génération intégrée de l'installateur ne correspond pas à votre flux de travail, ajoutez les flags `-addext` aux commandes openssl :
 
 ```bash
+#### Ed25519 (matches Bedrud's built-in generation, recommended)
+
+```bash
+openssl genpkey -algorithm ed25519 -out ca.key
+openssl req -new -x509 -days 3650 -key ca.key -out ca.crt \
+  -subj "/CN=Bedrud Internal CA"
+
+openssl genpkey -algorithm ed25519 -out server.key
+openssl req -new -key server.key -out server.csr \
+  -subj "/CN=<votre-adresse-ip-ou-nom-d'hôte>" \
+  -addext "subjectAltName=IP:VOTRE_ADRESSE_IP_SERVEUR"
+openssl x509 -req -days 1825 -in server.csr \
+  -CA ca.crt -CAkey ca.key -CAcreateserial -out server.crt \
+  -addext "subjectAltName=IP:VOTRE_ADRESSE_IP_SERVEUR"
+
+sudo ./bedrud install --tls --cert server.crt --key server.key --ip VOTRE_ADRESSE_IP_SERVEUR
+```
+
+#### ECDSA P256 (alternative)
+
+```bash
+openssl ecparam -genkey -name prime256v1 -out ca.key
+openssl req -new -x509 -days 3650 -key ca.key -out ca.crt \
+  -subj "/CN=Bedrud Internal CA"
+
+openssl ecparam -genkey -name prime256v1 -out server.key
+openssl req -new -key server.key -out server.csr \
+  -subj "/CN=<votre-adresse-ip-ou-nom-d'hôte>" \
+  -addext "subjectAltName=IP:VOTRE_ADRESSE_IP_SERVEUR"
+openssl x509 -req -days 1825 -in server.csr \
+  -CA ca.crt -CAkey ca.key -CAcreateserial -out server.crt \
+  -addext "subjectAltName=IP:VOTRE_ADRESSE_IP_SERVEUR"
+
+sudo ./bedrud install --tls --cert server.crt --key server.key --ip VOTRE_ADRESSE_IP_SERVEUR
+```
+
+#### RSA (legacy compatibility, larger keys)
+
+```bash
 openssl genrsa -out ca.key 4096
 openssl req -new -x509 -days 3650 -key ca.key -out ca.crt \
   -subj "/CN=Bedrud Internal CA"
@@ -85,8 +124,8 @@ Redémarrez les navigateurs, puis ouvrez `https://VOTRE_ADRESSE_IP_SERVEUR` (rem
 |---------|----------|
 | Le navigateur avertit toujours que le certificat n'est pas de confiance | Videz le cache du navigateur, redémarrez le navigateur après l'installation de l'AC |
 | Caméra/micro bloqués | Vérifiez que l'AC est dans les AC racines de confiance, pas intermédiaire |
-| Certificat expiré | Régénérez avec une valeur `-days` plus longue |
-| Inadéquation CN | Assurez-vous que le CN du certificat de serveur correspond à l'IP ou au nom d'hôte dans l'URL |
+| Certificat expiré | Exécutez `sudo bedrud cert renew` pour régénérer (renouvellement automatique toutes les 24h à 09:00) |
+| Inadéquation CN | Les navigateurs modernes ignorent le champ CN — SAN est l'autorité. Utilisez la génération intégrée de certificats de l'installateur (recommandé) ou ajoutez `-addext 'subjectAltName=...'` à la commande openssl |
 | SANs manquants | Les navigateurs modernes ignorent le champ CN. Utilisez la génération intégrée de certificats de l'installateur (recommandé) ou ajoutez `-addext 'subjectAltName=...'` à la commande openssl |
 
 ---

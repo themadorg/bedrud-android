@@ -75,6 +75,12 @@ cors:
   allowedHeaders: "Origin, Content-Type, Accept, Authorization"
   allowedMethods: "GET, POST, PUT, DELETE, OPTIONS"
   allowCredentials: true
+
+rateLimit:
+  authMaxRequests: 10       # Max auth requests per window (login, register, refresh, passkey). 0 = disable
+  authWindowSecs: 60         # Auth rate limit window in seconds
+  guestMaxRequests: 5        # Max guest join requests per window. 0 = disable
+  guestWindowSecs: 60        # Guest rate limit window in seconds
 ```
 
 ### 主要設定
@@ -98,6 +104,15 @@ database:
 #### CORS
 
 `allowedOrigins` 文字列（カンマ区切り）には、フロントエンドを提供する URL を含める必要があります。開発環境では `http://localhost:3000` です。本番環境ではドメイン（例: `https://meet.example.com`）を設定します。
+
+#### レート制限
+
+レート制限は、認証エンドポイントをブルートフォース攻撃やDoS攻撃から保護します。2つのバケット：
+
+- **認証エンドポイント**（ログイン、登録、リフレッシュ、パスキー ログイン/サインアップ）— デフォルト: IPあたり60秒に10リクエスト
+- **ゲスト参加** — デフォルト: IPあたり60秒に5リクエスト
+
+`rateLimit`セクションを省略するとデフォルト値が適用されます。`authMaxRequests: 0` または `guestMaxRequests: 0` を設定すると無効化できます。
 
 ---
 
@@ -217,6 +232,10 @@ export LIVEKIT_API_SECRET=prodsecret
 | `CORS_ALLOW_CREDENTIALS` | `cors.allowCredentials` | 認証情報を許可（`true`/`false`） |
 | `CORS_EXPOSE_HEADERS` | `cors.exposeHeaders` | ブラウザに公開するヘッダー |
 | `CORS_MAX_AGE` | `cors.maxAge` | プリフライトキャッシュ期間（秒） |
+| `RATELIMIT_AUTH_MAX` | `rateLimit.authMaxRequests` | 認証リクエストの最大数（ウィンドウあたり） |
+| `RATELIMIT_AUTH_WINDOW` | `rateLimit.authWindowSecs` | 認証レート制限ウィンドウ（秒） |
+| `RATELIMIT_GUEST_MAX` | `rateLimit.guestMaxRequests` | ゲスト参加リクエストの最大数（ウィンドウあたり） |
+| `RATELIMIT_GUEST_WINDOW` | `rateLimit.guestWindowSecs` | ゲストレート制限ウィンドウ（秒） |
 
 ---
 

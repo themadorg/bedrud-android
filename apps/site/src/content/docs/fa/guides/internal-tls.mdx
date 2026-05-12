@@ -31,6 +31,45 @@ sudo bedrud install --tls --ip YOUR_SERVER_IP --domain your.domain.com
 اگر تولید داخلی نصب‌کننده با گردش کار شما سازگار نیست، پرچم‌های `-addext` را به دستورات openssl اضافه کنید:
 
 ```bash
+#### Ed25519 (matches Bedrud's built-in generation, recommended)
+
+```bash
+openssl genpkey -algorithm ed25519 -out ca.key
+openssl req -new -x509 -days 3650 -key ca.key -out ca.crt \
+  -subj "/CN=Bedrud Internal CA"
+
+openssl genpkey -algorithm ed25519 -out server.key
+openssl req -new -key server.key -out server.csr \
+  -subj "/CN=<your-server-ip-or-hostname>" \
+  -addext "subjectAltName=IP:YOUR_SERVER_IP"
+openssl x509 -req -days 1825 -in server.csr \
+  -CA ca.crt -CAkey ca.key -CAcreateserial -out server.crt \
+  -addext "subjectAltName=IP:YOUR_SERVER_IP"
+
+sudo ./bedrud install --tls --cert server.crt --key server.key --ip YOUR_SERVER_IP
+```
+
+#### ECDSA P256 (alternative)
+
+```bash
+openssl ecparam -genkey -name prime256v1 -out ca.key
+openssl req -new -x509 -days 3650 -key ca.key -out ca.crt \
+  -subj "/CN=Bedrud Internal CA"
+
+openssl ecparam -genkey -name prime256v1 -out server.key
+openssl req -new -key server.key -out server.csr \
+  -subj "/CN=<your-server-ip-or-hostname>" \
+  -addext "subjectAltName=IP:YOUR_SERVER_IP"
+openssl x509 -req -days 1825 -in server.csr \
+  -CA ca.crt -CAkey ca.key -CAcreateserial -out server.crt \
+  -addext "subjectAltName=IP:YOUR_SERVER_IP"
+
+sudo ./bedrud install --tls --cert server.crt --key server.key --ip YOUR_SERVER_IP
+```
+
+#### RSA (legacy compatibility, larger keys)
+
+```bash
 openssl genrsa -out ca.key 4096
 openssl req -new -x509 -days 3650 -key ca.key -out ca.crt \
   -subj "/CN=Bedrud Internal CA"
@@ -85,8 +124,8 @@ sudo update-ca-trust
 |---------|-----|
 | مرورگر همچنان هشدار گواهی نامعتبر می‌دهد | کش مرورگر را پاک کنید، پس از نصب CA مرورگر را restart کنید |
 | دوربین/میکروفون مسدود شده | تأیید کنید CA در CAهای ریشه مورد اعتماد است، نه واسطه |
-| گواهی منقضی شده | با مقدار `-days` طولانی‌تر دوباره تولید کنید |
-| ناهماهنگی CN | اطمینان حاصل کنید CN گواهی سرور با IP یا نام میزبان در URL مطابقت دارد |
+| گواهی منقضی شده | برای بازتولید `sudo bedrud cert renew` را اجرا کنید (بازتولید خودکار هر ۲۴ ساعت در ۰۹:۰۰) |
+| ناهماهنگی CN | مرورگرهای مدرن فیلد CN را نادیده می‌گیرند — SAN معتبر است. از تولید گواهی داخلی نصب‌کننده استفاده کنید (توصیه می‌شود) یا `-addext 'subjectAltName=...'` را به دستور openssl اضافه کنید |
 | SANs گم‌شده | مرورگرهای مدرن فیلد CN را نادیده می‌گیرند. از تولید گواهی داخلی نصب‌کننده استفاده کنید (توصیه می‌شود) یا `-addext 'subjectAltName=...'` را به دستور openssl اضافه کنید |
 
 ---

@@ -75,6 +75,12 @@ cors:
   allowedHeaders: "Origin, Content-Type, Accept, Authorization"
   allowedMethods: "GET, POST, PUT, DELETE, OPTIONS"
   allowCredentials: true
+
+rateLimit:
+  authMaxRequests: 10       # Max auth requests per window (login, register, refresh, passkey). 0 = disable
+  authWindowSecs: 60         # Auth rate limit window in seconds
+  guestMaxRequests: 5        # Max guest join requests per window. 0 = disable
+  guestWindowSecs: 60        # Guest rate limit window in seconds
 ```
 
 ### Основные настройки
@@ -98,6 +104,15 @@ database:
 #### CORS
 
 Строка `allowedOrigins` (через запятую) должна содержать URL, по которому обслуживается фронтенд. В разработке это `http://localhost:3000`. В production укажите ваш домен (например, `https://meet.example.com`).
+
+#### Ограничение скорости
+
+Ограничение скорости защищает эндпоинты аутентификации от атак методом перебора и DoS-атак. Два типа:
+
+- **Эндпоинты аутентификации** (вход, регистрация, обновление токена, Passkey) — по умолчанию: 10 запросов за 60 секунд на IP
+- **Гостевой вход** — по умолчанию: 5 запросов за 60 секунд на IP
+
+Опустите раздел `rateLimit` для использования значений по умолчанию. Установите `authMaxRequests: 0` или `guestMaxRequests: 0` для отключения.
 
 ---
 
@@ -217,6 +232,10 @@ export LIVEKIT_API_SECRET=prodsecret
 | `CORS_ALLOW_CREDENTIALS` | `cors.allowCredentials` | Разрешить учётные данные (`true`/`false`) |
 | `CORS_EXPOSE_HEADERS` | `cors.exposeHeaders` | Заголовки, доступные браузеру |
 | `CORS_MAX_AGE` | `cors.maxAge` | Время кэширования preflight-запросов в секундах |
+| `RATELIMIT_AUTH_MAX` | `rateLimit.authMaxRequests` | Макс. запросов аутентификации за окно |
+| `RATELIMIT_AUTH_WINDOW` | `rateLimit.authWindowSecs` | Окно ограничения аутентификации (сек) |
+| `RATELIMIT_GUEST_MAX` | `rateLimit.guestMaxRequests` | Макс. запросов гостевого входа за окно |
+| `RATELIMIT_GUEST_WINDOW` | `rateLimit.guestWindowSecs` | Окно ограничения гостевого входа (сек) |
 
 ---
 

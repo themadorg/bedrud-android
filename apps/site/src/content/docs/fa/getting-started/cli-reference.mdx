@@ -206,6 +206,47 @@ bedrud user [--config <path>] demote --email <email>
 
 ---
 
+### `cert`
+
+مدیریت گواهی‌های TLS. فقط زمانی مرتبط است که از گواهی‌های self-signed استفاده می‌کنید (تولید شده توسط `bedrud install --self-signed`).
+
+```bash
+bedrud cert [--config <path>] <subcommand>
+```
+
+| پرچم سراسری | پیش‌فرض                    | توضیحات                                |
+|-------------|----------------------------|----------------------------------------|
+| `--config`  | `/etc/bedrud/config.yaml`  | مسیر فایل پیکربندی Bedrud              |
+| `--algo`    | `""`                        | الگوریتم کلید: ed25519, ecdsa256, rsa2048, rsa4096 (پیش‌فرض: تشخیص از گواهی موجود) |
+
+#### `renew`
+
+تمدید دستی گواهی self-signed TLS. الگوریتم کلید گواهی موجود را تشخیص داده و با همان نوع بازتولید می‌کند (پیش‌فرض: Ed25519). گواهی جدید به مدت ۱۸۲۵ روز (~۵ سال) معتبر است.
+
+```bash
+bedrud cert renew [--config <path>]
+```
+
+سرور همچنین به‌طور خودکار روزانه گواهی را از طریق زمانبند داخلی خود تمدید می‌کند زمانی که کمتر از ۳۰ روز تا انقضا باقی مانده باشد. این دستور برای تمدید دستی یا فوق‌العاده است.
+
+**SANها:** از پیکربندی سرور استخراج می‌شوند — `domain` (اگر تنظیم شده باشد)، به همراه `localhost`، `127.0.0.1` و `::1`.
+
+**پیاده‌سازی:** `server/internal/utils/tls.go` (`RenewSelfSignedCert`)
+
+#### `info`
+
+نمایش فراداده‌های گواهی TLS در stdout.
+
+```bash
+bedrud cert info [--config <path>]
+```
+
+**فیلدهای خروجی:** subject، issuer، notBefore، notAfter، daysRemaining، status (valid/expiring/error)، SANها.
+
+**پیاده‌سازی:** `server/internal/utils/tls.go` (`ValidateTLSCertPair`)
+
+---
+
 ### `help`
 
 پیام استفاده را با تمام دستورات و فلگ‌ها نشان دهید.

@@ -31,6 +31,45 @@ sudo bedrud install --tls --ip YOUR_SERVER_IP --domain your.domain.com
 Если встроенная генерация установщика не подходит для вашего рабочего процесса, добавьте флаги `-addext` к командам openssl:
 
 ```bash
+#### Ed25519 (matches Bedrud's built-in generation, recommended)
+
+```bash
+openssl genpkey -algorithm ed25519 -out ca.key
+openssl req -new -x509 -days 3650 -key ca.key -out ca.crt \
+  -subj "/CN=Bedrud Internal CA"
+
+openssl genpkey -algorithm ed25519 -out server.key
+openssl req -new -key server.key -out server.csr \
+  -subj "/CN=<your-server-ip-or-hostname>" \
+  -addext "subjectAltName=IP:YOUR_SERVER_IP"
+openssl x509 -req -days 1825 -in server.csr \
+  -CA ca.crt -CAkey ca.key -CAcreateserial -out server.crt \
+  -addext "subjectAltName=IP:YOUR_SERVER_IP"
+
+sudo ./bedrud install --tls --cert server.crt --key server.key --ip YOUR_SERVER_IP
+```
+
+#### ECDSA P256 (alternative)
+
+```bash
+openssl ecparam -genkey -name prime256v1 -out ca.key
+openssl req -new -x509 -days 3650 -key ca.key -out ca.crt \
+  -subj "/CN=Bedrud Internal CA"
+
+openssl ecparam -genkey -name prime256v1 -out server.key
+openssl req -new -key server.key -out server.csr \
+  -subj "/CN=<your-server-ip-or-hostname>" \
+  -addext "subjectAltName=IP:YOUR_SERVER_IP"
+openssl x509 -req -days 1825 -in server.csr \
+  -CA ca.crt -CAkey ca.key -CAcreateserial -out server.crt \
+  -addext "subjectAltName=IP:YOUR_SERVER_IP"
+
+sudo ./bedrud install --tls --cert server.crt --key server.key --ip YOUR_SERVER_IP
+```
+
+#### RSA (legacy compatibility, larger keys)
+
+```bash
 openssl genrsa -out ca.key 4096
 openssl req -new -x509 -days 3650 -key ca.key -out ca.crt \
   -subj "/CN=Bedrud Internal CA"
@@ -85,8 +124,8 @@ sudo update-ca-trust
 |---------|-----|
 | Браузер всё ещё предупреждает о недоверенном сертификате | Очистите кэш браузера, перезапустите браузер после установки CA |
 | Камера/микрофон заблокированы | Убедитесь, что CA находится в «Доверенных корневых ЦС», а не в промежуточных |
-| Сертификат истёк | Перегенерируйте с большим значением `-days` |
-| Несовпадение CN | Убедитесь, что CN серверного сертификата совпадает с IP или именем хоста в URL |
+| Сертификат истёк | Выполните `sudo bedrud cert renew` для перегенерации (автообновление каждые 24 часа в 09:00) |
+| Несовпадение CN | Современные браузеры игнорируют поле CN — SAN является авторитетным. Используйте встроенную генерацию сертификатов установщика (рекомендуется) или добавьте `-addext 'subjectAltName=...'` к команде openssl |
 | Отсутствуют SANs | Современные браузеры игнорируют поле CN. Используйте встроенную генерацию сертификатов установщика (рекомендуется) или добавьте `-addext 'subjectAltName=...'` к команде openssl |
 
 ---

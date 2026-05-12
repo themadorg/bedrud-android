@@ -75,6 +75,12 @@ cors:
   allowedHeaders: "Origin, Content-Type, Accept, Authorization"
   allowedMethods: "GET, POST, PUT, DELETE, OPTIONS"
   allowCredentials: true
+
+rateLimit:
+  authMaxRequests: 10       # Max auth requests per window (login, register, refresh, passkey). 0 = disable
+  authWindowSecs: 60         # Auth rate limit window in seconds
+  guestMaxRequests: 5        # Max guest join requests per window. 0 = disable
+  guestWindowSecs: 60        # Guest rate limit window in seconds
 ```
 
 ### Paramètres clés
@@ -98,6 +104,15 @@ Les **fournisseurs OAuth** sont optionnels. Si vous ne les configurez pas, les b
 #### CORS
 
 La chaîne `allowedOrigins` (séparée par des virgules) doit inclure l'URL où votre frontend est servi. En développement, c'est `http://localhost:3000`. En production, définissez-la sur votre domaine (ex. `https://meet.example.com`).
+
+#### Limitation de débit
+
+La limitation de débit protège les points d'accès d'authentification contre les attaques par force brute et les dénis de service. Deux catégories :
+
+- **Points d'accès Auth** (connexion, inscription, rafraîchissement, Passkey) — défaut : 10 requêtes par 60 secondes par IP
+- **Invité** — défaut : 5 requêtes par 60 secondes par IP
+
+Omettez la section `rateLimit` pour conserver les valeurs par défaut. Définissez `authMaxRequests: 0` ou `guestMaxRequests: 0` pour désactiver.
 
 ---
 
@@ -217,6 +232,10 @@ export LIVEKIT_API_SECRET=prodsecret
 | `CORS_ALLOW_CREDENTIALS` | `cors.allowCredentials` | Autoriser les identifiants (`true`/`false`) |
 | `CORS_EXPOSE_HEADERS` | `cors.exposeHeaders` | En-têtes exposés au navigateur |
 | `CORS_MAX_AGE` | `cors.maxAge` | Durée du cache préflight en secondes |
+| `RATELIMIT_AUTH_MAX` | `rateLimit.authMaxRequests` | Nombre max de requêtes d'auth par fenêtre |
+| `RATELIMIT_AUTH_WINDOW` | `rateLimit.authWindowSecs` | Fenêtre de limitation en secondes |
+| `RATELIMIT_GUEST_MAX` | `rateLimit.guestMaxRequests` | Nombre max de requêtes invité par fenêtre |
+| `RATELIMIT_GUEST_WINDOW` | `rateLimit.guestWindowSecs` | Fenêtre de limitation invité en secondes |
 
 ---
 

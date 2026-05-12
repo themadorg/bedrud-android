@@ -75,6 +75,12 @@ cors:
   allowedHeaders: "Origin, Content-Type, Accept, Authorization"
   allowedMethods: "GET, POST, PUT, DELETE, OPTIONS"
   allowCredentials: true
+
+rateLimit:
+  authMaxRequests: 10       # Max auth requests per window (login, register, refresh, passkey). 0 = disable
+  authWindowSecs: 60         # Auth rate limit window in seconds
+  guestMaxRequests: 5        # Max guest join requests per window. 0 = disable
+  guestWindowSecs: 60        # Guest rate limit window in seconds
 ```
 
 ### Wichtige Einstellungen
@@ -98,6 +104,15 @@ Das `jwtSecret` wird zum Signieren von Access- und Refresh-Tokens verwendet. Än
 #### CORS
 
 Der String `allowedOrigins` (kommagetrennt) muss die URL enthalten, unter der Ihr Frontend ausgeliefert wird. In der Entwicklung ist dies `http://localhost:3000`. In der Produktion setzen Sie ihn auf Ihre Domain (z. B. `https://meet.example.com`).
+
+#### Ratenbegrenzung
+
+Die Ratenbegrenzung schützt Authentifizierungsendpunkte vor Brute-Force- und DoS-Angriffen. Zwei Kategorien:
+
+- **Auth-Endpunkte** (Login, Registrierung, Refresh, Passkey-Login/-Signup) — Standard: 10 Anfragen pro 60 Sekunden pro IP
+- **Gastbeitritt** — Standard: 5 Anfragen pro 60 Sekunden pro IP
+
+Lassen Sie den Abschnitt `rateLimit` weg, um die Standardwerte zu verwenden. Setzen Sie `authMaxRequests: 0` oder `guestMaxRequests: 0` zum Deaktivieren.
 
 ---
 
@@ -217,6 +232,10 @@ export LIVEKIT_API_SECRET=prodsecret
 | `CORS_ALLOW_CREDENTIALS` | `cors.allowCredentials` | Credentials erlauben (`true`/`false`) |
 | `CORS_EXPOSE_HEADERS` | `cors.exposeHeaders` | Header, die dem Browser offengelegt werden |
 | `CORS_MAX_AGE` | `cors.maxAge` | Preflight-Cache-Dauer in Sekunden |
+| `RATELIMIT_AUTH_MAX` | `rateLimit.authMaxRequests` | Maximale Auth-Anfragen pro Zeitfenster |
+| `RATELIMIT_AUTH_WINDOW` | `rateLimit.authWindowSecs` | Auth-Ratenlimit-Zeitfenster in Sekunden |
+| `RATELIMIT_GUEST_MAX` | `rateLimit.guestMaxRequests` | Maximale Gastbeitritts-Anfragen pro Zeitfenster |
+| `RATELIMIT_GUEST_WINDOW` | `rateLimit.guestWindowSecs` | Gast-Ratenlimit-Zeitfenster in Sekunden |
 
 ---
 

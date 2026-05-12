@@ -75,6 +75,12 @@ cors:
   allowedHeaders: "Origin, Content-Type, Accept, Authorization"
   allowedMethods: "GET, POST, PUT, DELETE, OPTIONS"
   allowCredentials: true
+
+rateLimit:
+  authMaxRequests: 10       # Max auth requests per window (login, register, refresh, passkey). 0 = disable
+  authWindowSecs: 60         # Auth rate limit window in seconds
+  guestMaxRequests: 5        # Max guest join requests per window. 0 = disable
+  guestWindowSecs: 60        # Guest rate limit window in seconds
 ```
 
 ### Temel Ayarlar
@@ -98,6 +104,15 @@ database:
 #### CORS
 
 `allowedOrigins` dizesi (virgülle ayrılmış), önyüzünüzün sunulduğu URL'yi içermelidir. Geliştirmede bu `http://localhost:3000`'dir. Üretimde alan adınıza ayarlayın (örn. `https://meet.example.com`).
+
+#### Hız Sınırlaması
+
+Hız sınırlaması, kimlik doğrulama uç noktalarını kaba kuvvet ve DoS saldırılarına karşı korur. İki kategori:
+
+- **Kimlik doğrulama uç noktaları** (giriş, kayıt, yenileme, passkey giriş/kayıt) — varsayılan: IP başına 60 saniyede 10 istek
+- **Misafir katılımı** — varsayılan: IP başına 60 saniyede 5 istek
+
+`rateLimit` bölümünü kaldırarak varsayılanları kullanın. Devre dışı bırakmak için `authMaxRequests: 0` veya `guestMaxRequests: 0` ayarlayın.
 
 ---
 
@@ -217,6 +232,10 @@ export LIVEKIT_API_SECRET=prodsecret
 | `CORS_ALLOW_CREDENTIALS` | `cors.allowCredentials` | Kimlik bilgilerine izin ver (`true`/`false`) |
 | `CORS_EXPOSE_HEADERS` | `cors.exposeHeaders` | Tarayıcıya sunulan başlıklar |
 | `CORS_MAX_AGE` | `cors.maxAge` | Ön uçuş önbellek süresi, saniye |
+| `RATELIMIT_AUTH_MAX` | `rateLimit.authMaxRequests` | Pencere başına maksimum auth isteği |
+| `RATELIMIT_AUTH_WINDOW` | `rateLimit.authWindowSecs` | Auth hız sınırı penceresi (saniye) |
+| `RATELIMIT_GUEST_MAX` | `rateLimit.guestMaxRequests` | Pencere başına maksimum misafir katılım isteği |
+| `RATELIMIT_GUEST_WINDOW` | `rateLimit.guestWindowSecs` | Misafir hız sınırı penceresi (saniye) |
 
 ---
 
