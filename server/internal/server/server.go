@@ -45,6 +45,7 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/adaptor"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/filesystem"
+	"github.com/gofiber/fiber/v2/middleware/helmet"
 	"github.com/gofiber/fiber/v2/middleware/recover"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -133,7 +134,10 @@ func Run(configPath string) error {
 	defer scheduler.Stop()
 	auth.Init(cfg)
 
-	fiberCfg := fiber.Config{AppName: "Bedrud API"}
+	fiberCfg := fiber.Config{
+		AppName:   "Bedrud API",
+		BodyLimit: 2 * 1024 * 1024,
+	}
 	// Enable trusted-proxy mode when: explicit trustedProxies list is set,
 	// OR behindProxy=true (CDN / nginx in front), OR DisableTLS with a domain.
 	if len(cfg.Server.TrustedProxies) > 0 || cfg.Server.BehindProxy {
@@ -175,6 +179,12 @@ func Run(configPath string) error {
 	}
 
 	app.Use(recover.New())
+	app.Use(helmet.New(helmet.Config{
+		XSSProtection:      "1; mode=block",
+		ContentTypeNosniff: "nosniff",
+		XFrameOptions:      "DENY",
+		ReferrerPolicy:     "strict-origin-when-cross-origin",
+	}))
 	corsConfig := cors.Config{
 		AllowHeaders:     cfg.Cors.AllowedHeaders,
 		AllowMethods:     "GET,POST,PUT,DELETE,OPTIONS",
@@ -216,10 +226,10 @@ func Run(configPath string) error {
 	authHandler := handlers.NewAuthHandler(authService, cfg, settingsRepo, inviteTokenRepo)
 	roomHandler := handlers.NewRoomHandler(&cfg.LiveKit, &cfg.Chat, roomRepo)
 
-	api.Post("/auth/register", authHandler.Register)
-	api.Post("/auth/login", authHandler.Login)
-	api.Post("/auth/guest-login", authHandler.GuestLogin)
-	api.Post("/auth/refresh", authHandler.RefreshToken)
+	api.Post("/auth/register", middleware.AuthRateLimiter(), authHandler.Register)
+	api.Post("/auth/login", middleware.AuthRateLimiter(), authHandler.Login)
+	api.Post("/auth/guest-login", middleware.AuthRateLimiter(), authHandler.GuestLogin)
+	api.Post("/auth/refresh", middleware.AuthRateLimiter(), authHandler.RefreshToken)
 	api.Post("/auth/logout", middleware.Protected(), authHandler.Logout)
 	api.Get("/auth/me", middleware.Protected(), authHandler.GetMe)
 	api.Put("/auth/me", middleware.Protected(), authHandler.UpdateProfile)
@@ -233,14 +243,14 @@ func Run(configPath string) error {
 	// Passkey routes
 	api.Post("/auth/passkey/register/begin", middleware.Protected(), authHandler.PasskeyRegisterBegin)
 	api.Post("/auth/passkey/register/finish", middleware.Protected(), authHandler.PasskeyRegisterFinish)
-	api.Post("/auth/passkey/login/begin", authHandler.PasskeyLoginBegin)
-	api.Post("/auth/passkey/login/finish", authHandler.PasskeyLoginFinish)
-	api.Post("/auth/passkey/signup/begin", authHandler.PasskeySignupBegin)
-	api.Post("/auth/passkey/signup/finish", authHandler.PasskeySignupFinish)
+	api.Post("/auth/passkey/login/begin", middleware.AuthRateLimiter(), authHandler.PasskeyLoginBegin)
+	api.Post("/auth/passkey/login/finish", middleware.AuthRateLimiter(), authHandler.PasskeyLoginFinish)
+	api.Post("/auth/passkey/signup/begin", middleware.AuthRateLimiter(), authHandler.PasskeySignupBegin)
+	api.Post("/auth/passkey/signup/finish", middleware.AuthRateLimiter(), authHandler.PasskeySignupFinish)
 
 	api.Post("/room/create", middleware.Protected(), roomHandler.CreateRoom)
 	api.Post("/room/join", middleware.Protected(), roomHandler.JoinRoom)
-	api.Post("/room/guest-join", roomHandler.GuestJoinRoom)
+	api.Post("/room/guest-join", middleware.GuestRateLimiter(), roomHandler.GuestJoinRoom)
 	api.Get("/room/list", middleware.Protected(), roomHandler.ListRooms)
 	api.Post("/room/:roomId/kick/:identity", middleware.Protected(), roomHandler.KickParticipant)
 	api.Post("/room/:roomId/mute/:identity", middleware.Protected(), roomHandler.MuteParticipant)
