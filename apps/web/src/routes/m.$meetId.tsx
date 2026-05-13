@@ -11,6 +11,7 @@ import { useAudioPreferencesStore } from '#/lib/audio-preferences.store'
 import { useAuthStore } from '#/lib/auth.store'
 import { useRecentRoomsStore } from '#/lib/recent-rooms.store'
 import { usePinnedParticipants } from '#/lib/usePinnedParticipants'
+import { useVideoPreferencesStore } from '#/lib/video-preferences.store'
 import { ErrorPage } from '@/components/ErrorPage'
 import { AskActionBanner } from '@/components/meeting/AskActionBanner'
 import { AudioProcessorManager } from '@/components/meeting/AudioProcessorManager'
@@ -128,6 +129,7 @@ function MeetingPage() {
   const echoCancellation = useAudioPreferencesStore((s) => s.echoCancellation)
   const autoGainControl = useAudioPreferencesStore((s) => s.autoGainControl)
   const mergeAudioPrefs = useAudioPreferencesStore((s) => s.merge)
+  const mergeVideoPrefs = useVideoPreferencesStore((s) => s.merge)
 
   // Echo cancellation is always honoured from user preferences.
   // Noise suppression is only enabled for browser mode to avoid double-processing
@@ -151,6 +153,7 @@ function MeetingPage() {
         try {
           const parsed = JSON.parse(r.preferencesJson)
           if (parsed?.audio) mergeAudioPrefs(parsed.audio)
+          if (parsed?.video) mergeVideoPrefs(parsed.video)
         } catch {
           /* use local defaults */
         }
@@ -159,7 +162,7 @@ function MeetingPage() {
         /* use local defaults on network failure */
       })
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [joinData, mergeAudioPrefs, tokens])
+  }, [joinData, mergeAudioPrefs, mergeVideoPrefs, tokens])
 
   const addRecent = useRecentRoomsStore((s) => s.add)
   const queryClient = useQueryClient()

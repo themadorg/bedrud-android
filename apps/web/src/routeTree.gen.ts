@@ -22,6 +22,7 @@ import { Route as AuthLoginRouteImport } from './routes/auth.login'
 import { Route as AuthCallbackRouteImport } from './routes/auth.callback'
 import { Route as DashboardSettingsIndexRouteImport } from './routes/dashboard/settings/index'
 import { Route as DashboardAdminIndexRouteImport } from './routes/dashboard/admin/index'
+import { Route as DashboardSettingsVideoRouteImport } from './routes/dashboard/settings/video'
 import { Route as DashboardSettingsSecurityRouteImport } from './routes/dashboard/settings/security'
 import { Route as DashboardSettingsAudioRouteImport } from './routes/dashboard/settings/audio'
 import { Route as DashboardAdminUsersRouteImport } from './routes/dashboard/admin/users'
@@ -95,6 +96,11 @@ const DashboardAdminIndexRoute = DashboardAdminIndexRouteImport.update({
   path: '/',
   getParentRoute: () => DashboardAdminRoute,
 } as any)
+const DashboardSettingsVideoRoute = DashboardSettingsVideoRouteImport.update({
+  id: '/video',
+  path: '/video',
+  getParentRoute: () => DashboardSettingsRoute,
+} as any)
 const DashboardSettingsSecurityRoute =
   DashboardSettingsSecurityRouteImport.update({
     id: '/security',
@@ -151,6 +157,7 @@ export interface FileRoutesByFullPath {
   '/dashboard/admin/users': typeof DashboardAdminUsersRoute
   '/dashboard/settings/audio': typeof DashboardSettingsAudioRoute
   '/dashboard/settings/security': typeof DashboardSettingsSecurityRoute
+  '/dashboard/settings/video': typeof DashboardSettingsVideoRoute
   '/dashboard/admin/': typeof DashboardAdminIndexRoute
   '/dashboard/settings/': typeof DashboardSettingsIndexRoute
   '/dashboard/admin/rooms/$roomId': typeof DashboardAdminRoomsRoomIdRoute
@@ -169,6 +176,7 @@ export interface FileRoutesByTo {
   '/dashboard/admin/users': typeof DashboardAdminUsersRoute
   '/dashboard/settings/audio': typeof DashboardSettingsAudioRoute
   '/dashboard/settings/security': typeof DashboardSettingsSecurityRoute
+  '/dashboard/settings/video': typeof DashboardSettingsVideoRoute
   '/dashboard/admin': typeof DashboardAdminIndexRoute
   '/dashboard/settings': typeof DashboardSettingsIndexRoute
   '/dashboard/admin/rooms/$roomId': typeof DashboardAdminRoomsRoomIdRoute
@@ -192,6 +200,7 @@ export interface FileRoutesById {
   '/dashboard/admin/users': typeof DashboardAdminUsersRoute
   '/dashboard/settings/audio': typeof DashboardSettingsAudioRoute
   '/dashboard/settings/security': typeof DashboardSettingsSecurityRoute
+  '/dashboard/settings/video': typeof DashboardSettingsVideoRoute
   '/dashboard/admin/': typeof DashboardAdminIndexRoute
   '/dashboard/settings/': typeof DashboardSettingsIndexRoute
   '/dashboard/admin/rooms_/$roomId': typeof DashboardAdminRoomsRoomIdRoute
@@ -216,6 +225,7 @@ export interface FileRouteTypes {
     | '/dashboard/admin/users'
     | '/dashboard/settings/audio'
     | '/dashboard/settings/security'
+    | '/dashboard/settings/video'
     | '/dashboard/admin/'
     | '/dashboard/settings/'
     | '/dashboard/admin/rooms/$roomId'
@@ -234,6 +244,7 @@ export interface FileRouteTypes {
     | '/dashboard/admin/users'
     | '/dashboard/settings/audio'
     | '/dashboard/settings/security'
+    | '/dashboard/settings/video'
     | '/dashboard/admin'
     | '/dashboard/settings'
     | '/dashboard/admin/rooms/$roomId'
@@ -256,6 +267,7 @@ export interface FileRouteTypes {
     | '/dashboard/admin/users'
     | '/dashboard/settings/audio'
     | '/dashboard/settings/security'
+    | '/dashboard/settings/video'
     | '/dashboard/admin/'
     | '/dashboard/settings/'
     | '/dashboard/admin/rooms_/$roomId'
@@ -362,6 +374,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardAdminIndexRouteImport
       parentRoute: typeof DashboardAdminRoute
     }
+    '/dashboard/settings/video': {
+      id: '/dashboard/settings/video'
+      path: '/video'
+      fullPath: '/dashboard/settings/video'
+      preLoaderRoute: typeof DashboardSettingsVideoRouteImport
+      parentRoute: typeof DashboardSettingsRoute
+    }
     '/dashboard/settings/security': {
       id: '/dashboard/settings/security'
       path: '/security'
@@ -455,12 +474,14 @@ const DashboardAdminRouteWithChildren = DashboardAdminRoute._addFileChildren(
 interface DashboardSettingsRouteChildren {
   DashboardSettingsAudioRoute: typeof DashboardSettingsAudioRoute
   DashboardSettingsSecurityRoute: typeof DashboardSettingsSecurityRoute
+  DashboardSettingsVideoRoute: typeof DashboardSettingsVideoRoute
   DashboardSettingsIndexRoute: typeof DashboardSettingsIndexRoute
 }
 
 const DashboardSettingsRouteChildren: DashboardSettingsRouteChildren = {
   DashboardSettingsAudioRoute: DashboardSettingsAudioRoute,
   DashboardSettingsSecurityRoute: DashboardSettingsSecurityRoute,
+  DashboardSettingsVideoRoute: DashboardSettingsVideoRoute,
   DashboardSettingsIndexRoute: DashboardSettingsIndexRoute,
 }
 

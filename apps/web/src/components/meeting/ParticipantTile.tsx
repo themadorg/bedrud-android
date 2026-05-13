@@ -7,6 +7,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { selectVolume, useParticipantOverridesStore } from '#/lib/participant-overrides.store'
 import { getPalette } from '#/lib/participant-palette'
 import { useLongPress } from '#/lib/useLongPress'
+import { useVideoPreferencesStore } from '#/lib/video-preferences.store'
 import { useMeetingRoomContext } from '@/components/meeting/MeetingContext'
 import { ParticipantContextMenu, ParticipantMenuButton } from '@/components/meeting/ParticipantContextMenu'
 
@@ -122,6 +123,7 @@ export function ParticipantTile({ participant, totalCount, index, isPinned = fal
   }, [participant])
 
   const hasCameraVideo = Boolean(cameraTrack?.isSubscribed && !cameraTrack.isMuted)
+  const mirrorWebcam = useVideoPreferencesStore((s) => s.mirrorWebcam)
   const displayName = name ?? identity ?? '?'
   const initial = displayName.charAt(0).toUpperCase()
 
@@ -148,7 +150,14 @@ export function ParticipantTile({ participant, totalCount, index, isPinned = fal
           /* Video stream — wrapper suppresses browser's native <video> context menu
              so right-click bubbles to the Radix ContextMenuTrigger instead */
           // biome-ignore lint/a11y/noStaticElementInteractions: wrapper prevents native <video> context menu so Radix ContextMenu works
-          <div style={{ position: 'absolute', inset: 0 }} onContextMenu={(e) => e.preventDefault()}>
+          <div
+            style={{
+              position: 'absolute',
+              inset: 0,
+              transform: participant.isLocal && mirrorWebcam ? 'scaleX(-1)' : undefined,
+            }}
+            onContextMenu={(e) => e.preventDefault()}
+          >
             <VideoTrack
               trackRef={{ participant, source: Track.Source.Camera, publication: cameraTrack }}
               style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }}
