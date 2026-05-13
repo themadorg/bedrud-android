@@ -176,7 +176,7 @@ function HomePage() {
         <span>&copy; {new Date().getFullYear()} Bedrud</span>
         <span className="h-3 w-px bg-border" />
         <a
-          href="https://bedrud.org/docs?utm_source=app&utm_medium=footer"
+          href="https://bedrud.org/en/docs/getting-started/quickstart/?utm_source=app&utm_medium=footer"
           target="_blank"
           rel="noopener noreferrer"
           className="transition-colors hover:text-foreground"
