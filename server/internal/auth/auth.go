@@ -9,6 +9,7 @@ import (
 	"crypto/x509"
 	"encoding/base64"
 	"errors"
+	"fmt"
 	"strings"
 	"time"
 
@@ -261,6 +262,30 @@ func (s *AuthService) UpdateRefreshToken(userID, refreshToken string) error {
 	return s.userRepo.UpdateRefreshToken(userID, refreshToken)
 }
 
+// RotateRefreshToken atomically rotates a refresh token: blocks the old token and
+// updates the stored hash, but only if the stored hash still matches the old token.
+// Returns error if another request already rotated the token.
+func (s *AuthService) RotateRefreshToken(userID, oldRawToken, newRawToken string) error {
+	// Parse old token for expiry, then block it
+	claims := &Claims{}
+	token, err := jwt.ParseWithClaims(oldRawToken, claims, func(token *jwt.Token) (interface{}, error) {
+		return []byte(config.Get().Auth.JWTSecret), nil
+	})
+	if err == nil && token.Valid {
+		_ = s.userRepo.BlockRefreshToken(userID, oldRawToken, time.Unix(claims.ExpiresAt.Unix(), 0))
+	}
+
+	// Atomically swap — only succeeds if no concurrent rotation happened
+	ok, err := s.userRepo.UpdateRefreshTokenAtomic(userID, oldRawToken, newRawToken)
+	if err != nil {
+		return err
+	}
+	if !ok {
+		return ErrRefreshTokenMismatch
+	}
+	return nil
+}
+
 // @Summary Get user profile
 // @Description Get current user profile
 // @Tags auth
@@ -366,7 +391,9 @@ var ErrRefreshTokenMismatch = errors.New("refresh token does not match stored to
 // Updated refresh token validation
 func (s *AuthService) ValidateRefreshToken(refreshToken string) (*Claims, error) {
 	// Check if token is blocked
-	if s.userRepo.IsRefreshTokenBlocked(refreshToken) {
+	if blocked, err := s.userRepo.IsRefreshTokenBlocked(refreshToken); err != nil {
+		return nil, fmt.Errorf("failed to check token status: %w", err)
+	} else if blocked {
 		return nil, errors.New("refresh token has been revoked")
 	}
 
@@ -385,7 +412,9 @@ func (s *AuthService) ValidateRefreshToken(refreshToken string) (*Claims, error)
 	if user == nil {
 		return nil, errors.New("user not found")
 	}
-	if !s.userRepo.MatchRefreshToken(user.ID, refreshToken) {
+	if matched, err := s.userRepo.MatchRefreshToken(user.ID, refreshToken); err != nil {
+		return nil, fmt.Errorf("failed to verify refresh token: %w", err)
+	} else if !matched {
 		return nil, ErrRefreshTokenMismatch
 	}
 
@@ -472,7 +501,13 @@ func (s *AuthService) FinishSignupPasskey(userID, email, name, challengeStr stri
 		return nil, err
 	}
 
-	// Create user
+	// Re-check email uniqueness before creating user
+	existing, _ := s.userRepo.GetUserByEmail(email)
+	if existing != nil {
+		return nil, errors.New("email already registered")
+	}
+
+	// Create user + passkey in single transaction
 	user := &models.User{
 		ID:       userID,
 		Email:    email,
@@ -480,10 +515,6 @@ func (s *AuthService) FinishSignupPasskey(userID, email, name, challengeStr stri
 		Provider: "passkey",
 		IsActive: true,
 		Accesses: []string{"user"},
-	}
-
-	if err := s.userRepo.CreateUser(user); err != nil {
-		return nil, err
 	}
 
 	passkey := &models.Passkey{
@@ -496,7 +527,7 @@ func (s *AuthService) FinishSignupPasskey(userID, email, name, challengeStr stri
 		Name:         "Passkey",
 	}
 
-	if err := s.passkeyRepo.CreatePasskey(passkey); err != nil {
+	if err := s.userRepo.CreateUserWithPasskey(user, passkey); err != nil {
 		return nil, err
 	}
 
