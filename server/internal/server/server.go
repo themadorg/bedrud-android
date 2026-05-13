@@ -22,10 +22,13 @@ import (
 	"bedrud/internal/database"
 	"bedrud/internal/handlers"
 	"bedrud/internal/livekit"
+	"bedrud/internal/lkutil"
 	"bedrud/internal/middleware"
 	"bedrud/internal/models"
 	"bedrud/internal/repository"
 	"bedrud/internal/scheduler"
+	"bedrud/internal/services"
+	"bedrud/internal/storage"
 	"bedrud/internal/utils"
 	"context"
 	"crypto/tls"
@@ -231,9 +234,16 @@ func Run(configPath string) error {
 	settingsRepo := repository.NewSettingsRepository(database.GetDB())
 	settingsRepo.SetConfig(cfg)
 	inviteTokenRepo := repository.NewInviteTokenRepository(database.GetDB())
+	uploadDir := cfg.Chat.Uploads.DiskDir
+	if uploadDir == "" {
+		uploadDir = "./data/uploads/chat"
+	}
+	uploadTracker := storage.NewChatUploadTracker(database.GetDB(), uploadDir)
+	lkClient := lkutil.NewClient(&cfg.LiveKit)
+	cleanupSvc := services.NewRoomCleanupService(roomRepo, lkClient, cfg.LiveKit.APIKey, cfg.LiveKit.APISecret, uploadTracker)
 	authService := auth.NewAuthService(userRepo, passkeyRepo)
 	authHandler := handlers.NewAuthHandler(authService, cfg, settingsRepo, inviteTokenRepo)
-	roomHandler := handlers.NewRoomHandler(&cfg.LiveKit, &cfg.Chat, roomRepo)
+	roomHandler := handlers.NewRoomHandler(&cfg.LiveKit, &cfg.Chat, roomRepo, uploadTracker, cleanupSvc)
 
 	api.Post("/auth/register", middleware.AuthRateLimiter(cfg.RateLimit), authHandler.Register)
 	api.Post("/auth/login", middleware.AuthRateLimiter(cfg.RateLimit), authHandler.Login)
@@ -284,17 +294,13 @@ func Run(configPath string) error {
 
 	// Serve disk-backed chat image uploads as static files.
 	// Inline (base64) and S3-hosted images are not served from here.
-	uploadDir := cfg.Chat.Uploads.DiskDir
-	if uploadDir == "" {
-		uploadDir = "./data/uploads/chat"
-	}
 	if err := os.MkdirAll(uploadDir, 0o755); err != nil {
 		log.Warn().Err(err).Str("dir", uploadDir).Msg("Could not create chat upload dir")
 	}
 	app.Static("/uploads/chat", uploadDir, fiber.Static{Browse: false})
 
 	// Admin routes
-	usersHandler := handlers.NewUsersHandler(userRepo, roomRepo)
+	usersHandler := handlers.NewUsersHandler(userRepo, roomRepo, passkeyRepo, prefsRepo, cleanupSvc)
 	adminHandler := handlers.NewAdminHandler(settingsRepo, inviteTokenRepo)
 	certHandler := handlers.NewCertHandler(cfg)
 	adminGroup := api.Group("/admin",
@@ -304,9 +310,11 @@ func Run(configPath string) error {
 	adminGroup.Get("/users", usersHandler.ListUsers)
 	adminGroup.Put("/users/:id/status", usersHandler.UpdateUserStatus)
 	adminGroup.Put("/users/:id/accesses", usersHandler.UpdateUserAccesses)
+	adminGroup.Post("/users/:id/force-logout", usersHandler.ForceLogout)
 	adminGroup.Get("/rooms", roomHandler.AdminListRooms)
 	adminGroup.Post("/rooms/:roomId/token", roomHandler.AdminGenerateToken)
 	adminGroup.Delete("/rooms/:roomId", roomHandler.AdminCloseRoom)
+	adminGroup.Post("/rooms/:roomId/suspend", roomHandler.AdminSuspendRoom)
 	adminGroup.Put("/rooms/:roomId", roomHandler.AdminUpdateRoom)
 	adminGroup.Get("/online-count", roomHandler.GetOnlineCount)
 	adminGroup.Get("/livekit/stats", roomHandler.AdminLiveKitStats)
@@ -413,5 +421,6 @@ func Run(configPath string) error {
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
+	usersHandler.Shutdown()
 	return app.Shutdown()
 }

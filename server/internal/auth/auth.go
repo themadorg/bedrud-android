@@ -5,6 +5,7 @@ import (
 	"bedrud/internal/models"
 	"bedrud/internal/repository"
 	"crypto/rand"
+	"crypto/sha256"
 	"crypto/x509"
 	"encoding/base64"
 	"errors"
@@ -63,6 +64,33 @@ type TokenPair struct {
 	RefreshToken string `json:"refreshToken"`
 }
 
+// HashPassword pre-hashes with SHA-256 before bcrypt to bypass bcrypt's 72-byte limit.
+// All new passwords are stored as bcrypt(sha256(password)). Existing bcrypt(password)
+// hashes are still verified via VerifyPassword's fallback path.
+func HashPassword(password string) (string, error) {
+	h := sha256.Sum256([]byte(password))
+	hashed, err := bcrypt.GenerateFromPassword(h[:], bcrypt.DefaultCost)
+	if err != nil {
+		return "", err
+	}
+	return string(hashed), nil
+}
+
+// VerifyPassword checks a password against a stored hash.
+// It first tries bcrypt(sha256(password)) for new-style hashes, then falls back
+// to bcrypt(password) for pre-migration hashes.
+func VerifyPassword(password, storedHash string) error {
+	h := sha256.Sum256([]byte(password))
+	// Always do both comparisons to keep timing constant regardless of
+	// whether the stored hash is new-style (sha256+bcrypt) or old-style (plain bcrypt).
+	err1 := bcrypt.CompareHashAndPassword([]byte(storedHash), h[:])
+	err2 := bcrypt.CompareHashAndPassword([]byte(storedHash), []byte(password))
+	if err1 != nil && err2 != nil {
+		return err1 // neither matched
+	}
+	return nil
+}
+
 type AuthService struct {
 	userRepo    *repository.UserRepository
 	passkeyRepo *repository.PasskeyRepository
@@ -95,7 +123,7 @@ func (s *AuthService) Register(email, password, name string) (*models.User, erro
 	}
 
 	// Hash password
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	hashedPassword, err := HashPassword(password)
 	if err != nil {
 		return nil, err
 	}
@@ -142,12 +170,11 @@ func (s *AuthService) Login(email, password string) (*LoginResponse, error) {
 	if user == nil {
 		// Perform a dummy comparison so both the nil-user and wrong-password paths
 		// take roughly the same amount of time (~100ms bcrypt).
-		_ = bcrypt.CompareHashAndPassword([]byte(dummyHash), []byte(password))
+		_ = VerifyPassword(password, dummyHash)
 		return nil, errors.New("invalid credentials")
 	}
 
-	err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password))
-	if err != nil {
+	if err := VerifyPassword(password, user.Password); err != nil {
 		return nil, errors.New("invalid credentials")
 	}
 
@@ -277,11 +304,11 @@ func (s *AuthService) ChangePassword(userID, currentPassword, newPassword string
 	// Passkey-only users may have an empty stored password; skip the current-
 	// password check in that case and let them set a password for the first time.
 	if user.Password != "" {
-		if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(currentPassword)); err != nil {
+		if err := VerifyPassword(currentPassword, user.Password); err != nil {
 			return errors.New("current password is incorrect")
 		}
 	}
-	hashed, err := bcrypt.GenerateFromPassword([]byte(newPassword), bcrypt.DefaultCost)
+	hashed, err := HashPassword(newPassword)
 	if err != nil {
 		return err
 	}

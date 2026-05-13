@@ -95,7 +95,13 @@ func (h *CertHandler) GetCertInfo(c *fiber.Ctx) error {
 	}
 
 	return c.JSON(fiber.Map{
-		"enabled": true,
-		"cert":    info,
+		"enabled":       true,
+		"status":        info.Status,
+		"daysRemaining": info.DaysRemaining,
+		"notAfter":      info.NotAfter,
+		"subject":       info.Subject,
+		"issuer":        info.Issuer,
+		"notBefore":     info.NotBefore,
+		"sans":          info.SANs,
 	})
 }

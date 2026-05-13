@@ -19,9 +19,6 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-const minPasswordLength = 12
-const maxPasswordLength = 128
-
 type AuthHandler struct {
 	authService     *auth.AuthService
 	config          *config.Config
@@ -153,15 +150,15 @@ func (h *AuthHandler) Register(c *fiber.Ctx) error {
 		}
 	}
 
-	if len(input.Password) < minPasswordLength {
+	if len(input.Password) < MinPasswordLength {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": fmt.Sprintf("Password must be at least %d characters", minPasswordLength),
+			"error": fmt.Sprintf("Password must be at least %d characters", MinPasswordLength),
 		})
 	}
 
-	if len(input.Password) > maxPasswordLength {
+	if len(input.Password) > MaxPasswordLength {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": fmt.Sprintf("Password must be at most %d characters", maxPasswordLength),
+			"error": fmt.Sprintf("Password must be at most %d characters", MaxPasswordLength),
 		})
 	}
 
@@ -230,9 +227,9 @@ func (h *AuthHandler) Login(c *fiber.Ctx) error {
 		})
 	}
 
-	if len(input.Password) > maxPasswordLength {
+	if len(input.Password) > MaxPasswordLength {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": fmt.Sprintf("Password must be at most %d characters", maxPasswordLength),
+			"error": fmt.Sprintf("Password must be at most %d characters", MaxPasswordLength),
 		})
 	}
 
@@ -355,6 +352,11 @@ func (h *AuthHandler) GetMe(c *fiber.Ctx) error {
 			"error": "Failed to get user",
 		})
 	}
+	if user == nil {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"error": "User not found",
+		})
+	}
 
 	return c.JSON(user)
 }
@@ -386,11 +388,11 @@ func (h *AuthHandler) ChangePassword(c *fiber.Ctx) error {
 	if err := c.BodyParser(&input); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid input"})
 	}
-	if len(input.NewPassword) < minPasswordLength {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": fmt.Sprintf("New password must be at least %d characters", minPasswordLength)})
+	if len(input.NewPassword) < MinPasswordLength {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": fmt.Sprintf("New password must be at least %d characters", MinPasswordLength)})
 	}
-	if len(input.NewPassword) > maxPasswordLength {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": fmt.Sprintf("New password must be at most %d characters", maxPasswordLength)})
+	if len(input.NewPassword) > MaxPasswordLength {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": fmt.Sprintf("New password must be at most %d characters", MaxPasswordLength)})
 	}
 	if err := h.authService.ChangePassword(claims.UserID, input.CurrentPassword, input.NewPassword); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})

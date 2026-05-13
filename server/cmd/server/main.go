@@ -21,10 +21,13 @@ import (
 	"bedrud/internal/auth"
 	"bedrud/internal/database"
 	"bedrud/internal/handlers"
+	"bedrud/internal/lkutil"
 	"bedrud/internal/middleware"
 	"bedrud/internal/models"
 	"bedrud/internal/repository"
 	"bedrud/internal/scheduler"
+	"bedrud/internal/services"
+	"bedrud/internal/storage"
 	"bedrud/internal/utils"
 	"fmt"
 	"net/http"
@@ -300,7 +303,14 @@ func run() error {
 	api.Post("/auth/passkey/signup/finish", middleware.AuthRateLimiter(cfg.RateLimit), authHandler.PasskeySignupFinish)
 
 	// Initialize handlers
-	roomHandler := handlers.NewRoomHandler(&cfg.LiveKit, &cfg.Chat, roomRepo)
+	uploadDir := cfg.Chat.Uploads.DiskDir
+	if uploadDir == "" {
+		uploadDir = "./data/uploads/chat"
+	}
+	uploadTracker := storage.NewChatUploadTracker(database.GetDB(), uploadDir)
+	lkClient := lkutil.NewClient(&cfg.LiveKit)
+	cleanupSvc := services.NewRoomCleanupService(roomRepo, lkClient, cfg.LiveKit.APIKey, cfg.LiveKit.APISecret, uploadTracker)
+	roomHandler := handlers.NewRoomHandler(&cfg.LiveKit, &cfg.Chat, roomRepo, uploadTracker, cleanupSvc)
 
 	// Room routes
 	api.Post("/room/create", middleware.Protected(), roomHandler.CreateRoom)
@@ -327,17 +337,13 @@ func run() error {
 	api.Post("/room/:roomId/chat/upload", middleware.Protected(), roomHandler.UploadChatImage)
 
 	// Serve disk-backed chat image uploads.
-	uploadDir := cfg.Chat.Uploads.DiskDir
-	if uploadDir == "" {
-		uploadDir = "./data/uploads/chat"
-	}
 	if err := os.MkdirAll(uploadDir, 0o755); err != nil {
 		log.Warn().Err(err).Str("dir", uploadDir).Msg("Could not create chat upload dir")
 	}
 	app.Static("/uploads/chat", uploadDir, fiber.Static{Browse: false})
 
 	// Initialize handlers
-	usersHandler := handlers.NewUsersHandler(userRepo, roomRepo)
+	usersHandler := handlers.NewUsersHandler(userRepo, roomRepo, passkeyRepo, prefsRepo, cleanupSvc)
 	adminHandler := handlers.NewAdminHandler(settingsRepo, inviteTokenRepo)
 	certHandler := handlers.NewCertHandler(cfg)
 
@@ -349,13 +355,17 @@ func run() error {
 	adminGroup.Get("/users", usersHandler.ListUsers)
 	adminGroup.Put("/users/:id/status", usersHandler.UpdateUserStatus)
 	adminGroup.Put("/users/:id/accesses", usersHandler.UpdateUserAccesses)
+	adminGroup.Post("/users/:id/force-logout", usersHandler.ForceLogout)
+	adminGroup.Put("/users/:id/password", usersHandler.SetUserPassword)
 	adminGroup.Get("/rooms", roomHandler.AdminListRooms)
 	adminGroup.Post("/rooms/:roomId/token", roomHandler.AdminGenerateToken)
 	adminGroup.Delete("/rooms/:roomId", roomHandler.AdminCloseRoom)
+	adminGroup.Post("/rooms/:roomId/suspend", roomHandler.AdminSuspendRoom)
 	adminGroup.Put("/rooms/:roomId", roomHandler.AdminUpdateRoom)
 	adminGroup.Get("/online-count", roomHandler.GetOnlineCount)
 	adminGroup.Get("/livekit/stats", roomHandler.AdminLiveKitStats)
 	adminGroup.Get("/users/:id", usersHandler.GetUserDetail)
+	adminGroup.Delete("/users/:id", usersHandler.DeleteUser)
 	adminGroup.Get("/rooms/:roomId/participants", roomHandler.AdminGetRoomParticipants)
 	adminGroup.Post("/rooms/:roomId/participants/:identity/kick", roomHandler.AdminKickParticipant)
 	adminGroup.Post("/rooms/:roomId/participants/:identity/mute", roomHandler.AdminMuteParticipant)
