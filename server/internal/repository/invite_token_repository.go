@@ -20,10 +20,24 @@ func (r *InviteTokenRepository) Create(t *models.InviteToken) error {
 	return r.db.Create(t).Error
 }
 
-func (r *InviteTokenRepository) List() ([]models.InviteToken, error) {
+func (r *InviteTokenRepository) List(p PaginationParams) ([]models.InviteToken, int64, error) {
+	var total int64
+	if err := r.db.Model(&models.InviteToken{}).Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+	if p.Limit <= 0 || p.Limit > 100 {
+		p.Limit = 50
+	}
+	if p.Page <= 0 {
+		p.Page = 1
+	}
+	offset := (p.Page - 1) * p.Limit
+	if offset > 10000 {
+		offset = 10000
+	}
 	var tokens []models.InviteToken
-	err := r.db.Order("created_at desc").Find(&tokens).Error
-	return tokens, err
+	err := r.db.Order("created_at desc").Limit(p.Limit).Offset(offset).Find(&tokens).Error
+	return tokens, total, err
 }
 
 func (r *InviteTokenRepository) GetByToken(token string) (*models.InviteToken, error) {
