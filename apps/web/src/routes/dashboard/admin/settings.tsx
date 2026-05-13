@@ -166,7 +166,7 @@ function Toggle({ checked, onChange, label }: { checked: boolean; onChange: (v: 
       <button
         type="button"
         className={cn(
-          'flex h-4 w-7 shrink-0 items-center rounded-full p-px transition-colors',
+          'flex h-4 w-7 shrink-0 items-center rounded-full p-px transition-colors focus-visible:ring-2 focus-visible:ring-ring',
           checked ? 'bg-primary justify-end' : 'bg-muted',
         )}
         onClick={() => onChange(!checked)}
@@ -203,7 +203,7 @@ function GeneralTab({
                 onClick={() => onPatch({ ...settings, ...modeToSettings(id) })}
                 disabled={saving}
                 className={cn(
-                  'flex w-full items-center gap-3 border p-3 text-left transition-colors disabled:opacity-60',
+                  'flex w-full items-center gap-3 border p-3 text-left transition-colors disabled:opacity-60 focus-visible:ring-2 focus-visible:ring-ring',
                   active
                     ? id === 'closed'
                       ? 'border-destructive/40 bg-destructive/5'
@@ -738,7 +738,7 @@ function InviteTokensSection() {
               type="button"
               onClick={() => setConfirmGenerate(true)}
               disabled={createToken.isPending}
-              className="inline-flex h-8 flex-1 shrink-0 items-center justify-center gap-1.5 bg-primary px-3 text-xs font-medium text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-50 sm:flex-none"
+              className="inline-flex h-9 flex-1 shrink-0 items-center justify-center gap-1.5 bg-primary px-3 text-xs font-medium text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-50 sm:flex-none focus-visible:ring-2 focus-visible:ring-ring"
             >
               {createToken.isPending ? (
                 <>
@@ -763,7 +763,7 @@ function InviteTokensSection() {
               <button
                 type="button"
                 onClick={() => setConfirmGenerate(false)}
-                className="px-2 py-1 text-xs text-muted-foreground hover:text-foreground"
+                className="px-2 py-1 text-xs text-muted-foreground hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
               >
                 Cancel
               </button>
@@ -773,7 +773,7 @@ function InviteTokensSection() {
                   setConfirmGenerate(false)
                   createToken.mutate()
                 }}
-                className="inline-flex items-center gap-1 bg-primary px-2.5 py-1 text-xs font-medium text-primary-foreground"
+                className="inline-flex items-center gap-1 bg-primary px-2.5 py-1 text-xs font-medium text-primary-foreground focus-visible:ring-2 focus-visible:ring-ring"
               >
                 <Check className="h-3 w-3" /> Confirm
               </button>
@@ -797,7 +797,8 @@ function InviteTokensSection() {
             <button
               type="button"
               onClick={() => setNewToken(null)}
-              className="shrink-0 text-xs text-muted-foreground hover:text-foreground"
+              className="shrink-0 text-xs text-muted-foreground hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
+              aria-label="Dismiss"
             >
               ×
             </button>
@@ -830,7 +831,7 @@ function InviteTokensSection() {
               <div
                 key={tok.id}
                 className={cn(
-                  'group flex items-center gap-2 px-3 py-2.5 transition-colors sm:gap-3 sm:px-5',
+                  'group flex items-center gap-2 px-3 py-3 transition-colors sm:gap-3 sm:px-5',
                   isInert ? 'opacity-50' : 'hover:bg-accent/30',
                 )}
               >
@@ -864,8 +865,9 @@ function InviteTokensSection() {
                     type="button"
                     onClick={() => copyToken(tok)}
                     disabled={isInert}
-                    className="p-1.5 hover:bg-muted disabled:pointer-events-none"
-                    title="Copy"
+                    className="p-1.5 hover:bg-muted disabled:pointer-events-none focus-visible:ring-2 focus-visible:ring-ring"
+                    title="Copy token"
+                    aria-label="Copy token"
                   >
                     {copiedId === tok.id ? (
                       <Check className="h-3.5 w-3.5 text-emerald-500" />
@@ -882,14 +884,15 @@ function InviteTokensSection() {
                           setConfirmDeleteId(null)
                         }}
                         disabled={deleteToken.isPending}
-                        className="bg-destructive px-2 py-0.5 text-[10px] font-semibold text-destructive-foreground"
+                        className="bg-destructive px-2 py-0.5 text-[10px] font-semibold text-destructive-foreground focus-visible:ring-2 focus-visible:ring-ring"
                       >
                         Del
                       </button>
                       <button
                         type="button"
                         onClick={() => setConfirmDeleteId(null)}
-                        className="px-1.5 py-0.5 text-xs text-muted-foreground hover:text-foreground"
+                        className="px-1.5 py-0.5 text-xs text-muted-foreground hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
+                        aria-label="Cancel delete"
                       >
                         ×
                       </button>
@@ -898,8 +901,9 @@ function InviteTokensSection() {
                     <button
                       type="button"
                       onClick={() => setConfirmDeleteId(tok.id)}
-                      className="p-1.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-                      title="Revoke"
+                      className="p-1.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive focus-visible:ring-2 focus-visible:ring-ring"
+                      title="Revoke token"
+                      aria-label="Revoke token"
                     >
                       <Trash2 className="h-3.5 w-3.5" />
                     </button>
@@ -942,7 +946,7 @@ function AdminSettingsPage() {
   }
 
   return (
-    <div className="mx-auto max-w-5xl space-y-4">
+    <div className="mx-auto max-w-6xl space-y-6 px-4">
       <div>
         <h1 className="text-sm font-semibold">System settings</h1>
         <p className="text-xs text-muted-foreground">Manage auth, infrastructure, and server configuration.</p>
@@ -956,7 +960,7 @@ function AdminSettingsPage() {
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
             className={cn(
-              'shrink-0 px-3 py-1.5 text-xs font-medium transition-colors',
+              'shrink-0 px-3 py-2.5 text-xs font-medium transition-colors focus-visible:ring-2 focus-visible:ring-ring',
               activeTab === tab.id
                 ? 'border-b-2 border-primary text-primary'
                 : 'text-muted-foreground hover:text-foreground',
@@ -993,7 +997,7 @@ function AdminSettingsPage() {
                 type="button"
                 onClick={() => handlePatch(localSettings)}
                 disabled={saveSettings.isPending}
-                className="inline-flex items-center gap-1.5 bg-primary px-4 py-1.5 text-xs font-medium text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-50"
+                className="inline-flex items-center gap-1.5 bg-primary px-4 py-2 text-xs font-medium text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-50 focus-visible:ring-2 focus-visible:ring-ring"
               >
                 {saveSettings.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Save className="h-3 w-3" />}
                 Save changes
@@ -1002,7 +1006,7 @@ function AdminSettingsPage() {
               <button
                 type="button"
                 onClick={() => setLocalSettings(null)}
-                className="px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground"
+                className="px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
               >
                 Discard
               </button>

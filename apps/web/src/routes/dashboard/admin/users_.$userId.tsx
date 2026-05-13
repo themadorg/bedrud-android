@@ -7,6 +7,7 @@ import {
   Globe,
   Hash,
   Lock,
+  LogOut,
   Mail,
   RefreshCw,
   Shield,
@@ -17,8 +18,9 @@ import {
   UserX,
   Video,
 } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis } from 'recharts'
+import { toast } from 'sonner'
 import { api } from '#/lib/api'
 import { useUserStore } from '#/lib/user.store'
 
@@ -72,7 +74,7 @@ function buildWeeklyChart(rooms: Room[]) {
     const d = new Date()
     d.setDate(d.getDate() - (7 - i) * 7)
     return {
-      label: d.toLocaleDateString('en', { month: 'short', day: 'numeric' }),
+      label: d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
       start: new Date(d.getFullYear(), d.getMonth(), d.getDate() - d.getDay()),
       rooms: 0,
     }
@@ -126,6 +128,19 @@ function UserDetailPage() {
   const currentUser = useUserStore((s) => s.user)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [confirmEmail, setConfirmEmail] = useState('')
+  const [forceLogoutDialogOpen, setForceLogoutDialogOpen] = useState(false)
+
+  useEffect(() => {
+    if (!deleteDialogOpen && !forceLogoutDialogOpen) return
+    function onKey(e: KeyboardEvent) {
+      if (e.key === 'Escape') {
+        setDeleteDialogOpen(false)
+        setForceLogoutDialogOpen(false)
+      }
+    }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [deleteDialogOpen, forceLogoutDialogOpen])
 
   const { data, isLoading } = useQuery({
     queryKey: ['admin', 'user', userId],
@@ -145,8 +160,20 @@ function UserDetailPage() {
   const deleteUser = useMutation({
     mutationFn: () => api.delete(`/api/admin/users/${userId}`),
     onSuccess: () => {
+      toast.success('User deleted')
       queryClient.invalidateQueries({ queryKey: ['admin', 'users'] })
       navigate({ to: '/dashboard/admin/users' })
+    },
+  })
+
+  const forceLogout = useMutation({
+    mutationFn: () => api.post(`/api/admin/users/${userId}/force-logout`),
+    onSuccess: () => {
+      toast.success('All sessions revoked')
+      setForceLogoutDialogOpen(false)
+    },
+    onError: () => {
+      toast.error('Failed to revoke sessions')
     },
   })
 
@@ -159,13 +186,14 @@ function UserDetailPage() {
   const weeklyData = user ? buildWeeklyChart(rooms) : []
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6">
+    <div className="mx-auto max-w-4xl space-y-6 px-4">
       {/* Back + header */}
       <div className="flex items-center gap-3">
         <button
           type="button"
           onClick={() => navigate({ to: '/dashboard/admin/users' })}
-          className="p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+          className="p-2 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors focus-visible:ring-2 focus-visible:ring-ring"
+          aria-label="Go back to users"
         >
           <ArrowLeft className="h-4 w-4" />
         </button>
@@ -176,8 +204,8 @@ function UserDetailPage() {
         <button
           type="button"
           onClick={() => queryClient.invalidateQueries({ queryKey: ['admin', 'user', userId] })}
-          className="p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
-          title="Refresh"
+          className="p-2 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors focus-visible:ring-2 focus-visible:ring-ring"
+          aria-label="Refresh user data"
         >
           <RefreshCw className="h-4 w-4" />
         </button>
@@ -225,7 +253,7 @@ function UserDetailPage() {
                     onClick={() => toggleAdmin.mutate(isSuperadmin ? ['user'] : ['superadmin', 'user'])}
                     disabled={toggleAdmin.isPending}
                     title={isSuperadmin ? 'Remove admin' : 'Promote to admin'}
-                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold transition-all hover:opacity-80 disabled:opacity-50"
+                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold transition-all hover:opacity-80 disabled:opacity-50 focus-visible:ring-2 focus-visible:ring-ring"
                     style={
                       isSuperadmin
                         ? {
@@ -243,7 +271,7 @@ function UserDetailPage() {
                     type="button"
                     onClick={() => toggleStatus.mutate(!user.isActive)}
                     disabled={toggleStatus.isPending}
-                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold transition-all hover:opacity-80 disabled:opacity-50"
+                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold transition-all hover:opacity-80 disabled:opacity-50 focus-visible:ring-2 focus-visible:ring-ring"
                     style={
                       user.isActive
                         ? { background: '#10b98115', color: '#10b981', border: '1px solid #10b98130' }
@@ -263,22 +291,39 @@ function UserDetailPage() {
                     )}
                   </button>
                   {currentUser?.id !== user.id && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setConfirmEmail('')
-                        setDeleteDialogOpen(true)
-                      }}
-                      className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold transition-all hover:opacity-80"
-                      style={{
-                        background: '#ef444415',
-                        color: '#f87171',
-                        border: '1px solid #ef444430',
-                      }}
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                      Delete
-                    </button>
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => setForceLogoutDialogOpen(true)}
+                        className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold transition-all hover:opacity-80 focus-visible:ring-2 focus-visible:ring-ring"
+                        style={{
+                          background: '#f59e0b15',
+                          color: '#fbbf24',
+                          border: '1px solid #f59e0b30',
+                        }}
+                        aria-label="Force logout"
+                      >
+                        <LogOut className="h-3.5 w-3.5" />
+                        Logout
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setConfirmEmail('')
+                          setDeleteDialogOpen(true)
+                        }}
+                        className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold transition-all hover:opacity-80 focus-visible:ring-2 focus-visible:ring-ring"
+                        style={{
+                          background: '#ef444415',
+                          color: '#f87171',
+                          border: '1px solid #ef444430',
+                        }}
+                        aria-label="Delete user"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                        Delete
+                      </button>
+                    </>
                   )}
                 </div>
               </div>
@@ -310,7 +355,7 @@ function UserDetailPage() {
               </div>
 
               {/* Detail grid */}
-              <div className="mt-4 grid grid-cols-2 gap-2 border-t pt-4" style={{ borderColor: 'var(--border)' }}>
+              <div className="mt-4 grid grid-cols-2 gap-4 border-t pt-4" style={{ borderColor: 'var(--border)' }}>
                 {[
                   { icon: Hash, label: 'User ID', value: user.id, mono: true },
                   {
@@ -327,7 +372,7 @@ function UserDetailPage() {
                 ].map(({ icon: Icon, label, value, mono }) => (
                   <div
                     key={label}
-                    className="flex items-start gap-2.5 p-3"
+                    className="flex items-start gap-2.5 p-4"
                     style={{ background: 'color-mix(in oklab, var(--muted) 40%, transparent)' }}
                   >
                     <Icon className="h-3.5 w-3.5 mt-0.5 shrink-0 text-muted-foreground" />
@@ -344,7 +389,7 @@ function UserDetailPage() {
           </div>
 
           {/* ── Stats row ──────────────────────────────────── */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
             <StatCard value={rooms.length} label="Rooms created" icon={Video} color="var(--primary)" />
             <StatCard value={activeRooms} label="Currently live" icon={Activity} color="#10b981" />
             <StatCard value={publicRooms} label="Public rooms" icon={Globe} color="var(--primary)" />
@@ -431,7 +476,7 @@ function UserDetailPage() {
                 <div className="min-w-[460px]">
                   {/* header row */}
                   <div
-                    className="grid grid-cols-[1fr_auto_auto_auto_auto] gap-4 border-b px-5 py-2 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground"
+                    className="grid grid-cols-[1fr_auto_auto_auto_auto] gap-4 border-b px-5 py-3 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground"
                     style={{ borderColor: 'var(--border)' }}
                   >
                     <span>Name</span>
@@ -444,7 +489,7 @@ function UserDetailPage() {
                     {rooms.map((room) => (
                       <div
                         key={room.id}
-                        className="grid grid-cols-[1fr_auto_auto_auto_auto] items-center gap-4 px-5 py-3 hover:bg-muted/20 transition-colors"
+                        className="grid grid-cols-[1fr_auto_auto_auto_auto] items-center gap-4 px-5 py-3.5 hover:bg-muted/20 transition-colors"
                       >
                         <Link
                           to="/dashboard/admin/rooms/$roomId"
@@ -505,18 +550,87 @@ function UserDetailPage() {
         </Link>
       </p>
 
+      {/* Force logout confirmation dialog */}
+      {forceLogoutDialogOpen && user && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <button
+            type="button"
+            className="absolute inset-0 bg-black/50 cursor-default"
+            onClick={() => setForceLogoutDialogOpen(false)}
+            aria-hidden="true"
+            tabIndex={-1}
+          />
+          <div
+            className="relative z-10 w-full max-w-md border bg-background p-6 shadow-lg"
+            style={{ borderColor: 'var(--border)' }}
+          >
+            <div className="flex items-center gap-3 mb-4">
+              <div
+                className="flex h-10 w-10 items-center justify-center"
+                style={{ background: '#f59e0b15', color: '#fbbf24' }}
+              >
+                <LogOut className="h-5 w-5" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold">Force logout</h3>
+                <p className="text-sm text-muted-foreground">Revoke all active sessions for this user</p>
+              </div>
+            </div>
+
+            <div className="mb-4 p-3 text-sm" style={{ background: 'var(--muted)', color: 'var(--muted-foreground)' }}>
+              <p className="font-medium text-foreground">{user.name || '—'}</p>
+              <p className="text-xs mt-0.5">{user.email}</p>
+            </div>
+
+            <p className="text-sm text-muted-foreground mb-4">
+              This will revoke the user's refresh token, forcing them to log in again on all devices. Their current
+              access token will remain valid until it expires.
+            </p>
+
+            {forceLogout.isError && (
+              <div
+                className="mb-3 flex items-center gap-2 border px-3 py-2 text-sm"
+                style={{
+                  borderColor: '#ef444430',
+                  background: '#ef444415',
+                  color: '#f87171',
+                }}
+              >
+                {forceLogout.error instanceof Error ? forceLogout.error.message : 'Failed to revoke sessions'}
+              </div>
+            )}
+
+            <div className="flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setForceLogoutDialogOpen(false)}
+                className="px-4 py-2 text-sm font-medium text-muted-foreground hover:bg-muted transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => forceLogout.mutate()}
+                disabled={forceLogout.isPending}
+                className="px-4 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
+                style={{ background: '#f59e0b' }}
+              >
+                {forceLogout.isPending ? 'Revoking...' : 'Revoke sessions'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Delete confirmation dialog */}
       {deleteDialogOpen && user && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
           <button
             type="button"
-            className="absolute inset-0 bg-black/50"
+            className="absolute inset-0 bg-black/50 cursor-default"
             onClick={() => setDeleteDialogOpen(false)}
-            onKeyDown={(e) => {
-              if (e.key === 'Escape') setDeleteDialogOpen(false)
-            }}
-            tabIndex={0}
-            aria-label="Close dialog"
+            aria-hidden="true"
+            tabIndex={-1}
           />
           <div
             className="relative z-10 w-full max-w-md border bg-background p-6 shadow-lg"

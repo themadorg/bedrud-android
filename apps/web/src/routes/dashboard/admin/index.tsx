@@ -165,7 +165,7 @@ function AdminOverview() {
   const last7Days = Array.from({ length: 7 }, (_, i) => {
     const d = new Date()
     d.setDate(d.getDate() - (6 - i))
-    return { date: d.toLocaleDateString('en', { weekday: 'short' }), rooms: 0, full: d.toDateString() }
+    return { date: d.toLocaleDateString(undefined, { weekday: 'short' }), rooms: 0, full: d.toDateString() }
   })
   rooms.forEach((r) => {
     const d = new Date(r.createdAt).toDateString()
@@ -174,7 +174,7 @@ function AdminOverview() {
   })
 
   return (
-    <div className="mx-auto max-w-5xl space-y-5">
+    <div className="mx-auto max-w-5xl space-y-6 px-4">
       {/* Header */}
       <div>
         <h1 className="text-sm font-semibold">System overview</h1>
@@ -182,7 +182,7 @@ function AdminOverview() {
       </div>
 
       {/* Stats grid */}
-      <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3">
         <StatCard value={users.length} label="Total users" sub={`${activeUsers} active`} icon={Users} />
         <StatCard value={rooms.length} label="Total rooms" sub={`${activeRooms} live`} icon={Video} />
         <StatCard value={onlineCount} label="Online users" sub="currently in rooms" icon={Radio} />
@@ -196,11 +196,11 @@ function AdminOverview() {
 
       {/* Room activity chart */}
       <div className="border overflow-hidden">
-        <div className="flex items-center justify-between border-b bg-muted/30 px-4 py-2.5">
+        <div className="flex items-center justify-between border-b bg-muted/30 px-4 py-3.5">
           <p className="text-xs font-semibold">Room creation activity</p>
           <span className="text-[11px] text-muted-foreground">Last 7 days</span>
         </div>
-        <div className="p-4">
+        <div className="p-5">
           <ResponsiveContainer width="100%" height={100}>
             <AreaChart data={last7Days} margin={{ top: 4, right: 4, left: -10, bottom: 0 }}>
               <defs>
@@ -241,7 +241,7 @@ function AdminOverview() {
       <div className="grid gap-4 lg:grid-cols-2">
         {/* Recent signups */}
         <div className="border overflow-hidden">
-          <div className="flex items-center justify-between border-b bg-muted/30 px-4 py-2.5">
+          <div className="flex items-center justify-between border-b bg-muted/30 px-4 py-3.5">
             <p className="text-xs font-semibold">Recent sign-ups</p>
             <span className="text-[11px] text-muted-foreground">{users.length} total</span>
           </div>
@@ -250,7 +250,7 @@ function AdminOverview() {
               <p className="px-4 py-6 text-xs text-muted-foreground text-center">No users yet</p>
             ) : (
               recentUsers.map((u) => (
-                <div key={u.id} className="flex items-center justify-between gap-3 px-4 py-2.5">
+                <div key={u.id} className="flex items-center justify-between gap-3 px-4 py-3">
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-xs font-medium">{u.name}</p>
                     <p className="truncate text-[11px] text-muted-foreground">{u.email}</p>
@@ -271,11 +271,11 @@ function AdminOverview() {
 
         {/* Room breakdown */}
         <div className="border overflow-hidden">
-          <div className="flex items-center justify-between border-b bg-muted/30 px-4 py-2.5">
+          <div className="flex items-center justify-between border-b bg-muted/30 px-4 py-3.5">
             <p className="text-xs font-semibold">Room breakdown</p>
             <span className="text-[11px] text-muted-foreground">{rooms.length} total</span>
           </div>
-          <div className="p-4 space-y-3">
+          <div className="p-5 space-y-3">
             {[
               {
                 label: 'Live rooms',

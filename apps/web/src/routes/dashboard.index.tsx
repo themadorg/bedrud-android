@@ -306,6 +306,7 @@ function DashboardPage() {
   const { data: rooms, isLoading } = useQuery({
     queryKey: ['rooms'],
     queryFn: () => api.get<Room[]>('/api/room/list'),
+    refetchOnMount: 'always',
   })
 
   function handleJoin(roomName: string) {

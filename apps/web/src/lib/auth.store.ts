@@ -28,6 +28,7 @@ export const useAuthStore = create<AuthStore>()((set, get) => ({
   setTokens: (tokens, remember = true) => {
     set({ tokens })
     if (remember === 'ephemeral') {
+      sessionStorage.setItem(REMEMBER_KEY, '1')
       sessionStorage.setItem(ACCESS_TOKEN_KEY, tokens.accessToken)
       return
     }

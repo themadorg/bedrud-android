@@ -11,6 +11,7 @@ import {
   Pin,
   Power,
   Search,
+  Trash2,
 } from 'lucide-react'
 import { useState } from 'react'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '#/components/ui/select'
@@ -43,7 +44,8 @@ function AdminRoomsPage() {
   const [search, setSearch] = useState('')
   const [sortField, setSortField] = useState<SortField>('createdAt')
   const [sortAsc, setSortAsc] = useState(false)
-  const [confirmClose, setConfirmClose] = useState<string | null>(null)
+  const [confirmSuspend, setConfirmSuspend] = useState<string | null>(null)
+  const [confirmDelete, setConfirmDelete] = useState<string | null>(null)
   const [editingLimit, setEditingLimit] = useState<string | null>(null)
   const [limitValue, setLimitValue] = useState(0)
   const [page, setPage] = useState(1)
@@ -54,11 +56,19 @@ function AdminRoomsPage() {
     queryFn: () => api.get<{ rooms: AdminRoom[]; total: number }>(`/api/admin/rooms?page=${page}&limit=${limit}`),
   })
 
-  const closeRoom = useMutation({
+  const suspendRoom = useMutation({
+    mutationFn: (id: string) => api.post(`/api/admin/rooms/${id}/suspend`, {}),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'rooms'], exact: false })
+      setConfirmSuspend(null)
+    },
+  })
+
+  const deleteRoom = useMutation({
     mutationFn: (id: string) => api.delete(`/api/admin/rooms/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'rooms'], exact: false })
-      setConfirmClose(null)
+      setConfirmDelete(null)
     },
   })
 
@@ -95,7 +105,7 @@ function AdminRoomsPage() {
   }
 
   return (
-    <div className="mx-auto max-w-5xl space-y-4">
+    <div className="mx-auto max-w-6xl space-y-6 px-4">
       {/* Header */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
@@ -103,7 +113,7 @@ function AdminRoomsPage() {
           <p className="text-xs text-muted-foreground">{data?.total ?? 0} rooms in this instance</p>
         </div>
 
-        <div className="flex items-center gap-2 border bg-background px-2.5 py-1.5 w-full sm:w-56">
+        <div className="flex items-center gap-2 border bg-background px-3 py-2.5 w-full sm:w-56 focus-within:ring-2 focus-within:ring-ring">
           <Search className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
           <input
             value={search}
@@ -117,12 +127,13 @@ function AdminRoomsPage() {
       {/* Table */}
       <div className="border overflow-hidden">
         <div className="overflow-x-auto">
-          <div className="min-w-[560px]">
-            <div className="grid grid-cols-[1fr_auto_auto_auto_auto_auto] gap-3 border-b bg-muted/30 px-4 py-2.5 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+          <div className="min-w-[640px]">
+            <div className="grid grid-cols-[1fr_auto_auto_auto_auto_auto_auto] gap-4 border-b bg-muted/30 px-4 py-3.5 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
               <button
                 type="button"
                 className="text-left hover:text-foreground transition-colors"
                 onClick={() => toggleSort('name')}
+                aria-label={`Sort by room name${sortField === 'name' ? (sortAsc ? ' ascending' : ' descending') : ''}`}
               >
                 Room <SortIcon field="name" />
               </button>
@@ -132,6 +143,7 @@ function AdminRoomsPage() {
                 type="button"
                 className="text-left hover:text-foreground transition-colors"
                 onClick={() => toggleSort('maxParticipants')}
+                aria-label={`Sort by capacity${sortField === 'maxParticipants' ? (sortAsc ? ' ascending' : ' descending') : ''}`}
               >
                 Cap. <SortIcon field="maxParticipants" />
               </button>
@@ -139,18 +151,23 @@ function AdminRoomsPage() {
                 type="button"
                 className="text-left hover:text-foreground transition-colors hidden sm:block"
                 onClick={() => toggleSort('createdAt')}
+                aria-label={`Sort by created date${sortField === 'createdAt' ? (sortAsc ? ' ascending' : ' descending') : ''}`}
               >
                 Created <SortIcon field="createdAt" />
               </button>
-              <span className="sr-only">Actions</span>
+              <span>Suspend</span>
+              <span>Delete</span>
             </div>
 
             <div className="divide-y">
               {isLoading ? (
                 [...Array(4)].map((_, i) => (
-                  <div key={i} className="grid grid-cols-[1fr_auto_auto_auto_auto_auto] gap-3 px-4 py-3 animate-pulse">
-                    {[...Array(6)].map((__, j) => (
-                      <div key={j} className="h-3.5 rounded-full bg-muted" />
+                  <div
+                    key={i}
+                    className="grid grid-cols-[1fr_auto_auto_auto_auto_auto_auto] gap-4 px-4 py-4 animate-pulse"
+                  >
+                    {[...Array(7)].map((__, j) => (
+                      <div key={j} className="h-3.5 bg-muted" />
                     ))}
                   </div>
                 ))
@@ -160,7 +177,7 @@ function AdminRoomsPage() {
                 rooms.map((room) => (
                   <div
                     key={room.id}
-                    className="grid grid-cols-[1fr_auto_auto_auto_auto_auto] items-center gap-3 px-4 py-3 hover:bg-muted/30 transition-colors"
+                    className="grid grid-cols-[1fr_auto_auto_auto_auto_auto_auto] items-center gap-4 px-4 py-4 hover:bg-muted/30 transition-colors"
                   >
                     <div className="flex items-center gap-1.5">
                       {room.settings?.isPersistent && <Pin className="h-3 w-3 shrink-0 text-primary" />}
@@ -194,7 +211,7 @@ function AdminRoomsPage() {
                       )}
                     >
                       {room.isActive && <Activity className="h-3 w-3 animate-pulse" />}
-                      {room.isActive ? 'Live' : 'Idle'}
+                      {room.isActive ? 'Live' : 'Suspended'}
                     </span>
 
                     {editingLimit === room.id ? (
@@ -224,7 +241,7 @@ function AdminRoomsPage() {
                           setEditingLimit(room.id)
                           setLimitValue(room.maxParticipants)
                         }}
-                        className="text-xs text-muted-foreground hover:text-foreground underline-offset-2 hover:underline transition-colors"
+                        className="text-xs text-muted-foreground hover:text-foreground underline-offset-2 hover:underline transition-colors focus-visible:ring-2 focus-visible:ring-ring"
                         title="Click to edit"
                       >
                         {room.maxParticipants}
@@ -239,20 +256,22 @@ function AdminRoomsPage() {
                       })}
                     </p>
 
-                    {confirmClose === room.id ? (
+                    {/* Suspend action */}
+                    {confirmSuspend === room.id ? (
                       <div className="flex items-center gap-1">
                         <button
                           type="button"
-                          onClick={() => closeRoom.mutate(room.id)}
-                          disabled={closeRoom.isPending}
-                          className="bg-destructive px-2 py-1 text-[10px] font-semibold text-destructive-foreground transition-opacity hover:opacity-80 disabled:opacity-50"
+                          onClick={() => suspendRoom.mutate(room.id)}
+                          disabled={suspendRoom.isPending}
+                          className="bg-amber-500 px-2 py-1 text-[10px] font-semibold text-white transition-opacity hover:opacity-80 disabled:opacity-50 focus-visible:ring-2 focus-visible:ring-ring"
                         >
                           Confirm
                         </button>
                         <button
                           type="button"
-                          onClick={() => setConfirmClose(null)}
-                          className="px-2 py-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                          onClick={() => setConfirmSuspend(null)}
+                          className="px-2 py-1 text-xs text-muted-foreground hover:text-foreground transition-colors focus-visible:ring-2 focus-visible:ring-ring"
+                          aria-label="Cancel suspend"
                         >
                           ×
                         </button>
@@ -260,12 +279,45 @@ function AdminRoomsPage() {
                     ) : (
                       <button
                         type="button"
-                        onClick={() => setConfirmClose(room.id)}
+                        onClick={() => setConfirmSuspend(room.id)}
                         disabled={!room.isActive}
-                        className="p-1.5 transition-colors hover:bg-destructive/10 hover:text-destructive disabled:opacity-30 disabled:cursor-not-allowed text-muted-foreground"
-                        title={room.isActive ? 'Force close room' : 'Room already inactive'}
+                        className="p-1.5 transition-colors hover:bg-amber-500/10 hover:text-amber-500 disabled:opacity-30 disabled:cursor-not-allowed text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"
+                        title={room.isActive ? 'Suspend room (end call)' : 'Room already suspended'}
+                        aria-label={room.isActive ? 'Suspend room' : 'Room already suspended'}
                       >
                         <Power className="h-3.5 w-3.5" />
+                      </button>
+                    )}
+
+                    {/* Delete action */}
+                    {confirmDelete === room.id ? (
+                      <div className="flex items-center gap-1">
+                        <button
+                          type="button"
+                          onClick={() => deleteRoom.mutate(room.id)}
+                          disabled={deleteRoom.isPending}
+                          className="bg-destructive px-2 py-1 text-[10px] font-semibold text-destructive-foreground transition-opacity hover:opacity-80 disabled:opacity-50 focus-visible:ring-2 focus-visible:ring-ring"
+                        >
+                          Delete
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setConfirmDelete(null)}
+                          className="px-2 py-1 text-xs text-muted-foreground hover:text-foreground transition-colors focus-visible:ring-2 focus-visible:ring-ring"
+                          aria-label="Cancel delete"
+                        >
+                          ×
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => setConfirmDelete(room.id)}
+                        className="p-1.5 transition-colors hover:bg-destructive/10 hover:text-destructive text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"
+                        title="Permanently delete room"
+                        aria-label="Permanently delete room"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
                       </button>
                     )}
                   </div>
@@ -275,7 +327,7 @@ function AdminRoomsPage() {
           </div>
         </div>
 
-        <div className="flex items-center justify-between border-t bg-muted/30 px-4 py-2">
+        <div className="flex items-center justify-between border-t bg-muted/30 px-4 py-3.5">
           <p className="text-[11px] text-muted-foreground">
             Page {page} of {Math.max(1, Math.ceil((data?.total ?? 0) / limit))}
           </p>
@@ -288,7 +340,7 @@ function AdminRoomsPage() {
                 setPage(1)
               }}
             >
-              <SelectTrigger className="h-7 w-[70px] text-[11px]">
+              <SelectTrigger className="h-8 w-[72px] text-[11px]">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -302,7 +354,8 @@ function AdminRoomsPage() {
               type="button"
               disabled={page <= 1}
               onClick={() => setPage((p) => p - 1)}
-              className="inline-flex items-center justify-center h-7 w-7 border transition-opacity hover:opacity-80 disabled:opacity-30 disabled:cursor-not-allowed"
+              className="inline-flex items-center justify-center h-8 w-8 border transition-opacity hover:opacity-80 disabled:opacity-30 disabled:cursor-not-allowed focus-visible:ring-2 focus-visible:ring-ring"
+              aria-label="Previous page"
             >
               <ChevronLeft className="h-3.5 w-3.5" />
             </button>
@@ -311,7 +364,8 @@ function AdminRoomsPage() {
               type="button"
               disabled={page * limit >= (data?.total ?? 0)}
               onClick={() => setPage((p) => p + 1)}
-              className="inline-flex items-center justify-center h-7 w-7 border transition-opacity hover:opacity-80 disabled:opacity-30 disabled:cursor-not-allowed"
+              className="inline-flex items-center justify-center h-8 w-8 border transition-opacity hover:opacity-80 disabled:opacity-30 disabled:cursor-not-allowed focus-visible:ring-2 focus-visible:ring-ring"
+              aria-label="Next page"
             >
               <ChevronRight className="h-3.5 w-3.5" />
             </button>

@@ -135,7 +135,9 @@ export function CreateRoomDialog({ open, onOpenChange, onCreate, isAdmin }: Prop
               autoFocus
               className="mt-2 w-full bg-transparent font-mono text-xl font-semibold tracking-tight outline-none placeholder:text-muted-foreground/30"
             />
-            <p className="mt-1.5 font-mono text-[11px] text-muted-foreground/50">bedrud.app/m/{displaySlug}</p>
+            <p className="mt-1.5 font-mono text-[11px] text-muted-foreground/50">
+              {window.location.host}/m/{displaySlug}
+            </p>
             {!name.trim() && (
               <p className="mt-0.5 text-[10px] text-muted-foreground/40">Leave blank to auto-generate a name</p>
             )}

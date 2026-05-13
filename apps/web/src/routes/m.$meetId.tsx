@@ -1,9 +1,11 @@
 import '@livekit/components-styles/components'
 import { LiveKitRoom, RoomAudioRenderer, useTracks } from '@livekit/components-react'
+import { useQueryClient } from '@tanstack/react-query'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import type { AudioCaptureOptions } from 'livekit-client'
 import { Track } from 'livekit-client'
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { toast } from 'sonner'
 import { api } from '#/lib/api'
 import { useAudioPreferencesStore } from '#/lib/audio-preferences.store'
 import { useAuthStore } from '#/lib/auth.store'
@@ -15,7 +17,7 @@ import { AudioProcessorManager } from '@/components/meeting/AudioProcessorManage
 import { BeforeUnloadLock } from '@/components/meeting/BeforeUnloadLock'
 import { FocusLayout } from '@/components/meeting/FocusLayout'
 import { KickDetector } from '@/components/meeting/KickDetector'
-import { MeetingProvider, useMeetingChatContext } from '@/components/meeting/MeetingContext'
+import { MeetingProvider, type RoomDeletionEvent, useMeetingChatContext } from '@/components/meeting/MeetingContext'
 import { MeetingErrorBoundary } from '@/components/meeting/MeetingErrorBoundary'
 import { MeetingHeader } from '@/components/meeting/MeetingHeader'
 import { MeetingPanels } from '@/components/meeting/MeetingPanels'
@@ -35,6 +37,28 @@ export const Route = createFileRoute('/m/$meetId')({
   component: MeetingPage,
 })
 
+async function checkUserStatus(): Promise<boolean> {
+  const tokens = useAuthStore.getState().tokens
+  if (!tokens?.accessToken) return false
+
+  try {
+    const meRes = await fetch('/api/auth/me', {
+      headers: { Authorization: `Bearer ${tokens.accessToken}` },
+      credentials: 'include',
+    })
+    if (meRes.ok) return true
+
+    const refreshRes = await fetch('/api/auth/refresh', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+    })
+    return refreshRes.ok
+  } catch {
+    return false
+  }
+}
+
 function MeetingPage() {
   const { meetId } = Route.useParams()
   const navigate = useNavigate()
@@ -51,6 +75,46 @@ function MeetingPage() {
   const [guestName, setGuestName] = useState<string | null>(null)
   const [guestInput, setGuestInput] = useState('')
   const [wasKicked, setWasKicked] = useState(false)
+  const [wasRoomDeleted, setWasRoomDeleted] = useState(false)
+  const redirectTargetRef = useRef({ to: '/auth/login', search: { redirect: undefined } as { redirect?: string } })
+  const deletionTypeRef = useRef<'user_deleted' | 'room_closed'>('room_closed')
+
+  const handleRoomDeleted = useCallback(() => {
+    setWasRoomDeleted(true)
+    const isUserDeleted = deletionTypeRef.current === 'user_deleted'
+
+    if (isUserDeleted) {
+      const toastId = toast.loading('Verifying your account...')
+      checkUserStatus().then((exists) => {
+        if (exists) {
+          toast.success('Room closed', { id: toastId, description: 'This room is no longer available.' })
+          navigate({ to: '/dashboard', search: { redirect: undefined } })
+        } else {
+          toast.error('Account deleted', { id: toastId, description: 'Your account has been deleted.' })
+          useAuthStore.getState().clear()
+          setTimeout(() => navigate({ to: '/auth/login', search: { redirect: undefined } }), 2000)
+        }
+      })
+    } else {
+      toast.error('Room closed', { description: 'This room is no longer available.' })
+      setTimeout(() => navigate({ to: '/dashboard', search: { redirect: undefined } }), 5000)
+    }
+  }, [navigate])
+
+  const handleRoomDeletionMessage = useCallback(
+    (_event: RoomDeletionEvent, message: string, isCurrentUserDeleted: boolean) => {
+      if (isCurrentUserDeleted) {
+        deletionTypeRef.current = 'user_deleted'
+        redirectTargetRef.current = { to: '/auth/login', search: { redirect: undefined } }
+        toast.error('Account deleted', { description: message || 'Your account has been deleted.' })
+      } else {
+        deletionTypeRef.current = 'room_closed'
+        redirectTargetRef.current = { to: '/dashboard', search: { redirect: undefined } }
+        toast.error('Room closed', { description: message || 'This room has been closed.' })
+      }
+    },
+    [],
+  )
 
   // Set initial guestName only after mount (client-side), where tokens are available.
   useEffect(() => {
@@ -98,6 +162,17 @@ function MeetingPage() {
   }, [joinData, mergeAudioPrefs, tokens])
 
   const addRecent = useRecentRoomsStore((s) => s.add)
+  const queryClient = useQueryClient()
+  const invalidatedRef = useRef(false)
+
+  useEffect(() => {
+    return () => {
+      if (!invalidatedRef.current) {
+        invalidatedRef.current = true
+        queryClient.invalidateQueries({ queryKey: ['rooms'] })
+      }
+    }
+  }, [queryClient])
 
   useEffect(() => {
     if (joinData) return
@@ -280,6 +355,35 @@ function MeetingPage() {
     return <ErrorPage variant="kicked" showBack={false} />
   }
 
+  if (wasRoomDeleted) {
+    return (
+      <div
+        style={{
+          position: 'fixed',
+          inset: 0,
+          background: '#07070f',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: 14,
+        }}
+      >
+        <div
+          style={{
+            width: 48,
+            height: 48,
+            borderRadius: '50%',
+            border: '2px solid color-mix(in oklab, var(--primary) 30%, transparent)',
+            borderTopColor: 'var(--primary)',
+            animation: 'meet-connecting-spin 0.9s linear infinite',
+          }}
+        />
+        <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: 14 }}>Room deleted. Redirecting…</p>
+      </div>
+    )
+  }
+
   return (
     <MeetingErrorBoundary>
       <LiveKitRoom token={token} serverUrl={wsUrl} connect audio={audioConstraints} video={false}>
@@ -287,9 +391,14 @@ function MeetingPage() {
         {/* LiveKitRoom renders as display:contents — this div is the actual viewport container */}
         <div className="fixed inset-0 overflow-hidden" style={{ background: '#07070f' }}>
           <SecureContextBanner />
-          <MeetingProvider roomId={id} roomName={roomName} adminId={adminId ?? ''}>
+          <MeetingProvider
+            roomId={id}
+            roomName={roomName}
+            adminId={adminId ?? ''}
+            onRoomDeletionMessage={handleRoomDeletionMessage}
+          >
             <BeforeUnloadLock />
-            <KickDetector onKicked={() => setWasKicked(true)} />
+            <KickDetector onKicked={() => setWasKicked(true)} onRoomDeleted={handleRoomDeleted} />
             <AskActionBanner />
             <AudioProcessorManager />
             <MeetingSoundEffects />
@@ -362,7 +471,7 @@ function MeetingLayout() {
     const last = [...systemMessages].reverse().find((m) => m.event === 'spotlight')
     if (!last || last.ts <= lastSpotlightTsRef.current) return
     lastSpotlightTsRef.current = last.ts
-    if (!pinned.has(last.target)) toggle(last.target)
+    if (!pinned.has(last.target!) && last.target) toggle(last.target)
   }, [systemMessages, pinned, toggle])
 
   useEffect(() => () => clear(), [clear])

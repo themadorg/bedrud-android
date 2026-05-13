@@ -3,6 +3,7 @@ import { LayoutDashboard, LogOut, Menu, Radio, Settings, Shield, Users, Video } 
 import { useEffect, useState } from 'react'
 import { api } from '#/lib/api'
 import { useAuthStore } from '#/lib/auth.store'
+import { useRecentRoomsStore } from '#/lib/recent-rooms.store'
 import type { User } from '#/lib/user.store'
 import { useUserStore } from '#/lib/user.store'
 import { ThemeToggle } from '@/components/ThemeToggle'
@@ -321,6 +322,7 @@ function DashboardLayout() {
     } finally {
       clearAuth()
       clearUser()
+      useRecentRoomsStore.getState().clear()
       navigate({ to: '/auth' })
     }
   }
