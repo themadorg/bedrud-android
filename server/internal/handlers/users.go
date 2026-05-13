@@ -4,67 +4,66 @@ import (
 	"bedrud/internal/auth"
 	"bedrud/internal/models"
 	"bedrud/internal/repository"
+	"bedrud/internal/services"
+	"context"
+	"fmt"
+	"sync"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/rs/zerolog/log"
+	"gorm.io/gorm"
 )
 
 type UsersHandler struct {
-	userRepo *repository.UserRepository
-	roomRepo *repository.RoomRepository
+	userRepo    *repository.UserRepository
+	roomRepo    *repository.RoomRepository
+	passkeyRepo *repository.PasskeyRepository
+	prefsRepo   *repository.UserPreferencesRepository
+	cleanupSvc  *services.RoomCleanupService
+	wg          sync.WaitGroup
 }
 
-// UserListResponse represents the response for listing users
-// @Description Response containing a list of users
 type UserListResponse struct {
-	// @Description List of user details
 	Users []UserDetails `json:"users"`
 }
 
-// UserDetails represents detailed user information
-// @Description Detailed information about a user
 type UserDetails struct {
-	// @Description User's unique identifier
-	ID string `json:"id" example:"123e4567-e89b-12d3-a456-426614174000"`
-
-	// @Description User's email address
-	Email string `json:"email" example:"user@example.com"`
-
-	// @Description User's display name
-	Name string `json:"name" example:"John Doe"`
-
-	// @Description Authentication provider
-	Provider string `json:"provider" example:"local"`
-
-	// @Description Whether the user account is active
-	IsActive bool `json:"isActive" example:"true"`
-
-	// @Description Whether the user has admin access
-	IsAdmin bool `json:"isAdmin" example:"false"`
-
-	// @Description List of user's access levels
-	Accesses []string `json:"accesses" example:"user,admin"`
-
-	// @Description Account creation timestamp
-	CreatedAt string `json:"createdAt" example:"2025-01-01 12:00:00"`
+	ID        string   `json:"id" example:"123e4567-e89b-12d3-a456-426614174000"`
+	Email     string   `json:"email" example:"user@example.com"`
+	Name      string   `json:"name" example:"John Doe"`
+	Provider  string   `json:"provider" example:"local"`
+	IsActive  bool     `json:"isActive" example:"true"`
+	IsAdmin   bool     `json:"isAdmin" example:"false"`
+	Accesses  []string `json:"accesses" example:"user,admin"`
+	CreatedAt string   `json:"createdAt" example:"2025-01-01 12:00:00"`
 }
 
-// UserStatusUpdateRequest represents the request to update user status
-// @Description Request body for updating user status
 type UserStatusUpdateRequest struct {
 	Active bool `json:"active" example:"true"`
 }
 
-// UserStatusUpdateResponse represents the response for status update
-// @Description Response for user status update
 type UserStatusUpdateResponse struct {
 	Message string `json:"message" example:"User status updated successfully"`
 }
 
-func NewUsersHandler(userRepo *repository.UserRepository, roomRepo *repository.RoomRepository) *UsersHandler {
+func NewUsersHandler(
+	userRepo *repository.UserRepository,
+	roomRepo *repository.RoomRepository,
+	passkeyRepo *repository.PasskeyRepository,
+	prefsRepo *repository.UserPreferencesRepository,
+	cleanupSvc *services.RoomCleanupService,
+) *UsersHandler {
 	return &UsersHandler{
-		userRepo: userRepo,
-		roomRepo: roomRepo,
+		userRepo:    userRepo,
+		roomRepo:    roomRepo,
+		passkeyRepo: passkeyRepo,
+		prefsRepo:   prefsRepo,
+		cleanupSvc:  cleanupSvc,
 	}
+}
+
+func (h *UsersHandler) Shutdown() {
+	h.wg.Wait()
 }
 
 // @Summary List all users
@@ -88,7 +87,7 @@ func (h *UsersHandler) ListUsers(c *fiber.Ctx) error {
 		})
 	}
 
-	var response []UserDetails
+	response := make([]UserDetails, 0, len(users))
 	for i := range users {
 		user := &users[i]
 		response = append(response, UserDetails{
@@ -111,21 +110,21 @@ func (h *UsersHandler) ListUsers(c *fiber.Ctx) error {
 	})
 }
 
-// @Summary Update user status
-// @Description Activate or deactivate a user (requires superadmin access)
+// @Summary Update user accesses
+// @Description Update user access levels (requires superadmin access). Invalidates all existing sessions by clearing their refresh token.
 // @Tags admin
 // @Accept json
 // @Produce json
 // @Param id path string true "User ID"
-// @Param request body UserStatusUpdateRequest true "Status update"
+// @Param request body object{accesses=[]string} true "Access levels to assign"
 // @Security BearerAuth
-// @Success 200 {object} UserStatusUpdateResponse "Status updated successfully"
+// @Success 200 {object} map[string]interface{} "Accesses updated"
 // @Failure 400 {object} ErrorResponse "Invalid request"
 // @Failure 401 {object} ErrorResponse "Unauthorized"
 // @Failure 403 {object} ErrorResponse "Forbidden"
 // @Failure 404 {object} ErrorResponse "User not found"
 // @Failure 500 {object} ErrorResponse "Internal server error"
-// @Router /admin/users/{id}/status [put]
+// @Router /admin/users/{id}/accesses [put]
 func (h *UsersHandler) UpdateUserAccesses(c *fiber.Ctx) error {
 	claims, ok := c.Locals("user").(*auth.Claims)
 	if !ok || claims == nil || !containsAccess(claims.Accesses, "superadmin") {
@@ -139,14 +138,16 @@ func (h *UsersHandler) UpdateUserAccesses(c *fiber.Ctx) error {
 	if err := c.BodyParser(&input); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid input"})
 	}
-	user, err := h.userRepo.GetUserByID(userID)
-	if err != nil || user == nil {
-		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "User not found"})
-	}
-	user.Accesses = input.Accesses
-	if err := h.userRepo.UpdateUser(user); err != nil {
+
+	// Atomically update accesses and clear the refresh token so the user gets a
+	// fresh JWT with correct roles on their next login.
+	if err := h.userRepo.UpdateAccessesAndClearToken(userID, input.Accesses); err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "User not found"})
+		}
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to update user"})
 	}
+
 	return c.JSON(fiber.Map{"message": "User accesses updated"})
 }
 
@@ -165,14 +166,36 @@ func (h *UsersHandler) UpdateUserStatus(c *fiber.Ctx) error {
 		})
 	}
 
-	user, err := h.userRepo.GetUserByID(userID)
-	if err != nil || user == nil {
-		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
-			"error": "User not found",
+	_, err := h.userRepo.GetUserByID(userID)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "Failed to lookup user",
 		})
 	}
 
-	user.IsActive = input.Active
+	// When banning, atomically set is_active=false and clear the refresh token
+	// to immediately invalidate all sessions. Uses a single DB call to avoid
+	// the security gap where ban succeeds but token-clear fails independently.
+	if !input.Active {
+		if err := h.userRepo.UpdateUserStatusAndClearToken(userID, false); err != nil {
+			if err == gorm.ErrRecordNotFound {
+				return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "User not found"})
+			}
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"error": "Failed to update user status",
+			})
+		}
+		return c.JSON(UserStatusUpdateResponse{
+			Message: "User status updated successfully",
+		})
+	}
+
+	// Unbanning: only set is_active=true, no token manipulation needed.
+	user, err := h.userRepo.GetUserByID(userID)
+	if err != nil || user == nil {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "User not found"})
+	}
+	user.IsActive = true
 	if err := h.userRepo.UpdateUser(user); err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": "Failed to update user status",
@@ -184,15 +207,15 @@ func (h *UsersHandler) UpdateUserStatus(c *fiber.Ctx) error {
 	})
 }
 
-// DeleteUser permanently deletes a user
+// DeleteUser permanently deletes a user and all associated data asynchronously.
 // @Summary Delete a user
-// @Description Permanently delete a user and all associated data (requires superadmin access). Cannot delete your own account.
+// @Description Permanently delete a user and all associated data (requires superadmin access). Cannot delete your own account. Returns 202 Accepted — deletion runs in background.
 // @Tags admin
 // @Accept json
 // @Produce json
 // @Param id path string true "User ID"
 // @Security BearerAuth
-// @Success 200 {object} UserStatusUpdateResponse "User deleted successfully"
+// @Success 202 {object} map[string]interface{} "Deletion queued"
 // @Failure 400 {object} ErrorResponse "Cannot delete own account"
 // @Failure 401 {object} ErrorResponse "Unauthorized"
 // @Failure 403 {object} ErrorResponse "Forbidden"
@@ -218,13 +241,132 @@ func (h *UsersHandler) DeleteUser(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "User not found"})
 	}
 
-	if err := h.userRepo.DeleteUser(userID); err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to delete user"})
+	rooms, err := h.roomRepo.GetRoomsCreatedByUser(userID)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to fetch user rooms"})
+	}
+	if rooms == nil {
+		rooms = []models.Room{}
 	}
 
-	return c.JSON(UserStatusUpdateResponse{
-		Message: "User deleted permanently",
+	h.wg.Add(1)
+	go func() {
+		defer h.wg.Done()
+		h.runHardDeleteJob(context.Background(), user.Email, userID, rooms)
+	}()
+
+	return c.Status(fiber.StatusAccepted).JSON(fiber.Map{
+		"message": "User deletion queued",
+		"rooms":   len(rooms),
 	})
+}
+
+func (h *UsersHandler) runHardDeleteJob(ctx context.Context, userEmail, userID string, rooms []models.Room) {
+	if err := h.cleanupSvc.DeleteUserRooms(ctx, rooms, userID); err != nil {
+		log.Warn().Err(err).Str("userID", userID).
+			Int("total", len(rooms)).
+			Msg("room cleanup had errors, proceeding with user deletion")
+	}
+
+	if err := h.passkeyRepo.DeleteByUserID(userID); err != nil {
+		log.Error().Err(err).Str("userID", userID).Msg("failed to delete passkeys")
+	}
+	if err := h.prefsRepo.DeleteByUserID(userID); err != nil {
+		log.Error().Err(err).Str("userID", userID).Msg("failed to delete user preferences")
+	}
+	if err := h.userRepo.DeleteUser(userID); err != nil {
+		log.Error().Err(err).Str("userID", userID).Msg("failed to delete user")
+		return
+	}
+
+	log.Info().Str("userID", userID).Str("email", userEmail).Int("rooms", len(rooms)).Msg("user deleted with room cleanup")
+}
+
+// @Summary Set user password (admin)
+// @Description Force-set a user's password. Superadmin only. Invalidates all existing sessions by clearing their refresh token.
+// @Tags admin
+// @Accept json
+// @Produce json
+// @Param id path string true "User ID"
+// @Param request body object{password=string} true "New password (12-128 characters)"
+// @Security BearerAuth
+// @Success 200 {object} map[string]interface{} "Password updated"
+// @Failure 400 {object} ErrorResponse "Invalid password"
+// @Failure 401 {object} ErrorResponse "Unauthorized"
+// @Failure 403 {object} ErrorResponse "Forbidden"
+// @Failure 404 {object} ErrorResponse "User not found"
+// @Failure 500 {object} ErrorResponse "Internal server error"
+// @Router /admin/users/{id}/password [put]
+func (h *UsersHandler) SetUserPassword(c *fiber.Ctx) error {
+	claims, ok := c.Locals("user").(*auth.Claims)
+	if !ok || claims == nil || !containsAccess(claims.Accesses, "superadmin") {
+		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "Insufficient permissions"})
+	}
+
+	userID := c.Params("id")
+	var input struct {
+		Password string `json:"password"`
+	}
+	if err := c.BodyParser(&input); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid input"})
+	}
+	if len(input.Password) < MinPasswordLength {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": fmt.Sprintf("Password must be at least %d characters", MinPasswordLength)})
+	}
+	if len(input.Password) > MaxPasswordLength {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": fmt.Sprintf("Password must be at most %d characters", MaxPasswordLength)})
+	}
+
+	hashed, err := auth.HashPassword(input.Password)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to hash password"})
+	}
+
+	if err := h.userRepo.UpdatePassword(userID, hashed); err != nil {
+		if err == gorm.ErrRecordNotFound {
+			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "User not found"})
+		}
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to update password"})
+	}
+
+	log.Info().Str("adminID", claims.UserID).Str("targetUserID", userID).Msg("Admin reset user password")
+	return c.JSON(fiber.Map{"message": "Password updated successfully"})
+}
+
+// ForceLogout revokes all sessions for a user by clearing their stored refresh token.
+// The user's access token will remain valid until it naturally expires.
+// @Summary Force logout a user
+// @Description Revoke all active sessions for a user by clearing their refresh token (superadmin only)
+// @Tags admin
+// @Accept json
+// @Produce json
+// @Param id path string true "User ID"
+// @Security BearerAuth
+// @Success 200 {object} map[string]interface{} "Sessions revoked"
+// @Failure 401 {object} ErrorResponse "Unauthorized"
+// @Failure 403 {object} ErrorResponse "Forbidden"
+// @Failure 404 {object} ErrorResponse "User not found"
+// @Failure 500 {object} ErrorResponse "Internal server error"
+// @Router /admin/users/{id}/force-logout [post]
+func (h *UsersHandler) ForceLogout(c *fiber.Ctx) error {
+	claims, ok := c.Locals("user").(*auth.Claims)
+	if !ok || claims == nil || !containsAccess(claims.Accesses, "superadmin") {
+		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "Insufficient permissions"})
+	}
+
+	userID := c.Params("id")
+
+	user, err := h.userRepo.GetUserByID(userID)
+	if err != nil || user == nil {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "User not found"})
+	}
+
+	if err := h.userRepo.ClearRefreshToken(userID); err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to revoke sessions"})
+	}
+
+	log.Info().Str("adminID", claims.UserID).Str("targetUserID", userID).Msg("Admin force-logged out user")
+	return c.JSON(fiber.Map{"message": "All sessions revoked"})
 }
 
 func (h *UsersHandler) GetUserDetail(c *fiber.Ctx) error {

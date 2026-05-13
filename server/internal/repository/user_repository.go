@@ -155,6 +155,73 @@ func (r *UserRepository) UpdateUserAccesses(userID string, accesses []string) er
 	return result.Error
 }
 
+// UpdateAccessesAndClearToken atomically updates accesses and clears the refresh token.
+// Used when changing user roles to force re-login with correct accesses in the JWT.
+func (r *UserRepository) UpdateAccessesAndClearToken(userID string, accesses []string) error {
+	result := r.db.Model(&models.User{}).Where("id = ?", userID).Updates(map[string]any{
+		"accesses":      models.StringArray(accesses),
+		"refresh_token": "",
+		"updated_at":    time.Now(),
+	})
+	if result.Error != nil {
+		log.Error().Err(result.Error).Str("userID", userID).Msg("Failed to update accesses and clear token")
+		return result.Error
+	}
+	if result.RowsAffected == 0 {
+		return gorm.ErrRecordNotFound
+	}
+	return nil
+}
+
+// ClearRefreshToken removes the stored refresh token for a user, invalidating all sessions.
+func (r *UserRepository) ClearRefreshToken(userID string) error {
+	result := r.db.Model(&models.User{}).
+		Where("id = ?", userID).
+		Update("refresh_token", "")
+	if result.Error != nil {
+		log.Error().Err(result.Error).Str("userID", userID).Msg("Failed to clear refresh token")
+		return result.Error
+	}
+	if result.RowsAffected == 0 {
+		return gorm.ErrRecordNotFound
+	}
+	return nil
+}
+
+// UpdateUserStatusAndClearToken atomically updates is_active and clears the refresh token.
+// Used when banning a user to immediately invalidate all sessions.
+func (r *UserRepository) UpdateUserStatusAndClearToken(userID string, active bool) error {
+	result := r.db.Model(&models.User{}).Where("id = ?", userID).Updates(map[string]any{
+		"is_active":     active,
+		"refresh_token": "",
+		"updated_at":    time.Now(),
+	})
+	if result.Error != nil {
+		log.Error().Err(result.Error).Str("userID", userID).Msg("Failed to update status and clear token")
+		return result.Error
+	}
+	if result.RowsAffected == 0 {
+		return gorm.ErrRecordNotFound
+	}
+	return nil
+}
+
+func (r *UserRepository) UpdatePassword(userID, hashedPassword string) error {
+	result := r.db.Model(&models.User{}).Where("id = ?", userID).Updates(map[string]any{
+		"password":      hashedPassword,
+		"refresh_token": "",
+		"updated_at":    time.Now(),
+	})
+	if result.Error != nil {
+		log.Error().Err(result.Error).Str("userID", userID).Msg("Failed to update password")
+		return result.Error
+	}
+	if result.RowsAffected == 0 {
+		return gorm.ErrRecordNotFound
+	}
+	return nil
+}
+
 func (r *UserRepository) GetUsersByAccess(access models.AccessLevel) ([]models.User, error) {
 	var users []models.User
 	err := r.db.Where("? = ANY(accesses)", string(access)).Find(&users).Error
@@ -174,19 +241,24 @@ func (r *UserRepository) UpdateUser(user *models.User) error {
 
 // DeleteUser deletes a user by ID
 func (r *UserRepository) DeleteUser(userID string) error {
-	// First delete associated room participants and permissions
-	if err := r.db.Delete(&models.RoomParticipant{}, "user_id = ?", userID).Error; err != nil {
-		return err
-	}
-	if err := r.db.Delete(&models.RoomPermissions{}, "user_id = ?", userID).Error; err != nil {
-		return err
-	}
-	// Then delete blocked refresh tokens
-	if err := r.db.Delete(&models.BlockedRefreshToken{}, "user_id = ?", userID).Error; err != nil {
-		return err
-	}
-	// Finally delete the user
-	return r.db.Delete(&models.User{}, "id = ?", userID).Error
+	return r.db.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Delete(&models.Passkey{}, "user_id = ?", userID).Error; err != nil {
+			return err
+		}
+		if err := tx.Delete(&models.UserPreferences{}, "user_id = ?", userID).Error; err != nil {
+			return err
+		}
+		if err := tx.Delete(&models.RoomParticipant{}, "user_id = ?", userID).Error; err != nil {
+			return err
+		}
+		if err := tx.Delete(&models.RoomPermissions{}, "user_id = ?", userID).Error; err != nil {
+			return err
+		}
+		if err := tx.Delete(&models.BlockedRefreshToken{}, "user_id = ?", userID).Error; err != nil {
+			return err
+		}
+		return tx.Delete(&models.User{}, "id = ?", userID).Error
+	})
 }
 
 // PaginationParams holds page and limit for paginated queries.
