@@ -76,8 +76,18 @@ func Initialize(cfg *config.DatabaseConfig) error {
 	// Connect to the database
 	db, err = gorm.Open(dialector, gormConfig)
 	if err != nil {
-		log.Error().Err(err).Str("dsn_used", dsn).Msg("Failed to connect to database") // Log DSN for SQLite for easier debugging
+		log.Error().Err(err).Str("host", cfg.Host).Str("dbname", cfg.DBName).Str("type", dbType).Msg("Failed to connect to database")
 		return err
+	}
+
+	// SQLite-specific optimizations
+	if dbType == DBTypeSQLite {
+		if err := db.Exec("PRAGMA foreign_keys = ON").Error; err != nil {
+			log.Warn().Err(err).Msg("Failed to enable SQLite foreign keys")
+		}
+		if err := db.Exec("PRAGMA journal_mode = WAL").Error; err != nil {
+			log.Warn().Err(err).Msg("Failed to enable SQLite WAL mode")
+		}
 	}
 
 	// Configure connection pool (these settings might have limited or no effect for SQLite)
@@ -98,10 +108,8 @@ func Initialize(cfg *config.DatabaseConfig) error {
 			sqlDB.SetConnMaxLifetime(time.Duration(cfg.MaxLifetime) * time.Minute)
 		}
 	} else if cfg.Type == DBTypeSQLite {
-		// For SQLite, generally, MaxOpenConns = 1 is a common practice to avoid "database is locked" errors
-		// if not using WAL mode. GORM's default might handle this, or you might set it explicitly.
-		// sqlDB.SetMaxOpenConns(1) // Optional: consider if you face locking issues.
-		log.Info().Msg("SQLite connection established. Connection pool settings (MaxIdleConns, MaxOpenConns, MaxLifetime) are generally less relevant or behave differently for SQLite.")
+		// WAL mode allows concurrent reads; single write at a time to avoid "database is locked"
+		sqlDB.SetMaxOpenConns(1)
 	}
 
 	log.Info().Msg("Database connection established successfully")

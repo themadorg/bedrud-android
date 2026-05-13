@@ -37,7 +37,10 @@ func (sa *StringArray) Scan(value interface{}) error {
 	case []byte:
 		// Convert the []byte to string and parse it
 		str := string(v)
-		// Remove the curly braces and split by comma
+		if len(str) < 2 || str[0] != '{' || str[len(str)-1] != '}' {
+			*sa = StringArray{}
+			return nil
+		}
 		str = str[1 : len(str)-1]
 		if str == "" {
 			*sa = StringArray{}
@@ -47,6 +50,10 @@ func (sa *StringArray) Scan(value interface{}) error {
 		return nil
 	case string:
 		str := v
+		if len(str) < 2 || str[0] != '{' || str[len(str)-1] != '}' {
+			*sa = StringArray{}
+			return nil
+		}
 		str = str[1 : len(str)-1]
 		if str == "" {
 			*sa = StringArray{}
@@ -80,7 +87,7 @@ type User struct {
 	AvatarURL    string      `json:"avatarUrl" gorm:"column:avatar_url;type:varchar(255)"`
 	Password     string      `json:"-" gorm:"type:varchar(255)"`
 	RefreshToken string      `json:"-" gorm:"column:refresh_token;type:text"`
-	Accesses     StringArray `json:"accesses" gorm:"type:text[]"`
+	Accesses     StringArray `json:"accesses" gorm:"type:text"`
 	IsActive     bool        `json:"isActive" gorm:"not null;default:true"`
 	CreatedAt    time.Time   `json:"createdAt" gorm:"autoCreateTime;not null"`
 	UpdatedAt    time.Time   `json:"updatedAt" gorm:"autoUpdateTime;not null"`
