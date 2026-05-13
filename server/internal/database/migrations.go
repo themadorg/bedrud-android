@@ -48,6 +48,9 @@ func RunMigrations() error {
 	if err := db.AutoMigrate(&models.UserPreferences{}); err != nil {
 		return err
 	}
+	if err := db.AutoMigrate(&models.ChatUpload{}); err != nil {
+		return err
+	}
 
 	// Add foreign key constraints manually (idempotent, Postgres only)
 	// SQLite does not support ALTER TABLE ADD CONSTRAINT for composite FKs.
@@ -61,6 +64,17 @@ func RunMigrations() error {
 				ON DELETE CASCADE
 			`).Error; err != nil {
 				log.Warn().Err(err).Msg("Failed to add foreign key constraint")
+			}
+		}
+		if !db.Migrator().HasConstraint(&models.ChatUpload{}, "fk_chat_uploads_room") {
+			if err := db.Exec(`
+				ALTER TABLE chat_uploads
+				ADD CONSTRAINT fk_chat_uploads_room
+				FOREIGN KEY (room_id)
+				REFERENCES rooms(id)
+				ON DELETE CASCADE
+			`).Error; err != nil {
+				log.Warn().Err(err).Msg("Failed to add chat_uploads FK constraint")
 			}
 		}
 	}

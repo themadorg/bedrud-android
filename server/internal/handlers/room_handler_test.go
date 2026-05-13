@@ -28,7 +28,7 @@ func setupRoomTestApp(t *testing.T) (*fiber.App, *repository.RoomRepository, *au
 		APIKey:    "test-key",
 		APISecret: "test-secret",
 	}
-	handler := NewRoomHandler(&lkCfg, &config.ChatConfig{}, roomRepo)
+	handler := NewRoomHandler(&lkCfg, &config.ChatConfig{}, roomRepo, nil, nil)
 
 	claims := &auth.Claims{
 		UserID:   "creator-user",
@@ -146,7 +146,7 @@ func TestRoomHandler_DeleteRoom_Forbidden(t *testing.T) {
 	app2 := fiber.New()
 	rr := roomRepo
 	lkCfg := config.LiveKitConfig{Host: "http://localhost:9999", APIKey: "k", APISecret: "s"}
-	handler := NewRoomHandler(&lkCfg, &config.ChatConfig{}, rr)
+	handler := NewRoomHandler(&lkCfg, &config.ChatConfig{}, rr, nil, nil)
 	app2.Use(func(c *fiber.Ctx) error { c.Locals("user", otherClaims); return c.Next() })
 	app2.Delete("/rooms/:roomId", handler.DeleteRoom)
 
@@ -298,7 +298,7 @@ func setupJoinTestApp(t *testing.T, claims *auth.Claims) (*fiber.App, *repositor
 		APIKey:    "test-key",
 		APISecret: "test-secret",
 	}
-	handler := NewRoomHandler(&lkCfg, &config.ChatConfig{}, roomRepo)
+	handler := NewRoomHandler(&lkCfg, &config.ChatConfig{}, roomRepo, nil, nil)
 
 	app := fiber.New()
 	app.Use(func(c *fiber.Ctx) error {
@@ -386,7 +386,7 @@ func setupModTestApp(t *testing.T, claims *auth.Claims) (*fiber.App, *repository
 		APIKey:    "test-key",
 		APISecret: "test-secret",
 	}
-	handler := NewRoomHandler(&lkCfg, &config.ChatConfig{}, roomRepo)
+	handler := NewRoomHandler(&lkCfg, &config.ChatConfig{}, roomRepo, nil, nil)
 
 	app := fiber.New()
 	app.Use(func(c *fiber.Ctx) error {
@@ -593,7 +593,7 @@ func TestRoomHandler_UpdateSettings_StripsIsPersistent(t *testing.T) {
 	roomRepo := repository.NewRoomRepository(db)
 
 	lkCfg := config.LiveKitConfig{Host: "http://localhost:9999", APIKey: "k", APISecret: "s"}
-	handler := NewRoomHandler(&lkCfg, &config.ChatConfig{}, roomRepo)
+	handler := NewRoomHandler(&lkCfg, &config.ChatConfig{}, roomRepo, nil, nil)
 
 	claims := &auth.Claims{UserID: "creator-user", Email: "creator@ex.com", Name: "Creator", Accesses: []string{"user"}}
 

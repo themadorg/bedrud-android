@@ -2,6 +2,7 @@ package storage
 
 import (
 	"bedrud/config"
+	"bedrud/internal/models"
 	"bytes"
 	"crypto/hmac"
 	"crypto/sha256"
@@ -18,6 +19,10 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/google/uuid"
+	"github.com/rs/zerolog/log"
+	"gorm.io/gorm"
 )
 
 // ChatAttachment is the metadata returned after a successful upload.
@@ -296,4 +301,46 @@ func (s *s3Store) deriveSigningKey(datestamp, region string) []byte {
 	kRegion := s.hmacSHA256(kDate, region)
 	kService := s.hmacSHA256(kRegion, "s3")
 	return s.hmacSHA256(kService, "aws4_request")
+}
+
+type ChatUploadTracker struct {
+	db      *gorm.DB
+	chatDir string
+}
+
+func NewChatUploadTracker(db *gorm.DB, chatDir string) *ChatUploadTracker {
+	if chatDir == "" {
+		chatDir = "./data/uploads/chat"
+	}
+	return &ChatUploadTracker{db: db, chatDir: chatDir}
+}
+
+func (t *ChatUploadTracker) Record(roomID, fileHash, ext string) error {
+	upload := &models.ChatUpload{
+		ID:        uuid.New().String(),
+		RoomID:    roomID,
+		FileHash:  fileHash,
+		Extension: ext,
+	}
+	return t.db.Create(upload).Error
+}
+
+func (t *ChatUploadTracker) DeleteByRoom(roomID string) error {
+	var uploads []models.ChatUpload
+	if err := t.db.Where("room_id = ?", roomID).Find(&uploads).Error; err != nil {
+		return err
+	}
+	if len(uploads) == 0 {
+		return nil
+	}
+	if err := t.db.Where("room_id = ?", roomID).Delete(&models.ChatUpload{}).Error; err != nil {
+		return err
+	}
+	for _, u := range uploads {
+		path := filepath.Join(t.chatDir, u.FileHash+u.Extension)
+		if err := os.Remove(path); err != nil && !os.IsNotExist(err) {
+			log.Warn().Err(err).Str("path", path).Msg("orphan chat upload file on disk")
+		}
+	}
+	return nil
 }

@@ -3,16 +3,16 @@ package handlers
 import (
 	"bedrud/config"
 	"bedrud/internal/auth"
+	"bedrud/internal/lkutil"
 	"bedrud/internal/models"
 	"bedrud/internal/repository"
+	"bedrud/internal/services"
 	"bedrud/internal/storage"
 	"context"
 	"crypto/rand"
-	"crypto/tls"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"net/http"
 	"strings"
 	"time"
 
@@ -20,7 +20,6 @@ import (
 	lkauth "github.com/livekit/protocol/auth"
 	"github.com/livekit/protocol/livekit"
 	"github.com/rs/zerolog/log"
-	"github.com/twitchtv/twirp"
 )
 
 func boolPtr(b bool) *bool { return &b }
@@ -47,59 +46,40 @@ type JoinRoomRequest struct {
 }
 
 type RoomHandler struct {
-	roomRepo    *repository.RoomRepository
-	livekitHost string
-	apiKey      string
-	apiSecret   string
-	client      livekit.RoomService
-	uploadStore storage.ChatUploadStore
-	uploadMax   int64
+	roomRepo      *repository.RoomRepository
+	livekitHost   string
+	apiKey        string
+	apiSecret     string
+	client        livekit.RoomService
+	uploadStore   storage.ChatUploadStore
+	uploadMax     int64
+	uploadTracker *storage.ChatUploadTracker
+	cleanupSvc    *services.RoomCleanupService
 }
 
-func NewRoomHandler(lkCfg *config.LiveKitConfig, chatCfg *config.ChatConfig, roomRepo *repository.RoomRepository) *RoomHandler {
-	apiHost := lkCfg.InternalHost
-	if apiHost == "" {
-		apiHost = lkCfg.Host
-	}
-	httpClient := http.DefaultClient
-	if lkCfg.SkipTLSVerify && strings.HasPrefix(apiHost, "https") {
-		httpClient = &http.Client{
-			Transport: &http.Transport{
-				TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-			},
-		}
-	}
-	client := livekit.NewRoomServiceProtobufClient(apiHost, httpClient)
+func NewRoomHandler(lkCfg *config.LiveKitConfig, chatCfg *config.ChatConfig, roomRepo *repository.RoomRepository, uploadTracker *storage.ChatUploadTracker, cleanupSvc *services.RoomCleanupService) *RoomHandler {
+	client := lkutil.NewClient(lkCfg)
 
 	uploadMax := chatCfg.Uploads.MaxBytes.Int64()
 	if uploadMax == 0 {
-		uploadMax = 10 * 1024 * 1024 // 10 MB default
+		uploadMax = 10 * 1024 * 1024
 	}
 
 	return &RoomHandler{
-		roomRepo:    roomRepo,
-		livekitHost: lkCfg.Host,
-		apiKey:      lkCfg.APIKey,
-		apiSecret:   lkCfg.APISecret,
-		client:      client,
-		uploadStore: storage.NewChatUploadStore(&chatCfg.Uploads),
-		uploadMax:   uploadMax,
+		roomRepo:      roomRepo,
+		livekitHost:   lkCfg.Host,
+		apiKey:        lkCfg.APIKey,
+		apiSecret:     lkCfg.APISecret,
+		client:        client,
+		uploadStore:   storage.NewChatUploadStore(&chatCfg.Uploads),
+		uploadMax:     uploadMax,
+		uploadTracker: uploadTracker,
+		cleanupSvc:    cleanupSvc,
 	}
 }
 
 func (h *RoomHandler) withAuth(ctx context.Context, grants ...*lkauth.VideoGrant) context.Context {
-	at := lkauth.NewAccessToken(h.apiKey, h.apiSecret)
-	for _, g := range grants {
-		at.AddGrant(g) //nolint:staticcheck // AddGrant is deprecated but VideoGrant field is not available in this version of the protocol SDK
-	}
-	token, err := at.ToJWT()
-	if err != nil {
-		log.Error().Err(err).Msg("Failed to generate LiveKit auth token")
-	}
-	ctx, _ = twirp.WithHTTPRequestHeaders(ctx, http.Header{
-		"Authorization": []string{"Bearer " + token},
-	})
-	return ctx
+	return lkutil.AuthContext(ctx, h.apiKey, h.apiSecret, grants...)
 }
 
 func (h *RoomHandler) CreateRoom(c *fiber.Ctx) error {
@@ -671,19 +651,12 @@ func (h *RoomHandler) DeleteRoom(c *fiber.Ctx) error {
 		return c.Status(403).JSON(fiber.Map{"error": "Only the room creator can delete this room"})
 	}
 
-	// Delete from LiveKit
-	ctx := h.withAuth(c.Context(), &lkauth.VideoGrant{RoomCreate: true})
-	_, _ = h.client.DeleteRoom(ctx, &livekit.DeleteRoomRequest{Room: room.Name})
-
-	// Delete from database (superadmin bypass skips creator check)
-	var deleteErr error
-	if room.CreatedBy != claims.UserID && containsAccess(claims.Accesses, "superadmin") {
-		deleteErr = h.roomRepo.AdminDeleteRoom(roomID)
-	} else {
-		deleteErr = h.roomRepo.DeleteRoom(roomID, claims.UserID)
+	opts := services.CascadeDeleteOptions{
+		SystemEvent:   "room_ended",
+		SystemMessage: "The meeting has been ended by the creator",
 	}
-	if deleteErr != nil {
-		log.Error().Err(deleteErr).Str("roomId", roomID).Msg("Failed to delete room")
+	if err := h.cleanupSvc.CascadeDeleteRoom(c.Context(), room, opts); err != nil {
+		log.Error().Err(err).Str("roomId", roomID).Msg("Failed to delete room")
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to delete room"})
 	}
 
@@ -865,11 +838,32 @@ func (h *RoomHandler) AdminCloseRoom(c *fiber.Ctx) error {
 	if room == nil {
 		return c.Status(404).JSON(fiber.Map{"error": "Room not found"})
 	}
-	ctx := h.withAuth(c.Context(), &lkauth.VideoGrant{RoomCreate: true})
-	_, _ = h.client.DeleteRoom(ctx, &livekit.DeleteRoomRequest{Room: room.Name})
-	room.IsActive = false
-	if err := h.roomRepo.UpdateRoom(room); err != nil {
+	opts := services.CascadeDeleteOptions{
+		SystemEvent:   "room_closed",
+		SystemMessage: "This room has been closed by an administrator",
+	}
+	if err := h.cleanupSvc.CascadeDeleteRoom(c.Context(), room, opts); err != nil {
+		log.Error().Err(err).Str("roomId", roomID).Msg("Failed to close room")
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to close room"})
+	}
+	return c.JSON(fiber.Map{"status": "success"})
+}
+
+func (h *RoomHandler) AdminSuspendRoom(c *fiber.Ctx) error {
+	roomID := c.Params("roomId")
+	room, err := h.roomRepo.GetRoom(roomID)
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to fetch room"})
+	}
+	if room == nil {
+		return c.Status(404).JSON(fiber.Map{"error": "Room not found"})
+	}
+	if !room.IsActive {
+		return c.Status(400).JSON(fiber.Map{"error": "Room is not active"})
+	}
+	if err := h.cleanupSvc.SuspendRoom(c.Context(), room); err != nil {
+		log.Error().Err(err).Str("roomId", roomID).Msg("Failed to suspend room")
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to suspend room"})
 	}
 	return c.JSON(fiber.Map{"status": "success"})
 }
@@ -1071,6 +1065,22 @@ func (h *RoomHandler) UploadChatImage(c *fiber.Ctx) error {
 	if err != nil {
 		log.Warn().Err(err).Str("roomId", roomID).Msg("Chat image upload failed")
 		return c.Status(400).JSON(fiber.Map{"error": err.Error()})
+	}
+
+	if h.uploadTracker != nil && strings.HasPrefix(attachment.URL, "/uploads/chat/") {
+		filename := strings.TrimPrefix(attachment.URL, "/uploads/chat/")
+		dotIdx := strings.LastIndex(filename, ".")
+		hash := filename
+		ext := ""
+		if dotIdx > 0 {
+			hash = filename[:dotIdx]
+			ext = filename[dotIdx:]
+		}
+		if hash != "" {
+			if err := h.uploadTracker.Record(roomID, hash, ext); err != nil {
+				log.Warn().Err(err).Str("roomID", roomID).Str("hash", hash).Msg("failed to track chat upload")
+			}
+		}
 	}
 
 	return c.JSON(attachment)

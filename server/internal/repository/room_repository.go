@@ -310,21 +310,17 @@ func (r *RoomRepository) DeleteRoom(roomID, userID string) error {
 	})
 }
 
-// AdminDeleteRoom deletes a room without a created_by check. Use only after
-// verifying the caller has superadmin access in the handler layer.
-func (r *RoomRepository) AdminDeleteRoom(roomID string) error {
+// HardDeleteRoom deletes a room and its related data without a created_by check.
+// Callers must verify authorization before calling this.
+func (r *RoomRepository) HardDeleteRoom(roomID string) error {
 	return r.db.Transaction(func(tx *gorm.DB) error {
-		var room models.Room
-		if err := tx.Where("id = ?", roomID).First(&room).Error; err != nil {
-			return err
-		}
 		if err := tx.Where("room_id = ?", roomID).Delete(&models.RoomPermissions{}).Error; err != nil {
 			return err
 		}
 		if err := tx.Where("room_id = ?", roomID).Delete(&models.RoomParticipant{}).Error; err != nil {
 			return err
 		}
-		return tx.Delete(&room).Error
+		return tx.Where("id = ?", roomID).Delete(&models.Room{}).Error
 	})
 }
 
@@ -360,6 +356,12 @@ func (r *RoomRepository) GetAllActiveRooms() ([]models.Room, error) {
 
 func (r *RoomRepository) SetRoomIdle(roomID string) error {
 	return r.db.Model(&models.Room{}).Where("id = ?", roomID).Update("is_active", false).Error
+}
+
+func (r *RoomRepository) DeactivateRoomParticipants(roomID string) error {
+	return r.db.Model(&models.RoomParticipant{}).
+		Where("room_id = ? AND is_active = ?", roomID, true).
+		Updates(map[string]interface{}{"is_active": false, "left_at": time.Now()}).Error
 }
 
 func (r *RoomRepository) GetRoomParticipantsWithUsers(roomID string) ([]models.RoomParticipant, error) {
