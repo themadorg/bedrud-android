@@ -54,6 +54,7 @@ interface SystemSettings {
   chatUploadS3SecretKey: string
   chatUploadS3PublicUrl: string
   logLevel: string
+  maxParticipantsLimit: number
   updatedAt: string
 }
 
@@ -498,6 +499,12 @@ function ServerTab({ settings, setSettings }: { settings: SystemSettings; setSet
           />
         </Field>
       </div>
+      <Field label="Max participants limit" hint="Hard ceiling for room capacity (default: 1000, 0 = unlimited).">
+        <TextInput
+          value={String(settings.maxParticipantsLimit ?? 1000)}
+          onChange={(v) => setSettings({ ...settings, maxParticipantsLimit: Number(v) || 0 })}
+        />
+      </Field>
       {settings.serverEnableTls && <CertStatusIndicator />}
     </Section>
   )
