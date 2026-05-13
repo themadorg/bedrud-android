@@ -1,0 +1,267 @@
+---
+title: Yönetici Paneli
+description: Web arayüzünden kullanıcıları, odaları, ayarları ve davet jetonlarını yönetin
+order: 35
+---
+
+Yönetici paneli, Bedrud örneğinizi yönetmek için bir web arayüzü sağlar. Superadmin'ler sistem istatistiklerini görüntüleyebilir, kullanıcıları ve odaları yönetebilir, örnek genelindeki ayarları yapılandırabilir ve davet jetonları oluşturabilir.
+
+## Ön Koşullar
+
+- **Superadmin erişimi:** Kullanıcınızın `accesses` dizisinde `superadmin` bulunmalıdır.
+- **İlk admin kurulumu:** Bedrud'u kurduktan sonra, CLI üzerinden bir kullanıcı oluşturun ve yükseltin:
+
+```bash
+bedrud user create --email "admin@example.com" --password "securepassword" --name "Admin"
+bedrud user promote --email "admin@example.com"
+```
+
+İlk superadmin'i oluşturmak için bir web arayüzü veya API yoktur. Bu, güvenlik amacıyla bilinçli olarak tasarlanmıştır.
+
+## Yönetici Paneline Erişim
+
+Superadmin erişiminiz olduğunda, yönetici paneli Bedrud web uygulamanızda `/dashboard/admin` adresinde kullanılabilir.
+
+**Gezinme:**
+- **Kenar çubuğu**, Genel Bakış, Kullanıcılar, Odalar ve Ayarlar bağlantılarını içeren bir "Yönetici" bölümü gösterir. Bu bölüm yalnızca superadmin'lere görünür.
+- **Sağ üst kullanıcı menüsü**, kalkan simgeli bir "Yönetici paneli" bağlantısı içerir.
+- `/dashboard/admin/*` URL'lerini ziyaret etmeye çalışan admin olmayan kullanıcılar otomatik olarak `/dashboard` sayfasına yönlendirilir.
+
+---
+
+## Genel Bakış Sayfası
+
+`/dashboard/admin` adresindeki genel bakış sayfası, temel sistem metriklerini içeren bir pano sunar.
+
+### Sistem İstatistikleri
+
+Kartlar şunları gösterir:
+- **Çevrimiçi Kullanıcılar:** Tüm odalardaki toplam farklı aktif katılımcı sayısı
+- **Toplam Oda:** Örnek üzerindeki toplam oda sayısı
+- **Toplam Kullanıcı:** Toplam kayıtlı kullanıcı sayısı
+
+### TLS Sertifika Durumu
+
+Renk kodlu bir gösterge, sunucunuzun TLS sertifikasının durumunu gösterir:
+
+| Durum | Renk | Anlamı |
+|---|---|---|
+| Geçerli | Yeşil | Sertifika geçerli |
+| Yakında Sona Erecek | Sarı | 30 gün içinde sona eriyor |
+| Süresi Dolmuş | Kırmızı | Sertifikanın süresi dolmuş |
+| Yapılandırılmamış | Gri | TLS devre dışı |
+
+Sertifika durumu her 5 dakikada bir yenilenir.
+
+### Grafikler
+
+- **Oda Oluşturma:** Son 8 haftada oluşturulan odaların çubuk grafiği
+- **Son Kayıtlar:** En son kullanıcı kayıtlarının listesi
+
+---
+
+## Kullanıcı Yönetimi
+
+### Kullanıcı Listesi
+
+`/dashboard/admin/users` adresindeki kullanıcı listesi, tüm kayıtlı kullanıcıları aranabilir, sıralanabilir bir tabloda gösterir.
+
+**Sütunlar:**
+- **Ad:** Kullanıcının görünen adı
+- **E-posta:** Kullanıcının e-posta adresi
+- **Sağlayıcı:** Kimlik doğrulama yöntemi (local, google, github, guest, passkey)
+- **Rol:** Erişim seviyesi rozeti. `superadmin` erişimi olan kullanıcılar için "Superadmin" gösterir.
+- **Oluşturma:** Kayıt tarihi
+- **Durum:** Aktif/Yasaklı geçiş düğmesi
+
+**Eylemler:**
+- **Ara:** Kullanıcıları ada veya e-postaya göre filtrelemek için arama çubuğuna yazın (istemci tarafında).
+- **Sırala:** Sıralamak için herhangi bir sütun başlığına tıklayın. Artan/azalan değiştirmek için tekrar tıklayın.
+- **Sayfalandırma:** Büyük kullanıcı listelerinde gezinmek için gezinme kontrolleri.
+
+### Kullanıcı Eylemleri
+
+Her kullanıcı satırı hızlı eylem düğmeleri içerir:
+
+- **Yükselt/Düşür:** `["user"]` ve `["user", "superadmin"]` erişim seviyeleri arasında geçiş yap. Erişim seviyesi sütununda görünür.
+- **Aktif/Yasaklı:** Kullanıcının hesap durumunu değiştir. Yasaklı kullanıcılar giriş yapamaz veya jeton yenileyemez.
+- **Detayı Görüntüle:** Detay görünümünü açmak için kullanıcı satırına tıklayın.
+
+### Kullanıcı Detayı
+
+`/dashboard/admin/users/:userId` adresindeki detay sayfası tam bir kullanıcı profili gösterir.
+
+**Görüntülenen bilgiler:**
+- Kullanıcı adı, e-posta, sağlayıcı ve kayıt tarihi
+- Erişim seviyesi rozeti (superadmin/user)
+- Oda oluşturma etkinlik grafiği (8 haftalık geçmiş)
+- Kullanıcı tarafından oluşturulan odaların listesi
+
+**Eylemler:**
+- **Yükselt/Düşür:** Detay başlığında özel düğme
+- **Kullanıcıyı Sil:** Kullanıcıyı ve tüm verilerini kalıcı olarak kaldırır. E-posta onayı gerektirir. Silme düğmesi kendi hesabınız için gizlenir (kendinizi silemezsiniz).
+
+> **Silme kalıcı ve asenkron bir işlemdir.** Bir kullanıcıyı silmek, tüm odalarını, passkey'lerini ve tercihlerini de kaldırır. İstek hemen döner, temizlik arka planda çalışır.
+
+---
+
+## Oda Yönetimi
+
+### Oda Listesi
+
+`/dashboard/admin/rooms` adresindeki oda listesi, örnek üzerindeki tüm odaları gösterir.
+
+**Sütunlar:**
+- **Oda Adı:** Oda tanımlayıcısı
+- **Görünürlük:** Genel, özel veya listelenmemiş
+- **Maks. Katılımcı:** Satır içi düzenlenebilir — değiştirmek için değere tıklayın
+- **Durum:** Aktif veya aktif değil
+- **Oluşturma:** Oda oluşturma tarihi
+
+**Eylemler:**
+- **Ara:** Odaları ada göre filtrele (istemci tarafında)
+- **Sırala:** Sıralamak için sütun başlıklarına tıklayın
+- **Askıya Al:** Odayı silmeden aktif bir çağrıyı sonlandır
+- **Sil:** Bir odayı kademeli silme ile kalıcı olarak kapat
+
+### Oda Detayı
+
+`/dashboard/admin/rooms/:roomId` adresindeki detay sayfası, bir odaya derinlemesine görünürlük sağlar.
+
+**Oda Ayarları:**
+- Oda adı, görünürlük modu, maksimum katılımcı
+- **Kalıcı mod geçişi:** Boştaki odaların otomatik temizlenmesini engellemek için etkinleştirin. Bu yalnızca superadmin'ler tarafından kullanılabilir — oda oluşturanlar değiştiremez.
+
+**Canlı Katılımcılar:**
+- Her 3 saniyede bir yoklanan gerçek zamanlı katılımcı listesi
+- Katılımcı başına: ad, katılım zamanı, iz bilgileri (ses/video/ekran paylaşımı)
+- **Bit hızı grafiği:** Ses ve video izleri için canlı bit hızı grafiği
+- **At:** Herhangi bir katılımcıyı odadan çıkar
+- **Sessize Al:** Herhangi bir katılımcının ses izlerini kapat
+
+---
+
+## Sistem Ayarları
+
+`/dashboard/admin/settings` adresindeki ayarlar sayfası 7 sekme halinde düzenlenmiştir. Herhangi bir sekmeyi değiştirdikten sonra "Değişiklikleri kaydet"e tıklayın (Genel sekmesi, kayıt modu değişikliklerinde otomatik kaydeder).
+
+### Genel Sekmesi
+
+- **Kayıt Modu:**
+  - **Açık:** Herkes hesap oluşturabilir
+  - **Yalnızca davet:** Yeni kullanıcılar geçerli bir davet jetonu sağlamalıdır
+  - **Kapalı:** Yeni kayıt yok — mevcut kullanıcılar hâlâ giriş yapabilir
+  - Mod değiştirdiğinizde değişiklikler otomatik olarak kaydedilir
+
+**Davet Jetonu Yönetimi (Genel sekmesi içinde):**
+
+Jetonlar, Yalnızca davet modundayken kimlerin kaydolabileceğini kontrol eder.
+
+- **Jeton Oluştur:** Jetonu belirli bir adrese kilitlemek için isteğe bağlı bir e-posta girin ve bir sona erme süresi seçin (24 saat, 72 saat, 7 gün veya 30 gün).
+- **Jeton Listesi:** Tüm jetonları durumlarıyla birlikte gösterir. Kullanılmamış jetonlar yeşil bir "Aktif" rozetine sahiptir, kullanılmış jetonlar gri renkte "Kullanıldı" gösterir.
+- **Jetonu Kopyala:** 32 karakterlik jeton değerini panonuza kopyalamak için kopyala düğmesine tıklayın.
+- **İptal Et:** Kullanılmasını engellemek için bir jetonu silin.
+
+### Kimlik Doğrulama Sekmesi
+
+- **Passkey'ler:** FIDO2/WebAuthn parolasız kimlik doğrulamayı aç/kapat
+- **OAuth Sağlayıcıları:** Google, GitHub ve Twitter OAuth'u yapılandırın:
+  - Client ID
+  - Client Secret
+  - Redirect URL
+
+Her sağlayıcının kendi yapılandırma kartı vardır. Üç alanı da doldurarak bir sağlayıcıyı etkinleştirin.
+
+### LiveKit Sekmesi
+
+- **Harici LiveKit:** Gömülü LiveKit yerine harici bir LiveKit sunucusu kullanmak için aç/kapat
+- **Host:** LiveKit sunucu adresi ve portu (ör. `127.0.0.1:7880`)
+- **API Key:** LiveKit sunucu API anahtarı
+- **API Secret:** LiveKit sunucu API gizli anahtarı
+
+### Sunucu Sekmesi
+
+- **Port:** HTTP sunucu portu (varsayılan: `80`)
+- **Host:** Sunucu ana bilgisayar adı
+- **Domain:** Sunucu alan adı
+- **E-posta:** Yönetici e-postası (ACME sertifika kaydı için kullanılır)
+- **TLS:** Sertifika dosyalarıyla HTTPS'i etkinleştir
+- **ACME:** Otomatik Let's Encrypt sertifika yönetimini etkinleştir
+- **Ters Proxy:** Sunucunun bir proxy arkasında olduğunu belirt (istemci IP tespitini etkiler)
+- **Sertifika Yolları:** Sertifika dosyası ve anahtar dosyası yolları (manuel TLS kurulumu için)
+- **Sertifika Durumu:** Mevcut TLS sertifika sağlığını gösteren satır içi gösterge
+
+### CORS Sekmesi
+
+- **İzin Verilen Kökenler:** Virgülle ayrılmış CORS kökenleri listesi
+- **İzin Verilen Başlıklar:** Virgülle ayrılmış izin verilen istek başlıkları listesi
+- **İzin Verilen Yöntemler:** Virgülle ayrılmış izin verilen HTTP yöntemleri listesi
+- **Kimlik Bilgilerine İzin Ver:** Çapraz köken isteklerinde kimlik bilgilerini dahil etmek için aç/kapat
+- **Maks. Yaş:** CORS ön kontrol yanıtları için önbellek süresi (saniye)
+
+### Sohbet Yüklemeleri Sekmesi
+
+Sohbet resim yüklemelerinin nasıl saklanacağını yapılandırın:
+
+- **Arka Uç:** `disk` (yerel dosya sistemi), `s3` (S3 uyumlu depolama) veya `inline` (base64 gömülü)
+- **Maks. Yükleme Baytı:** Yükleme başına maksimum dosya boyutu
+- **Satır İçi Maks.:** Satır içi/base64 yüklemeler için maksimum boyut
+- **Disk Dizini:** `disk` arka ucu yüklemeleri için yerel dizin
+
+**S3 Yapılandırması (arka uç `s3` olduğunda):**
+- Endpoint, Bucket, Region
+- Access Key, Secret Key
+- Public URL
+
+### Günlükleme Sekmesi
+
+- **Günlük Seviyesi:** `trace`, `debug`, `info`, `warn` veya `error`. Hata ayıklama için kullanışlıdır — detaylı günlükleri görmek için `debug` moduna geçin, ardından üretim için `info` moduna dönün.
+
+---
+
+## Sorun Giderme
+
+### "Yönetici paneli görünmüyor"
+
+**Belirti:** Yönetici bölümü kenar çubuğunda görünmüyor ve kullanıcı menüsünde "Yönetici paneli" bağlantısı eksik.
+
+**Neden:** Oturum açmış kullanıcının `accesses` dizisinde `superadmin` yok.
+
+**Çözüm:** Kullanıcıyı yükseltmek için CLI kullanın:
+```bash
+bedrud user promote --email "your-email@example.com"
+```
+Ardından güncellenmiş erişimleri içeren yeni bir JWT almak için çıkış yapıp tekrar giriş yapın.
+
+### "Ayarlar kaydedilmiyor"
+
+**Belirti:** Ayarları kaydetmek başarılı dönüyor ancak gizli değerler değişmemiş görünüyor.
+
+**Neden:** Sunucu, güncelleme isteğinde `"••••••••"` veya boş string gönderdiğinizde mevcut gizli değerleri korur. Bu bilinçli bir tasarımdır — yalnızca gizli olmayan alanları değiştirirken gizli anahtarların yanlışlıkla üzerine yazılmasını engeller.
+
+**Çözüm:** Güncelleme isteğinde maskelenmiş yer tutucu yerine gerçek gizli değeri gönderin.
+
+### "Kendi hesabımı silemiyorum"
+
+**Belirti:** Silme düğmesi kendi kullanıcı detay sayfanızda gizli veya API 400 hatası döndürüyor.
+
+**Neden:** Kendini silme güvenlik için engellenmiştir. Şu anda oturum açtığınız hesabı silemezsiniz.
+
+**Çözüm:** Hesabı başka bir superadmin'in silmesini sağlayın veya farklı bir kullanıcı olarak CLI kullanın.
+
+### "Admin URL'sini ziyaret ettiğimde dashboard'a yönlendiriliyorum"
+
+**Belirti:** `/dashboard/admin` adresini doğrudan ziyaret etmek `/dashboard` sayfasına yönlendiriyor.
+
+**Neden:** Admin koruma rotası, JWT'nizin `accesses` dizisini kontrol eder. `superadmin` eksikse, koruma yönlendirir.
+
+**Çözüm:** Hesabınızın superadmin erişimine sahip olduğunu doğrulayın. Erişiminiz yakın zamanda değiştiyse, JWT'nizi yenilemek için çıkış yapıp tekrar giriş yapın.
+
+---
+
+## Ayrıca Bakınız
+
+- [Yönetici API'si](/tr/docs/api/admin) — tüm admin uç noktaları için tam API referansı
+- [Kimlik Doğrulama](/tr/docs/backend/authentication) — erişim seviyeleri ve rol sistemi
+- [Yapılandırma](/tr/docs/getting-started/configuration) — config.yaml ayar referansı
+- [Hızlı Başlangıç](/tr/docs/getting-started/quickstart) — ilk admin kurulumu adım adım kılavuzu

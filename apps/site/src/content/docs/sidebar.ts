@@ -252,6 +252,13 @@ export const sections: SidebarSection[] = [
         description: "Pre-configured appliance setup",
         order: 34,
       },
+      {
+        slug: "guides/admin-dashboard",
+        title: "Admin Dashboard",
+        description:
+          "Manage users, rooms, settings, and invite tokens from the web UI",
+        order: 35,
+      },
     ],
   },
   {
@@ -262,7 +269,7 @@ export const sections: SidebarSection[] = [
         slug: "contributing",
         title: "Contributing",
         description: "How to contribute to Bedrud",
-        order: 35,
+        order: 36,
       },
     ],
   },

@@ -1,0 +1,267 @@
+---
+title: Tableau de bord administrateur
+description: Gérer les utilisateurs, les salles, les paramètres et les jetons d'invitation depuis l'interface web
+order: 35
+---
+
+Le tableau de bord administrateur fournit une interface web pour gérer votre instance Bedrud. Les superadmins peuvent consulter les statistiques du système, gérer les utilisateurs et les salles, configurer les paramètres de l'instance et générer des jetons d'invitation.
+
+## Prérequis
+
+- **Accès superadmin :** Vous devez avoir `superadmin` dans le tableau `accesses` de votre utilisateur.
+- **Configuration initiale de l'admin :** Après avoir installé Bedrud, créez un utilisateur et promouvez-le via la CLI :
+
+```bash
+bedrud user create --email "admin@example.com" --password "securepassword" --name "Admin"
+bedrud user promote --email "admin@example.com"
+```
+
+Il n'y a pas d'interface web ni d'API pour créer le premier superadmin. C'est intentionnel pour des raisons de sécurité.
+
+## Accéder au panneau d'administration
+
+Une fois que vous avez l'accès superadmin, le panneau d'administration est disponible à l'adresse `/dashboard/admin` dans votre application web Bedrud.
+
+**Navigation :**
+- La **barre latérale** affiche une section « Admin » avec des liens vers Vue d'ensemble, Utilisateurs, Salles et Paramètres. Cette section n'est visible que pour les superadmins.
+- Le **menu déroulant en haut à droite** inclut un lien « Panneau d'administration » avec une icône de bouclier.
+- Les utilisateurs non-admin qui tentent d'accéder aux URL `/dashboard/admin/*` sont automatiquement redirigés vers `/dashboard`.
+
+---
+
+## Page de vue d'ensemble
+
+La page de vue d'ensemble à `/dashboard/admin` fournit un tableau de bord avec les métriques clés du système.
+
+### Statistiques système
+
+Les cartes affichent :
+- **Utilisateurs en ligne :** Nombre total de participants actifs distincts dans toutes les salles
+- **Total des salles :** Nombre total de salles sur l'instance
+- **Total des utilisateurs :** Nombre total d'utilisateurs enregistrés
+
+### Statut du certificat TLS
+
+Un indicateur coloré montre l'état du certificat TLS de votre serveur :
+
+| Statut | Couleur | Signification |
+|---|---|---|
+| Valide | Vert | Le certificat est valide |
+| Expire bientôt | Orange | Expire dans les 30 jours |
+| Expiré | Rouge | Le certificat a expiré |
+| Non configuré | Gris | TLS est désactivé |
+
+Le statut du certificat se rafraîchit toutes les 5 minutes.
+
+### Graphiques
+
+- **Création de salles :** Graphique en barres des salles créées au cours des 8 dernières semaines
+- **Inscriptions récentes :** Liste des inscriptions d'utilisateurs les plus récentes
+
+---
+
+## Gestion des utilisateurs
+
+### Liste des utilisateurs
+
+La liste des utilisateurs à `/dashboard/admin/users` affiche tous les utilisateurs enregistrés dans un tableau consultable et triable.
+
+**Colonnes :**
+- **Nom :** Nom d'affichage de l'utilisateur
+- **E-mail :** Adresse e-mail de l'utilisateur
+- **Fournisseur :** Méthode d'authentification (local, google, github, guest, passkey)
+- **Rôle :** Badge du niveau d'accès. Affiche « Superadmin » pour les utilisateurs avec l'accès `superadmin`.
+- **Créé le :** Date d'inscription
+- **Statut :** Bascule Actif/Banni
+
+**Actions :**
+- **Rechercher :** Saisissez dans la barre de recherche pour filtrer les utilisateurs par nom ou e-mail (côté client).
+- **Trier :** Cliquez sur un en-tête de colonne pour trier. Cliquez à nouveau pour inverser l'ordre croissant/décroissant.
+- **Pagination :** Contrôles de navigation pour parcourir de grandes listes d'utilisateurs.
+
+### Actions sur les utilisateurs
+
+Chaque ligne d'utilisateur inclut des boutons d'action rapide :
+
+- **Promouvoir/Rétrograder :** Bascule entre les niveaux d'accès `["user"]` et `["user", "superadmin"]`. Visible dans la colonne du niveau d'accès.
+- **Actif/Banni :** Bascule le statut du compte utilisateur. Les utilisateurs bannis ne peuvent pas se connecter ni rafraîchir leurs jetons.
+- **Voir le détail :** Cliquez sur la ligne de l'utilisateur pour ouvrir la vue détaillée.
+
+### Détail d'un utilisateur
+
+La page de détail à `/dashboard/admin/users/:userId` affiche le profil complet d'un utilisateur.
+
+**Informations affichées :**
+- Nom de l'utilisateur, e-mail, fournisseur et date d'inscription
+- Badge du niveau d'accès (superadmin/user)
+- Graphique d'activité de création de salles (historique sur 8 semaines)
+- Liste des salles créées par l'utilisateur
+
+**Actions :**
+- **Promouvoir/Rétrograder :** Bouton dédié dans l'en-tête du détail
+- **Supprimer l'utilisateur :** Supprime définitivement l'utilisateur et toutes ses données. Nécessite une confirmation par e-mail. Le bouton de suppression est masqué pour votre propre compte (vous ne pouvez pas vous supprimer vous-même).
+
+> **La suppression est permanente et asynchrone.** Supprimer un utilisateur supprime également toutes ses salles, passkeys et préférences. La requête retourne immédiatement tandis que le nettoyage s'exécute en arrière-plan.
+
+---
+
+## Gestion des salles
+
+### Liste des salles
+
+La liste des salles à `/dashboard/admin/rooms` affiche toutes les salles de l'instance.
+
+**Colonnes :**
+- **Nom de la salle :** Identifiant de la salle
+- **Visibilité :** Publique, privée ou non répertoriée
+- **Participants max :** Modifiable en ligne — cliquez sur la valeur pour la changer
+- **Statut :** Active ou inactive
+- **Créée le :** Date de création de la salle
+
+**Actions :**
+- **Rechercher :** Filtrer les salles par nom (côté client)
+- **Trier :** Cliquez sur les en-têtes de colonne pour trier
+- **Suspendre :** Terminer un appel actif sans supprimer la salle
+- **Supprimer :** Fermer définitivement une salle avec suppression en cascade
+
+### Détail d'une salle
+
+La page de détail à `/dashboard/admin/rooms/:roomId` offre une visibilité approfondie sur une salle.
+
+**Paramètres de la salle :**
+- Nom de la salle, mode de visibilité, participants maximum
+- **Bascule du mode persistant :** Activez pour empêcher le nettoyage automatique des salles inactives. Disponible uniquement pour les superadmins — les créateurs de salle ne peuvent pas le modifier.
+
+**Participants en direct :**
+- Liste des participants en temps réel qui s'actualise toutes les 3 secondes
+- Par participant : nom, heure de connexion, informations des pistes (audio/vidéo/partage d'écran)
+- **Graphique de débit :** Graphique en direct du débit pour les pistes audio et vidéo
+- **Expulser :** Retirer un participant de la salle
+- **Couper le micro :** Couper les pistes audio d'un participant
+
+---
+
+## Paramètres système
+
+La page des paramètres à `/dashboard/admin/settings` est organisée en 7 onglets. Cliquez sur « Enregistrer les modifications » après avoir modifié un onglet (l'onglet Général s'enregistre automatiquement lors des changements de mode d'inscription).
+
+### Onglet Général
+
+- **Mode d'inscription :**
+  - **Ouvert :** Tout le monde peut créer un compte
+  - **Sur invitation uniquement :** Les nouveaux utilisateurs doivent fournir un jeton d'invitation valide
+  - **Fermé :** Aucune nouvelle inscription — les utilisateurs existants peuvent toujours se connecter
+  - Les modifications s'enregistrent automatiquement lorsque vous changez de mode
+
+**Gestion des jetons d'invitation (dans l'onglet Général) :**
+
+Les jetons contrôlent qui peut s'inscrire en mode Sur invitation uniquement.
+
+- **Générer un jeton :** Saisissez un e-mail optionnel pour verrouiller le jeton sur une adresse spécifique et sélectionnez une période d'expiration (24 heures, 72 heures, 7 jours ou 30 jours).
+- **Liste des jetons :** Affiche tous les jetons avec leur statut. Les jetons non utilisés ont un badge vert « Actif », les jetons utilisés affichent « Utilisé » en gris.
+- **Copier le jeton :** Cliquez sur le bouton de copie pour copier la valeur du jeton de 32 caractères dans votre presse-papiers.
+- **Révoquer :** Supprimez un jeton pour empêcher son utilisation.
+
+### Onglet Authentification
+
+- **Passkeys :** Activer/désactiver l'authentification sans mot de passe FIDO2/WebAuthn
+- **Fournisseurs OAuth :** Configurer les OAuth Google, GitHub et Twitter :
+  - ID Client
+  - Secret Client
+  - URL de redirection
+
+Chaque fournisseur a sa propre carte de configuration. Activez un fournisseur en remplissant les trois champs.
+
+### Onglet LiveKit
+
+- **LiveKit externe :** Bascule pour utiliser un serveur LiveKit externe au lieu du serveur intégré
+- **Hôte :** Hôte et port du serveur LiveKit (ex : `127.0.0.1:7880`)
+- **Clé API :** Clé API du serveur LiveKit
+- **Secret API :** Secret API du serveur LiveKit
+
+### Onglet Serveur
+
+- **Port :** Port du serveur HTTP (défaut : `80`)
+- **Hôte :** Nom d'hôte du serveur
+- **Domaine :** Domaine du serveur
+- **E-mail :** E-mail administratif (utilisé pour l'enregistrement du certificat ACME)
+- **TLS :** Activer HTTPS avec des fichiers de certificat
+- **ACME :** Activer la gestion automatique des certificats Let's Encrypt
+- **Proxy inverse :** Indiquer que le serveur est derrière un proxy (affecte la détection de l'IP client)
+- **Chemins des certificats :** Chemins du fichier de certificat et du fichier de clé (pour la configuration TLS manuelle)
+- **Statut du certificat :** Indicateur en ligne montrant l'état actuel du certificat TLS
+
+### Onglet CORS
+
+- **Origines autorisées :** Liste séparée par des virgules des origines CORS
+- **En-têtes autorisés :** Liste séparée par des virgules des en-têtes de requête autorisés
+- **Méthodes autorisées :** Liste séparée par des virgules des méthodes HTTP autorisées
+- **Autoriser les identifiants :** Bascule pour inclure les identifiants dans les requêtes cross-origin
+- **Âge maximum :** Durée de mise en cache des réponses preflight CORS (en secondes)
+
+### Onglet Téléchargements du chat
+
+Configurez comment les images du chat sont stockées :
+
+- **Backend :** `disk` (système de fichiers local), `s3` (stockage compatible S3) ou `inline` (intégré en base64)
+- **Octets max par téléchargement :** Taille maximale du fichier par téléchargement
+- **Taille max inline :** Taille maximale pour les téléchargements inline/base64
+- **Répertoire disque :** Répertoire local pour les téléchargements du backend `disk`
+
+**Configuration S3 (lorsque le backend est `s3`) :**
+- Point de terminaison, Bucket, Région
+- Clé d'accès, Clé secrète
+- URL publique
+
+### Onglet Journalisation
+
+- **Niveau de journalisation :** `trace`, `debug`, `info`, `warn` ou `error`. Utile pour le débogage — passez à `debug` pour voir les journaux détaillés, puis revenez à `info` pour la production.
+
+---
+
+## Dépannage
+
+### « Le panneau d'administration n'est pas visible »
+
+**Symptôme :** La section Admin n'apparaît pas dans la barre latérale et le lien « Panneau d'administration » est absent du menu déroulant utilisateur.
+
+**Cause :** L'utilisateur connecté n'a pas `superadmin` dans son tableau `accesses`.
+
+**Solution :** Utilisez la CLI pour promouvoir l'utilisateur :
+```bash
+bedrud user promote --email "votre-email@exemple.com"
+```
+Puis déconnectez-vous et reconnectez-vous pour obtenir un nouveau JWT avec les accès mis à jour.
+
+### « Les paramètres ne s'enregistrent pas »
+
+**Symptôme :** L'enregistrement des paramètres retourne un succès, mais les valeurs secrètes semblent inchangées.
+
+**Cause :** Le serveur conserve les valeurs secrètes existantes lorsque vous envoyez `"••••••••"` ou une chaîne vide dans la requête de mise à jour. C'est intentionnel — cela empêche d'écraser accidentellement les secrets lorsque vous modifiez uniquement des champs non secrets.
+
+**Solution :** Envoyez la valeur secrète réelle (pas le placeholder masqué) dans la requête de mise à jour.
+
+### « Impossible de supprimer mon propre compte »
+
+**Symptôme :** Le bouton de suppression est masqué sur votre propre page de détail utilisateur, ou l'API renvoie une erreur 400.
+
+**Cause :** L'auto-suppression est bloquée pour des raisons de sécurité. Vous ne pouvez pas supprimer le compte avec lequel vous êtes actuellement connecté.
+
+**Solution :** Demandez à un autre superadmin de supprimer le compte, ou utilisez la CLI en tant qu'utilisateur différent.
+
+### « Redirigé vers le tableau de bord lors de l'accès à l'URL admin »
+
+**Symptôme :** Visiter `/dashboard/admin` redirige directement vers `/dashboard`.
+
+**Cause :** La route de garde admin vérifie le tableau `accesses` de votre JWT. Si `superadmin` est manquant, la garde redirige.
+
+**Solution :** Vérifiez que votre compte a l'accès superadmin. Si votre accès a été modifié récemment, déconnectez-vous et reconnectez-vous pour rafraîchir votre JWT.
+
+---
+
+## Voir aussi
+
+- [API d'administration](/fr/docs/api/admin) — référence complète de l'API pour tous les points de terminaison admin
+- [Authentification](/fr/docs/backend/authentication) — niveaux d'accès et système de rôles
+- [Configuration](/fr/docs/getting-started/configuration) — référence des paramètres config.yaml
+- [Démarrage rapide](/fr/docs/getting-started/quickstart) — guide de configuration du premier admin

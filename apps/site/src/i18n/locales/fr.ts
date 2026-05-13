@@ -507,6 +507,7 @@
       "guides/makefile": "Référence Makefile",
       "guides/packages": "Installation des paquets",
       "guides/appliance": "Mode appliance",
+      "guides/admin-dashboard": "Tableau de Bord Administrateur",
       "guides/behind-proxy": "Derrière un proxy/CDN",
       contributing: "Contribution",
     },

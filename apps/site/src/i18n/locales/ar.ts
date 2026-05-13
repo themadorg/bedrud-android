@@ -504,6 +504,7 @@
       "guides/makefile": "مرجع Makefile",
       "guides/packages": "تثبيت الحزم",
       "guides/appliance": "وضع الجهاز",
+      "guides/admin-dashboard": "لوحة تحكم المشرف",
       "guides/behind-proxy": "خلف بروكسي/CDN",
       contributing: "المساهمة",
     },

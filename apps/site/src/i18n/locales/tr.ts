@@ -537,6 +537,7 @@
       "guides/makefile": "Makefile Referansı",
       "guides/packages": "Paket Kurulumu",
       "guides/appliance": "Cihaz Modu",
+      "guides/admin-dashboard": "Yönetici Paneli",
       "guides/behind-proxy": "Bir Proxy/CDN Arkasında",
       contributing: "Katkıda Bulunma",
     },

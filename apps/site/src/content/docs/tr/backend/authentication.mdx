@@ -81,10 +81,34 @@ Bedrud, birden fazla kökenden erişilebilir olacak şekilde tasarlanmıştır; 
 - **İzin Verilen Kökenler:** Varsayılan olarak sunucunun kendi alan adına ve `localhost:3000`'e (React geliştirme sunucusu portu) izin verir.
 
 ## Kullanıcı Rolleri (Erişim Kontrolü)
-Her kullanıcının bir "erişim" (rol) listesi vardır.
 
-- `user`: Standart kullanıcı. Oda katılabilir ve oluşturabilir.
-- `guest`: Geçici kullanıcı. Odalara katılabilir.
-- `superadmin`: `/admin` paneli üzerinden tüm kullanıcıları ve odaları yönetebilir.
+Her kullanıcının aynı anda birden fazla erişim seviyesi içerebilen bir `accesses` dizisi vardır. JWT claims, middleware'in ayrıntılı izinleri kontrol etmesine olanak tanıyan tam `accesses` dizisini içerir.
 
-`middleware.RequireAccess("superadmin")` koruması, yönetici rotalarını güvence altına alır.
+### Erişim Seviyeleri
+
+| Erişim Seviyesi | Kapsam | Yetkiler |
+|---|---|---|
+| `superadmin` | Sistem geneli | Yönetici paneline (`/dashboard/admin`) tam erişim, tüm admin API uç noktaları (`/api/admin/*`), kullanıcı yönetimi, oda yönetimi, sistem ayarları, davet jetonları. Tüm oda moderasyon eylemleri için genel atlama görevi görür. `RequireAccess("superadmin")` middleware'i ile korunur. |
+| `admin` | Tanımlı, zorlanmıyor | `accesses` dizisinde mevcut ancak şu anda **hiçbir middleware tarafından kullanılmıyor**. Yalnızca bilgilendirme amaçlı. Gelecekteki rol tabanlı erişim kontrolü özellikleri için ayrılmıştır. |
+| `moderator` | Oda kapsamlı | Belirli bir odayı yönetebilir: sohbeti engelleme, katılımcıları sağırlaştırma/sesini açma, spot ışığı, ekran paylaşımını durdurma, videoyu devre dışı bırakma. Bir çağrı sırasında oda oluşturan veya bir superadmin tarafından `PromoteParticipant` ile yükseltilir. `isRoomModerator()` yardımcısı ile kontrol edilir. |
+| `user` | Standart | Tüm kayıtlar için varsayılan. Oda oluşturabilir, odalara katılabilir, profili yönetebilir ve kendi passkey'lerini yönetebilir. `Protected()` middleware'i ile korunur. |
+| `guest` | Sınırlı | Misafir girişi ile genel odalara katılmak için geçici kullanıcı. Oda oluşturamaz veya korumalı özelliklere erişemez. |
+
+### Rol Hiyerarşisi
+
+```
+superadmin > admin > moderator > user > guest
+```
+
+Bir `superadmin`, oda moderatörü olarak yükseltilmeden herhangi bir odada herhangi bir moderasyon eylemini gerçekleştirebilir. Oda oluşturanlar otomatik olarak oda adminidir ve katılımcıları moderatörlüğe yükseltebilir.
+
+### Rol Atama
+
+Roller birden fazla kanal aracılığıyla yönetilir:
+
+- **CLI:** `bedrud user create` (`user` olarak oluşturur), `bedrud user promote` (`superadmin` ekler), `bedrud user demote` (`superadmin`i kaldırır)
+- **Yönetici Paneli:** Kullanıcı detay sayfasında yükselt/düşür düğmeleri bulunur
+- **Admin API:** İstenen `accesses` dizisi ile `PUT /api/admin/users/:id/accesses`
+- **Toplantı İçi:** Oda oluşturan, katılımcıları oda seviyesinde moderatörlüğe yükseltebilir
+
+> **Not:** İlk superadmin'i oluşturmak için bir API uç noktası veya web arayüzü yoktur. Kurulumdan sonra, ilk admin erişimini başlatmak için CLI kullanmalısınız (`bedrud user create` + `bedrud user promote`). Bu, bilinçli bir güvenlik önlemidir.
