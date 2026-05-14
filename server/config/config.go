@@ -49,6 +49,10 @@ type ServerConfig struct {
 	// 0 means use internal default (1000).
 	// Env: SERVER_MAX_PARTICIPANTS_LIMIT
 	MaxParticipantsLimit int `yaml:"maxParticipantsLimit" env:"SERVER_MAX_PARTICIPANTS_LIMIT"`
+	// MaxRoomsPerUser caps the number of active rooms a single user can create.
+	// 0 means unlimited. Default when used as fallback: 100.
+	// Env: SERVER_MAX_ROOMS_PER_USER
+	MaxRoomsPerUser int `yaml:"maxRoomsPerUser" env:"SERVER_MAX_ROOMS_PER_USER"`
 }
 
 type DatabaseConfig struct {
@@ -113,9 +117,24 @@ type CorsConfig struct {
 	MaxAge           ConfigInt `yaml:"maxAge"`
 }
 
-// ChatConfig holds settings for in-room chat, including image upload storage.
+// ChatConfig holds settings for in-room chat, including image upload storage and quotas.
 type ChatConfig struct {
 	Uploads ChatUploadConfig `yaml:"uploads"`
+	// MaxUploadBytesPerUser caps total bytes a user can store via chat uploads.
+	// 0 means unlimited. Default when used as fallback: 524288000 (500 MB).
+	// Env: CHAT_MAX_UPLOAD_BYTES_PER_USER
+	MaxUploadBytesPerUser int64 `yaml:"maxUploadBytesPerUser" env:"CHAT_MAX_UPLOAD_BYTES_PER_USER"`
+	// GlobalDiskThresholdBytes is the total upload storage ceiling across all users.
+	// When exceeded, all uploads are rejected until an admin frees space.
+	// 0 means unlimited. Env: CHAT_GLOBAL_DISK_THRESHOLD_BYTES
+	GlobalDiskThresholdBytes int64 `yaml:"globalDiskThresholdBytes" env:"CHAT_GLOBAL_DISK_THRESHOLD_BYTES"`
+	// MaxMessageCount caps the number of chat messages kept per room.
+	// 0 means unlimited. Default: 10000. Env: CHAT_MAX_MESSAGE_COUNT
+	MaxMessageCount int `yaml:"maxMessageCount" env:"CHAT_MAX_MESSAGE_COUNT"`
+	// MessageTTLHours is the max age of a chat message in hours.
+	// Messages older than this are purged. 0 means forever. Default: 2160 (90 days).
+	// Env: CHAT_MESSAGE_TTL_HOURS
+	MessageTTLHours int `yaml:"messageTTLHours" env:"CHAT_MESSAGE_TTL_HOURS"`
 }
 
 // ChatUploadConfig controls where and how chat image uploads are stored.
@@ -260,6 +279,11 @@ func Load(configPath string) (*Config, error) {
 		if envCertAlgorithm := os.Getenv("SERVER_CERT_ALGORITHM"); envCertAlgorithm != "" {
 			config.Server.CertAlgorithm = envCertAlgorithm
 		}
+		if envMaxRoomsPerUser := os.Getenv("SERVER_MAX_ROOMS_PER_USER"); envMaxRoomsPerUser != "" {
+			if i, err := strconv.Atoi(envMaxRoomsPerUser); err == nil {
+				config.Server.MaxRoomsPerUser = i
+			}
+		}
 		if dbHost := os.Getenv("DB_HOST"); dbHost != "" {
 			config.Database.Host = dbHost
 		}
@@ -335,6 +359,28 @@ func Load(configPath string) (*Config, error) {
 			}
 		}
 
+		// Chat upload quota environment variable overrides
+		if v := os.Getenv("CHAT_MAX_UPLOAD_BYTES_PER_USER"); v != "" {
+			if i, err := strconv.ParseInt(v, 10, 64); err == nil {
+				config.Chat.MaxUploadBytesPerUser = i
+			}
+		}
+		if v := os.Getenv("CHAT_GLOBAL_DISK_THRESHOLD_BYTES"); v != "" {
+			if i, err := strconv.ParseInt(v, 10, 64); err == nil {
+				config.Chat.GlobalDiskThresholdBytes = i
+			}
+		}
+		if v := os.Getenv("CHAT_MAX_MESSAGE_COUNT"); v != "" {
+			if i, err := strconv.Atoi(v); err == nil {
+				config.Chat.MaxMessageCount = i
+			}
+		}
+		if v := os.Getenv("CHAT_MESSAGE_TTL_HOURS"); v != "" {
+			if i, err := strconv.Atoi(v); err == nil {
+				config.Chat.MessageTTLHours = i
+			}
+		}
+
 		// Rate limit environment variable overrides
 		if v := os.Getenv("RATELIMIT_AUTH_MAX"); v != "" {
 			if i, err := strconv.Atoi(v); err == nil {
@@ -354,6 +400,18 @@ func Load(configPath string) (*Config, error) {
 		if v := os.Getenv("RATELIMIT_GUEST_WINDOW"); v != "" {
 			if i, err := strconv.Atoi(v); err == nil {
 				config.RateLimit.GuestWindowSecs = &i
+			}
+		}
+
+		// API rate limit environment variable overrides
+		if v := os.Getenv("RATELIMIT_API_MAX"); v != "" {
+			if i, err := strconv.Atoi(v); err == nil {
+				config.RateLimit.APIMaxRequests = &i
+			}
+		}
+		if v := os.Getenv("RATELIMIT_API_WINDOW"); v != "" {
+			if i, err := strconv.Atoi(v); err == nil {
+				config.RateLimit.APIWindowSecs = &i
 			}
 		}
 	})

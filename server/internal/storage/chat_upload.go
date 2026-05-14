@@ -24,6 +24,7 @@ import (
 	"github.com/rs/zerolog/log"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
+	"sync"
 )
 
 // ChatAttachment is the metadata returned after a successful upload.
@@ -105,6 +106,12 @@ func webpDimensions(data []byte) (width, height int) {
 // sniffMime returns the content type of the data, restricted to allowed image types.
 // Returns an error if the type is not a permitted image format.
 func sniffMime(data []byte) (string, error) {
+	// WebP detection: RIFF....WEBP (http.DetectContentType does not detect WebP)
+	if len(data) >= 12 &&
+		data[0] == 'R' && data[1] == 'I' && data[2] == 'F' && data[3] == 'F' &&
+		data[8] == 'W' && data[9] == 'E' && data[10] == 'B' && data[11] == 'P' {
+		return "image/webp", nil
+	}
 	mime := http.DetectContentType(data)
 	// DetectContentType can return "image/jpeg" or "image/png" etc.
 	// Strip parameters like "; charset=utf-8" if present.
@@ -117,8 +124,8 @@ func sniffMime(data []byte) (string, error) {
 	return mime, nil
 }
 
-// contentHash returns a hex-encoded SHA256 of the data — used as filename.
-func contentHash(data []byte) string {
+// ContentHash returns a hex-encoded SHA256 of the data — used as filename.
+func ContentHash(data []byte) string {
 	h := sha256.Sum256(data)
 	return hex.EncodeToString(h[:])
 }
@@ -164,7 +171,7 @@ func (s *diskStore) Store(data []byte) (*ChatAttachment, error) {
 		return nil, err
 	}
 	ext := allowedMimeTypes[mime]
-	hash := contentHash(data)
+	hash := ContentHash(data)
 	filename := hash + ext
 
 	if err := os.MkdirAll(s.dir, 0o755); err != nil {
@@ -251,7 +258,7 @@ func (s *s3Store) Store(data []byte) (*ChatAttachment, error) {
 		return nil, err
 	}
 	ext := allowedMimeTypes[mime]
-	hash := contentHash(data)
+	hash := ContentHash(data)
 	key := hash + ext
 
 	if err := s.putObject(key, mime, data); err != nil {
@@ -350,26 +357,148 @@ func (s *s3Store) deriveSigningKey(datestamp, region string) []byte {
 	return s.hmacSHA256(kService, "aws4_request")
 }
 
+// deleteObject removes an object from the S3 bucket using AWS Signature V4.
+// Errors are returned to the caller (ChatUploadTracker logs a warning and continues).
+func (s *s3Store) deleteObject(key string) error {
+	if s.cfg.Endpoint == "" || s.cfg.Bucket == "" || s.cfg.AccessKey == "" {
+		return fmt.Errorf("s3 not configured")
+	}
+
+	region := s.cfg.Region
+	if region == "" {
+		region = "auto"
+	}
+	endpoint := strings.TrimRight(s.cfg.Endpoint, "/")
+	url := endpoint + "/" + s.cfg.Bucket + "/" + key
+
+	now := time.Now().UTC()
+	datestamp := now.Format("20060102")
+	amzdate := now.Format("20060102T150405Z")
+	emptyPayloadHash := fmt.Sprintf("%x", sha256.Sum256([]byte("")))
+
+	req, err := http.NewRequest(http.MethodDelete, url, nil)
+	if err != nil {
+		return err
+	}
+	req.Header.Set("x-amz-content-sha256", emptyPayloadHash)
+	req.Header.Set("x-amz-date", amzdate)
+
+	signedHeaders := "host;x-amz-content-sha256;x-amz-date"
+	canonicalHeaders := fmt.Sprintf(
+		"host:%s\nx-amz-content-sha256:%s\nx-amz-date:%s\n",
+		req.URL.Host, emptyPayloadHash, amzdate,
+	)
+	canonicalURI := "/" + s.cfg.Bucket + "/" + key
+	canonicalRequest := strings.Join([]string{
+		"DELETE", canonicalURI, "", canonicalHeaders, signedHeaders, emptyPayloadHash,
+	}, "\n")
+
+	credScope := datestamp + "/" + region + "/s3/aws4_request"
+	stringToSign := strings.Join([]string{
+		"AWS4-HMAC-SHA256", amzdate, credScope,
+		fmt.Sprintf("%x", sha256.Sum256([]byte(canonicalRequest))),
+	}, "\n")
+
+	signingKey := s.deriveSigningKey(datestamp, region)
+	signature := fmt.Sprintf("%x", s.hmacSHA256(signingKey, stringToSign))
+
+	authHeader := fmt.Sprintf(
+		"AWS4-HMAC-SHA256 Credential=%s/%s, SignedHeaders=%s, Signature=%s",
+		s.cfg.AccessKey, credScope, signedHeaders, signature,
+	)
+	req.Header.Set("Authorization", authHeader)
+
+	client := &http.Client{Timeout: 30 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode >= 300 {
+		return fmt.Errorf("s3 delete returned status %d", resp.StatusCode)
+	}
+	return nil
+}
+
+// DeleteObject implements ObjectDeleter.
+func (s *s3Store) DeleteObject(key string) error { return s.deleteObject(key) }
+
+// ObjectDeleter removes an object from an S3-compatible bucket by key.
+type ObjectDeleter interface {
+	DeleteObject(key string) error
+}
+
+// NewS3Deleter creates an ObjectDeleter backed by the S3 configuration.
+// The returned deleter supports deleting objects via the same SigV4 signing
+// used by the s3Store upload path.
+func NewS3Deleter(cfg config.ChatUploadS3Config) ObjectDeleter {
+	return &s3Store{cfg: cfg}
+}
+
 type ChatUploadTracker struct {
 	db      *gorm.DB
 	chatDir string
+	deleter ObjectDeleter
+
+	mu                 sync.Mutex
+	totalBytesCache    int64
+	totalBytesCachedAt time.Time
 }
 
-func NewChatUploadTracker(db *gorm.DB, chatDir string) *ChatUploadTracker {
+func NewChatUploadTracker(db *gorm.DB, chatDir string, deleter ObjectDeleter) *ChatUploadTracker {
 	if chatDir == "" {
 		chatDir = "./data/uploads/chat"
 	}
-	return &ChatUploadTracker{db: db, chatDir: chatDir}
+	return &ChatUploadTracker{db: db, chatDir: chatDir, deleter: deleter}
 }
 
-func (t *ChatUploadTracker) Record(roomID, fileHash, ext string) error {
+func (t *ChatUploadTracker) Record(roomID, userID, fileHash, ext string, fileSize int64, backend string) error {
 	upload := &models.ChatUpload{
-		ID:        uuid.New().String(),
-		RoomID:    roomID,
-		FileHash:  fileHash,
-		Extension: ext,
+		ID:             uuid.New().String(),
+		RoomID:         roomID,
+		UploadedBy:     userID,
+		FileHash:       fileHash,
+		Extension:      ext,
+		FileSize:       fileSize,
+		StorageBackend: backend,
 	}
 	return t.db.Create(upload).Error
+}
+
+// GetUserUploadBytes returns the total bytes stored by a user via chat uploads.
+func (t *ChatUploadTracker) GetUserUploadBytes(userID string) (int64, error) {
+	var total int64
+	err := t.db.Model(&models.ChatUpload{}).
+		Where("uploaded_by = ?", userID).
+		Select("COALESCE(SUM(file_size), 0)").
+		Scan(&total).Error
+	return total, err
+}
+
+// GetTotalUploadBytes returns the total bytes stored across all users.
+// Results are cached for 60 seconds to avoid excessive DB queries.
+func (t *ChatUploadTracker) GetTotalUploadBytes() (int64, error) {
+	t.mu.Lock()
+	if time.Since(t.totalBytesCachedAt) < 60*time.Second {
+		cached := t.totalBytesCache
+		t.mu.Unlock()
+		return cached, nil
+	}
+	t.mu.Unlock()
+
+	var total int64
+	err := t.db.Model(&models.ChatUpload{}).
+		Select("COALESCE(SUM(file_size), 0)").
+		Scan(&total).Error
+	if err != nil {
+		return 0, err
+	}
+
+	t.mu.Lock()
+	t.totalBytesCache = total
+	t.totalBytesCachedAt = time.Now()
+	t.mu.Unlock()
+	return total, nil
 }
 
 func (t *ChatUploadTracker) DeleteByRoom(roomID string) error {
@@ -388,9 +517,22 @@ func (t *ChatUploadTracker) DeleteByRoom(roomID string) error {
 		if remaining > 0 {
 			continue
 		}
-		path := filepath.Join(t.chatDir, u.FileHash+u.Extension)
-		if err := os.Remove(path); err != nil && !os.IsNotExist(err) {
-			log.Warn().Err(err).Str("path", path).Msg("orphan chat upload file on disk")
+		switch u.StorageBackend {
+		case "s3":
+			if t.deleter != nil {
+				key := u.FileHash + u.Extension
+				if err := t.deleter.DeleteObject(key); err != nil {
+					log.Warn().Err(err).Str("key", key).Str("roomID", roomID).Msg("failed to delete S3 chat upload object")
+				}
+			} else {
+				log.Warn().Str("key", u.FileHash+u.Extension).Str("roomID", roomID).Msg("no S3 deleter configured, orphaned S3 object")
+			}
+		case "inline":
+		default: // "disk" or unknown
+			path := filepath.Join(t.chatDir, u.FileHash+u.Extension)
+			if err := os.Remove(path); err != nil && !os.IsNotExist(err) {
+				log.Warn().Err(err).Str("path", path).Msg("orphan chat upload file on disk")
+			}
 		}
 	}
 	return nil

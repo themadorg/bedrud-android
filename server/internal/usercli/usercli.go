@@ -137,7 +137,14 @@ func DeleteUser(configPath, email string) error {
 		if uploadDir == "" {
 			uploadDir = "./data/uploads/chat"
 		}
-		uploadTracker := storage.NewChatUploadTracker(database.GetDB(), uploadDir)
+		var s3Deleter storage.ObjectDeleter
+		if cfg.Chat.Uploads.Backend == "s3" &&
+			cfg.Chat.Uploads.S3.Endpoint != "" &&
+			cfg.Chat.Uploads.S3.Bucket != "" &&
+			cfg.Chat.Uploads.S3.AccessKey != "" {
+			s3Deleter = storage.NewS3Deleter(cfg.Chat.Uploads.S3)
+		}
+		uploadTracker := storage.NewChatUploadTracker(database.GetDB(), uploadDir, s3Deleter)
 		cleanupSvc := services.NewRoomCleanupService(roomRepo, client, cfg.LiveKit.APIKey, cfg.LiveKit.APISecret, uploadTracker)
 
 		if err := cleanupSvc.DeleteUserRooms(context.Background(), rooms, user.ID); err != nil {

@@ -36,6 +36,27 @@ func validateSettings(s *models.SystemSettings) error {
 	if s.MaxParticipantsLimit < 0 || s.MaxParticipantsLimit > 100000 {
 		return fmt.Errorf("maxParticipantsLimit must be between 0 and 100000")
 	}
+	if s.MaxRoomsPerUser < 0 || s.MaxRoomsPerUser > 100000 {
+		return fmt.Errorf("maxRoomsPerUser must be between 0 and 100000")
+	}
+	if s.MaxUploadBytesPerUser < 0 {
+		return fmt.Errorf("maxUploadBytesPerUser cannot be negative")
+	}
+	if s.GlobalDiskThresholdBytes < 0 {
+		return fmt.Errorf("globalDiskThresholdBytes cannot be negative")
+	}
+	if s.ChatMaxMessageCount < 0 {
+		return fmt.Errorf("chatMaxMessageCount cannot be negative")
+	}
+	if s.ChatMessageTTLHours < 0 {
+		return fmt.Errorf("chatMessageTTLHours cannot be negative")
+	}
+	if s.JWTSecret != "" && len(s.JWTSecret) < 32 {
+		return fmt.Errorf("jwtSecret must be at least 32 characters")
+	}
+	if s.CORSAllowCredentials && (s.CORSAllowedOrigins == "*" || s.CORSAllowedOrigins == "") {
+		return fmt.Errorf("corsAllowCredentials cannot be true when corsAllowedOrigins is '*' or empty")
+	}
 	return nil
 }
 
@@ -71,6 +92,8 @@ func (h *AdminHandler) GetPublicSettings(c *fiber.Ctx) error {
 		"tokenRegistrationOnly": s.TokenRegistrationOnly,
 		"passkeysEnabled":       s.PasskeysEnabled,
 		"oauthProviders":        auth.ConfiguredProviders(),
+		"chatMaxMessageCount":   s.ChatMaxMessageCount,
+		"chatMessageTTLHours":   s.ChatMessageTTLHours,
 	})
 }
 
@@ -118,17 +141,23 @@ func (h *AdminHandler) UpdateSettings(c *fiber.Ctx) error {
 // applySettingsFields selectively applies fields from raw JSON onto existing settings.
 // Only fields present in the JSON body are applied; others retain their current value.
 func applySettingsFields(existing *models.SystemSettings, raw map[string]json.RawMessage) *models.SystemSettings {
-	// Helper to decode a field into the existing struct
-	var val any
-
 	if v, ok := raw["registrationEnabled"]; ok {
-		if json.Unmarshal(v, &val) == nil { existing.RegistrationEnabled = val.(bool) }
+		var b bool
+		if json.Unmarshal(v, &b) == nil {
+			existing.RegistrationEnabled = b
+		}
 	}
 	if v, ok := raw["tokenRegistrationOnly"]; ok {
-		if json.Unmarshal(v, &val) == nil { existing.TokenRegistrationOnly = val.(bool) }
+		var b bool
+		if json.Unmarshal(v, &b) == nil {
+			existing.TokenRegistrationOnly = b
+		}
 	}
 	if v, ok := raw["passkeysEnabled"]; ok {
-		if json.Unmarshal(v, &val) == nil { existing.PasskeysEnabled = val.(bool) }
+		var b bool
+		if json.Unmarshal(v, &b) == nil {
+			existing.PasskeysEnabled = b
+		}
 	}
 
 	// Unmask secrets: if client sent masked placeholder, keep existing value
@@ -165,115 +194,250 @@ func applySettingsFields(existing *models.SystemSettings, raw map[string]json.Ra
 
 	// String fields
 	if v, ok := raw["googleClientId"]; ok {
-		var s string; if json.Unmarshal(v, &s) == nil { existing.GoogleClientID = s }
+		var s string
+		if json.Unmarshal(v, &s) == nil {
+			existing.GoogleClientID = s
+		}
 	}
 	if v, ok := raw["googleRedirectUrl"]; ok {
-		var s string; if json.Unmarshal(v, &s) == nil { existing.GoogleRedirectURL = s }
+		var s string
+		if json.Unmarshal(v, &s) == nil {
+			existing.GoogleRedirectURL = s
+		}
 	}
 	if v, ok := raw["githubClientId"]; ok {
-		var s string; if json.Unmarshal(v, &s) == nil { existing.GithubClientID = s }
+		var s string
+		if json.Unmarshal(v, &s) == nil {
+			existing.GithubClientID = s
+		}
 	}
 	if v, ok := raw["githubRedirectUrl"]; ok {
-		var s string; if json.Unmarshal(v, &s) == nil { existing.GithubRedirectURL = s }
+		var s string
+		if json.Unmarshal(v, &s) == nil {
+			existing.GithubRedirectURL = s
+		}
 	}
 	if v, ok := raw["twitterClientId"]; ok {
-		var s string; if json.Unmarshal(v, &s) == nil { existing.TwitterClientID = s }
+		var s string
+		if json.Unmarshal(v, &s) == nil {
+			existing.TwitterClientID = s
+		}
 	}
 	if v, ok := raw["twitterRedirectUrl"]; ok {
-		var s string; if json.Unmarshal(v, &s) == nil { existing.TwitterRedirectURL = s }
+		var s string
+		if json.Unmarshal(v, &s) == nil {
+			existing.TwitterRedirectURL = s
+		}
 	}
 	if v, ok := raw["frontendUrl"]; ok {
-		var s string; if json.Unmarshal(v, &s) == nil { existing.FrontendURL = s }
+		var s string
+		if json.Unmarshal(v, &s) == nil {
+			existing.FrontendURL = s
+		}
 	}
 	if v, ok := raw["serverPort"]; ok {
-		var s string; if json.Unmarshal(v, &s) == nil { existing.ServerPort = s }
+		var s string
+		if json.Unmarshal(v, &s) == nil {
+			existing.ServerPort = s
+		}
 	}
 	if v, ok := raw["serverHost"]; ok {
-		var s string; if json.Unmarshal(v, &s) == nil { existing.ServerHost = s }
+		var s string
+		if json.Unmarshal(v, &s) == nil {
+			existing.ServerHost = s
+		}
 	}
 	if v, ok := raw["serverDomain"]; ok {
-		var s string; if json.Unmarshal(v, &s) == nil { existing.ServerDomain = s }
+		var s string
+		if json.Unmarshal(v, &s) == nil {
+			existing.ServerDomain = s
+		}
 	}
 	if v, ok := raw["serverCertFile"]; ok {
-		var s string; if json.Unmarshal(v, &s) == nil { existing.ServerCertFile = s }
+		var s string
+		if json.Unmarshal(v, &s) == nil {
+			existing.ServerCertFile = s
+		}
 	}
 	if v, ok := raw["serverKeyFile"]; ok {
-		var s string; if json.Unmarshal(v, &s) == nil { existing.ServerKeyFile = s }
+		var s string
+		if json.Unmarshal(v, &s) == nil {
+			existing.ServerKeyFile = s
+		}
 	}
 	if v, ok := raw["serverEmail"]; ok {
-		var s string; if json.Unmarshal(v, &s) == nil { existing.ServerEmail = s }
+		var s string
+		if json.Unmarshal(v, &s) == nil {
+			existing.ServerEmail = s
+		}
 	}
 	if v, ok := raw["livekitHost"]; ok {
-		var s string; if json.Unmarshal(v, &s) == nil { existing.LiveKitHost = s }
+		var s string
+		if json.Unmarshal(v, &s) == nil {
+			existing.LiveKitHost = s
+		}
 	}
 	if v, ok := raw["livekitApiKey"]; ok {
-		var s string; if json.Unmarshal(v, &s) == nil { existing.LiveKitAPIKey = s }
+		var s string
+		if json.Unmarshal(v, &s) == nil {
+			existing.LiveKitAPIKey = s
+		}
 	}
 	if v, ok := raw["corsAllowedOrigins"]; ok {
-		var s string; if json.Unmarshal(v, &s) == nil { existing.CORSAllowedOrigins = s }
+		var s string
+		if json.Unmarshal(v, &s) == nil {
+			existing.CORSAllowedOrigins = s
+		}
 	}
 	if v, ok := raw["corsAllowedHeaders"]; ok {
-		var s string; if json.Unmarshal(v, &s) == nil { existing.CORSAllowedHeaders = s }
+		var s string
+		if json.Unmarshal(v, &s) == nil {
+			existing.CORSAllowedHeaders = s
+		}
 	}
 	if v, ok := raw["corsAllowedMethods"]; ok {
-		var s string; if json.Unmarshal(v, &s) == nil { existing.CORSAllowedMethods = s }
+		var s string
+		if json.Unmarshal(v, &s) == nil {
+			existing.CORSAllowedMethods = s
+		}
 	}
 	if v, ok := raw["chatUploadBackend"]; ok {
-		var s string; if json.Unmarshal(v, &s) == nil { existing.ChatUploadBackend = s }
+		var s string
+		if json.Unmarshal(v, &s) == nil {
+			existing.ChatUploadBackend = s
+		}
 	}
 	if v, ok := raw["chatUploadDiskDir"]; ok {
-		var s string; if json.Unmarshal(v, &s) == nil { existing.ChatUploadDiskDir = s }
+		var s string
+		if json.Unmarshal(v, &s) == nil {
+			existing.ChatUploadDiskDir = s
+		}
 	}
 	if v, ok := raw["chatUploadS3Endpoint"]; ok {
-		var s string; if json.Unmarshal(v, &s) == nil { existing.ChatUploadS3Endpoint = s }
+		var s string
+		if json.Unmarshal(v, &s) == nil {
+			existing.ChatUploadS3Endpoint = s
+		}
 	}
 	if v, ok := raw["chatUploadS3Bucket"]; ok {
-		var s string; if json.Unmarshal(v, &s) == nil { existing.ChatUploadS3Bucket = s }
+		var s string
+		if json.Unmarshal(v, &s) == nil {
+			existing.ChatUploadS3Bucket = s
+		}
 	}
 	if v, ok := raw["chatUploadS3Region"]; ok {
-		var s string; if json.Unmarshal(v, &s) == nil { existing.ChatUploadS3Region = s }
+		var s string
+		if json.Unmarshal(v, &s) == nil {
+			existing.ChatUploadS3Region = s
+		}
 	}
 	if v, ok := raw["chatUploadS3PublicUrl"]; ok {
-		var s string; if json.Unmarshal(v, &s) == nil { existing.ChatUploadS3PublicURL = s }
+		var s string
+		if json.Unmarshal(v, &s) == nil {
+			existing.ChatUploadS3PublicURL = s
+		}
 	}
 	if v, ok := raw["logLevel"]; ok {
-		var s string; if json.Unmarshal(v, &s) == nil { existing.LogLevel = s }
+		var s string
+		if json.Unmarshal(v, &s) == nil {
+			existing.LogLevel = s
+		}
 	}
 
 	// Bool fields
 	if v, ok := raw["serverEnableTls"]; ok {
-		var b bool; if json.Unmarshal(v, &b) == nil { existing.ServerEnableTLS = b }
+		var b bool
+		if json.Unmarshal(v, &b) == nil {
+			existing.ServerEnableTLS = b
+		}
 	}
 	if v, ok := raw["serverUseAcme"]; ok {
-		var b bool; if json.Unmarshal(v, &b) == nil { existing.ServerUseACME = b }
+		var b bool
+		if json.Unmarshal(v, &b) == nil {
+			existing.ServerUseACME = b
+		}
 	}
 	if v, ok := raw["behindProxy"]; ok {
-		var b bool; if json.Unmarshal(v, &b) == nil { existing.BehindProxy = b }
+		var b bool
+		if json.Unmarshal(v, &b) == nil {
+			existing.BehindProxy = b
+		}
 	}
 	if v, ok := raw["livekitExternal"]; ok {
-		var b bool; if json.Unmarshal(v, &b) == nil { existing.LiveKitExternal = b }
+		var b bool
+		if json.Unmarshal(v, &b) == nil {
+			existing.LiveKitExternal = b
+		}
 	}
 	if v, ok := raw["corsAllowCredentials"]; ok {
-		var b bool; if json.Unmarshal(v, &b) == nil { existing.CORSAllowCredentials = b }
+		var b bool
+		if json.Unmarshal(v, &b) == nil {
+			existing.CORSAllowCredentials = b
+		}
 	}
 
 	// Int fields
 	if v, ok := raw["corsMaxAge"]; ok {
-		var i int; if json.Unmarshal(v, &i) == nil { existing.CORSMaxAge = i }
+		var i int
+		if json.Unmarshal(v, &i) == nil {
+			existing.CORSMaxAge = i
+		}
 	}
 	if v, ok := raw["tokenDuration"]; ok {
-		var i int; if json.Unmarshal(v, &i) == nil { existing.TokenDuration = i }
+		var i int
+		if json.Unmarshal(v, &i) == nil {
+			existing.TokenDuration = i
+		}
 	}
 	if v, ok := raw["maxParticipantsLimit"]; ok {
-		var i int; if json.Unmarshal(v, &i) == nil { existing.MaxParticipantsLimit = i }
+		var i int
+		if json.Unmarshal(v, &i) == nil {
+			existing.MaxParticipantsLimit = i
+		}
+	}
+	if v, ok := raw["maxRoomsPerUser"]; ok {
+		var i int
+		if json.Unmarshal(v, &i) == nil {
+			existing.MaxRoomsPerUser = i
+		}
+	}
+	if v, ok := raw["chatMaxMessageCount"]; ok {
+		var i int
+		if json.Unmarshal(v, &i) == nil {
+			existing.ChatMaxMessageCount = i
+		}
+	}
+	if v, ok := raw["chatMessageTTLHours"]; ok {
+		var i int
+		if json.Unmarshal(v, &i) == nil {
+			existing.ChatMessageTTLHours = i
+		}
 	}
 
 	// Int64 fields
 	if v, ok := raw["chatUploadMaxBytes"]; ok {
-		var i int64; if json.Unmarshal(v, &i) == nil { existing.ChatUploadMaxBytes = i }
+		var i int64
+		if json.Unmarshal(v, &i) == nil {
+			existing.ChatUploadMaxBytes = i
+		}
 	}
 	if v, ok := raw["chatUploadInlineMax"]; ok {
-		var i int64; if json.Unmarshal(v, &i) == nil { existing.ChatUploadInlineMax = i }
+		var i int64
+		if json.Unmarshal(v, &i) == nil {
+			existing.ChatUploadInlineMax = i
+		}
+	}
+	if v, ok := raw["maxUploadBytesPerUser"]; ok {
+		var i int64
+		if json.Unmarshal(v, &i) == nil {
+			existing.MaxUploadBytesPerUser = i
+		}
+	}
+	if v, ok := raw["globalDiskThresholdBytes"]; ok {
+		var i int64
+		if json.Unmarshal(v, &i) == nil {
+			existing.GlobalDiskThresholdBytes = i
+		}
 	}
 
 	return existing
@@ -342,6 +506,9 @@ func (h *AdminHandler) CreateInviteToken(c *fiber.Ctx) error {
 	}
 	if input.ExpiresIn <= 0 {
 		input.ExpiresIn = 72
+	}
+	if input.ExpiresIn > 720 {
+		return c.Status(400).JSON(fiber.Map{"error": "expiresInHours cannot exceed 720 (30 days)"})
 	}
 
 	if input.Email != "" {

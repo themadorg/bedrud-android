@@ -109,6 +109,16 @@ func init() {
 		Out:        output,
 		TimeFormat: time.RFC3339,
 	})
+
+	if cfg.Auth.JWTSecret == "" {
+		log.Fatal().Msg("jwtSecret is required: set AUTH_JWT_SECRET env or auth.jwtSecret in config.yaml")
+	}
+	if len(cfg.Auth.JWTSecret) < 32 {
+		log.Warn().Int("length", len(cfg.Auth.JWTSecret)).Msg("jwtSecret is shorter than recommended 32 characters")
+	}
+	if cfg.Auth.SessionSecret == "" {
+		log.Fatal().Msg("sessionSecret is required: set AUTH_SESSION_SECRET env or auth.sessionSecret in config.yaml")
+	}
 }
 
 func main() {
@@ -290,8 +300,8 @@ func run() error {
 	api.Get("/auth/me", middleware.Protected(), authHandler.GetMe)
 	api.Put("/auth/me", middleware.Protected(), authHandler.UpdateProfile)
 	api.Put("/auth/password", middleware.Protected(), authHandler.ChangePassword)
-	api.Get("/auth/:provider/login", handlers.BeginAuthHandler)
-	api.Get("/auth/:provider/callback", authHandler.CallbackHandler)
+	api.Get("/auth/:provider/login", middleware.AuthRateLimiter(cfg.RateLimit), handlers.BeginAuthHandler)
+	api.Get("/auth/:provider/callback", middleware.AuthRateLimiter(cfg.RateLimit), authHandler.CallbackHandler)
 
 	prefsRepo := repository.NewUserPreferencesRepository(database.GetDB())
 	preferencesHandler := handlers.NewPreferencesHandler(prefsRepo)
@@ -311,7 +321,14 @@ func run() error {
 	if uploadDir == "" {
 		uploadDir = "./data/uploads/chat"
 	}
-	uploadTracker := storage.NewChatUploadTracker(database.GetDB(), uploadDir)
+	var s3Deleter storage.ObjectDeleter
+	if cfg.Chat.Uploads.Backend == "s3" &&
+		cfg.Chat.Uploads.S3.Endpoint != "" &&
+		cfg.Chat.Uploads.S3.Bucket != "" &&
+		cfg.Chat.Uploads.S3.AccessKey != "" {
+		s3Deleter = storage.NewS3Deleter(cfg.Chat.Uploads.S3)
+	}
+	uploadTracker := storage.NewChatUploadTracker(database.GetDB(), uploadDir, s3Deleter)
 	lkClient := lkutil.NewClient(&cfg.LiveKit)
 	cleanupSvc := services.NewRoomCleanupService(roomRepo, lkClient, cfg.LiveKit.APIKey, cfg.LiveKit.APISecret, uploadTracker)
 	roomHandler := handlers.NewRoomHandler(&cfg.LiveKit, &cfg.Chat, roomRepo, settingsRepo, uploadTracker, cleanupSvc)

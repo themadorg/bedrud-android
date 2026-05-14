@@ -52,18 +52,18 @@ func (r *RoomRepository) CreateRoom(createdBy, name string, isPublic bool, mode 
 
 		now := time.Now()
 		newRoom := &models.Room{
-			ID:               uuid.New().String(),
-			Name:             name,
-			CreatedBy:        createdBy,
-			AdminID:          createdBy,
-			IsActive:         true,
-			IsPublic:         isPublic,
-			Settings:         *settings,
-			Mode:             mode,
-			MaxParticipants:  maxParticipants,
-			ExpiresAt:        now.Add(24 * time.Hour),
-			CreatedAt:        now,
-			UpdatedAt:        now,
+			ID:              uuid.New().String(),
+			Name:            name,
+			CreatedBy:       createdBy,
+			AdminID:         createdBy,
+			IsActive:        true,
+			IsPublic:        isPublic,
+			Settings:        *settings,
+			Mode:            mode,
+			MaxParticipants: maxParticipants,
+			ExpiresAt:       now.Add(24 * time.Hour),
+			CreatedAt:       now,
+			UpdatedAt:       now,
 		}
 
 		if err := tx.Model(&models.Room{}).Create(map[string]interface{}{
@@ -366,6 +366,9 @@ func (r *RoomRepository) DeleteRoom(roomID, userID string) error {
 		if err := tx.Where("room_id = ?", roomID).Delete(&models.RoomParticipant{}).Error; err != nil {
 			return err
 		}
+		if err := tx.Where("room_id = ?", roomID).Delete(&models.ChatUpload{}).Error; err != nil {
+			return err
+		}
 		return tx.Delete(&room).Error
 	})
 }
@@ -378,6 +381,9 @@ func (r *RoomRepository) HardDeleteRoom(roomID string) error {
 			return err
 		}
 		if err := tx.Where("room_id = ?", roomID).Delete(&models.RoomParticipant{}).Error; err != nil {
+			return err
+		}
+		if err := tx.Where("room_id = ?", roomID).Delete(&models.ChatUpload{}).Error; err != nil {
 			return err
 		}
 		return tx.Where("id = ?", roomID).Delete(&models.Room{}).Error
@@ -446,6 +452,15 @@ func (r *RoomRepository) GetUserByID(userID string) (*models.User, error) {
 		return nil, err
 	}
 	return &user, nil
+}
+
+// CountActiveRoomsByUser returns the number of active rooms created by a user.
+func (r *RoomRepository) CountActiveRoomsByUser(userID string) (int64, error) {
+	var count int64
+	err := r.db.Model(&models.Room{}).
+		Where("created_by = ? AND is_active = ?", userID, true).
+		Count(&count).Error
+	return count, err
 }
 
 // GetRoomsCreatedByUser retrieves rooms created by a specific user

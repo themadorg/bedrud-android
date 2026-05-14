@@ -14,6 +14,9 @@ server:
   # maxParticipantsLimit sets the hard ceiling for room capacity (default: 1000, 0 = unlimited).
   # Env: SERVER_MAX_PARTICIPANTS_LIMIT
   maxParticipantsLimit: 1000
+  # maxRoomsPerUser caps active rooms per user (default: 100, 0 = unlimited).
+  # Env: SERVER_MAX_ROOMS_PER_USER
+  maxRoomsPerUser: 100
 
 database:
   type: "sqlite"
@@ -61,3 +64,9 @@ cors:
   allowedHeaders: "Origin, Content-Type, Accept, Authorization"
   allowedMethods: "GET, POST, PUT, DELETE, OPTIONS"
   allowCredentials: true
+
+chat:
+  maxUploadBytesPerUser: 524288000  # Per-user upload quota (500 MB). 0 = unlimited. Env: CHAT_MAX_UPLOAD_BYTES_PER_USER
+  globalDiskThresholdBytes: 0       # Global storage ceiling across all users. 0 = unlimited. Env: CHAT_GLOBAL_DISK_THRESHOLD_BYTES
+  maxMessageCount: 10000            # Max chat messages kept per room (0 = unlimited). Env: CHAT_MAX_MESSAGE_COUNT
+  messageTTLHours: 2160             # Purge messages older than this (0 = forever). 2160 = 90 days. Env: CHAT_MESSAGE_TTL_HOURS

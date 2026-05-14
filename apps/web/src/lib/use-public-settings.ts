@@ -5,6 +5,8 @@ export interface PublicSettings {
   tokenRegistrationOnly: boolean
   passkeysEnabled: boolean
   oauthProviders: string[]
+  chatMaxMessageCount: number
+  chatMessageTTLHours: number
 }
 
 let cached: PublicSettings | null = null

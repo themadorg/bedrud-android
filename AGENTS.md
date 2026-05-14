@@ -42,8 +42,7 @@ bedrud/
 ├── packages/
 │   └── api-types/        Shared TS types (@bedrud/api-types)
 ├── tools/cli/            Deployment CLI (pyinfra + Click)
-├── .claude/skills/       Custom agent skills (bedrud-server, bedrud-frontend, bedrud-api, + bundled)
-└── .agents/skills/       Agent-compatible skills
+├── .agents/skills/       Custom agent skills (bedrud-server, bedrud-frontend, bedrud-api, + bundled)
 ```
 
 **Entrypoints:**
@@ -192,7 +191,8 @@ Regen: `make swagger-gen` (needs `swag` CLI).
 - **Hot reload:** Only `make dev-server-hot` (Air). `make dev-server` no reload.
 - **Path aliases:** Use `#/*` not `../src/*`. Vite resolves via `vite-tsconfig-paths`.
 - **Config:** Dev config auto-copied. Override: `CONFIG_PATH` env var. LiveKit config override: `LIVEKIT_CONFIG_PATH` env var or `livekit.configPath` in config.yaml.
-- **Embedded LiveKit TLS:** When server TLS is enabled (`enableTLS: true`), the embedded LiveKit process auto-generates a temp config with TURN/TLS (port 5349) using the server's certificate. TURN `domain` is auto-set from `server.host`, UDP port 3478 is configured, and relative `certFile`/`keyFile` paths are resolved to absolute. Set `livekit.nodeIP` / `LIVEKIT_NODE_IP` for explicit RTC node IP (disables STUN). For custom LiveKit YAML, set `livekit.configPath` or `LIVEKIT_CONFIG_PATH`.
+- **Embedded LiveKit TLS:** When server TLS is enabled (`enableTLS: true`), embedded LiveKit process auto-generates temp config with TURN/TLS (port 5349) using server's certificate. TURN `domain` auto-set from `server.host`, UDP port 3478 configured, relative `certFile`/`keyFile` paths resolved to absolute. Set `livekit.nodeIP` / `LIVEKIT_NODE_IP` for explicit RTC node IP (disables STUN). For custom LiveKit YAML, set `livekit.configPath` or `LIVEKIT_CONFIG_PATH`.
+- **Chat message retention:** Config `chat.maxMessageCount` (default 10000) and `chat.messageTTLHours` (default 2160 = 90 days) control frontend-side trimming of chat messages in memory and sessionStorage. LiveKit doesn't persist data channel messages server-side — these are advisory limits enforced client-side. Env: `CHAT_MAX_MESSAGE_COUNT`, `CHAT_MESSAGE_TTL_HOURS`.
 - **Privileged ports:** HTTP listener defaults to `:80`. Non-root can't bind. Fix: set `httpPort: "8080"` in config / `SERVER_HTTP_PORT=8080` env, or `sudo setcap 'cap_net_bind_service=+ep' $(which bedrud)` (re-run after each binary update).
 - **Site search index:** Auto-generated before dev/build. Don't edit `public/search-index-*.json`.
 - **Site sidebar:** Manual in `src/content/docs/sidebar.ts`. Adding doc page? Add sidebar entry too.
@@ -208,9 +208,6 @@ Load skill by task. Injects full ctx.
 | Go backend (handler, model, repo, auth, middleware, DB) | `bedrud-server` | Every pkg → file → fn/struct/route. Full dep graph. |
 | React/UI (component, route, state, hook, store) | `bedrud-frontend` | Every route → path+purpose. Every component → props+exports. Every lib. Component hierarchy. |
 | API endpoints (add/modify/debug) | `bedrud-api` | Complete endpoint table: method, path, auth, handler, req/res shapes. Auth flow. |
-| Terse comms | `caveman` | Drop filler/articles. Fragments OK. Full/ultra/lite. |
-| Anti-AI-slop | `anti-slop` | Detect + fix generic AI patterns. |
-| Compress memory files | `compress` | Shrink CLAUDE.md/todos → caveman fmt. |
 
 **Load:** say skill name or describe task. Auto-dispatches.
 
@@ -239,9 +236,9 @@ Per-app design docs: `apps/web/DESIGN.md`, `apps/desktop/DESIGN.md`, `apps/site/
 - `server/config.local.yaml` — Dev config template
 - `Makefile` — All build/dev cmds
 - `Dockerfile` — Multi-stage prod build
-- `.claude/skills/bedrud-server/SKILL.md` — Full Go backend map
-- `.claude/skills/bedrud-frontend/SKILL.md` — Full React frontend map
-- `.claude/skills/bedrud-api/SKILL.md` — Complete API endpoint ref
+- `.agents/skills/bedrud-server/SKILL.md` — Full Go backend map
+- `.agents/skills/bedrud-frontend/SKILL.md` — Full React frontend map
+- `.agents/skills/bedrud-api/SKILL.md` — Complete API endpoint ref
 
 ---
 

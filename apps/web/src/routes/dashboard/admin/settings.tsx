@@ -55,6 +55,8 @@ interface SystemSettings {
   chatUploadS3PublicUrl: string
   logLevel: string
   maxParticipantsLimit: number
+  chatMaxMessageCount: number
+  chatMessageTTLHours: number
   updatedAt: string
 }
 
@@ -552,92 +554,119 @@ function CorsTab({ settings, setSettings }: { settings: SystemSettings; setSetti
 
 function ChatTab({ settings, setSettings }: { settings: SystemSettings; setSettings: (s: SystemSettings) => void }) {
   return (
-    <Section title="Chat Uploads" description="Image upload storage for in-room chat">
-      <Field label="Backend">
-        <select
-          value={settings.chatUploadBackend || 'disk'}
-          onChange={(e) => setSettings({ ...settings, chatUploadBackend: e.target.value })}
-          className="h-8 w-full border-b border-transparent bg-transparent px-1 text-xs outline-none focus:border-primary cursor-pointer"
-        >
-          <option value="disk">Disk</option>
-          <option value="s3">S3-compatible</option>
-          <option value="inline">Inline (base64)</option>
-        </select>
-      </Field>
-      <div className="grid gap-4 sm:grid-cols-2">
-        <Field label="Max upload size (bytes)">
-          <TextInput
-            value={String(settings.chatUploadMaxBytes || 0)}
-            onChange={(v) => setSettings({ ...settings, chatUploadMaxBytes: Number(v) || 0 })}
-            placeholder="10485760"
-          />
+    <>
+      <Section title="Chat Uploads" description="Image upload storage for in-room chat">
+        <Field label="Backend">
+          <select
+            value={settings.chatUploadBackend || 'disk'}
+            onChange={(e) => setSettings({ ...settings, chatUploadBackend: e.target.value })}
+            className="h-8 w-full border-b border-transparent bg-transparent px-1 text-xs outline-none focus:border-primary cursor-pointer"
+          >
+            <option value="disk">Disk</option>
+            <option value="s3">S3-compatible</option>
+            <option value="inline">Inline (base64)</option>
+          </select>
         </Field>
-        <Field label="Inline max bytes">
-          <TextInput
-            value={String(settings.chatUploadInlineMax || 0)}
-            onChange={(v) => setSettings({ ...settings, chatUploadInlineMax: Number(v) || 0 })}
-            placeholder="512000"
-          />
-        </Field>
-      </div>
-      <Field label="Disk directory">
-        <TextInput
-          value={settings.chatUploadDiskDir}
-          onChange={(v) => setSettings({ ...settings, chatUploadDiskDir: v })}
-          placeholder="./data/uploads/chat"
-        />
-      </Field>
-
-      {settings.chatUploadBackend === 's3' && (
-        <div className="space-y-3 border-t pt-4">
-          <p className="text-xs font-medium text-muted-foreground">S3 Configuration</p>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="Endpoint">
-              <TextInput
-                value={settings.chatUploadS3Endpoint}
-                onChange={(v) => setSettings({ ...settings, chatUploadS3Endpoint: v })}
-                placeholder="https://s3.amazonaws.com"
-              />
-            </Field>
-            <Field label="Bucket">
-              <TextInput
-                value={settings.chatUploadS3Bucket}
-                onChange={(v) => setSettings({ ...settings, chatUploadS3Bucket: v })}
-                placeholder="my-bucket"
-              />
-            </Field>
-            <Field label="Region">
-              <TextInput
-                value={settings.chatUploadS3Region}
-                onChange={(v) => setSettings({ ...settings, chatUploadS3Region: v })}
-                placeholder="us-east-1"
-              />
-            </Field>
-            <Field label="Access Key">
-              <TextInput
-                value={settings.chatUploadS3AccessKey}
-                onChange={(v) => setSettings({ ...settings, chatUploadS3AccessKey: v })}
-                mono
-              />
-            </Field>
-            <Field label="Secret Key" hint={settings.chatUploadS3SecretKey === '••••••••' ? 'Hidden' : undefined}>
-              <TextInput
-                value={settings.chatUploadS3SecretKey}
-                onChange={(v) => setSettings({ ...settings, chatUploadS3SecretKey: v })}
-                mono
-              />
-            </Field>
-            <Field label="Public Base URL">
-              <TextInput
-                value={settings.chatUploadS3PublicUrl}
-                onChange={(v) => setSettings({ ...settings, chatUploadS3PublicUrl: v })}
-                placeholder="https://cdn.example.com"
-              />
-            </Field>
-          </div>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field label="Max upload size (bytes)">
+            <TextInput
+              value={String(settings.chatUploadMaxBytes || 0)}
+              onChange={(v) => setSettings({ ...settings, chatUploadMaxBytes: Number(v) || 0 })}
+              placeholder="10485760"
+            />
+          </Field>
+          <Field label="Inline max bytes">
+            <TextInput
+              value={String(settings.chatUploadInlineMax || 0)}
+              onChange={(v) => setSettings({ ...settings, chatUploadInlineMax: Number(v) || 0 })}
+              placeholder="512000"
+            />
+          </Field>
         </div>
-      )}
-    </Section>
+        <Field label="Disk directory">
+          <TextInput
+            value={settings.chatUploadDiskDir}
+            onChange={(v) => setSettings({ ...settings, chatUploadDiskDir: v })}
+            placeholder="./data/uploads/chat"
+          />
+        </Field>
+
+        {settings.chatUploadBackend === 's3' && (
+          <div className="space-y-3 border-t pt-4">
+            <p className="text-xs font-medium text-muted-foreground">S3 Configuration</p>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field label="Endpoint">
+                <TextInput
+                  value={settings.chatUploadS3Endpoint}
+                  onChange={(v) => setSettings({ ...settings, chatUploadS3Endpoint: v })}
+                  placeholder="https://s3.amazonaws.com"
+                />
+              </Field>
+              <Field label="Bucket">
+                <TextInput
+                  value={settings.chatUploadS3Bucket}
+                  onChange={(v) => setSettings({ ...settings, chatUploadS3Bucket: v })}
+                  placeholder="my-bucket"
+                />
+              </Field>
+              <Field label="Region">
+                <TextInput
+                  value={settings.chatUploadS3Region}
+                  onChange={(v) => setSettings({ ...settings, chatUploadS3Region: v })}
+                  placeholder="us-east-1"
+                />
+              </Field>
+              <Field label="Access Key">
+                <TextInput
+                  value={settings.chatUploadS3AccessKey}
+                  onChange={(v) => setSettings({ ...settings, chatUploadS3AccessKey: v })}
+                  mono
+                />
+              </Field>
+              <Field label="Secret Key" hint={settings.chatUploadS3SecretKey === '••••••••' ? 'Hidden' : undefined}>
+                <TextInput
+                  value={settings.chatUploadS3SecretKey}
+                  onChange={(v) => setSettings({ ...settings, chatUploadS3SecretKey: v })}
+                  mono
+                />
+              </Field>
+              <Field label="Public Base URL">
+                <TextInput
+                  value={settings.chatUploadS3PublicUrl}
+                  onChange={(v) => setSettings({ ...settings, chatUploadS3PublicUrl: v })}
+                  placeholder="https://cdn.example.com"
+                />
+              </Field>
+            </div>
+          </div>
+        )}
+      </Section>
+
+      <Section title="Chat History" description="Message retention limits for in-room chat">
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field
+            label="Max messages per room"
+            hint="Oldest messages are trimmed when exceeded. 0 = unlimited. Default: 10000."
+          >
+            <TextInput
+              value={String(settings.chatMaxMessageCount ?? 10000)}
+              onChange={(v) => setSettings({ ...settings, chatMaxMessageCount: Number(v) || 0 })}
+              placeholder="10000"
+            />
+          </Field>
+          <Field
+            label="Message TTL (hours)"
+            hint="Messages older than this are purged. 0 = forever. Default: 2160 (90 days)."
+          >
+            <TextInput
+              value={String(settings.chatMessageTTLHours ?? 2160)}
+              onChange={(v) => setSettings({ ...settings, chatMessageTTLHours: Number(v) || 0 })}
+              placeholder="2160"
+            />
+          </Field>
+        </div>
+      </Section>
+    </>
   )
 }
 

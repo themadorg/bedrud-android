@@ -39,7 +39,7 @@ func setupUsersTestApp(t *testing.T) (*fiber.App, *repository.UserRepository) {
 	roomRepo := repository.NewRoomRepository(db)
 	passkeyRepo := repository.NewPasskeyRepository(db)
 	prefsRepo := repository.NewUserPreferencesRepository(db)
-	uploadTracker := storage.NewChatUploadTracker(db, t.TempDir())
+	uploadTracker := storage.NewChatUploadTracker(db, t.TempDir(), nil)
 	cleanupSvc := testCleanupSvc(t, roomRepo, uploadTracker)
 	usersHandler := testUsersHandler(userRepo, roomRepo, passkeyRepo, prefsRepo, cleanupSvc)
 
@@ -261,7 +261,7 @@ func TestUsersHandler_UpdateUserAccesses_Success(t *testing.T) {
 	rRepo := repository.NewRoomRepository(db)
 	pkRepo := repository.NewPasskeyRepository(db)
 	prRepo := repository.NewUserPreferencesRepository(db)
-	ut := storage.NewChatUploadTracker(db, t.TempDir())
+	ut := storage.NewChatUploadTracker(db, t.TempDir(), nil)
 	cleanupSvc := testCleanupSvc(t, rRepo, ut)
 	h := testUsersHandler(uRepo, rRepo, pkRepo, prRepo, cleanupSvc)
 
@@ -298,7 +298,7 @@ func TestUsersHandler_UpdateUserAccesses_NotFound(t *testing.T) {
 	rRepo := repository.NewRoomRepository(db)
 	pkRepo := repository.NewPasskeyRepository(db)
 	prRepo := repository.NewUserPreferencesRepository(db)
-	ut := storage.NewChatUploadTracker(db, t.TempDir())
+	ut := storage.NewChatUploadTracker(db, t.TempDir(), nil)
 	cleanupSvc := testCleanupSvc(t, rRepo, ut)
 	h := testUsersHandler(uRepo, rRepo, pkRepo, prRepo, cleanupSvc)
 
@@ -325,7 +325,7 @@ func TestUsersHandler_UpdateUserAccesses_Forbidden(t *testing.T) {
 	rRepo := repository.NewRoomRepository(db)
 	pkRepo := repository.NewPasskeyRepository(db)
 	prRepo := repository.NewUserPreferencesRepository(db)
-	ut := storage.NewChatUploadTracker(db, t.TempDir())
+	ut := storage.NewChatUploadTracker(db, t.TempDir(), nil)
 	cleanupSvc := testCleanupSvc(t, rRepo, ut)
 	h := testUsersHandler(uRepo, rRepo, pkRepo, prRepo, cleanupSvc)
 
@@ -352,7 +352,7 @@ func TestUsersHandler_GetUserDetail_Found(t *testing.T) {
 	rRepo := repository.NewRoomRepository(db)
 	pkRepo := repository.NewPasskeyRepository(db)
 	prRepo := repository.NewUserPreferencesRepository(db)
-	ut := storage.NewChatUploadTracker(db, t.TempDir())
+	ut := storage.NewChatUploadTracker(db, t.TempDir(), nil)
 	cleanupSvc := testCleanupSvc(t, rRepo, ut)
 	h := testUsersHandler(uRepo, rRepo, pkRepo, prRepo, cleanupSvc)
 
@@ -389,7 +389,7 @@ func TestUsersHandler_GetUserDetail_NotFound(t *testing.T) {
 	rRepo := repository.NewRoomRepository(db)
 	pkRepo := repository.NewPasskeyRepository(db)
 	prRepo := repository.NewUserPreferencesRepository(db)
-	ut := storage.NewChatUploadTracker(db, t.TempDir())
+	ut := storage.NewChatUploadTracker(db, t.TempDir(), nil)
 	cleanupSvc := testCleanupSvc(t, rRepo, ut)
 	h := testUsersHandler(uRepo, rRepo, pkRepo, prRepo, cleanupSvc)
 
@@ -540,7 +540,7 @@ func TestUsersHandler_SetUserPassword_Forbidden(t *testing.T) {
 	rRepo := repository.NewRoomRepository(db)
 	pkRepo := repository.NewPasskeyRepository(db)
 	prRepo := repository.NewUserPreferencesRepository(db)
-	ut := storage.NewChatUploadTracker(db, t.TempDir())
+	ut := storage.NewChatUploadTracker(db, t.TempDir(), nil)
 	cleanupSvc := testCleanupSvc(t, rRepo, ut)
 	h := testUsersHandler(uRepo, rRepo, pkRepo, prRepo, cleanupSvc)
 

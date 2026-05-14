@@ -189,6 +189,25 @@ func mergeFromConfig(s *models.SystemSettings, cfg *config.Config) {
 	if s.MaxParticipantsLimit == 0 && cfg.Server.MaxParticipantsLimit != 0 {
 		s.MaxParticipantsLimit = cfg.Server.MaxParticipantsLimit
 	}
+	if s.MaxRoomsPerUser == 0 && cfg.Server.MaxRoomsPerUser != 0 {
+		s.MaxRoomsPerUser = cfg.Server.MaxRoomsPerUser
+	}
+
+	// Upload quotas
+	if s.MaxUploadBytesPerUser == 0 && cfg.Chat.MaxUploadBytesPerUser != 0 {
+		s.MaxUploadBytesPerUser = cfg.Chat.MaxUploadBytesPerUser
+	}
+	if s.GlobalDiskThresholdBytes == 0 && cfg.Chat.GlobalDiskThresholdBytes != 0 {
+		s.GlobalDiskThresholdBytes = cfg.Chat.GlobalDiskThresholdBytes
+	}
+
+	// Chat message retention
+	if s.ChatMaxMessageCount == 0 && cfg.Chat.MaxMessageCount != 0 {
+		s.ChatMaxMessageCount = cfg.Chat.MaxMessageCount
+	}
+	if s.ChatMessageTTLHours == 0 && cfg.Chat.MessageTTLHours != 0 {
+		s.ChatMessageTTLHours = cfg.Chat.MessageTTLHours
+	}
 
 	// Logger
 	if s.LogLevel == "" {

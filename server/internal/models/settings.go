@@ -61,6 +61,15 @@ type SystemSettings struct {
 
 	// Room limits
 	MaxParticipantsLimit int `gorm:"default:1000" json:"maxParticipantsLimit"`
+	MaxRoomsPerUser      int `gorm:"default:100" json:"maxRoomsPerUser"`
+
+	// Upload quotas
+	MaxUploadBytesPerUser    int64 `gorm:"default:524288000" json:"maxUploadBytesPerUser"`
+	GlobalDiskThresholdBytes int64 `gorm:"default:0" json:"globalDiskThresholdBytes"`
+
+	// Chat message retention
+	ChatMaxMessageCount int `gorm:"default:10000" json:"chatMaxMessageCount"`
+	ChatMessageTTLHours int `gorm:"default:2160" json:"chatMessageTTLHours"`
 
 	// Logger
 	LogLevel string `gorm:"size:20" json:"logLevel"`

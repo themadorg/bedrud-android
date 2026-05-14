@@ -67,7 +67,7 @@ func setupAdminRoomTestApp(t *testing.T) (*fiber.App, *repository.RoomRepository
 	db := testutil.SetupTestDB(t)
 	roomRepo := repository.NewRoomRepository(db)
 	settingsRepo := repository.NewSettingsRepository(db)
-	uploadTracker := storage.NewChatUploadTracker(db, t.TempDir())
+	uploadTracker := storage.NewChatUploadTracker(db, t.TempDir(), nil)
 	cleanupSvc := testCleanupSvc(t, roomRepo, uploadTracker)
 
 	lkCfg := config.LiveKitConfig{

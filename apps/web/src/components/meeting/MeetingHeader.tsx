@@ -43,7 +43,9 @@ export function MeetingHeader({ meetId }: MeetingHeaderProps) {
           }}
         >
           <Radio size={11} style={{ color: 'var(--accent-400)' }} />
-          <span style={{ color: 'var(--accent-300)', fontSize: 11, fontWeight: 700, letterSpacing: '0.08em' }}>LIVE</span>
+          <span style={{ color: 'var(--accent-300)', fontSize: 11, fontWeight: 700, letterSpacing: '0.08em' }}>
+            LIVE
+          </span>
         </div>
         <span style={{ color: 'rgba(255,255,255,0.25)', fontSize: 13 }}>·</span>
         <span style={{ color: 'rgba(255,255,255,0.55)', fontSize: 12, fontFamily: 'monospace' }}>{meetId}</span>

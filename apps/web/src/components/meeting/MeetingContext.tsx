@@ -1,6 +1,7 @@
 import { useRoomContext } from '@livekit/components-react'
 import { RoomEvent } from 'livekit-client'
 import { createContext, type ReactNode, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
+import { getPublicSettings } from '#/lib/use-public-settings'
 import { useUserStore } from '#/lib/user.store'
 import { useChatPersistence } from './chat/useChatPersistence'
 
@@ -115,6 +116,23 @@ export function useMeetingContext(): MeetingContextValue {
   return useMemo(() => ({ ...room, ...chat }), [room, chat])
 }
 
+// ── Chat retention helpers ──────────────────────────────────────────────────
+
+function applyChatRetention(messages: ChatMessage[], retention: { maxCount: number; ttlHours: number }): ChatMessage[] {
+  let result = messages
+
+  if (retention.ttlHours > 0) {
+    const cutoff = Date.now() - retention.ttlHours * 60 * 60 * 1000
+    result = result.filter((m) => m.timestamp >= cutoff)
+  }
+
+  if (retention.maxCount > 0 && result.length > retention.maxCount) {
+    result = result.slice(result.length - retention.maxCount)
+  }
+
+  return result
+}
+
 // ── Provider ────────────────────────────────────────────────────────────────
 
 interface MeetingProviderProps {
@@ -131,7 +149,20 @@ export function MeetingProvider({ roomId, roomName, adminId, onRoomDeletionMessa
   const accesses = user?.accesses ?? []
   const room = useRoomContext()
 
-  const [initialMessages, persistMessages] = useChatPersistence(roomId)
+  const [retention, setRetention] = useState({ maxCount: 10000, ttlHours: 2160 })
+
+  useEffect(() => {
+    getPublicSettings()
+      .then((s) => {
+        setRetention({
+          maxCount: s.chatMaxMessageCount ?? 10000,
+          ttlHours: s.chatMessageTTLHours ?? 2160,
+        })
+      })
+      .catch(() => {})
+  }, [])
+
+  const [initialMessages, persistMessages] = useChatPersistence(roomId, retention.maxCount, retention.ttlHours)
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>(initialMessages)
   useEffect(() => {
     persistMessages(chatMessages)
@@ -198,7 +229,10 @@ export function MeetingProvider({ roomId, roomName, adminId, onRoomDeletionMessa
             attachments: Array.isArray(raw.attachments) ? (raw.attachments as ChatAttachment[]) : [],
             isLocal: false,
           }
-          setChatMessages((prev) => [...prev, msg])
+          setChatMessages((prev) => {
+            const updated = [...prev, msg]
+            return applyChatRetention(updated, retention)
+          })
         }
       } catch {
         // Silently discard malformed data messages — a malicious participant
@@ -209,7 +243,7 @@ export function MeetingProvider({ roomId, roomName, adminId, onRoomDeletionMessa
     return () => {
       room.off(RoomEvent.DataReceived, handler)
     }
-  }, [room, currentUserId])
+  }, [room, currentUserId, retention])
 
   // Increment unread counter only for messages that arrive after the last markRead()
   useEffect(() => {
@@ -254,20 +288,23 @@ export function MeetingProvider({ roomId, roomName, adminId, onRoomDeletionMessa
       })
 
       // Local echo so the sender sees the message immediately
-      setChatMessages((prev) => [
-        ...prev,
-        {
-          id,
-          timestamp,
-          senderName,
-          senderIdentity,
-          message: text,
-          attachments: attachments ?? [],
-          isLocal: true,
-        },
-      ])
+      setChatMessages((prev) => {
+        const updated = [
+          ...prev,
+          {
+            id,
+            timestamp,
+            senderName,
+            senderIdentity,
+            message: text,
+            attachments: attachments ?? [],
+            isLocal: true,
+          },
+        ]
+        return applyChatRetention(updated, retention)
+      })
     },
-    [room],
+    [room, retention],
   )
 
   const toggleSelfDeafen = useCallback(() => {

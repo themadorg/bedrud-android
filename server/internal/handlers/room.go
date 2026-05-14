@@ -11,6 +11,8 @@ import (
 	"bytes"
 	"context"
 	"crypto/rand"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -20,6 +22,7 @@ import (
 	_ "image/png"
 	"strings"
 	"time"
+	"unicode"
 
 	"github.com/gofiber/fiber/v2"
 	lkauth "github.com/livekit/protocol/auth"
@@ -155,6 +158,25 @@ func (h *RoomHandler) CreateRoom(c *fiber.Ctx) error {
 	}
 	if !isSuperAdmin {
 		req.Settings.IsPersistent = false
+
+		// Enforce per-user room creation limit
+		settings, err := h.settingsRepo.GetEffectiveSettings()
+		if err != nil {
+			log.Error().Err(err).Msg("Failed to get settings for room limit check")
+			return c.Status(500).JSON(fiber.Map{"error": "Failed to verify room limit"})
+		}
+		if settings.MaxRoomsPerUser > 0 {
+			activeCount, err := h.roomRepo.CountActiveRoomsByUser(claims.UserID)
+			if err != nil {
+				log.Error().Err(err).Msg("Failed to count user rooms")
+				return c.Status(500).JSON(fiber.Map{"error": "Failed to verify room limit"})
+			}
+			if activeCount >= int64(settings.MaxRoomsPerUser) {
+				return c.Status(403).JSON(fiber.Map{
+					"error": fmt.Sprintf("Room limit reached (max %d active rooms)", settings.MaxRoomsPerUser),
+				})
+			}
+		}
 	}
 	ctx := h.withAuth(c.Context(), &lkauth.VideoGrant{RoomCreate: true})
 	_, err := h.client.CreateRoom(ctx, &livekit.CreateRoomRequest{Name: req.Name, MaxParticipants: uint32(req.MaxParticipants)})
@@ -206,6 +228,21 @@ func (h *RoomHandler) JoinRoom(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusGone).JSON(fiber.Map{"error": "room is no longer active"})
 	}
 
+	// Enforce private room access — non-creators must be approved participants
+	if !room.IsPublic && room.CreatedBy != claims.UserID {
+		isParticipant, err := h.roomRepo.IsParticipant(room.ID, claims.UserID)
+		if err != nil {
+			log.Error().Err(err).Str("roomID", room.ID).Str("userID", claims.UserID).Msg("Failed to check room access")
+			return c.Status(500).JSON(fiber.Map{"error": "Failed to check room access"})
+		}
+		if !isParticipant {
+			if room.Settings.RequireApproval {
+				return c.Status(403).JSON(fiber.Map{"error": "This room requires approval to join"})
+			}
+			return c.Status(403).JSON(fiber.Map{"error": "This room is private"})
+		}
+	}
+
 	// Enforce participant limit (atomic capacity check inside transaction)
 	if err := h.roomRepo.AddParticipantWithCapacityCheck(room.ID, claims.UserID, room.MaxParticipants); err != nil {
 		if err.Error() == "room is full" {
@@ -219,7 +256,7 @@ func (h *RoomHandler) JoinRoom(c *fiber.Ctx) error {
 	}
 
 	at := lkauth.NewAccessToken(h.apiKey, h.apiSecret)
-	at.AddGrant(&lkauth.VideoGrant{RoomJoin: true, Room: req.RoomName, CanUpdateOwnMetadata: boolPtr(true)}).SetIdentity(claims.UserID).SetName(claims.Name).SetValidFor(time.Hour) //nolint:staticcheck // AddGrant is deprecated but VideoGrant field is not available in this version of the protocol SDK
+	at.AddGrant(&lkauth.VideoGrant{RoomJoin: true, Room: req.RoomName, CanUpdateOwnMetadata: boolPtr(false)}).SetIdentity(claims.UserID).SetName(claims.Name).SetValidFor(time.Hour) //nolint:staticcheck // AddGrant is deprecated but VideoGrant field is not available in this version of the protocol SDK
 	if meta, err := json.Marshal(map[string]interface{}{"accesses": claims.Accesses}); err == nil {
 		at.SetMetadata(string(meta))
 	}
@@ -259,6 +296,14 @@ func (h *RoomHandler) GuestJoinRoom(c *fiber.Ctx) error {
 	if len(req.GuestName) > 50 {
 		return c.Status(400).JSON(fiber.Map{"error": "Guest name too long (max 50 characters)"})
 	}
+
+	// Sanitize guest name: strip control characters and HTML special chars
+	req.GuestName = strings.Map(func(r rune) rune {
+		if unicode.IsControl(r) || r == '<' || r == '>' || r == '&' || r == '"' || r == '\'' {
+			return -1
+		}
+		return r
+	}, req.GuestName)
 
 	room, err := h.roomRepo.GetRoomByName(req.RoomName)
 	if err != nil {
@@ -315,7 +360,7 @@ func (h *RoomHandler) GuestJoinRoom(c *fiber.Ctx) error {
 
 func generateShortID() string {
 	const chars = "abcdefghijklmnopqrstuvwxyz0123456789"
-	const charLen = len(chars) // 36
+	const charLen = len(chars)             // 36
 	const maxValid = 256 - (256 % charLen) // 252, rejection threshold
 
 	b := make([]byte, 8)
@@ -1225,12 +1270,50 @@ func (h *RoomHandler) UploadChatImage(c *fiber.Ctx) error {
 		return c.Status(403).JSON(fiber.Map{"error": "Chat is disabled for this room"})
 	}
 
+	// Enforce per-user upload quota and global disk threshold
+	isSuperAdmin := false
+	for _, a := range claims.Accesses {
+		if a == string(models.AccessSuperAdmin) {
+			isSuperAdmin = true
+			break
+		}
+	}
+	settings, err := h.settingsRepo.GetEffectiveSettings()
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to get settings for upload quota check")
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to verify upload quota"})
+	}
+
 	file, err := c.FormFile("file")
 	if err != nil {
 		return c.Status(400).JSON(fiber.Map{"error": "Missing file field"})
 	}
 	if file.Size > h.uploadMax {
 		return c.Status(413).JSON(fiber.Map{"error": "File too large"})
+	}
+
+	if !isSuperAdmin && settings.MaxUploadBytesPerUser > 0 {
+		userBytes, err := h.uploadTracker.GetUserUploadBytes(claims.UserID)
+		if err != nil {
+			log.Error().Err(err).Msg("Failed to query user upload quota")
+			return c.Status(500).JSON(fiber.Map{"error": "Failed to verify upload quota"})
+		}
+		if userBytes+file.Size > settings.MaxUploadBytesPerUser {
+			return c.Status(507).JSON(fiber.Map{
+				"error": fmt.Sprintf("Upload quota exceeded (max %d bytes per user)", settings.MaxUploadBytesPerUser),
+			})
+		}
+	}
+
+	if settings.GlobalDiskThresholdBytes > 0 {
+		totalBytes, err := h.uploadTracker.GetTotalUploadBytes()
+		if err != nil {
+			log.Error().Err(err).Msg("Failed to query global upload threshold")
+		} else if totalBytes+file.Size > settings.GlobalDiskThresholdBytes {
+			return c.Status(507).JSON(fiber.Map{
+				"error": "Server storage limit reached, please try again later",
+			})
+		}
 	}
 
 	f, err := file.Open()
@@ -1260,19 +1343,10 @@ func (h *RoomHandler) UploadChatImage(c *fiber.Ctx) error {
 		return c.Status(400).JSON(fiber.Map{"error": err.Error()})
 	}
 
-	if h.uploadTracker != nil && strings.HasPrefix(attachment.URL, "/uploads/chat/") {
-		filename := strings.TrimPrefix(attachment.URL, "/uploads/chat/")
-		dotIdx := strings.LastIndex(filename, ".")
-		hash := filename
-		ext := ""
-		if dotIdx > 0 {
-			hash = filename[:dotIdx]
-			ext = filename[dotIdx:]
-		}
-		if hash != "" {
-			if err := h.uploadTracker.Record(roomID, hash, ext); err != nil {
-				log.Warn().Err(err).Str("roomID", roomID).Str("hash", hash).Msg("failed to track chat upload")
-			}
+	if h.uploadTracker != nil {
+		hash, ext, backend := parseUploadMeta(attachment.URL, attachment.Mime, data)
+		if err := h.uploadTracker.Record(roomID, claims.UserID, hash, ext, attachment.Size, backend); err != nil {
+			log.Warn().Err(err).Str("roomID", roomID).Str("hash", hash).Msg("failed to track chat upload")
 		}
 	}
 
@@ -1327,4 +1401,61 @@ func (h *RoomHandler) AdminMuteParticipant(c *fiber.Ctx) error {
 		}
 	}
 	return c.JSON(fiber.Map{"status": "success"})
+}
+
+// detectUploadBackend classifies a chat upload URL into a storage backend type.
+// Used to populate ChatUpload.StorageBackend for cleanup routing.
+func detectUploadBackend(url string) string {
+	if strings.HasPrefix(url, "data:") {
+		return "inline"
+	}
+	if strings.HasPrefix(url, "/uploads/chat/") {
+		return "disk"
+	}
+	return "s3"
+}
+
+// mimeExtension returns the file extension for an allowed image MIME type.
+func mimeExtension(mime string) string {
+	switch mime {
+	case "image/png":
+		return ".png"
+	case "image/jpeg":
+		return ".jpg"
+	case "image/gif":
+		return ".gif"
+	case "image/webp":
+		return ".webp"
+	}
+	return ""
+}
+
+// parseUploadMeta extracts the content hash, file extension, and storage backend
+// from a chat upload result. For inline uploads, hash is computed from data
+// since the URL doesn't contain a filename.
+func parseUploadMeta(url, mime string, data []byte) (hash, ext, backend string) {
+	backend = detectUploadBackend(url)
+	switch backend {
+	case "disk":
+		filename := strings.TrimPrefix(url, "/uploads/chat/")
+		if dotIdx := strings.LastIndex(filename, "."); dotIdx > 0 {
+			return filename[:dotIdx], filename[dotIdx:], backend
+		}
+		return filename, "", backend
+	case "s3":
+		if idx := strings.LastIndex(url, "/"); idx >= 0 {
+			filename := url[idx+1:]
+			if dotIdx := strings.LastIndex(filename, "."); dotIdx > 0 {
+				return filename[:dotIdx], filename[dotIdx:], backend
+			}
+			return filename, "", backend
+		}
+		return "", "", backend
+	default: // inline
+		if len(data) > 0 {
+			h := sha256.Sum256(data)
+			return hex.EncodeToString(h[:]), mimeExtension(mime), backend
+		}
+		return "", mimeExtension(mime), backend
+	}
 }
