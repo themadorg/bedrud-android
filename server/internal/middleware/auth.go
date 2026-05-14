@@ -8,6 +8,7 @@ import (
 	"bedrud/internal/models"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/rs/zerolog/log"
 )
 
 const bearerPrefix = "bearer "
@@ -60,8 +61,9 @@ func Protected() fiber.Handler {
 // accessLevelWeight maps access levels to numeric weights for hierarchical checks.
 // Higher weight = more privileges. Superadmin passes admin/user checks; admin passes user checks.
 var accessLevelWeight = map[models.AccessLevel]int{
-	models.AccessSuperAdmin: 3,
-	models.AccessAdmin:      2,
+	models.AccessSuperAdmin: 4,
+	models.AccessAdmin:      3,
+	models.AccessMod:        2,
 	models.AccessUser:       1,
 }
 
@@ -70,7 +72,8 @@ var accessLevelWeight = map[models.AccessLevel]int{
 func RequireAccess(requiredAccess models.AccessLevel) fiber.Handler {
 	requiredWeight, ok := accessLevelWeight[requiredAccess]
 	if !ok {
-		requiredWeight = 0
+		log.Warn().Str("requiredAccess", string(requiredAccess)).Msg("Unknown access level in RequireAccess middleware")
+		requiredWeight = 9999 // Fail closed: require impossible weight
 	}
 
 	return func(c *fiber.Ctx) error {

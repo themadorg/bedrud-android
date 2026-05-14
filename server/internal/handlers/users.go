@@ -209,10 +209,20 @@ func (h *UsersHandler) UpdateUserStatus(c *fiber.Ctx) error {
 		})
 	}
 
+	// Check last-superadmin guard before deactivating
+	if !input.Active {
+		targetUser, err := h.userRepo.GetUserByID(userID)
+		if err == nil && targetUser != nil && containsAccess(targetUser.Accesses, string(models.AccessSuperAdmin)) {
+			superadmins, _ := h.userRepo.GetUsersByAccess(models.AccessSuperAdmin)
+			if len(superadmins) <= 1 {
+				return c.Status(fiber.StatusConflict).JSON(fiber.Map{"error": "Cannot deactivate the last superadmin"})
+			}
+		}
+
 	// When banning, atomically set is_active=false and clear the refresh token
 	// to immediately invalidate all sessions. Uses a single DB call to avoid
 	// the security gap where ban succeeds but token-clear fails independently.
-	if !input.Active {
+		
 		if err := h.userRepo.UpdateUserStatusAndClearToken(userID, false); err != nil {
 			if err == gorm.ErrRecordNotFound {
 				return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "User not found"})
@@ -287,6 +297,7 @@ func (h *UsersHandler) DeleteUser(c *fiber.Ctx) error {
 		}
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to deactivate user"})
 	}
+	auth.BanUser(userID)
 
 	user, err := h.userRepo.GetUserByID(userID)
 	if err != nil || user == nil {

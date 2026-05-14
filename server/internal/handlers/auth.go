@@ -11,6 +11,7 @@ import (
 	"net/url"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/google/uuid"
 	"github.com/markbates/goth/gothic"
 	"github.com/rs/zerolog/log"
 )
@@ -276,7 +277,7 @@ func (h *AuthHandler) CallbackHandler(c *fiber.Ctx) error {
 
 		// New user — create with default access
 		dbUser = &models.User{
-			ID:        gothUser.UserID,
+			ID:        uuid.New().String(),
 			Email:     gothUser.Email,
 			Name:      gothUser.Name,
 			Provider:  gothUser.Provider,

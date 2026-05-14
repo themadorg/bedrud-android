@@ -318,7 +318,9 @@ func (s *AuthService) UpdateProfile(userID, name string) (*models.User, error) {
 }
 
 // ChangePassword verifies the current password then sets a new one.
-func (s *AuthService) ChangePassword(userID, currentPassword, newPassword string) error {
+// Invalidates all existing sessions by clearing the stored refresh token
+// and revoking the current access token.
+func (s *AuthService) ChangePassword(userID, currentPassword, newPassword, accessToken string) error {
 	user, err := s.userRepo.GetUserByID(userID)
 	if err != nil || user == nil {
 		return errors.New("user not found")
@@ -337,8 +339,13 @@ func (s *AuthService) ChangePassword(userID, currentPassword, newPassword string
 	if err != nil {
 		return err
 	}
-	user.Password = string(hashed)
-	return s.userRepo.UpdateUser(user)
+	// Use UpdatePassword to atomically update the hash and clear refresh_token,
+	// invalidating all active sessions. Matches admin SetUserPassword behavior.
+	if err := s.userRepo.UpdatePassword(userID, string(hashed)); err != nil {
+		return err
+	}
+	RevokeAccessToken(accessToken, config.Get())
+	return nil
 }
 
 // @Summary Logout user
@@ -528,6 +535,9 @@ func (s *AuthService) FinishSignupPasskey(userID, email, name, challengeStr stri
 	}
 
 	if err := s.userRepo.CreateUserWithPasskey(user, passkey); err != nil {
+		if strings.Contains(err.Error(), "unique") || strings.Contains(err.Error(), "duplicate") || strings.Contains(err.Error(), "UNIQUE") {
+			return nil, errors.New("email already registered")
+		}
 		return nil, err
 	}
 
@@ -590,7 +600,7 @@ func (s *AuthService) FinishLoginPasskey(challengeStr string, credentialID, clie
 
 	// Update counter to prevent replay attacks
 	if err := s.passkeyRepo.UpdatePasskeyCounter(credentialID, assertion.Counter); err != nil {
-		log.Error().Err(err).Msg("Failed to update passkey counter")
+		return nil, fmt.Errorf("authentication verification failed: %w", err)
 	}
 
 	user, err := s.userRepo.GetUserByID(passkey.UserID)

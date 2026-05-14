@@ -87,10 +87,11 @@ func (h *CertHandler) GetCertInfo(c *fiber.Ctx) error {
 
 	info, err := utils.ValidateTLSCertPair(certFile, keyFile)
 	if err != nil {
+		log.Error().Err(err).Msg("TLS certificate validation failed")
 		return c.Status(503).JSON(fiber.Map{
 			"enabled": true,
 			"status":  "error",
-			"error":   err.Error(),
+			"error":   "TLS certificate validation failed",
 		})
 	}
 

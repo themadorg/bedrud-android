@@ -380,9 +380,30 @@ func TestAuthService_ChangePassword_Success(t *testing.T) {
 
 	user, _ := svc.Register("chpass@example.com", "oldpass123", "Change Pass")
 
-	err := svc.ChangePassword(user.ID, "oldpass123", "newpass456")
+	// Simulate an existing session by logging in (stores refresh token in DB)
+	loginResp, _ := svc.Login("chpass@example.com", "oldpass123")
+
+	// Verify the refresh token was stored
+	beforeUser, _ := svc.userRepo.GetUserByID(user.ID)
+	if beforeUser.RefreshToken == "" {
+		t.Fatal("expected refresh token to be stored after login")
+	}
+
+	err := svc.ChangePassword(user.ID, "oldpass123", "newpass456", loginResp.Token.AccessToken)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
+	}
+
+	// Verify refresh token was cleared (all sessions invalidated) BEFORE re-login
+	updatedUser, _ := svc.userRepo.GetUserByID(user.ID)
+	if updatedUser.RefreshToken != "" {
+		t.Fatalf("expected refresh token to be cleared after password change, got: %q", updatedUser.RefreshToken)
+	}
+
+	// Verify old refresh token is blocked (cannot use old session)
+	_, err = svc.ValidateRefreshToken(loginResp.Token.RefreshToken)
+	if err == nil {
+		t.Fatal("expected old refresh token to be invalid after password change")
 	}
 
 	// Verify new password works
@@ -393,11 +414,12 @@ func TestAuthService_ChangePassword_Success(t *testing.T) {
 }
 
 func TestAuthService_ChangePassword_WrongCurrent(t *testing.T) {
-	svc, _ := setupAuthService(t)
+	svc, cfg := setupAuthService(t)
 
 	user, _ := svc.Register("wrongcur@example.com", "realpass", "User")
+	token, _ := GenerateToken(user.ID, user.Email, user.Name, "local", user.Accesses, cfg)
 
-	err := svc.ChangePassword(user.ID, "wrongcurrent", "newpass456")
+	err := svc.ChangePassword(user.ID, "wrongcurrent", "newpass456", token)
 	if err == nil {
 		t.Fatal("expected error for wrong current password")
 	}
@@ -406,7 +428,7 @@ func TestAuthService_ChangePassword_WrongCurrent(t *testing.T) {
 func TestAuthService_ChangePassword_NotFound(t *testing.T) {
 	svc, _ := setupAuthService(t)
 
-	err := svc.ChangePassword("nonexistent", "any", "newpass")
+	err := svc.ChangePassword("nonexistent", "any", "newpass", "dummy-token")
 	if err == nil {
 		t.Fatal("expected error for missing user")
 	}
@@ -425,7 +447,7 @@ func TestAuthService_ChangePassword_NonLocalProvider(t *testing.T) {
 	}
 	_ = userRepo.CreateUser(googleUser)
 
-	err := svc.ChangePassword("google-user-1", "any", "newpass")
+	err := svc.ChangePassword("google-user-1", "any", "newpass", "dummy-token")
 	if err == nil {
 		t.Fatal("expected error for non-local provider")
 	}

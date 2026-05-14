@@ -12,6 +12,7 @@ import (
 	"net/url"
 	"strings"
 	"time"
+	"unicode"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
@@ -126,6 +127,19 @@ func (h *AuthHandler) Register(c *fiber.Ctx) error {
 			"error": "Name must be at least 2 characters",
 		})
 	}
+	if len(input.Name) > 255 {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Name must be at most 255 characters",
+		})
+	}
+
+	// Sanitize name: strip control characters and HTML special chars (same as GuestJoinRoom)
+	input.Name = strings.Map(func(r rune) rune {
+		if unicode.IsControl(r) || r == '<' || r == '>' || r == '&' || r == '"' || r == '\'' {
+			return -1
+		}
+		return r
+	}, input.Name)
 
 	// Check registration settings
 	if h.settingsRepo != nil {
@@ -407,6 +421,9 @@ func (h *AuthHandler) UpdateProfile(c *fiber.Ctx) error {
 	if len(input.Name) < 2 {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Name must be at least 2 characters"})
 	}
+	if len(input.Name) > 255 {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Name must be at most 255 characters"})
+	}
 	user, err := h.authService.UpdateProfile(claims.UserID, input.Name)
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
@@ -429,7 +446,12 @@ func (h *AuthHandler) ChangePassword(c *fiber.Ctx) error {
 	if len(input.NewPassword) > MaxPasswordLength {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": fmt.Sprintf("New password must be at most %d characters", MaxPasswordLength)})
 	}
-	if err := h.authService.ChangePassword(claims.UserID, input.CurrentPassword, input.NewPassword); err != nil {
+	// Extract access token to revoke it after password change
+	accessToken := strings.TrimPrefix(c.Get("Authorization"), "Bearer ")
+	if accessToken == "" {
+		accessToken = c.Cookies("access_token")
+	}
+	if err := h.authService.ChangePassword(claims.UserID, input.CurrentPassword, input.NewPassword, accessToken); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
 	}
 	return c.JSON(fiber.Map{"message": "Password updated successfully"})
@@ -535,7 +557,7 @@ func (h *AuthHandler) PasskeyRegisterBegin(c *fiber.Ctx) error {
 	claims := c.Locals("user").(*auth.Claims)
 	challenge, err := h.authService.BeginRegisterPasskey(claims.UserID)
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+		return c.Status(fiber.StatusInternalServerError).JSON(internalError(err))
 	}
 
 	h.challengeStore.Set("passkey_register:"+claims.UserID, challenge, claims.UserID, nil)
@@ -591,7 +613,7 @@ func (h *AuthHandler) PasskeyRegisterFinish(c *fiber.Ctx) error {
 func (h *AuthHandler) PasskeyLoginBegin(c *fiber.Ctx) error {
 	challenge, err := h.authService.BeginLoginPasskey()
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+		return c.Status(fiber.StatusInternalServerError).JSON(internalError(err))
 	}
 
 	challengeID := make([]byte, 16)
@@ -724,7 +746,7 @@ func (h *AuthHandler) PasskeySignupBegin(c *fiber.Ctx) error {
 	userID := uuid.New().String()
 	challenge, err := h.authService.BeginRegisterPasskey(userID)
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+		return c.Status(fiber.StatusInternalServerError).JSON(internalError(err))
 	}
 
 	challengeID := make([]byte, 16)
