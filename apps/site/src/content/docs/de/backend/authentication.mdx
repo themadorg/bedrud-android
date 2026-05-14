@@ -81,10 +81,34 @@ Bedrud ist so konzipiert, dass es von mehreren Origins aus erreichbar ist, was f
 - **Erlaubte Origins:** Standardmäßig sind die eigene Domäne des Servers und `localhost:3000` (der React-Dev-Server-Port) erlaubt.
 
 ## Benutzerrollen (Zugriffskontrolle)
-Jeder Benutzer verfügt über eine Liste von „accesses" (Rollen).
 
-- `user`: Standardbenutzer. Kann Räume beitreten und erstellen.
-- `guest`: Temporärer Benutzer. Kann Räumen beitreten.
-- `superadmin`: Kann alle Benutzer und Räume über das `/admin`-Dashboard verwalten.
+Jeder Benutzer verfügt über ein `accesses`-Array, das mehrere Zugriffsebenen gleichzeitig enthalten kann. Die JWT-Claims enthalten das vollständige `accesses`-Array, sodass die Middleware granulare Berechtigungen prüfen kann.
 
-Die Middleware `middleware.RequireAccess("superadmin")` schützt die Admin-Routen.
+### Zugriffsebenen
+
+| Zugriffsebene | Geltungsbereich | Gewährt |
+|---|---|---|
+| `superadmin` | Systemweit | Voller Zugriff auf das Admin-Dashboard (`/dashboard/admin`), alle Admin-API-Endpunkte (`/api/admin/*`), Benutzerverwaltung, Raumverwaltung, Systemeinstellungen, Einladungstokens. Fungiert als globale Umgehung für alle Raum-Moderationsaktionen. Geschützt durch `RequireAccess("superadmin")`-Middleware. |
+| `admin` | Definiert, nicht erzwungen | Im `accesses`-Array verfügbar, aber derzeit **von keiner Middleware verwendet**. Nur informativ. Reserviert für zukünftige rollenbasierte Zugriffskontrollfunktionen. |
+| `moderator` | Raumbezogen | Kann einen bestimmten Raum moderieren: Chat blockieren, Teilnehmer stummschalten/entsperren, Spotlight, Bildschirmfreigabe stoppen, Video deaktivieren. Wird vom Raumersteller oder einem Superadmin während eines Anrufs über `PromoteParticipant` befördert. Geprüft über `isRoomModerator()`-Helper. |
+| `user` | Standard | Standard für alle Registrierungen. Kann Räume erstellen, Räumen beitreten, Profil verwalten und eigene Passkeys verwalten. Geschützt durch `Protected()`-Middleware. |
+| `guest` | Eingeschränkt | Temporärer Benutzer zum Beitreten öffentlicher Räume über die Gastanmeldung. Kann keine Räume erstellen oder auf geschützte Funktionen zugreifen. |
+
+### Rollenhierarchie
+
+```
+superadmin > admin > moderator > user > guest
+```
+
+Ein `superadmin` kann jede Moderationsaktion in jedem Raum durchführen, ohne als Raum-Moderator befördert zu werden. Raumersteller sind automatisch Raum-Admins und können Teilnehmer zum Moderator befördern.
+
+### Rollenzuweisung
+
+Rollen werden über mehrere Kanäle verwaltet:
+
+- **CLI:** `bedrud user create` (erstellt als `user`), `bedrud user promote` (fügt `superadmin` hinzu), `bedrud user demote` (entfernt `superadmin`)
+- **Admin-Dashboard:** Benutzerdetailseite hat Befördern-/Herabstufen-Schaltflächen
+- **Admin-API:** `PUT /api/admin/users/:id/accesses` mit gewünschtem `accesses`-Array
+- **Im Meeting:** Raumersteller können Teilnehmer zum Raum-Moderator befördern
+
+> **Hinweis:** Es gibt keinen API-Endpunkt oder keine Weboberfläche zum Erstellen des ersten Superadmins. Nach der Installation müssen Sie die CLI (`bedrud user create` + `bedrud user promote`) verwenden, um den initialen Admin-Zugriff einzurichten. Dies ist eine bewusste Sicherheitsmaßnahme.

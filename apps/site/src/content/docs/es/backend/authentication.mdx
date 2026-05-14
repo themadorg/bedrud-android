@@ -81,10 +81,34 @@ Bedrud está diseñado para ser accesible desde múltiples orígenes, lo cual es
 - **Orígenes Permitidos:** Por defecto, permite el dominio propio del servidor y `localhost:3000` (el puerto del servidor de desarrollo de React).
 
 ## Roles de Usuario (Control de Acceso)
-Cada usuario tiene una lista de "accesses" (roles).
 
-- `user`: Usuario estándar. Puede unirse a salas y crearlas.
-- `guest`: Usuario temporal. Puede unirse a salas.
-- `superadmin`: Puede gestionar todos los usuarios y salas a través del panel `/admin`.
+Cada usuario tiene un arreglo `accesses` que puede contener múltiples niveles de acceso simultáneamente. Los claims del JWT incluyen el arreglo `accesses` completo, permitiendo al middleware verificar permisos granulares.
 
-El guard `middleware.RequireAccess("superadmin")` protege las rutas de administración.
+### Niveles de Acceso
+
+| Nivel de Acceso | Alcance | Otorga |
+|---|---|---|
+| `superadmin` | Todo el sistema | Acceso total al panel de administración (`/dashboard/admin`), todos los endpoints de la API de administración (`/api/admin/*`), gestión de usuarios, gestión de salas, configuración del sistema, tokens de invitación. Actúa como una omisión global para todas las acciones de moderación de salas. Protegido por el middleware `RequireAccess("superadmin")`. |
+| `admin` | Definido, no aplicado | Disponible en el arreglo `accesses` pero actualmente **no es usado por ningún middleware**. Solo informativo. Reservado para futuras funciones de control de acceso basado en roles. |
+| `moderator` | Con alcance de sala | Puede moderar una sala específica: bloquear chat, ensordecer/reactivar participantes, destacar, detener pantalla compartida, desactivar video. Promovido por el creador de la sala o un superadmin durante una llamada mediante `PromoteParticipant`. Verificado mediante el helper `isRoomModerator()`. |
+| `user` | Estándar | Predeterminado para todos los registros. Puede crear salas, unirse a salas, gestionar perfil y gestionar sus propias passkeys. Protegido por el middleware `Protected()`. |
+| `guest` | Limitado | Usuario temporal para unirse a salas públicas mediante inicio de sesión como invitado. No puede crear salas ni acceder a funciones protegidas. |
+
+### Jerarquía de Roles
+
+```
+superadmin > admin > moderator > user > guest
+```
+
+Un `superadmin` puede realizar cualquier acción de moderación en cualquier sala sin ser promovido como moderador de sala. Los creadores de salas son automáticamente administradores de sala y pueden promover participantes a moderador.
+
+### Asignación de Roles
+
+Los roles se gestionan a través de múltiples canales:
+
+- **CLI:** `bedrud user create` (crea como `user`), `bedrud user promote` (agrega `superadmin`), `bedrud user demote` (elimina `superadmin`)
+- **Panel de Administración:** La página de detalle de usuario tiene botones de promover/degradar
+- **API de Administración:** `PUT /api/admin/users/:id/accesses` con el arreglo `accesses` deseado
+- **Durante la Reunión:** El creador de la sala puede promover participantes a moderador a nivel de sala
+
+> **Nota:** No hay un endpoint de API ni interfaz web para crear el primer superadmin. Después de la instalación, debe usar la CLI (`bedrud user create` + `bedrud user promote`) para iniciar el acceso de administración inicial. Esta es una medida de seguridad deliberada.

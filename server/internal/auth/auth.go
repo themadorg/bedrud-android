@@ -5,9 +5,11 @@ import (
 	"bedrud/internal/models"
 	"bedrud/internal/repository"
 	"crypto/rand"
+	"crypto/sha256"
 	"crypto/x509"
 	"encoding/base64"
 	"errors"
+	"fmt"
 	"strings"
 	"time"
 
@@ -63,6 +65,33 @@ type TokenPair struct {
 	RefreshToken string `json:"refreshToken"`
 }
 
+// HashPassword pre-hashes with SHA-256 before bcrypt to bypass bcrypt's 72-byte limit.
+// All new passwords are stored as bcrypt(sha256(password)). Existing bcrypt(password)
+// hashes are still verified via VerifyPassword's fallback path.
+func HashPassword(password string) (string, error) {
+	h := sha256.Sum256([]byte(password))
+	hashed, err := bcrypt.GenerateFromPassword(h[:], bcrypt.DefaultCost)
+	if err != nil {
+		return "", err
+	}
+	return string(hashed), nil
+}
+
+// VerifyPassword checks a password against a stored hash.
+// It first tries bcrypt(sha256(password)) for new-style hashes, then falls back
+// to bcrypt(password) for pre-migration hashes.
+func VerifyPassword(password, storedHash string) error {
+	h := sha256.Sum256([]byte(password))
+	// Always do both comparisons to keep timing constant regardless of
+	// whether the stored hash is new-style (sha256+bcrypt) or old-style (plain bcrypt).
+	err1 := bcrypt.CompareHashAndPassword([]byte(storedHash), h[:])
+	err2 := bcrypt.CompareHashAndPassword([]byte(storedHash), []byte(password))
+	if err1 != nil && err2 != nil {
+		return err1 // neither matched
+	}
+	return nil
+}
+
 type AuthService struct {
 	userRepo    *repository.UserRepository
 	passkeyRepo *repository.PasskeyRepository
@@ -95,7 +124,7 @@ func (s *AuthService) Register(email, password, name string) (*models.User, erro
 	}
 
 	// Hash password
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	hashedPassword, err := HashPassword(password)
 	if err != nil {
 		return nil, err
 	}
@@ -142,12 +171,11 @@ func (s *AuthService) Login(email, password string) (*LoginResponse, error) {
 	if user == nil {
 		// Perform a dummy comparison so both the nil-user and wrong-password paths
 		// take roughly the same amount of time (~100ms bcrypt).
-		_ = bcrypt.CompareHashAndPassword([]byte(dummyHash), []byte(password))
+		_ = VerifyPassword(password, dummyHash)
 		return nil, errors.New("invalid credentials")
 	}
 
-	err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(password))
-	if err != nil {
+	if err := VerifyPassword(password, user.Password); err != nil {
 		return nil, errors.New("invalid credentials")
 	}
 
@@ -234,6 +262,30 @@ func (s *AuthService) UpdateRefreshToken(userID, refreshToken string) error {
 	return s.userRepo.UpdateRefreshToken(userID, refreshToken)
 }
 
+// RotateRefreshToken atomically rotates a refresh token: blocks the old token and
+// updates the stored hash, but only if the stored hash still matches the old token.
+// Returns error if another request already rotated the token.
+func (s *AuthService) RotateRefreshToken(userID, oldRawToken, newRawToken string) error {
+	// Parse old token for expiry, then block it
+	claims := &Claims{}
+	token, err := jwt.ParseWithClaims(oldRawToken, claims, func(token *jwt.Token) (interface{}, error) {
+		return []byte(config.Get().Auth.JWTSecret), nil
+	})
+	if err == nil && token.Valid {
+		_ = s.userRepo.BlockRefreshToken(userID, oldRawToken, time.Unix(claims.ExpiresAt.Unix(), 0))
+	}
+
+	// Atomically swap — only succeeds if no concurrent rotation happened
+	ok, err := s.userRepo.UpdateRefreshTokenAtomic(userID, oldRawToken, newRawToken)
+	if err != nil {
+		return err
+	}
+	if !ok {
+		return ErrRefreshTokenMismatch
+	}
+	return nil
+}
+
 // @Summary Get user profile
 // @Description Get current user profile
 // @Tags auth
@@ -266,7 +318,9 @@ func (s *AuthService) UpdateProfile(userID, name string) (*models.User, error) {
 }
 
 // ChangePassword verifies the current password then sets a new one.
-func (s *AuthService) ChangePassword(userID, currentPassword, newPassword string) error {
+// Invalidates all existing sessions by clearing the stored refresh token
+// and revoking the current access token.
+func (s *AuthService) ChangePassword(userID, currentPassword, newPassword, accessToken string) error {
 	user, err := s.userRepo.GetUserByID(userID)
 	if err != nil || user == nil {
 		return errors.New("user not found")
@@ -277,16 +331,21 @@ func (s *AuthService) ChangePassword(userID, currentPassword, newPassword string
 	// Passkey-only users may have an empty stored password; skip the current-
 	// password check in that case and let them set a password for the first time.
 	if user.Password != "" {
-		if err := bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(currentPassword)); err != nil {
+		if err := VerifyPassword(currentPassword, user.Password); err != nil {
 			return errors.New("current password is incorrect")
 		}
 	}
-	hashed, err := bcrypt.GenerateFromPassword([]byte(newPassword), bcrypt.DefaultCost)
+	hashed, err := HashPassword(newPassword)
 	if err != nil {
 		return err
 	}
-	user.Password = string(hashed)
-	return s.userRepo.UpdateUser(user)
+	// Use UpdatePassword to atomically update the hash and clear refresh_token,
+	// invalidating all active sessions. Matches admin SetUserPassword behavior.
+	if err := s.userRepo.UpdatePassword(userID, string(hashed)); err != nil {
+		return err
+	}
+	RevokeAccessToken(accessToken, config.Get())
+	return nil
 }
 
 // @Summary Logout user
@@ -339,7 +398,9 @@ var ErrRefreshTokenMismatch = errors.New("refresh token does not match stored to
 // Updated refresh token validation
 func (s *AuthService) ValidateRefreshToken(refreshToken string) (*Claims, error) {
 	// Check if token is blocked
-	if s.userRepo.IsRefreshTokenBlocked(refreshToken) {
+	if blocked, err := s.userRepo.IsRefreshTokenBlocked(refreshToken); err != nil {
+		return nil, fmt.Errorf("failed to check token status: %w", err)
+	} else if blocked {
 		return nil, errors.New("refresh token has been revoked")
 	}
 
@@ -358,7 +419,9 @@ func (s *AuthService) ValidateRefreshToken(refreshToken string) (*Claims, error)
 	if user == nil {
 		return nil, errors.New("user not found")
 	}
-	if !s.userRepo.MatchRefreshToken(user.ID, refreshToken) {
+	if matched, err := s.userRepo.MatchRefreshToken(user.ID, refreshToken); err != nil {
+		return nil, fmt.Errorf("failed to verify refresh token: %w", err)
+	} else if !matched {
 		return nil, ErrRefreshTokenMismatch
 	}
 
@@ -445,7 +508,13 @@ func (s *AuthService) FinishSignupPasskey(userID, email, name, challengeStr stri
 		return nil, err
 	}
 
-	// Create user
+	// Re-check email uniqueness before creating user
+	existing, _ := s.userRepo.GetUserByEmail(email)
+	if existing != nil {
+		return nil, errors.New("email already registered")
+	}
+
+	// Create user + passkey in single transaction
 	user := &models.User{
 		ID:       userID,
 		Email:    email,
@@ -453,10 +522,6 @@ func (s *AuthService) FinishSignupPasskey(userID, email, name, challengeStr stri
 		Provider: "passkey",
 		IsActive: true,
 		Accesses: []string{"user"},
-	}
-
-	if err := s.userRepo.CreateUser(user); err != nil {
-		return nil, err
 	}
 
 	passkey := &models.Passkey{
@@ -469,7 +534,10 @@ func (s *AuthService) FinishSignupPasskey(userID, email, name, challengeStr stri
 		Name:         "Passkey",
 	}
 
-	if err := s.passkeyRepo.CreatePasskey(passkey); err != nil {
+	if err := s.userRepo.CreateUserWithPasskey(user, passkey); err != nil {
+		if strings.Contains(err.Error(), "unique") || strings.Contains(err.Error(), "duplicate") || strings.Contains(err.Error(), "UNIQUE") {
+			return nil, errors.New("email already registered")
+		}
 		return nil, err
 	}
 
@@ -532,7 +600,7 @@ func (s *AuthService) FinishLoginPasskey(challengeStr string, credentialID, clie
 
 	// Update counter to prevent replay attacks
 	if err := s.passkeyRepo.UpdatePasskeyCounter(credentialID, assertion.Counter); err != nil {
-		log.Error().Err(err).Msg("Failed to update passkey counter")
+		return nil, fmt.Errorf("authentication verification failed: %w", err)
 	}
 
 	user, err := s.userRepo.GetUserByID(passkey.UserID)

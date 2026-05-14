@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { createFileRoute } from '@tanstack/react-router'
-import { Activity, Globe, Lock, Radio, Shield, UserCheck, Users, UserX, Video } from 'lucide-react'
+import { Activity, AlertCircle, Globe, Lock, Radio, Shield, UserCheck, Users, UserX, Video } from 'lucide-react'
 import { Area, AreaChart, ResponsiveContainer, Tooltip, XAxis } from 'recharts'
 import { api } from '#/lib/api'
 import { cn } from '@/lib/utils'
@@ -24,7 +24,81 @@ interface AdminRoom {
   createdAt: string
 }
 
+interface CertInfo {
+  enabled: boolean
+  subject?: string
+  issuer?: string
+  notBefore?: string
+  notAfter?: string
+  daysRemaining?: number
+  sans?: string[]
+  status: 'valid' | 'expiring' | 'expired' | 'error' | 'not_configured'
+  error?: string
+}
+
 export const Route = createFileRoute('/dashboard/admin/')({ component: AdminOverview })
+
+function CertStatusCard() {
+  const { data: cert } = useQuery({
+    queryKey: ['admin', 'cert-info'],
+    queryFn: () => api.get<CertInfo>('/api/admin/cert-info'),
+    refetchInterval: 300_000,
+  })
+
+  const status = cert?.status ?? 'not_configured'
+  const enabled = cert?.enabled ?? false
+
+  const config = {
+    valid: { color: 'text-emerald-500', bg: 'bg-emerald-500/10', dot: 'bg-emerald-500', label: 'TLS active' },
+    expiring: {
+      color: 'text-amber-500',
+      bg: 'bg-amber-500/10',
+      dot: 'bg-amber-500',
+      label: 'TLS certificate expiring',
+    },
+    expired: {
+      color: 'text-destructive',
+      bg: 'bg-destructive/10',
+      dot: 'bg-destructive',
+      label: 'TLS certificate EXPIRED',
+    },
+    error: { color: 'text-destructive', bg: 'bg-destructive/10', dot: 'bg-destructive', label: 'TLS error' },
+    not_configured: {
+      color: 'text-muted-foreground',
+      bg: 'bg-muted',
+      dot: 'bg-muted-foreground/30',
+      label: 'TLS not configured',
+    },
+  }[status]
+
+  return (
+    <div className="flex items-center gap-3 border bg-card px-4 py-3">
+      <div className={cn('flex h-7 w-7 items-center justify-center', config.bg, config.color)}>
+        {status === 'error' || status === 'expired' ? (
+          <AlertCircle className="h-3.5 w-3.5" />
+        ) : (
+          <Activity className="h-3.5 w-3.5" />
+        )}
+      </div>
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-2">
+          <span className={cn('h-1.5 w-1.5 rounded-full', config.dot, status === 'valid' && 'animate-pulse')} />
+          <p className="text-xs font-semibold">{config.label}</p>
+        </div>
+        {enabled && cert?.daysRemaining != null && (
+          <p className="text-[11px] text-muted-foreground">
+            {status === 'error'
+              ? cert.error
+              : status === 'expired'
+                ? 'Certificate has expired — clients cannot connect securely'
+                : `Expires in ${cert.daysRemaining} days (${new Date(cert.notAfter!).toLocaleDateString()})`}
+          </p>
+        )}
+        {!enabled && <p className="text-[11px] text-muted-foreground">Server is running without TLS</p>}
+      </div>
+    </div>
+  )
+}
 
 function StatCard({
   value,
@@ -91,7 +165,7 @@ function AdminOverview() {
   const last7Days = Array.from({ length: 7 }, (_, i) => {
     const d = new Date()
     d.setDate(d.getDate() - (6 - i))
-    return { date: d.toLocaleDateString('en', { weekday: 'short' }), rooms: 0, full: d.toDateString() }
+    return { date: d.toLocaleDateString(undefined, { weekday: 'short' }), rooms: 0, full: d.toDateString() }
   })
   rooms.forEach((r) => {
     const d = new Date(r.createdAt).toDateString()
@@ -100,7 +174,7 @@ function AdminOverview() {
   })
 
   return (
-    <div className="mx-auto max-w-5xl space-y-5">
+    <div className="mx-auto max-w-5xl space-y-6 px-4">
       {/* Header */}
       <div>
         <h1 className="text-sm font-semibold">System overview</h1>
@@ -108,7 +182,7 @@ function AdminOverview() {
       </div>
 
       {/* Stats grid */}
-      <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3">
         <StatCard value={users.length} label="Total users" sub={`${activeUsers} active`} icon={Users} />
         <StatCard value={rooms.length} label="Total rooms" sub={`${activeRooms} live`} icon={Video} />
         <StatCard value={onlineCount} label="Online users" sub="currently in rooms" icon={Radio} />
@@ -117,27 +191,16 @@ function AdminOverview() {
         <StatCard value={activeRooms} label="Active rooms" sub="currently live" icon={Activity} />
       </div>
 
-      {/* Server status */}
-      <div className="flex items-center gap-3 border bg-card px-4 py-3">
-        <div className="flex h-7 w-7 items-center justify-center bg-emerald-500/10 text-emerald-500">
-          <Activity className="h-3.5 w-3.5" />
-        </div>
-        <div>
-          <div className="flex items-center gap-2">
-            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-            <p className="text-xs font-semibold">Server healthy</p>
-          </div>
-          <p className="text-[11px] text-muted-foreground">All systems operational</p>
-        </div>
-      </div>
+      {/* TLS cert status */}
+      <CertStatusCard />
 
       {/* Room activity chart */}
       <div className="border overflow-hidden">
-        <div className="flex items-center justify-between border-b bg-muted/30 px-4 py-2.5">
+        <div className="flex items-center justify-between border-b bg-muted/30 px-4 py-3.5">
           <p className="text-xs font-semibold">Room creation activity</p>
           <span className="text-[11px] text-muted-foreground">Last 7 days</span>
         </div>
-        <div className="p-4">
+        <div className="p-5">
           <ResponsiveContainer width="100%" height={100}>
             <AreaChart data={last7Days} margin={{ top: 4, right: 4, left: -10, bottom: 0 }}>
               <defs>
@@ -178,7 +241,7 @@ function AdminOverview() {
       <div className="grid gap-4 lg:grid-cols-2">
         {/* Recent signups */}
         <div className="border overflow-hidden">
-          <div className="flex items-center justify-between border-b bg-muted/30 px-4 py-2.5">
+          <div className="flex items-center justify-between border-b bg-muted/30 px-4 py-3.5">
             <p className="text-xs font-semibold">Recent sign-ups</p>
             <span className="text-[11px] text-muted-foreground">{users.length} total</span>
           </div>
@@ -187,7 +250,7 @@ function AdminOverview() {
               <p className="px-4 py-6 text-xs text-muted-foreground text-center">No users yet</p>
             ) : (
               recentUsers.map((u) => (
-                <div key={u.id} className="flex items-center justify-between gap-3 px-4 py-2.5">
+                <div key={u.id} className="flex items-center justify-between gap-3 px-4 py-3">
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-xs font-medium">{u.name}</p>
                     <p className="truncate text-[11px] text-muted-foreground">{u.email}</p>
@@ -208,11 +271,11 @@ function AdminOverview() {
 
         {/* Room breakdown */}
         <div className="border overflow-hidden">
-          <div className="flex items-center justify-between border-b bg-muted/30 px-4 py-2.5">
+          <div className="flex items-center justify-between border-b bg-muted/30 px-4 py-3.5">
             <p className="text-xs font-semibold">Room breakdown</p>
             <span className="text-[11px] text-muted-foreground">{rooms.length} total</span>
           </div>
-          <div className="p-4 space-y-3">
+          <div className="p-5 space-y-3">
             {[
               {
                 label: 'Live rooms',

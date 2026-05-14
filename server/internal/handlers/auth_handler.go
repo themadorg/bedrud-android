@@ -4,6 +4,7 @@ import (
 	"bedrud/config"
 	"bedrud/internal/auth"
 	"bedrud/internal/repository"
+	"crypto/rand"
 	"encoding/base64"
 	"fmt"
 	"net/http"
@@ -11,6 +12,7 @@ import (
 	"net/url"
 	"strings"
 	"time"
+	"unicode"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
@@ -19,22 +21,21 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-const minPasswordLength = 12
-const maxPasswordLength = 128
-
 type AuthHandler struct {
 	authService     *auth.AuthService
 	config          *config.Config
 	settingsRepo    *repository.SettingsRepository
 	inviteTokenRepo *repository.InviteTokenRepository
+	challengeStore  *auth.ChallengeStore
 }
 
-func NewAuthHandler(authService *auth.AuthService, cfg *config.Config, settingsRepo *repository.SettingsRepository, inviteTokenRepo *repository.InviteTokenRepository) *AuthHandler {
+func NewAuthHandler(authService *auth.AuthService, cfg *config.Config, settingsRepo *repository.SettingsRepository, inviteTokenRepo *repository.InviteTokenRepository, challengeStore *auth.ChallengeStore) *AuthHandler {
 	return &AuthHandler{
 		authService:     authService,
 		config:          cfg,
 		settingsRepo:    settingsRepo,
 		inviteTokenRepo: inviteTokenRepo,
+		challengeStore:  challengeStore,
 	}
 }
 
@@ -50,7 +51,7 @@ func setAuthCookies(c *fiber.Ctx, cfg *config.Config, accessToken, refreshToken 
 	c.Cookie(&fiber.Cookie{
 		Name:     "access_token",
 		Value:    accessToken,
-		MaxAge:   cfg.Auth.TokenDuration * 3600,
+		MaxAge:   cfg.Auth.TokenDuration.Int() * 3600,
 		HTTPOnly: true,
 		Secure:   secure,
 		SameSite: sameSite,
@@ -126,6 +127,19 @@ func (h *AuthHandler) Register(c *fiber.Ctx) error {
 			"error": "Name must be at least 2 characters",
 		})
 	}
+	if len(input.Name) > 255 {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Name must be at most 255 characters",
+		})
+	}
+
+	// Sanitize name: strip control characters and HTML special chars (same as GuestJoinRoom)
+	input.Name = strings.Map(func(r rune) rune {
+		if unicode.IsControl(r) || r == '<' || r == '>' || r == '&' || r == '"' || r == '\'' {
+			return -1
+		}
+		return r
+	}, input.Name)
 
 	// Check registration settings
 	if h.settingsRepo != nil {
@@ -153,16 +167,27 @@ func (h *AuthHandler) Register(c *fiber.Ctx) error {
 		}
 	}
 
-	if len(input.Password) < minPasswordLength {
+	if len(input.Password) < MinPasswordLength {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": fmt.Sprintf("Password must be at least %d characters", minPasswordLength),
+			"error": fmt.Sprintf("Password must be at least %d characters", MinPasswordLength),
 		})
 	}
 
-	if len(input.Password) > maxPasswordLength {
+	if len(input.Password) > MaxPasswordLength {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": fmt.Sprintf("Password must be at most %d characters", maxPasswordLength),
+			"error": fmt.Sprintf("Password must be at most %d characters", MaxPasswordLength),
 		})
+	}
+
+	// Mark invite token as used BEFORE creating user (TOCTOU guard)
+	var pendingTokenID string
+	if tokID, ok := c.Locals("pendingInviteToken").(string); ok && tokID != "" && h.inviteTokenRepo != nil {
+		if err := h.inviteTokenRepo.MarkUsed(tokID, ""); err != nil {
+			return c.Status(fiber.StatusConflict).JSON(fiber.Map{
+				"error": "Invite token already used or invalid",
+			})
+		}
+		pendingTokenID = tokID
 	}
 
 	user, err := h.authService.Register(input.Email, input.Password, input.Name)
@@ -192,13 +217,10 @@ func (h *AuthHandler) Register(c *fiber.Ctx) error {
 		})
 	}
 
-	// Mark invite token as used if one was validated
-	if tokenID, ok := c.Locals("pendingInviteToken").(string); ok && tokenID != "" && h.inviteTokenRepo != nil {
-		if err := h.inviteTokenRepo.MarkUsed(tokenID, user.ID); err != nil {
-			log.Error().Err(err).Str("tokenID", tokenID).Msg("Failed to mark invite token as used")
-			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-				"error": "Registration succeeded but failed to record token usage",
-			})
+	// Update used_by on invite token with the actual user ID
+	if pendingTokenID != "" && h.inviteTokenRepo != nil {
+		if err := h.inviteTokenRepo.MarkUsed(pendingTokenID, user.ID); err != nil {
+			log.Warn().Err(err).Str("tokenID", pendingTokenID).Msg("Failed to update used_by on invite token")
 		}
 	}
 
@@ -230,9 +252,9 @@ func (h *AuthHandler) Login(c *fiber.Ctx) error {
 		})
 	}
 
-	if len(input.Password) > maxPasswordLength {
+	if len(input.Password) > MaxPasswordLength {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": fmt.Sprintf("Password must be at most %d characters", maxPasswordLength),
+			"error": fmt.Sprintf("Password must be at most %d characters", MaxPasswordLength),
 		})
 	}
 
@@ -262,6 +284,21 @@ func (h *AuthHandler) GuestLogin(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": "Name is required",
 		})
+	}
+	if len(input.Name) < 2 || len(input.Name) > 50 {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "Name must be between 2 and 50 characters",
+		})
+	}
+
+	// Check registration settings
+	if h.settingsRepo != nil {
+		settings, _ := h.settingsRepo.GetSettings()
+		if settings != nil && !settings.RegistrationEnabled {
+			return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
+				"error": "Registration is currently disabled",
+			})
+		}
 	}
 
 	loginResponse, err := h.authService.GuestLogin(input.Name)
@@ -314,17 +351,25 @@ func (h *AuthHandler) RefreshToken(c *fiber.Ctx) error {
 		})
 	}
 
-	// Block the old refresh token to prevent replay
-	if err := h.authService.BlockRefreshToken(claims.UserID, input.RefreshToken); err != nil {
-		log.Error().Err(err).Msg("Failed to block old refresh token during rotation")
+	// Re-fetch user from DB for current accesses (may have changed since token was issued)
+	user, err := h.authService.GetUserByID(claims.UserID)
+	if err != nil || user == nil {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"error": "User not found",
+		})
+	}
+	if !user.IsActive {
+		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
+			"error": "Account is deactivated",
+		})
 	}
 
-	// Generate new token pair
+	// Generate new token pair with fresh user data
 	accessToken, refreshToken, err := auth.GenerateTokenPair(
-		claims.UserID,
-		claims.Email,
-		claims.Name,
-		claims.Accesses,
+		user.ID,
+		user.Email,
+		user.Name,
+		user.Accesses,
 		h.config,
 	)
 	if err != nil {
@@ -333,10 +378,11 @@ func (h *AuthHandler) RefreshToken(c *fiber.Ctx) error {
 		})
 	}
 
-	// Update refresh token in database
-	if err := h.authService.UpdateRefreshToken(claims.UserID, refreshToken); err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error": "Failed to update refresh token",
+	// Atomically rotate the refresh token — only succeeds if the old token
+	// hasn't already been rotated (prevents token reuse race condition).
+	if err := h.authService.RotateRefreshToken(user.ID, input.RefreshToken, refreshToken); err != nil {
+		return c.Status(fiber.StatusConflict).JSON(fiber.Map{
+			"error": "Refresh token has already been rotated",
 		})
 	}
 
@@ -355,6 +401,11 @@ func (h *AuthHandler) GetMe(c *fiber.Ctx) error {
 			"error": "Failed to get user",
 		})
 	}
+	if user == nil {
+		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+			"error": "User not found",
+		})
+	}
 
 	return c.JSON(user)
 }
@@ -369,6 +420,9 @@ func (h *AuthHandler) UpdateProfile(c *fiber.Ctx) error {
 	}
 	if len(input.Name) < 2 {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Name must be at least 2 characters"})
+	}
+	if len(input.Name) > 255 {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Name must be at most 255 characters"})
 	}
 	user, err := h.authService.UpdateProfile(claims.UserID, input.Name)
 	if err != nil {
@@ -386,13 +440,18 @@ func (h *AuthHandler) ChangePassword(c *fiber.Ctx) error {
 	if err := c.BodyParser(&input); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid input"})
 	}
-	if len(input.NewPassword) < minPasswordLength {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": fmt.Sprintf("New password must be at least %d characters", minPasswordLength)})
+	if len(input.NewPassword) < MinPasswordLength {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": fmt.Sprintf("New password must be at least %d characters", MinPasswordLength)})
 	}
-	if len(input.NewPassword) > maxPasswordLength {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": fmt.Sprintf("New password must be at most %d characters", maxPasswordLength)})
+	if len(input.NewPassword) > MaxPasswordLength {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": fmt.Sprintf("New password must be at most %d characters", MaxPasswordLength)})
 	}
-	if err := h.authService.ChangePassword(claims.UserID, input.CurrentPassword, input.NewPassword); err != nil {
+	// Extract access token to revoke it after password change
+	accessToken := strings.TrimPrefix(c.Get("Authorization"), "Bearer ")
+	if accessToken == "" {
+		accessToken = c.Cookies("access_token")
+	}
+	if err := h.authService.ChangePassword(claims.UserID, input.CurrentPassword, input.NewPassword, accessToken); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
 	}
 	return c.JSON(fiber.Map{"message": "Password updated successfully"})
@@ -406,16 +465,12 @@ type LogoutRequest struct {
 // Logout handles user logout
 func (h *AuthHandler) Logout(c *fiber.Ctx) error {
 	var input LogoutRequest
-	if err := c.BodyParser(&input); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "Invalid input - expected JSON with refresh_token field",
-		})
-	}
+	_ = c.BodyParser(&input) // non-fatal — fallback to cookie below
 
 	// Get user from context (set by auth middleware)
 	claims := c.Locals("user").(*auth.Claims)
 
-	// Fallback to cookie when body omits the token
+	// Fallback to cookie when body is empty or parse fails
 	if input.RefreshToken == "" {
 		input.RefreshToken = c.Cookies("refresh_token")
 	}
@@ -502,17 +557,10 @@ func (h *AuthHandler) PasskeyRegisterBegin(c *fiber.Ctx) error {
 	claims := c.Locals("user").(*auth.Claims)
 	challenge, err := h.authService.BeginRegisterPasskey(claims.UserID)
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+		return c.Status(fiber.StatusInternalServerError).JSON(internalError(err))
 	}
 
-	sess, req, err := h.getSession(c)
-	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Session unavailable"})
-	}
-	sess.Values["passkey_register_challenge"] = challenge
-	if err := h.saveSession(c, sess, req); err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to save session"})
-	}
+	h.challengeStore.Set("passkey_register:"+claims.UserID, challenge, claims.UserID, nil)
 
 	return c.JSON(fiber.Map{
 		"challenge": challenge,
@@ -538,13 +586,9 @@ func (h *AuthHandler) PasskeyRegisterFinish(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid input"})
 	}
 
-	sess, req, err := h.getSession(c)
-	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Session unavailable"})
-	}
-	challenge, ok := sess.Values["passkey_register_challenge"].(string)
+	challenge, _, ok := h.challengeStore.GetAndVerify("passkey_register:"+claims.UserID, "")
 	if !ok {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Challenge not found in session"})
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Challenge not found or expired"})
 	}
 
 	clientData, err := base64.RawURLEncoding.DecodeString(input.ClientDataJSON)
@@ -561,8 +605,7 @@ func (h *AuthHandler) PasskeyRegisterFinish(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
 	}
 
-	delete(sess.Values, "passkey_register_challenge")
-	_ = h.saveSession(c, sess, req)
+	h.challengeStore.Delete("passkey_register:" + claims.UserID)
 
 	return c.JSON(fiber.Map{"message": "Passkey registered successfully"})
 }
@@ -570,15 +613,24 @@ func (h *AuthHandler) PasskeyRegisterFinish(c *fiber.Ctx) error {
 func (h *AuthHandler) PasskeyLoginBegin(c *fiber.Ctx) error {
 	challenge, err := h.authService.BeginLoginPasskey()
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+		return c.Status(fiber.StatusInternalServerError).JSON(internalError(err))
 	}
+
+	challengeID := make([]byte, 16)
+	if _, err := rand.Read(challengeID); err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to generate challenge ID"})
+	}
+	id := base64.RawURLEncoding.EncodeToString(challengeID)
+
+	h.challengeStore.Set("passkey_login:"+id, challenge, "", nil)
 
 	sess, req, err := h.getSession(c)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Session unavailable"})
 	}
-	sess.Values["passkey_login_challenge"] = challenge
+	sess.Values["passkey_login_challenge_id"] = id
 	if err := h.saveSession(c, sess, req); err != nil {
+		h.challengeStore.Delete("passkey_login:" + id)
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to save session"})
 	}
 
@@ -603,9 +655,14 @@ func (h *AuthHandler) PasskeyLoginFinish(c *fiber.Ctx) error {
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Session unavailable"})
 	}
-	challenge, ok := sess.Values["passkey_login_challenge"].(string)
+	challengeID, ok := sess.Values["passkey_login_challenge_id"].(string)
 	if !ok {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Challenge not found in session"})
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Challenge not found or expired"})
+	}
+
+	challenge, _, ok := h.challengeStore.GetAndVerify("passkey_login:"+challengeID, "")
+	if !ok {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Challenge not found or expired"})
 	}
 
 	credID, err := base64.RawURLEncoding.DecodeString(input.CredentialID)
@@ -630,7 +687,8 @@ func (h *AuthHandler) PasskeyLoginFinish(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": err.Error()})
 	}
 
-	delete(sess.Values, "passkey_login_challenge")
+	h.challengeStore.Delete("passkey_login:" + challengeID)
+	delete(sess.Values, "passkey_login_challenge_id")
 	_ = h.saveSession(c, sess, req)
 
 	setAuthCookies(c, h.config, loginResponse.Token.AccessToken, loginResponse.Token.RefreshToken)
@@ -649,6 +707,14 @@ func (h *AuthHandler) PasskeySignupBegin(c *fiber.Ctx) error {
 
 	if input.Email == "" || input.Name == "" {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Email and Name are required"})
+	}
+
+	if _, err := mail.ParseAddress(input.Email); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid email format"})
+	}
+
+	if len(input.Name) < 2 || len(input.Name) > 100 {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Name must be between 2 and 100 characters"})
 	}
 
 	// Check registration settings (mirrors Register())
@@ -680,21 +746,33 @@ func (h *AuthHandler) PasskeySignupBegin(c *fiber.Ctx) error {
 	userID := uuid.New().String()
 	challenge, err := h.authService.BeginRegisterPasskey(userID)
 	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+		return c.Status(fiber.StatusInternalServerError).JSON(internalError(err))
 	}
+
+	challengeID := make([]byte, 16)
+	if _, err := rand.Read(challengeID); err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to generate challenge ID"})
+	}
+	id := base64.RawURLEncoding.EncodeToString(challengeID)
+
+	extra := map[string]string{
+		"email":  input.Email,
+		"name":   input.Name,
+		"userID": userID,
+	}
+	if tokenID, ok := c.Locals("pendingPasskeyInviteToken").(string); ok && tokenID != "" {
+		extra["inviteToken"] = tokenID
+	}
+	h.challengeStore.Set("passkey_signup:"+id, challenge, "", extra)
 
 	sess, req, err := h.getSession(c)
 	if err != nil {
+		h.challengeStore.Delete("passkey_signup:" + id)
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Session unavailable"})
 	}
-	sess.Values["signup_challenge"] = challenge
-	sess.Values["signup_email"] = input.Email
-	sess.Values["signup_name"] = input.Name
-	sess.Values["signup_user_id"] = userID
-	if tokenID, ok := c.Locals("pendingPasskeyInviteToken").(string); ok && tokenID != "" {
-		sess.Values["signup_invite_token"] = tokenID
-	}
+	sess.Values["passkey_signup_challenge_id"] = id
 	if err := h.saveSession(c, sess, req); err != nil {
+		h.challengeStore.Delete("passkey_signup:" + id)
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to save session"})
 	}
 
@@ -725,15 +803,20 @@ func (h *AuthHandler) PasskeySignupFinish(c *fiber.Ctx) error {
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Session unavailable"})
 	}
-	challenge, ok := sess.Values["signup_challenge"].(string)
+	challengeID, ok := sess.Values["passkey_signup_challenge_id"].(string)
 	if !ok {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Signup session expired or not found"})
 	}
 
-	email, ok2 := sess.Values["signup_email"].(string)
-	name, ok3 := sess.Values["signup_name"].(string)
-	userID, ok4 := sess.Values["signup_user_id"].(string)
-	if !ok2 || !ok3 || !ok4 {
+	challenge, extra, ok := h.challengeStore.GetAndVerify("passkey_signup:"+challengeID, "")
+	if !ok {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Signup session expired or not found"})
+	}
+
+	email := extra["email"]
+	name := extra["name"]
+	userID := extra["userID"]
+	if email == "" || name == "" || userID == "" {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Signup session expired or not found"})
 	}
 
@@ -752,7 +835,7 @@ func (h *AuthHandler) PasskeySignupFinish(c *fiber.Ctx) error {
 	}
 
 	// Mark invite token used if passkey signup required one
-	if tokenID, ok := sess.Values["signup_invite_token"].(string); ok && tokenID != "" && h.inviteTokenRepo != nil {
+	if tokenID := extra["inviteToken"]; tokenID != "" && h.inviteTokenRepo != nil {
 		if err := h.inviteTokenRepo.MarkUsed(tokenID, loginResponse.User.ID); err != nil {
 			log.Error().Err(err).Str("tokenID", tokenID).Msg("Failed to mark passkey invite token as used")
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
@@ -761,11 +844,8 @@ func (h *AuthHandler) PasskeySignupFinish(c *fiber.Ctx) error {
 		}
 	}
 
-	delete(sess.Values, "signup_challenge")
-	delete(sess.Values, "signup_email")
-	delete(sess.Values, "signup_name")
-	delete(sess.Values, "signup_user_id")
-	delete(sess.Values, "signup_invite_token")
+	h.challengeStore.Delete("passkey_signup:" + challengeID)
+	delete(sess.Values, "passkey_signup_challenge_id")
 	_ = h.saveSession(c, sess, req)
 
 	setAuthCookies(c, h.config, loginResponse.Token.AccessToken, loginResponse.Token.RefreshToken)

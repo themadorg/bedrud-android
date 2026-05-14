@@ -6,6 +6,17 @@ server:
   host: "0.0.0.0"
   readTimeout: 30
   writeTimeout: 30
+  # Self-signed cert key algorithm: "ed25519" (default, recommended),
+  # "ecdsa256", "rsa2048", or "rsa4096". Only applies to cert generation;
+  # renewal auto-detects and preserves the existing cert's algorithm.
+  # Env: SERVER_CERT_ALGORITHM
+  certAlgorithm: "ed25519"
+  # maxParticipantsLimit sets the hard ceiling for room capacity (default: 1000, 0 = unlimited).
+  # Env: SERVER_MAX_PARTICIPANTS_LIMIT
+  maxParticipantsLimit: 1000
+  # maxRoomsPerUser caps active rooms per user (default: 100, 0 = unlimited).
+  # Env: SERVER_MAX_ROOMS_PER_USER
+  maxRoomsPerUser: 100
 
 database:
   type: "sqlite"
@@ -20,11 +31,14 @@ livekit:
   internalHost: "http://127.0.0.1:7880"
   apiKey: "devkey"
   apiSecret: "CHANGE_ME_LIVEKIT_SECRET"
+  # configPath: "/etc/bedrud/livekit.yaml"  # External LiveKit YAML. Env: LIVEKIT_CONFIG_PATH
+  # When TLS is enabled (enableTLS: true), TURN/TLS is auto-configured using server certs.
 
 auth:
   jwtSecret: "CHANGE_ME_32_CHAR_RANDOM_STRING"
   sessionSecret: "CHANGE_ME_32_CHAR_RANDOM_STRING"
   tokenDuration: 24
+  passkeyChallengeTTL: 5  # passkey challenge expiry in minutes. Env: AUTH_PASSKEY_CHALLENGE_TTL
   frontendURL: "http://localhost:8090"
   google:
     clientId: "CHANGE_ME_GOOGLE_CLIENT_ID"
@@ -39,8 +53,20 @@ auth:
     clientSecret: ""
     redirectUrl: "http://localhost:8090/api/auth/twitter/callback"
 
+rateLimit:
+  authMaxRequests: 10    # Max auth requests per window (login, register, refresh, passkey). 0 = disable
+  authWindowSecs: 60     # Auth rate limit window in seconds
+  guestMaxRequests: 5    # Max guest join requests per window. 0 = disable
+  guestWindowSecs: 60    # Guest rate limit window in seconds
+
 cors:
   allowedOrigins: "http://localhost:8090,http://localhost:3000,http://localhost:5173"
   allowedHeaders: "Origin, Content-Type, Accept, Authorization"
   allowedMethods: "GET, POST, PUT, DELETE, OPTIONS"
   allowCredentials: true
+
+chat:
+  maxUploadBytesPerUser: 524288000  # Per-user upload quota (500 MB). 0 = unlimited. Env: CHAT_MAX_UPLOAD_BYTES_PER_USER
+  globalDiskThresholdBytes: 0       # Global storage ceiling across all users. 0 = unlimited. Env: CHAT_GLOBAL_DISK_THRESHOLD_BYTES
+  maxMessageCount: 10000            # Max chat messages kept per room (0 = unlimited). Env: CHAT_MAX_MESSAGE_COUNT
+  messageTTLHours: 2160             # Purge messages older than this (0 = forever). 2160 = 90 days. Env: CHAT_MESSAGE_TTL_HOURS

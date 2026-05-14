@@ -21,10 +21,13 @@ import (
 	"bedrud/internal/auth"
 	"bedrud/internal/database"
 	"bedrud/internal/handlers"
+	"bedrud/internal/lkutil"
 	"bedrud/internal/middleware"
 	"bedrud/internal/models"
 	"bedrud/internal/repository"
 	"bedrud/internal/scheduler"
+	"bedrud/internal/services"
+	"bedrud/internal/storage"
 	"bedrud/internal/utils"
 	"fmt"
 	"net/http"
@@ -32,6 +35,7 @@ import (
 	"net/url"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"strings"
 	"syscall"
 	"time"
@@ -93,9 +97,11 @@ func init() {
 
 	output := os.Stdout
 	if cfg.Logger.OutputPath != "" {
-		file, err := os.OpenFile(cfg.Logger.OutputPath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o666)
+		file, err := utils.SafeOpenAppend(cfg.Logger.OutputPath, 0o644)
 		if err == nil {
 			output = file
+		} else {
+			log.Warn().Err(err).Str("path", cfg.Logger.OutputPath).Msg("Failed to create log file, falling back to stdout")
 		}
 	}
 
@@ -103,6 +109,16 @@ func init() {
 		Out:        output,
 		TimeFormat: time.RFC3339,
 	})
+
+	if cfg.Auth.JWTSecret == "" {
+		log.Fatal().Msg("jwtSecret is required: set AUTH_JWT_SECRET env or auth.jwtSecret in config.yaml")
+	}
+	if len(cfg.Auth.JWTSecret) < 32 {
+		log.Warn().Int("length", len(cfg.Auth.JWTSecret)).Msg("jwtSecret is shorter than recommended 32 characters")
+	}
+	if cfg.Auth.SessionSecret == "" {
+		log.Fatal().Msg("sessionSecret is required: set AUTH_SESSION_SECRET env or auth.sessionSecret in config.yaml")
+	}
 }
 
 func main() {
@@ -146,8 +162,8 @@ func run() error {
 	// Create new Fiber instance
 	app := fiber.New(fiber.Config{
 		AppName:      "Bedrud API",
-		ReadTimeout:  time.Duration(cfg.Server.ReadTimeout) * time.Second,
-		WriteTimeout: time.Duration(cfg.Server.WriteTimeout) * time.Second,
+		ReadTimeout:  time.Duration(cfg.Server.ReadTimeout.Int()) * time.Second,
+		WriteTimeout: time.Duration(cfg.Server.WriteTimeout.Int()) * time.Second,
 		BodyLimit:    2 * 1024 * 1024,
 		// Enable custom error handling
 		ErrorHandler: func(c *fiber.Ctx, err error) error {
@@ -197,13 +213,13 @@ func run() error {
 	passkeyRepo := repository.NewPasskeyRepository(database.GetDB())
 	roomRepo := repository.NewRoomRepository(database.GetDB())
 	settingsRepo := repository.NewSettingsRepository(database.GetDB())
-		settingsRepo.SetConfig(cfg)
-		if effective, err := settingsRepo.GetEffectiveSettings(); err == nil {
-			auth.ReloadProviders(effective)
-		}
+	settingsRepo.SetConfig(cfg)
+	if effective, err := settingsRepo.GetEffectiveSettings(); err == nil {
+		auth.ReloadProviders(effective)
+	}
 	inviteTokenRepo := repository.NewInviteTokenRepository(database.GetDB())
 
-	scheduler.Initialize(roomRepo, &cfg.LiveKit)
+	scheduler.Initialize(roomRepo, userRepo, &cfg.LiveKit, &cfg.Server)
 	defer scheduler.Stop()
 
 	// Periodically clean up expired blocked refresh tokens from the database.
@@ -238,7 +254,7 @@ func run() error {
 		AllowMethods:     cfg.Cors.AllowedMethods,
 		AllowCredentials: cfg.Cors.AllowCredentials,
 		ExposeHeaders:    cfg.Cors.ExposeHeaders,
-		MaxAge:           cfg.Cors.MaxAge,
+		MaxAge:           cfg.Cors.MaxAge.Int(),
 	}))
 
 	// ===============================
@@ -249,15 +265,16 @@ func run() error {
 	api.Get("/health", healthCheck)
 	api.Get("/ready", readinessCheck)
 
-	api.Get("/swagger/*", swagger.New(swagger.Config{
-		URL:          "/api/swagger/doc.json",
-		DeepLinking:  true,
-		DocExpansion: "list",
-	}))
+	if os.Getenv("DISABLE_API_DOCS") == "" {
+		api.Get("/swagger/*", swagger.New(swagger.Config{
+			URL:          "/api/swagger/doc.json",
+			DeepLinking:  true,
+			DocExpansion: "list",
+		}))
 
-	api.Get("/scalar", func(c *fiber.Ctx) error {
-		c.Set(fiber.HeaderContentType, fiber.MIMETextHTMLCharsetUTF8)
-		return c.SendString(`<!doctype html>
+		api.Get("/scalar", func(c *fiber.Ctx) error {
+			c.Set(fiber.HeaderContentType, fiber.MIMETextHTMLCharsetUTF8)
+			return c.SendString(`<!doctype html>
 <html>
 <head>
   <title>Bedrud API — Scalar</title>
@@ -269,20 +286,22 @@ func run() error {
   <script src="https://cdn.jsdelivr.net/npm/@scalar/api-reference"></script>
 </body>
 </html>`)
-	})
+		})
+	}
 
 	// ------------------------------
-	authHandler := handlers.NewAuthHandler(authService, cfg, settingsRepo, inviteTokenRepo)
-	api.Post("/auth/register", middleware.AuthRateLimiter(), authHandler.Register)
-	api.Post("/auth/login", middleware.AuthRateLimiter(), authHandler.Login)
-	api.Post("/auth/guest-login", middleware.AuthRateLimiter(), authHandler.GuestLogin)
-	api.Post("/auth/refresh", middleware.AuthRateLimiter(), authHandler.RefreshToken)
+	challengeStore := auth.NewChallengeStore(cfg.Auth.PasskeyChallengeTTL)
+	authHandler := handlers.NewAuthHandler(authService, cfg, settingsRepo, inviteTokenRepo, challengeStore)
+	api.Post("/auth/register", middleware.AuthRateLimiter(cfg.RateLimit), authHandler.Register)
+	api.Post("/auth/login", middleware.AuthRateLimiter(cfg.RateLimit), authHandler.Login)
+	api.Post("/auth/guest-login", middleware.AuthRateLimiter(cfg.RateLimit), authHandler.GuestLogin)
+	api.Post("/auth/refresh", middleware.AuthRateLimiter(cfg.RateLimit), authHandler.RefreshToken)
 	api.Post("/auth/logout", middleware.Protected(), authHandler.Logout)
 	api.Get("/auth/me", middleware.Protected(), authHandler.GetMe)
 	api.Put("/auth/me", middleware.Protected(), authHandler.UpdateProfile)
 	api.Put("/auth/password", middleware.Protected(), authHandler.ChangePassword)
-	api.Get("/auth/:provider/login", handlers.BeginAuthHandler)
-	api.Get("/auth/:provider/callback", authHandler.CallbackHandler)
+	api.Get("/auth/:provider/login", middleware.AuthRateLimiter(cfg.RateLimit), handlers.BeginAuthHandler)
+	api.Get("/auth/:provider/callback", middleware.AuthRateLimiter(cfg.RateLimit), authHandler.CallbackHandler)
 
 	prefsRepo := repository.NewUserPreferencesRepository(database.GetDB())
 	preferencesHandler := handlers.NewPreferencesHandler(prefsRepo)
@@ -292,18 +311,32 @@ func run() error {
 	// Passkey routes
 	api.Post("/auth/passkey/register/begin", middleware.Protected(), authHandler.PasskeyRegisterBegin)
 	api.Post("/auth/passkey/register/finish", middleware.Protected(), authHandler.PasskeyRegisterFinish)
-	api.Post("/auth/passkey/login/begin", middleware.AuthRateLimiter(), authHandler.PasskeyLoginBegin)
-	api.Post("/auth/passkey/login/finish", middleware.AuthRateLimiter(), authHandler.PasskeyLoginFinish)
-	api.Post("/auth/passkey/signup/begin", middleware.AuthRateLimiter(), authHandler.PasskeySignupBegin)
-	api.Post("/auth/passkey/signup/finish", middleware.AuthRateLimiter(), authHandler.PasskeySignupFinish)
+	api.Post("/auth/passkey/login/begin", middleware.AuthRateLimiter(cfg.RateLimit), authHandler.PasskeyLoginBegin)
+	api.Post("/auth/passkey/login/finish", middleware.AuthRateLimiter(cfg.RateLimit), authHandler.PasskeyLoginFinish)
+	api.Post("/auth/passkey/signup/begin", middleware.AuthRateLimiter(cfg.RateLimit), authHandler.PasskeySignupBegin)
+	api.Post("/auth/passkey/signup/finish", middleware.AuthRateLimiter(cfg.RateLimit), authHandler.PasskeySignupFinish)
 
 	// Initialize handlers
-	roomHandler := handlers.NewRoomHandler(&cfg.LiveKit, &cfg.Chat, roomRepo)
+	uploadDir := cfg.Chat.Uploads.DiskDir
+	if uploadDir == "" {
+		uploadDir = "./data/uploads/chat"
+	}
+	var s3Deleter storage.ObjectDeleter
+	if cfg.Chat.Uploads.Backend == "s3" &&
+		cfg.Chat.Uploads.S3.Endpoint != "" &&
+		cfg.Chat.Uploads.S3.Bucket != "" &&
+		cfg.Chat.Uploads.S3.AccessKey != "" {
+		s3Deleter = storage.NewS3Deleter(cfg.Chat.Uploads.S3)
+	}
+	uploadTracker := storage.NewChatUploadTracker(database.GetDB(), uploadDir, s3Deleter)
+	lkClient := lkutil.NewClient(&cfg.LiveKit)
+	cleanupSvc := services.NewRoomCleanupService(roomRepo, lkClient, cfg.LiveKit.APIKey, cfg.LiveKit.APISecret, uploadTracker)
+	roomHandler := handlers.NewRoomHandler(&cfg.LiveKit, &cfg.Chat, roomRepo, settingsRepo, uploadTracker, cleanupSvc)
 
 	// Room routes
-	api.Post("/room/create", middleware.Protected(), roomHandler.CreateRoom)
+	api.Post("/room/create", middleware.Protected(), middleware.APIRateLimiter(cfg.RateLimit), roomHandler.CreateRoom)
 	api.Post("/room/join", middleware.Protected(), roomHandler.JoinRoom)
-	api.Post("/room/guest-join", middleware.GuestRateLimiter(), roomHandler.GuestJoinRoom)
+	api.Post("/room/guest-join", middleware.GuestRateLimiter(cfg.RateLimit), roomHandler.GuestJoinRoom)
 	api.Get("/room/list", middleware.Protected(), roomHandler.ListRooms)
 	api.Post("/room/:roomId/kick/:identity", middleware.Protected(), roomHandler.KickParticipant)
 	api.Post("/room/:roomId/mute/:identity", middleware.Protected(), roomHandler.MuteParticipant)
@@ -322,21 +355,24 @@ func run() error {
 	api.Post("/room/:roomId/stage/:identity/remove", middleware.Protected(), roomHandler.RemoveFromStage)
 	api.Put("/room/:roomId/settings", middleware.Protected(), roomHandler.UpdateSettings)
 	api.Delete("/room/:roomId", middleware.Protected(), roomHandler.DeleteRoom)
-	api.Post("/room/:roomId/chat/upload", middleware.Protected(), roomHandler.UploadChatImage)
+	api.Post("/room/:roomId/chat/upload", middleware.Protected(), middleware.APIRateLimiter(cfg.RateLimit), roomHandler.UploadChatImage)
 
 	// Serve disk-backed chat image uploads.
-	uploadDir := cfg.Chat.Uploads.DiskDir
-	if uploadDir == "" {
-		uploadDir = "./data/uploads/chat"
-	}
 	if err := os.MkdirAll(uploadDir, 0o755); err != nil {
 		log.Warn().Err(err).Str("dir", uploadDir).Msg("Could not create chat upload dir")
 	}
-	app.Static("/uploads/chat", uploadDir, fiber.Static{Browse: false})
+	app.Get("/uploads/chat/*", middleware.Protected(), func(c *fiber.Ctx) error {
+		path := c.Params("*")
+		if strings.Contains(path, "..") {
+			return c.Status(400).JSON(fiber.Map{"error": "Invalid path"})
+		}
+		return c.SendFile(filepath.Join(uploadDir, path))
+	})
 
 	// Initialize handlers
-	usersHandler := handlers.NewUsersHandler(userRepo, roomRepo)
+	usersHandler := handlers.NewUsersHandler(userRepo, roomRepo, passkeyRepo, prefsRepo, cleanupSvc)
 	adminHandler := handlers.NewAdminHandler(settingsRepo, inviteTokenRepo)
+	certHandler := handlers.NewCertHandler(cfg)
 
 	// Admin routes
 	adminGroup := api.Group("/admin",
@@ -346,22 +382,29 @@ func run() error {
 	adminGroup.Get("/users", usersHandler.ListUsers)
 	adminGroup.Put("/users/:id/status", usersHandler.UpdateUserStatus)
 	adminGroup.Put("/users/:id/accesses", usersHandler.UpdateUserAccesses)
+	adminGroup.Post("/users/:id/force-logout", usersHandler.ForceLogout)
+	adminGroup.Put("/users/:id/password", usersHandler.SetUserPassword)
 	adminGroup.Get("/rooms", roomHandler.AdminListRooms)
 	adminGroup.Post("/rooms/:roomId/token", roomHandler.AdminGenerateToken)
 	adminGroup.Delete("/rooms/:roomId", roomHandler.AdminCloseRoom)
+	adminGroup.Post("/rooms/:roomId/suspend", roomHandler.AdminSuspendRoom)
+	adminGroup.Post("/rooms/:roomId/reactivate", roomHandler.AdminReactivateRoom)
 	adminGroup.Put("/rooms/:roomId", roomHandler.AdminUpdateRoom)
 	adminGroup.Get("/online-count", roomHandler.GetOnlineCount)
 	adminGroup.Get("/livekit/stats", roomHandler.AdminLiveKitStats)
 	adminGroup.Get("/users/:id", usersHandler.GetUserDetail)
+	adminGroup.Delete("/users/:id", usersHandler.DeleteUser)
 	adminGroup.Get("/rooms/:roomId/participants", roomHandler.AdminGetRoomParticipants)
 	adminGroup.Post("/rooms/:roomId/participants/:identity/kick", roomHandler.AdminKickParticipant)
 	adminGroup.Post("/rooms/:roomId/participants/:identity/mute", roomHandler.AdminMuteParticipant)
 	api.Get("/auth/settings", adminHandler.GetPublicSettings)
+	api.Get("/cert", certHandler.GetCert)
 	adminGroup.Get("/settings", adminHandler.GetSettings)
 	adminGroup.Put("/settings", adminHandler.UpdateSettings)
 	adminGroup.Get("/invite-tokens", adminHandler.ListInviteTokens)
 	adminGroup.Post("/invite-tokens", adminHandler.CreateInviteToken)
 	adminGroup.Delete("/invite-tokens/:id", adminHandler.DeleteInviteToken)
+	adminGroup.Get("/cert-info", certHandler.GetCertInfo)
 
 	// ------------------------------
 	// Serve static files
@@ -420,6 +463,7 @@ func run() error {
 // @Produce json
 // @Success 200 {object} map[string]interface{}
 // @Router /health [get]
+// @Router /api/health [get]
 // Health check handler
 func healthCheck(c *fiber.Ctx) error {
 	log.Info().
@@ -439,6 +483,7 @@ func healthCheck(c *fiber.Ctx) error {
 // @Produce json
 // @Success 200 {object} map[string]interface{}
 // @Router /ready [get]
+// @Router /api/ready [get]
 // Readiness check handler
 func readinessCheck(c *fiber.Ctx) error {
 	log.Info().

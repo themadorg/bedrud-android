@@ -213,11 +213,11 @@ No secrets exposed.
 
 ### Notes
 
-- Create: auto-generates name if empty (`xxx-xxxx-xxx`). 409 on name conflict. Creator auto-added as approved participant + admin perms. 24h expiry.
+- Create: auto-generates name if empty (`xxx-xxxx-xxx`). 409 on name conflict. Strips `isPersistent` from settings (superadmin-only, set via AdminUpdateRoom). Creator auto-added as approved participant + admin perms. 24h expiry.
 - Join: looks up room by name. Adds participant. Generates LK token with user metadata. Rejects banned users.
 - Guest join: public rooms only. Restricted LK token. `guest-` prefixed identity.
 - Delete: creator or superadmin only.
-- Settings update: partial — only sent fields updated (pointer fields).
+- Settings update: partial — only sent fields updated (pointer fields). Preserves `isPersistent` (only changeable via AdminUpdateRoom).
 - Chat upload: MIME must be png/jpeg/gif/webp. SHA256 content hash filename. Max size from `chatUploadMaxBytes` config.
 
 ---
@@ -277,12 +277,19 @@ All require `Protected()`. All use path params `:roomId` + `:identity`.
 
 All routes: `Protected()` + `RequireAccess(superadmin)`. Prefix: `/api/admin`.
 
-| Method | Path | Handler | Req | Res |
-|--------|------|---------|-----|-----|
-| GET | `/api/admin/users` | `usersHandler.ListUsers` | query: `page`, `limit` | `{"users":[UserDetails],"total":int,"page":int,"limit":int}` |
-| GET | `/api/admin/users/:id` | `usersHandler.GetUserDetail` | — | `{"user":UserDetails,"rooms":[Room]}` |
-| PUT | `/api/admin/users/:id/status` | `usersHandler.UpdateUserStatus` | `{active: bool}` | `{"message":"User status updated successfully"}` |
-| PUT | `/api/admin/users/:id/accesses` | `usersHandler.UpdateUserAccesses` | `{accesses: []string}` | `{"message":"User accesses updated"}` |
+| Method | Path | Handler | Req | Res | Status |
+|--------|------|---------|-----|-----|--------|
+| GET | `/api/admin/users` | `usersHandler.ListUsers` | query: `page`, `limit` | `{"users":[UserDetails],"total":int,"page":int,"limit":int}` | 200 |
+| GET | `/api/admin/users/:id` | `usersHandler.GetUserDetail` | — | `{"user":UserDetails,"rooms":[Room]}` | 200 |
+| PUT | `/api/admin/users/:id/status` | `usersHandler.UpdateUserStatus` | `{active: bool}` | `{"message":"User status updated successfully"}` | 200 |
+| PUT | `/api/admin/users/:id/accesses` | `usersHandler.UpdateUserAccesses` | `{accesses: []string}` | `{"message":"User accesses updated"}` | 200 |
+| DELETE | `/api/admin/users/:id` | `usersHandler.DeleteUser` | — | `202 {"message":"User deletion started","rooms":N}` (async 3-phase, 202 Accepted) | 202 / 400 / 403 / 404 / 500 |
+
+### DeleteUser Notes
+- **Self-deletion guard**: 400 if the requesting superadmin targets their own ID.
+- **3-phase async goroutine**: Phase 1 (notify + stop LiveKit rooms, best-effort) → Phase 2 (hard-delete rooms from DB + chat upload cleanup, critical — abort on failure) → Phase 3 (delete passkeys, preferences, user record in transaction).
+- **202 Accepted**: Returns immediately. Rooms stopped and participants see "This room has been deleted by an administrator".
+- **Partial failure**: LiveKit failures are non-fatal (rooms auto-expire). DB room deletion failures abort the entire deletion (user stays intact).
 
 ### UserDetails DTO
 
@@ -309,7 +316,7 @@ All routes: `Protected()` + `RequireAccess(superadmin)`. Prefix: `/api/admin`.
 |--------|------|---------|-----|-----|
 | GET | `/api/admin/rooms` | `roomHandler.AdminListRooms` | query: `page`, `limit` | `{"rooms":[],"total":int,"page":int,"limit":int}` |
 | POST | `/api/admin/rooms/:roomId/close` | `roomHandler.AdminCloseRoom` | — | `{"status":"success"}` |
-| PUT | `/api/admin/rooms/:roomId` | `roomHandler.AdminUpdateRoom` | `{maxParticipants *int}` | `models.Room` |
+| PUT | `/api/admin/rooms/:roomId` | `roomHandler.AdminUpdateRoom` | `{maxParticipants *int, settings *AdminUpdateRoomSettingsInput}` | `models.Room` |
 | POST | `/api/admin/rooms/:roomId/token` | `roomHandler.AdminGenerateToken` | — | 501 `{"error":"not yet implemented"}` |
 | GET | `/api/admin/rooms/:roomId/participants` | `roomHandler.AdminGetRoomParticipants` | — | `{"participants":[...],"room":Room}` |
 | POST | `/api/admin/rooms/:roomId/participants/:identity/kick` | `roomHandler.AdminKickParticipant` | — | `{"status":"success"}` |
@@ -330,10 +337,36 @@ All routes: `Protected()` + `RequireAccess(superadmin)`. Prefix: `/api/admin`.
 }
 ```
 
+### AdminUpdateRoom Request Body
+
+```go
+{
+    maxParticipants *int                          // optional
+    settings        *AdminUpdateRoomSettingsInput // optional, merge-patched
+}
+
+// AdminUpdateRoomSettingsInput — all fields are *bool for merge semantics
+AdminUpdateRoomSettingsInput {
+    allowChat       *bool
+    allowVideo      *bool
+    allowAudio      *bool
+    requireApproval *bool
+    e2ee            *bool
+    isPersistent    *bool   // superadmin toggle for persistent room
+}
+```
+
+### AdminUpdateRoom Notes
+
+- Partial merge: only sent fields override existing room settings. Unsent fields unchanged.
+- `isPersistent` can only be set via this endpoint (superadmin-only).
+- After settings + maxParticipants update, the room is re-fetched from DB and returned.
+
 ### Admin Close vs Delete
 
 - `close`: removes from LK, sets `IsActive = false` in DB. Room record preserved.
-- No admin delete endpoint — close is the admin equivalent.
+- `DELETE /admin/rooms/:roomId` (normal delete): creator or superadmin. Removes from LK + DB.
+- `DELETE /api/admin/users/:id` (hard delete user): superadmin-only. 3-phase async: closes all user's rooms (LK + DB + chat upload files), then deletes user + passkeys + preferences.
 
 ---
 
@@ -513,6 +546,7 @@ type RoomSettings struct {
     AllowAudio      bool `json:"allowAudio"      default:true`
     RequireApproval bool `json:"requireApproval" default:false`
     E2EE            bool `json:"e2ee"            default:false`
+    IsPersistent    bool `json:"isPersistent"    default:false` // superadmin-only, skips idle cleanup
 }
 ```
 
@@ -665,6 +699,10 @@ type ChatAttachment struct {
 | InviteToken model | `internal/models/invite_token.go` |
 | UserPreferences model | `internal/models/user_preferences.go` |
 | ChatAttachment DTO | `internal/storage/chat_upload.go` |
+| ChatUploadTracker (Record + DeleteByRoom) | `internal/storage/chat_upload.go` |
+| ChatUpload model | `internal/models/chat_upload.go` |
+| Shared LiveKit helpers (NewClient, AuthContext, SendSystemMessage) | `internal/lkutil/lkutil.go` |
+| User handler (DeleteUser, Shutdown) | `internal/handlers/users.go` |
 
 ---
 

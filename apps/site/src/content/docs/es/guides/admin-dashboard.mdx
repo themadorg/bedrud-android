@@ -1,0 +1,280 @@
+---
+title: Panel de Administración
+description: Gestione usuarios, salas, configuración y tokens de invitación desde la interfaz web
+order: 35
+---
+
+El panel de administración proporciona una interfaz web para gestionar su instancia de Bedrud. Los superadmins pueden ver estadísticas del sistema, gestionar usuarios y salas, configurar ajustes de la instancia y generar tokens de invitación.
+
+## Requisitos Previos
+
+- **Acceso de superadmin:** Debe tener `superadmin` en el arreglo `accesses` de su usuario.
+- **Configuración inicial del admin:** Después de instalar Bedrud, cree un usuario y promuévalo mediante la CLI:
+
+```bash
+bedrud user create --email "admin@example.com" --password "securepassword" --name "Admin"
+bedrud user promote --email "admin@example.com"
+```
+
+No hay interfaz web ni API para crear el primer superadmin. Esto es intencional por seguridad.
+
+## Acceder al Panel de Administración
+
+Una vez que tenga acceso de superadmin, el panel de administración está disponible en `/dashboard/admin` en su aplicación web de Bedrud.
+
+**Navegación:**
+- La **barra lateral** muestra una sección "Admin" con enlaces a Resumen, Usuarios, Salas y Configuración. Esta sección solo es visible para superadmins.
+- El **menú desplegable de usuario** en la esquina superior derecha incluye un enlace "Panel de administración" con un icono de escudo.
+- Los usuarios sin permisos de administración que intenten visitar URLs `/dashboard/admin/*` son redirigidos automáticamente a `/dashboard`.
+
+---
+
+## Página de Resumen
+
+La página de resumen en `/dashboard/admin` proporciona un tablero con métricas clave del sistema.
+
+### Estadísticas del Sistema
+
+Las tarjetas muestran:
+- **Usuarios en Línea:** Total de participantes activos distintos en todas las salas
+- **Total de Salas:** Total de salas en la instancia
+- **Total de Usuarios:** Total de usuarios registrados
+
+### Estado del Certificado TLS
+
+Un indicador codificado por colores muestra el estado del certificado TLS de su servidor:
+
+| Estado | Color | Significado |
+|---|---|---|
+| Válido | Verde | El certificado es válido |
+| Próximo a Expirar | Ámbar | Expira en los próximos 30 días |
+| Expirado | Rojo | El certificado ha expirado |
+| No Configurado | Gris | TLS está deshabilitado |
+
+El estado del certificado se actualiza cada 5 minutos.
+
+### Gráficos
+
+- **Creación de Salas:** Gráfico de barras de salas creadas durante las últimas 8 semanas
+- **Registros Recientes:** Lista de los registros de usuario más recientes
+
+---
+
+## Gestión de Usuarios
+
+### Lista de Usuarios
+
+La lista de usuarios en `/dashboard/admin/users` muestra todos los usuarios registrados en una tabla con búsqueda y ordenación.
+
+**Columnas:**
+- **Nombre:** Nombre para mostrar del usuario
+- **Email:** Dirección de correo del usuario
+- **Proveedor:** Método de autenticación (local, google, github, guest, passkey)
+- **Rol:** Insignia de nivel de acceso. Muestra "Superadmin" para usuarios con acceso `superadmin`.
+- **Creado:** Fecha de registro
+- **Estado:** Alternar Activo/Baneado
+
+**Acciones:**
+- **Buscar:** Escriba en la barra de búsqueda para filtrar usuarios por nombre o email (del lado del cliente).
+- **Ordenar:** Haga clic en cualquier encabezado de columna para ordenar. Haga clic nuevamente para alternar ascendente/descendente.
+- **Paginación:** Controles de navegación para explorar listas grandes de usuarios.
+
+### Acciones de Usuario
+
+Cada fila de usuario incluye botones de acción rápida:
+
+- **Promover/Degradar:** Alternar entre los niveles de acceso `["user"]` y `["user", "superadmin"]`. Visible en la columna de nivel de acceso.
+- **Activo/Baneado:** Alternar el estado de la cuenta del usuario. Los usuarios baneados no pueden iniciar sesión ni renovar tokens.
+- **Ver Detalle:** Haga clic en la fila del usuario para abrir la vista de detalle.
+
+### Detalle de Usuario
+
+La página de detalle en `/dashboard/admin/users/:userId` muestra un perfil completo del usuario.
+
+**Información mostrada:**
+- Nombre del usuario, email, proveedor y fecha de registro
+- Insignia de nivel de acceso (superadmin/user)
+- Gráfico de actividad de creación de salas (historial de 8 semanas)
+- Lista de salas creadas por el usuario
+
+**Acciones:**
+- **Promover/Degradar:** Botón dedicado en el encabezado del detalle
+- **Eliminar Usuario:** Elimina permanentemente al usuario y todos sus datos. Requiere confirmación por email. El botón de eliminar está oculto para su propia cuenta (no puede eliminarse a sí mismo).
+
+> **La eliminación es permanente y asíncrona.** Eliminar un usuario también elimina todas sus salas, passkeys y preferencias. La solicitud retorna inmediatamente mientras la limpieza se ejecuta en segundo plano.
+
+---
+
+## Gestión de Salas
+
+### Lista de Salas
+
+La lista de salas en `/dashboard/admin/rooms` muestra todas las salas en la instancia.
+
+**Columnas:**
+- **Nombre de Sala:** Identificador de la sala
+- **Visibilidad:** Pública, privada o no listada
+- **Máx. Participantes:** Editable en línea — haga clic en el valor para cambiarlo
+- **Estado:** Activa o inactiva
+- **Creada:** Fecha de creación de la sala
+
+**Acciones:**
+- **Buscar:** Filtrar salas por nombre (del lado del cliente)
+- **Ordenar:** Haga clic en los encabezados de columna para ordenar
+- **Suspender:** Finalizar una llamada activa sin eliminar la sala
+- **Eliminar:** Cerrar permanentemente una sala con eliminación en cascada
+
+### Detalle de Sala
+
+La página de detalle en `/dashboard/admin/rooms/:roomId` proporciona visibilidad profunda de una sala.
+
+**Configuración de la Sala:**
+- Nombre de la sala, modo de visibilidad, máximo de participantes
+- **Alternar modo persistente:** Actívelo para evitar la limpieza automática de salas inactivas. Esto solo está disponible para superadmins — los creadores de salas no pueden cambiarlo.
+
+**Participantes en Vivo:**
+- Lista de participantes en tiempo real que se actualiza cada 3 segundos
+- Por participante: nombre, hora de ingreso, información de pistas (audio/video/compartir pantalla)
+- **Gráfico de bitrate:** Gráfico de bitrate en vivo para pistas de audio y video
+- **Expulsar:** Eliminar a cualquier participante de la sala
+- **Silenciar:** Silenciar las pistas de audio de cualquier participante
+
+---
+
+## Configuración del Sistema
+
+La página de configuración en `/dashboard/admin/settings` está organizada en 9 pestañas. Haga clic en "Guardar cambios" después de modificar cualquier pestaña (la pestaña General se guarda automáticamente al cambiar el modo de registro).
+
+### Pestaña General
+
+- **Modo de Registro:**
+  - **Abierto:** Cualquiera puede registrar una cuenta
+  - **Solo por Invitación:** Los nuevos usuarios deben proporcionar un token de invitación válido
+  - **Cerrado:** Sin nuevos registros — los usuarios existentes aún pueden iniciar sesión
+  - Los cambios se guardan automáticamente al cambiar de modo
+
+**Gestión de Tokens de Invitación (dentro de la pestaña General):**
+
+Los tokens controlan quién puede registrarse en modo Solo por Invitación.
+
+- **Generar Token:** Ingrese un email opcional para vincular el token a una dirección específica, y seleccione un período de expiración (24 horas, 72 horas, 7 días o 30 días).
+- **Lista de Tokens:** Muestra todos los tokens con su estado. Los tokens no utilizados tienen una insignia verde "Activo", los tokens usados muestran "Usado" en gris.
+- **Copiar Token:** Haga clic en el botón de copiar para copiar el valor del token de 32 caracteres a su portapapeles.
+- **Revocar:** Elimine un token para evitar que sea utilizado.
+
+### Pestaña de Autenticación
+
+- **Passkeys:** Activar/desactivar autenticación sin contraseña FIDO2/WebAuthn
+- **Proveedores OAuth:** Configure OAuth de Google, GitHub y Twitter:
+  - Client ID
+  - Client Secret
+  - Redirect URL
+
+Cada proveedor tiene su propia tarjeta de configuración. Habilite un proveedor completando los tres campos.
+
+### Pestaña LiveKit
+
+- **LiveKit Externo:** Active para usar un servidor LiveKit externo en lugar del incorporado
+- **Host:** Host y puerto del servidor LiveKit (ej., `127.0.0.1:7880`)
+- **API Key:** Clave API del servidor LiveKit
+- **API Secret:** Secreto API del servidor LiveKit
+
+### Pestaña Servidor
+
+- **Puerto:** Puerto del servidor HTTP (predeterminado: `80`)
+- **Host:** Nombre del host del servidor
+- **Dominio:** Dominio del servidor
+- **Email:** Correo administrativo (usado para el registro de certificados ACME)
+- **TLS:** Habilitar HTTPS con archivos de certificado
+- **ACME:** Habilitar gestión automática de certificados Let's Encrypt
+- **Proxy Inverso:** Indicar que el servidor está detrás de un proxy (afecta la detección de IP del cliente)
+- **Rutas de Certificado:** Rutas del archivo de certificado y clave (para configuración TLS manual)
+- **Estado del Certificado:** Indicador en línea que muestra la salud actual del certificado TLS
+
+### Pestaña CORS
+
+- **Orígenes Permitidos:** Lista separada por comas de orígenes CORS
+- **Encabezados Permitidos:** Lista separada por comas de encabezados de solicitud permitidos
+- **Métodos Permitidos:** Lista separada por comas de métodos HTTP permitidos
+- **Permitir Credenciales:** Alternar para incluir credenciales en solicitudes de origen cruzado
+- **Edad Máxima:** Duración de caché para respuestas preflight CORS (segundos)
+
+### Pestaña de Límites de Salas
+
+Controla cuántas salas activas puede crear un solo usuario:
+
+- **Máx. de Salas por Usuario:** Número máximo de salas activas que un usuario no superadmin puede crear (predeterminado: 100, 0 = ilimitado). Los superadmins omiten este límite.
+
+### Pestaña de Cuotas de Carga
+
+Controla los límites de almacenamiento para las imágenes cargadas en el chat:
+
+- **Máx. de Bytes de Carga por Usuario:** Cuota de almacenamiento por usuario en todas las salas (predeterminado: 524288000 = 500 MB, 0 = ilimitado). Los superadmins omiten este límite.
+- **Umbral de Disco Global:** Límite total de almacenamiento para todos los usuarios. Cuando se excede, todas las cargas se rechazan hasta que un administrador libere espacio (predeterminado: 0 = ilimitado). Este límite aplica a todos, incluidos los superadmins.
+
+### Pestaña de Carga de Chat
+
+Configure cómo se almacenan las imágenes cargadas en el chat:
+
+- **Backend:** `disk` (sistema de archivos local), `s3` (almacenamiento compatible con S3) o `inline` (incrustado en base64)
+- **Bytes Máximos de Carga:** Tamaño máximo de archivo por carga
+- **Máximo en Línea:** Tamaño máximo para cargas inline/base64
+- **Directorio de Disco:** Directorio local para cargas del backend `disk`
+
+**Configuración S3 (cuando el backend es `s3`):**
+- Endpoint, Bucket, Región
+- Access Key, Secret Key
+- URL Pública
+
+### Pestaña de Registro
+
+- **Nivel de Registro:** `trace`, `debug`, `info`, `warn` o `error`. Útil para depuración — cambie a `debug` para ver registros detallados, luego vuelva a `info` para producción.
+
+---
+
+## Solución de Problemas
+
+### "El panel de administración no está visible"
+
+**Síntoma:** La sección Admin no aparece en la barra lateral y el enlace "Panel de administración" falta en el menú desplegable de usuario.
+
+**Causa:** El usuario que ha iniciado sesión no tiene `superadmin` en su arreglo `accesses`.
+
+**Solución:** Use la CLI para promover al usuario:
+```bash
+bedrud user promote --email "su-email@ejemplo.com"
+```
+Luego cierre sesión y vuelva a iniciarla para obtener un nuevo JWT con los niveles de acceso actualizados.
+
+### "La configuración no se guarda"
+
+**Síntoma:** Guardar la configuración retorna éxito, pero los valores secretos aparecen sin cambios.
+
+**Causa:** El servidor preserva los valores secretos existentes cuando usted envía `"••••••••"` o una cadena vacía en la solicitud de actualización. Esto es por diseño — evita sobrescribir accidentalmente secretos cuando solo está cambiando campos no secretos.
+
+**Solución:** Envíe el valor secreto real (no el marcador de posición enmascarado) en la solicitud de actualización.
+
+### "No puedo eliminar mi propia cuenta"
+
+**Síntoma:** El botón de eliminar está oculto en su propia página de detalle de usuario, o la API devuelve un error 400.
+
+**Causa:** La auto-eliminación está bloqueada por seguridad. No puede eliminar la cuenta con la que ha iniciado sesión actualmente.
+
+**Solución:** Haga que otro superadmin elimine la cuenta, o use la CLI como un usuario diferente.
+
+### "Redirigido al panel al visitar una URL de administración"
+
+**Síntoma:** Visitar `/dashboard/admin` directamente redirige a `/dashboard`.
+
+**Causa:** La ruta de guardia de administración verifica el arreglo `accesses` de su JWT. Si falta `superadmin`, la guardia redirige.
+
+**Solución:** Verifique que su cuenta tenga acceso de superadmin. Si su acceso fue cambiado recientemente, cierre sesión y vuelva a iniciarla para refrescar su JWT.
+
+---
+
+## Véase También
+
+- [API de Administración](/es/docs/api/admin) — referencia completa de la API para todos los endpoints de administración
+- [Autenticación](/es/docs/backend/authentication) — niveles de acceso y sistema de roles
+- [Configuración](/es/docs/getting-started/configuration) — referencia de configuración de config.yaml
+- [Inicio Rápido](/es/docs/getting-started/quickstart) — guía de configuración inicial del primer admin

@@ -8,7 +8,10 @@ import {
   Mic,
   MicOff,
   Monitor,
+  Pin,
+  Power,
   RefreshCw,
+  Trash2,
   Users,
   UserX,
   Video,
@@ -45,7 +48,7 @@ interface RoomInfo {
   isActive: boolean
   maxParticipants: number
   createdAt: string
-  settings?: { allowChat: boolean; allowVideo: boolean; allowAudio: boolean; e2ee: boolean }
+  settings?: { allowChat: boolean; allowVideo: boolean; allowAudio: boolean; e2ee: boolean; isPersistent?: boolean }
 }
 
 function formatBitrate(bps: number) {
@@ -87,6 +90,8 @@ function RoomDetailPage() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const [confirmKick, setConfirmKick] = useState<string | null>(null)
+  const [confirmSuspend, setConfirmSuspend] = useState(false)
+  const [confirmDelete, setConfirmDelete] = useState(false)
 
   // Rolling bitrate history — stored in a ref so appending doesn't retrigger queries
   const historyRef = useRef<BitratePoint[]>([])
@@ -130,6 +135,39 @@ function RoomDetailPage() {
     },
   })
 
+  const suspendRoom = useMutation({
+    mutationFn: () => api.post(`/api/admin/rooms/${roomId}/suspend`, {}),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'room', roomId, 'participants'] })
+      setConfirmSuspend(false)
+    },
+  })
+
+  const deleteRoom = useMutation({
+    mutationFn: () => api.delete(`/api/admin/rooms/${roomId}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'rooms'], exact: false })
+      navigate({ to: '/dashboard/admin/rooms' })
+    },
+  })
+
+  const togglePersistent = useMutation({
+    mutationFn: (isPersistent: boolean) => {
+      const s = room?.settings
+      if (!s) throw new Error('no room settings')
+      return api.put(`/api/admin/rooms/${roomId}`, {
+        settings: {
+          allowChat: s.allowChat,
+          allowVideo: s.allowVideo,
+          allowAudio: s.allowAudio,
+          e2ee: s.e2ee,
+          isPersistent,
+        },
+      })
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin', 'room', roomId, 'participants'] }),
+  })
+
   const mute = useMutation({
     mutationFn: (identity: string) => api.post(`/api/admin/rooms/${roomId}/participants/${identity}/mute`, {}),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin', 'room', roomId, 'participants'] }),
@@ -165,12 +203,13 @@ function RoomDetailPage() {
   }
 
   return (
-    <div className="mx-auto max-w-4xl space-y-6">
+    <div className="mx-auto max-w-5xl space-y-6 px-4">
       {/* Back + header */}
       <div className="flex items-center gap-3">
         <button
+          type="button"
           onClick={() => navigate({ to: '/dashboard/admin/rooms' })}
-          className="p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+          className="p-2 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
         >
           <ArrowLeft className="h-4 w-4" />
         </button>
@@ -182,8 +221,9 @@ function RoomDetailPage() {
           </p>
         </div>
         <button
+          type="button"
           onClick={() => queryClient.invalidateQueries({ queryKey: ['admin', 'room', roomId, 'participants'] })}
-          className="p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+          className="p-2 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
           title="Refresh now"
         >
           <RefreshCw className="h-4 w-4" />
@@ -192,7 +232,7 @@ function RoomDetailPage() {
 
       {/* Room meta cards */}
       {room && (
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           {[
             { label: 'Participants', value: participants.length, icon: Users, color: 'var(--primary)' },
             {
@@ -214,7 +254,7 @@ function RoomDetailPage() {
               color: room.isPublic ? 'var(--primary)' : 'var(--sky-700)',
             },
           ].map(({ label, value, icon: Icon, color }) => (
-            <div key={label} className="border p-4" style={{ borderColor: `${color}25`, background: `${color}07` }}>
+            <div key={label} className="border p-5" style={{ borderColor: `${color}25`, background: `${color}07` }}>
               <div className="flex items-center justify-between gap-2">
                 <div>
                   <p className="text-xl font-bold tracking-tight" style={{ color }}>
@@ -226,6 +266,78 @@ function RoomDetailPage() {
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Room actions — suspend / delete */}
+      {room && (
+        <div className="flex items-center gap-3">
+          {room.isActive ? (
+            confirmSuspend ? (
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => suspendRoom.mutate()}
+                  disabled={suspendRoom.isPending}
+                  className="inline-flex items-center gap-2 rounded-md bg-amber-500 px-4 py-2 text-sm font-medium text-white transition-opacity hover:opacity-80 disabled:opacity-50"
+                >
+                  <Power className="h-4 w-4" />
+                  Confirm Suspend
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setConfirmSuspend(false)}
+                  className="px-2 py-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  ×
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setConfirmSuspend(true)}
+                className="inline-flex items-center gap-2 rounded-md border border-amber-500/30 bg-amber-500/10 px-4 py-2 text-sm font-medium text-amber-600 transition-colors hover:bg-amber-500/20"
+              >
+                <Power className="h-4 w-4" />
+                Suspend Room
+              </button>
+            )
+          ) : (
+            <span className="inline-flex items-center gap-2 rounded-md border border-border bg-muted px-4 py-2 text-sm font-medium text-muted-foreground">
+              <Power className="h-4 w-4" />
+              Suspended
+            </span>
+          )}
+
+          {confirmDelete ? (
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => deleteRoom.mutate()}
+                disabled={deleteRoom.isPending}
+                className="inline-flex items-center gap-2 rounded-md bg-destructive px-4 py-2 text-sm font-medium text-destructive-foreground transition-opacity hover:opacity-80 disabled:opacity-50"
+              >
+                <Trash2 className="h-4 w-4" />
+                Confirm Delete
+              </button>
+              <button
+                type="button"
+                onClick={() => setConfirmDelete(false)}
+                className="px-2 py-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+              >
+                ×
+              </button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setConfirmDelete(true)}
+              className="inline-flex items-center gap-2 rounded-md border border-destructive/30 bg-destructive/10 px-4 py-2 text-sm font-medium text-destructive transition-colors hover:bg-destructive/20"
+            >
+              <Trash2 className="h-4 w-4" />
+              Delete Room
+            </button>
+          )}
         </div>
       )}
 
@@ -349,7 +461,7 @@ function RoomDetailPage() {
               return (
                 <div
                   key={p.sid}
-                  className="flex flex-wrap items-center gap-3 px-4 py-3 sm:flex-nowrap sm:gap-4 sm:px-5 sm:py-4 hover:bg-muted/20 transition-colors"
+                  className="flex flex-wrap items-center gap-3 px-4 py-3.5 sm:flex-nowrap sm:gap-4 sm:px-5 sm:py-4 hover:bg-muted/20 transition-colors"
                 >
                   {/* Avatar */}
                   <div
@@ -398,6 +510,7 @@ function RoomDetailPage() {
                   <div className="flex items-center gap-1 shrink-0">
                     {/* Mute */}
                     <button
+                      type="button"
                       onClick={() => mute.mutate(p.identity)}
                       disabled={mute.isPending || audioTracks.every((t) => t.muted)}
                       className="p-1.5 text-muted-foreground transition-colors hover:bg-amber-500/10 hover:text-amber-500 disabled:opacity-30 disabled:cursor-not-allowed"
@@ -410,6 +523,7 @@ function RoomDetailPage() {
                     {confirmKick === p.identity ? (
                       <div className="flex items-center gap-1">
                         <button
+                          type="button"
                           onClick={() => kick.mutate(p.identity)}
                           disabled={kick.isPending}
                           className="px-2 py-1 text-xs font-semibold text-white"
@@ -418,6 +532,7 @@ function RoomDetailPage() {
                           Kick
                         </button>
                         <button
+                          type="button"
                           onClick={() => setConfirmKick(null)}
                           className="px-1.5 py-1 text-xs text-muted-foreground hover:text-foreground"
                         >
@@ -426,6 +541,7 @@ function RoomDetailPage() {
                       </div>
                     ) : (
                       <button
+                        type="button"
                         onClick={() => setConfirmKick(p.identity)}
                         className="p-1.5 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
                         title="Kick participant"
@@ -454,7 +570,7 @@ function RoomDetailPage() {
             <p className="text-sm font-semibold">Room configuration</p>
           </div>
           <div
-            className="grid grid-cols-2 sm:grid-cols-4 gap-0 divide-x divide-y"
+            className="grid grid-cols-2 sm:grid-cols-5 gap-0 divide-x divide-y"
             style={{ borderColor: 'var(--border)' }}
           >
             {[
@@ -463,12 +579,30 @@ function RoomDetailPage() {
               { label: 'Audio', enabled: room.settings.allowAudio },
               { label: 'E2EE', enabled: room.settings.e2ee },
             ].map(({ label, enabled }) => (
-              <div key={label} className="flex flex-col items-center gap-1 py-4">
+              <div key={label} className="flex flex-col items-center gap-1 py-5">
                 <span className="h-2 w-2 rounded-full" style={{ background: enabled ? '#10b981' : '#ef4444' }} />
                 <p className="text-xs font-medium">{label}</p>
                 <p className="text-[10px] text-muted-foreground">{enabled ? 'allowed' : 'disabled'}</p>
               </div>
             ))}
+            <button
+              type="button"
+              onClick={() => togglePersistent.mutate(!room.settings!.isPersistent)}
+              disabled={togglePersistent.isPending}
+              className="flex flex-col items-center gap-1 py-5 transition-colors hover:bg-muted/30 disabled:opacity-50"
+              title={
+                room.settings.isPersistent
+                  ? 'Room stays active during idle periods'
+                  : 'Room will be deactivated when idle'
+              }
+            >
+              <Pin
+                className="h-2 w-2"
+                style={{ color: room.settings.isPersistent ? 'var(--primary)' : 'var(--muted-foreground)' }}
+              />
+              <p className="text-xs font-medium">Persistent</p>
+              <p className="text-[10px] text-muted-foreground">{room.settings.isPersistent ? 'on' : 'off'}</p>
+            </button>
           </div>
         </div>
       )}

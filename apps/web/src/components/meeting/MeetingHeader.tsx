@@ -36,14 +36,16 @@ export function MeetingHeader({ meetId }: MeetingHeaderProps) {
             display: 'flex',
             alignItems: 'center',
             gap: 5,
-            background: 'color-mix(in oklab, var(--primary) 18%, transparent)',
-            border: '1px solid color-mix(in oklab, var(--primary) 35%, transparent)',
+            background: 'color-mix(in oklab, var(--accent-400) 20%, transparent)',
+            border: '1px solid color-mix(in oklab, var(--accent-400) 40%, transparent)',
             borderRadius: 7,
             padding: '3px 9px',
           }}
         >
-          <Radio size={11} style={{ color: 'var(--sky-400)' }} />
-          <span style={{ color: 'var(--sky-300)', fontSize: 11, fontWeight: 700, letterSpacing: '0.08em' }}>LIVE</span>
+          <Radio size={11} style={{ color: 'var(--accent-400)' }} />
+          <span style={{ color: 'var(--accent-300)', fontSize: 11, fontWeight: 700, letterSpacing: '0.08em' }}>
+            LIVE
+          </span>
         </div>
         <span style={{ color: 'rgba(255,255,255,0.25)', fontSize: 13 }}>·</span>
         <span style={{ color: 'rgba(255,255,255,0.55)', fontSize: 12, fontFamily: 'monospace' }}>{meetId}</span>
@@ -66,7 +68,14 @@ export function MeetingHeader({ meetId }: MeetingHeaderProps) {
               style={{ width: 6, height: 6, borderRadius: '50%', background: '#22c55e', display: 'inline-block' }}
             />
           ) : (
-            <svg className="meet-connecting" width="10" height="10" viewBox="0 0 10 10">
+            <svg
+              className="meet-connecting"
+              width="10"
+              height="10"
+              viewBox="0 0 10 10"
+              role="img"
+              aria-label="Connecting"
+            >
               <circle cx="5" cy="5" r="4" fill="none" stroke="#eab308" strokeWidth="1.5" strokeDasharray="6 4" />
             </svg>
           )}

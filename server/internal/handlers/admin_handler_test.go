@@ -196,7 +196,7 @@ func TestAdminHandler_DeleteInviteToken_Success(t *testing.T) {
 	tokenID, _ := created["id"].(string)
 
 	// Verify it exists
-	tokens, _ := inviteTokenRepo.List()
+	tokens, _, _ := inviteTokenRepo.List(repository.PaginationParams{Page: 1, Limit: 50})
 	if len(tokens) == 0 {
 		t.Fatal("expected at least one token before delete")
 	}

@@ -156,7 +156,7 @@ bedrud uninstall
 Bedrud veritabanındaki kullanıcıları yönetir.
 
 ```bash
-bedrud user <alt-komut> [--config <yol>] <bayraklar>
+bedrud user [--config <yol>] <alt-komut> [bayraklar]
 ```
 
 | Genel Bayrak | Varsayılan                   | Açıklama                                     |
@@ -168,7 +168,7 @@ bedrud user <alt-komut> [--config <yol>] <bayraklar>
 Yerel kimlik doğrulama ile yeni bir kullanıcı oluşturur (bcrypt ile hashlenmiş parola).
 
 ```bash
-bedrud user create --email <e-posta> --password <parola> --name <ad>
+bedrud user [--config <yol>] create --email <e-posta> --password <parola> --name <ad>
 ```
 
 **Gerekli bayraklar:**
@@ -183,7 +183,7 @@ bedrud user create --email <e-posta> --password <parola> --name <ad>
 Bir kullanıcıyı e-posta adresine göre siler.
 
 ```bash
-bedrud user delete --email <e-posta>
+bedrud user [--config <yol>] delete --email <e-posta>
 ```
 
 #### `promote`
@@ -191,7 +191,7 @@ bedrud user delete --email <e-posta>
 Bir kullanıcıya `superadmin` erişimi verir.
 
 ```bash
-bedrud user promote --email <e-posta>
+bedrud user [--config <yol>] promote --email <e-posta>
 ```
 
 #### `demote`
@@ -199,10 +199,51 @@ bedrud user promote --email <e-posta>
 Bir kullanıcıdan `superadmin` erişimini kaldırır (`user` seviyesine döner).
 
 ```bash
-bedrud user demote --email <e-posta>
+bedrud user [--config <yol>] demote --email <e-posta>
 ```
 
 **Uygulama:** `server/internal/usercli/usercli.go`
+
+---
+
+### `cert`
+
+TLS sertifikalarını yönetin. Yalnızca kendi imzalı sertifikalar kullanılırken geçerlidir (`bedrud install --self-signed` tarafından oluşturulur).
+
+```bash
+bedrud cert [--config <path>] <subcommand>
+```
+
+| Genel Bayrak | Varsayılan                  | Açıklama                               |
+|--------------|-----------------------------|----------------------------------------|
+| `--config`   | `/etc/bedrud/config.yaml`   | Bedrud yapılandırma dosyasının yolu    |
+| `--algo`     | `""`                         | Anahtar algoritması: ed25519, ecdsa256, rsa2048, rsa4096 (varsayılan: mevcut sertifikadan algıla) |
+
+#### `renew`
+
+Kendi imzalı TLS sertifikasını elle yenileyin. Mevcut sertifikanın anahtar algoritmasını algılar ve aynı türle yeniden oluşturur (varsayılan: Ed25519). Yeni sertifika 1825 gün (~5 yıl) geçerlidir.
+
+```bash
+bedrud cert renew [--config <path>]
+```
+
+Sunucu ayrıca, sürenin dolmasına 30 günden az kaldığında, yerleşik zamanlayıcısı aracılığıyla sertifikayı günlük olarak otomatik yeniler. Bu komut, manuel veya olağan dışı yenileme içindir.
+
+**SAN'ler:** Sunucu yapılandırmasından türetilir — `domain` (ayarlanmışsa), artı `localhost`, `127.0.0.1` ve `::1`.
+
+**Uygulama:** `server/internal/utils/tls.go` (`RenewSelfSignedCert`)
+
+#### `info`
+
+TLS sertifika meta verilerini stdout'a yazdırın.
+
+```bash
+bedrud cert info [--config <path>]
+```
+
+**Çıktı alanları:** subject, issuer, notBefore, notAfter, daysRemaining, status (valid/expiring/error), SAN'ler.
+
+**Uygulama:** `server/internal/utils/tls.go` (`ValidateTLSCertPair`)
 
 ---
 
@@ -268,19 +309,19 @@ bedrud install --fresh --domain example.com --email admin@example.com
 
 ```bash
 # İlk yönetici kullanıcısını oluştur
-bedrud user create --email admin@example.com --password secret123 --name "Admin User"
+bedrud user [--config <yol>] create --email admin@example.com --password secret123 --name "Admin User"
 
 # Süper yönetici erişimi ver
-bedrud user promote --email admin@example.com
+bedrud user [--config <yol>] promote --email admin@example.com
 
 # Normal kullanıcı oluştur
-bedrud user create --email user@example.com --password pass456 --name "Regular User"
+bedrud user [--config <yol>] create --email user@example.com --password pass456 --name "Regular User"
 
 # Bir kullanıcıyı kaldır
-bedrud user delete --email user@example.com
+bedrud user [--config <yol>] delete --email user@example.com
 
 # Yönetici erişimini kaldır
-bedrud user demote --email admin@example.com
+bedrud user [--config <yol>] demote --email admin@example.com
 ```
 
 ---

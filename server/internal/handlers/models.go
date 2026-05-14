@@ -1,5 +1,11 @@
 package handlers
 
+// Password length constraints shared across auth and admin handlers.
+const (
+	MinPasswordLength = 12
+	MaxPasswordLength = 128
+)
+
 // ErrorResponse represents an error response
 type ErrorResponse struct {
 	Error string `json:"error" example:"Error message"`

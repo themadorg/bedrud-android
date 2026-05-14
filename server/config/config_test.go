@@ -1,6 +1,10 @@
 package config
 
-import "testing"
+import (
+	"testing"
+
+	"gopkg.in/yaml.v3"
+)
 
 func TestDatabaseConfig_GetDSN(t *testing.T) {
 	cfg := &DatabaseConfig{
@@ -122,7 +126,238 @@ func TestCorsConfig_Fields(t *testing.T) {
 	if c.AllowedOrigins != "http://localhost:3000" {
 		t.Fatalf("unexpected AllowedOrigins: %s", c.AllowedOrigins)
 	}
+	if !c.AllowCredentials {
+		t.Fatal("expected AllowCredentials true")
+	}
+	if c.ExposeHeaders != "X-Custom" {
+		t.Fatalf("unexpected ExposeHeaders: %s", c.ExposeHeaders)
+	}
 	if c.MaxAge != 3600 {
 		t.Fatalf("expected MaxAge 3600, got %d", c.MaxAge)
+	}
+}
+
+// TestParse_UserConfig verifies that the exact config the user runs parses
+// without errors — this is the backward-compat test for string-typed numerics.
+func TestParse_UserConfig(t *testing.T) {
+	y := `
+server:
+  port: "8443"
+  httpPort: "8440"
+  enableTLS: true
+  certFile: "crt.pem"
+  keyFile: "key.pem"
+  host: "192.168.70.159"
+  readTimeout: 30
+  writeTimeout: 30
+
+database:
+  type: "sqlite"
+  path: "./bedrud-local.db"
+
+logger:
+  level: "debug"
+  outputPath: ""
+
+livekit:
+  host: "https://192.168.70.159:8443/livekit"
+  internalHost: "http://127.0.0.1:7880"
+  apiKey: "devkey"
+  apiSecret: "ce66a6fc4e6c0c961202035f58f710f377f42d9d8416e670a62a1b3515d6aec63bd23e56d1836aca630d499067022e7e"
+
+auth:
+  jwtSecret: "6615786f478eb6a3a2e57afb6b10886b38a3b38eea7834180323f07339e512cb"
+  sessionSecret: "6615786f478eb6a3a2e57afb6b10886b38a3b38eea7834180323f07339e512cb"
+  tokenDuration: 24
+  frontendURL: "https://192.168.70.159:8443"
+  google:
+    clientId: "CHANGE_ME_GOOGLE_CLIENT_ID"
+    clientSecret: "CHANGE_ME_GOOGLE_CLIENT_SECRET"
+    redirectUrl: "http://localhost:8090/api/auth/google/callback"
+  github:
+    clientId: "CHANGE_ME_GITHUB_CLIENT_ID"
+    clientSecret: "CHANGE_ME_GITHUB_CLIENT_SECRET"
+    redirectUrl: "http://localhost:8090/api/auth/github/callback"
+  twitter:
+    clientId: ""
+    clientSecret: ""
+    redirectUrl: "http://localhost:8090/api/auth/twitter/callback"
+
+cors:
+  allowedOrigins: "https://192.168.70.159:8443,http://192.168.70.159:8440,http://localhost:8090,http://localhost:3000,http://localhost:5173"
+  allowedHeaders: "Origin, Content-Type, Accept, Authorization"
+  allowedMethods: "GET, POST, PUT, DELETE, OPTIONS"
+  allowCredentials: true
+`
+	var cfg Config
+	if err := yaml.Unmarshal([]byte(y), &cfg); err != nil {
+		t.Fatalf("failed to parse user config: %v", err)
+	}
+
+	tests := []struct {
+		name string
+		got  any
+		want any
+	}{
+		{"server.port", cfg.Server.Port, "8443"},
+		{"server.httpPort", cfg.Server.HTTPPort, "8440"},
+		{"server.host", cfg.Server.Host, "192.168.70.159"},
+		{"server.readTimeout", cfg.Server.ReadTimeout.Int(), 30},
+		{"server.writeTimeout", cfg.Server.WriteTimeout.Int(), 30},
+		{"server.enableTLS", cfg.Server.EnableTLS, true},
+		{"server.certFile", cfg.Server.CertFile, "crt.pem"},
+		{"server.keyFile", cfg.Server.KeyFile, "key.pem"},
+		{"database.type", cfg.Database.Type, "sqlite"},
+		{"database.path", cfg.Database.Path, "./bedrud-local.db"},
+		{"livekit.host", cfg.LiveKit.Host, "https://192.168.70.159:8443/livekit"},
+		{"livekit.apiKey", cfg.LiveKit.APIKey, "devkey"},
+		{"auth.tokenDuration", cfg.Auth.TokenDuration.Int(), 24},
+		{"auth.frontendURL", cfg.Auth.FrontendURL, "https://192.168.70.159:8443"},
+		{"cors.allowCredentials", cfg.Cors.AllowCredentials, true},
+	}
+	for _, tt := range tests {
+		if tt.got != tt.want {
+			t.Errorf("field %s = %v, want %v", tt.name, tt.got, tt.want)
+		}
+	}
+}
+
+// TestParse_StringNumerics asserts that numeric fields accept quoted strings.
+// This is the core backward-compat requirement — the user's binary failed
+// because the old uint32 fields rejected "7880".
+func TestParse_StringNumerics(t *testing.T) {
+	y := `
+server:
+  readTimeout: "30"
+  writeTimeout: "30"
+
+auth:
+  tokenDuration: "24"
+
+cors:
+  maxAge: "3600"
+
+chat:
+  uploads:
+    maxBytes: "10485760"
+    inlineMaxBytes: "512000"
+`
+	var cfg Config
+	if err := yaml.Unmarshal([]byte(y), &cfg); err != nil {
+		t.Fatalf("failed to parse string numerics: %v", err)
+	}
+
+	if cfg.Server.ReadTimeout.Int() != 30 {
+		t.Fatalf("ReadTimeout: got %d, want 30", cfg.Server.ReadTimeout.Int())
+	}
+	if cfg.Server.WriteTimeout.Int() != 30 {
+		t.Fatalf("WriteTimeout: got %d, want 30", cfg.Server.WriteTimeout.Int())
+	}
+	if cfg.Auth.TokenDuration.Int() != 24 {
+		t.Fatalf("TokenDuration: got %d, want 24", cfg.Auth.TokenDuration.Int())
+	}
+	if cfg.Cors.MaxAge.Int() != 3600 {
+		t.Fatalf("MaxAge: got %d, want 3600", cfg.Cors.MaxAge.Int())
+	}
+	if cfg.Chat.Uploads.MaxBytes.Int64() != 10485760 {
+		t.Fatalf("MaxBytes: got %d, want 10485760", cfg.Chat.Uploads.MaxBytes.Int64())
+	}
+	if cfg.Chat.Uploads.InlineMaxBytes.Int64() != 512000 {
+		t.Fatalf("InlineMaxBytes: got %d, want 512000", cfg.Chat.Uploads.InlineMaxBytes.Int64())
+	}
+}
+
+// TestParse_IntNumerics asserts that unquoted ints still work.
+func TestParse_IntNumerics(t *testing.T) {
+	y := `
+server:
+  readTimeout: 30
+  writeTimeout: 30
+
+auth:
+  tokenDuration: 24
+
+cors:
+  maxAge: 3600
+
+chat:
+  uploads:
+    maxBytes: 10485760
+    inlineMaxBytes: 512000
+`
+	var cfg Config
+	if err := yaml.Unmarshal([]byte(y), &cfg); err != nil {
+		t.Fatalf("failed to parse int numerics: %v", err)
+	}
+
+	if cfg.Server.ReadTimeout.Int() != 30 {
+		t.Fatalf("ReadTimeout: got %d, want 30", cfg.Server.ReadTimeout.Int())
+	}
+	if cfg.Server.WriteTimeout.Int() != 30 {
+		t.Fatalf("WriteTimeout: got %d, want 30", cfg.Server.WriteTimeout.Int())
+	}
+	if cfg.Auth.TokenDuration.Int() != 24 {
+		t.Fatalf("TokenDuration: got %d, want 24", cfg.Auth.TokenDuration.Int())
+	}
+	if cfg.Cors.MaxAge.Int() != 3600 {
+		t.Fatalf("MaxAge: got %d, want 3600", cfg.Cors.MaxAge.Int())
+	}
+	if cfg.Chat.Uploads.MaxBytes.Int64() != 10485760 {
+		t.Fatalf("MaxBytes: got %d, want 10485760", cfg.Chat.Uploads.MaxBytes.Int64())
+	}
+	if cfg.Chat.Uploads.InlineMaxBytes.Int64() != 512000 {
+		t.Fatalf("InlineMaxBytes: got %d, want 512000", cfg.Chat.Uploads.InlineMaxBytes.Int64())
+	}
+}
+
+// TestParse_MixedNumerics confirms mixing quoted and unquoted works.
+func TestParse_MixedNumerics(t *testing.T) {
+	y := `
+server:
+  readTimeout: "30"
+  writeTimeout: 30
+`
+	var cfg Config
+	if err := yaml.Unmarshal([]byte(y), &cfg); err != nil {
+		t.Fatalf("failed to parse mixed numerics: %v", err)
+	}
+
+	if cfg.Server.ReadTimeout.Int() != 30 {
+		t.Fatalf("ReadTimeout: got %d, want 30", cfg.Server.ReadTimeout.Int())
+	}
+	if cfg.Server.WriteTimeout.Int() != 30 {
+		t.Fatalf("WriteTimeout: got %d, want 30", cfg.Server.WriteTimeout.Int())
+	}
+}
+
+// TestParse_EmptyStringNumerics verifies empty strings resolve to 0.
+func TestParse_EmptyStringNumerics(t *testing.T) {
+	y := `
+server:
+  readTimeout: ""
+  writeTimeout: ""
+`
+	var cfg Config
+	if err := yaml.Unmarshal([]byte(y), &cfg); err != nil {
+		t.Fatalf("failed to parse empty string numerics: %v", err)
+	}
+
+	if cfg.Server.ReadTimeout.Int() != 0 {
+		t.Fatalf("ReadTimeout: got %d, want 0", cfg.Server.ReadTimeout.Int())
+	}
+	if cfg.Server.WriteTimeout.Int() != 0 {
+		t.Fatalf("WriteTimeout: got %d, want 0", cfg.Server.WriteTimeout.Int())
+	}
+}
+
+// TestParse_MissingNumerics confirms omitted fields stay 0.
+func TestParse_MissingNumerics(t *testing.T) {
+	y := `server: {}`
+	var cfg Config
+	if err := yaml.Unmarshal([]byte(y), &cfg); err != nil {
+		t.Fatalf("failed to parse empty server: %v", err)
+	}
+	if cfg.Server.ReadTimeout.Int() != 0 {
+		t.Fatalf("ReadTimeout: got %d, want 0", cfg.Server.ReadTimeout.Int())
 	}
 }

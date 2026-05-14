@@ -2,13 +2,21 @@ package scheduler
 
 import (
 	"bedrud/config"
+	"bedrud/internal/auth"
+	"bedrud/internal/models"
 	"bedrud/internal/repository"
+	"bedrud/internal/utils"
 	"context"
 	"crypto/tls"
+	"encoding/pem"
+	"net"
 	"net/http"
+	"os"
 	"strings"
+	"sync"
 	"time"
 
+	"crypto/x509"
 	"github.com/go-co-op/gocron"
 	lkauth "github.com/livekit/protocol/auth"
 	"github.com/livekit/protocol/livekit"
@@ -18,9 +26,48 @@ import (
 
 var scheduler *gocron.Scheduler
 
-// Initialize creates and starts the scheduler with idle room detection.
-func Initialize(roomRepo *repository.RoomRepository, lkCfg *config.LiveKitConfig) {
+var certFile string
+var keyFile string
+var certHosts []string
+var certMu sync.Mutex
+
+func Initialize(roomRepo *repository.RoomRepository, userRepo *repository.UserRepository, lkCfg *config.LiveKitConfig, serverCfg *config.ServerConfig) {
 	scheduler = gocron.NewScheduler(time.Local)
+
+	certFile = ""
+	keyFile = ""
+	certHosts = nil
+	if serverCfg.EnableTLS && !serverCfg.DisableTLS && !serverCfg.UseACME {
+		certFile = serverCfg.CertFile
+		keyFile = serverCfg.KeyFile
+		if certFile == "" {
+			certFile = "/etc/bedrud/cert.pem"
+		}
+		if keyFile == "" {
+			keyFile = "/etc/bedrud/key.pem"
+		}
+		var hosts []string
+		if serverCfg.Domain != "" {
+			hosts = append(hosts, serverCfg.Domain)
+		}
+		if ip := net.ParseIP(serverCfg.Host); ip != nil && !ip.IsLoopback() && !ip.IsUnspecified() {
+			hosts = append(hosts, serverCfg.Host)
+		}
+		if outIP := utils.OutboundIP(); outIP != nil && !outIP.IsLoopback() && !outIP.IsUnspecified() {
+			found := false
+			for _, h := range hosts {
+				if h == outIP.String() {
+					found = true
+					break
+				}
+			}
+			if !found {
+				hosts = append(hosts, outIP.String())
+			}
+		}
+		hosts = append(hosts, "localhost", "127.0.0.1", "::1")
+		certHosts = hosts
+	}
 
 	apiHost := lkCfg.InternalHost
 	if apiHost == "" {
@@ -39,8 +86,48 @@ func Initialize(roomRepo *repository.RoomRepository, lkCfg *config.LiveKitConfig
 	lkClient := livekit.NewRoomServiceProtobufClient(apiHost, httpClient)
 
 	_, _ = scheduler.Every(1).Minute().Do(func() {
+		if roomRepo != nil {
+			if err := roomRepo.CleanupExpiredRooms(); err != nil {
+				log.Error().Err(err).Msg("Scheduler: failed to clean up expired rooms")
+			}
+		}
 		checkIdleRooms(roomRepo, lkCfg, lkClient)
 	})
+
+	// Weekly cleanup of stale guest users (older than 7 days, no active rooms)
+	if userRepo != nil {
+		_, _ = scheduler.Every(1).Week().At("03:00").Do(func() {
+			cutoff := time.Now().Add(-7 * 24 * time.Hour)
+			deleted, err := userRepo.DeleteGuestUsers(cutoff)
+			if err != nil {
+				log.Error().Err(err).Msg("Scheduler: failed to clean up stale guest users")
+			} else if deleted > 0 {
+				log.Info().Int64("deleted", deleted).Msg("Scheduler: cleaned up stale guest users")
+			}
+		})
+	}
+
+	// Periodic cleanup of expired blocked refresh tokens
+	_, _ = scheduler.Every(24).Hours().At("04:00").Do(func() {
+		if userRepo != nil {
+			if err := userRepo.CleanupBlockedTokens(); err != nil {
+				log.Error().Err(err).Msg("Scheduler: failed to clean up blocked tokens")
+			} else {
+				log.Info().Msg("Scheduler: cleaned up expired blocked tokens")
+			}
+		}
+	})
+
+	// Periodic pruning of in-memory revoked access token set
+	_, _ = scheduler.Every(1).Hour().Do(func() {
+		auth.PruneRevokedTokens()
+	})
+
+	if certFile != "" {
+		_, _ = scheduler.Every(1).Day().At("09:00").Do(func() {
+			checkCertExpiry()
+		})
+	}
 
 	scheduler.StartAsync()
 }
@@ -58,7 +145,7 @@ func checkIdleRooms(roomRepo *repository.RoomRepository, cfg *config.LiveKitConf
 	if roomRepo == nil {
 		return
 	}
-	rooms, err := roomRepo.GetAllActiveRooms()
+	rooms, err := roomRepo.GetAllActiveRoomsWithLimit(1000)
 	if err != nil || len(rooms) == 0 {
 		return
 	}
@@ -70,13 +157,17 @@ func checkIdleRooms(roomRepo *repository.RoomRepository, cfg *config.LiveKitConf
 		log.Error().Err(err).Msg("Scheduler: failed to generate LiveKit token")
 		return
 	}
-	ctx, _ := twirp.WithHTTPRequestHeaders(context.Background(), http.Header{
+	ctx, err := twirp.WithHTTPRequestHeaders(context.Background(), http.Header{
 		"Authorization": []string{"Bearer " + token},
 	})
+	if err != nil {
+		log.Error().Err(err).Msg("Scheduler: failed to set LiveKit auth headers")
+		return
+	}
 
 	resp, err := client.ListRooms(ctx, &livekit.ListRoomsRequest{})
 	if err != nil {
-		log.Debug().Err(err).Msg("Scheduler: failed to list LiveKit rooms")
+		log.Warn().Err(err).Msg("Scheduler: failed to list LiveKit rooms")
 		return
 	}
 
@@ -92,11 +183,95 @@ func checkIdleRooms(roomRepo *repository.RoomRepository, cfg *config.LiveKitConf
 		if time.Since(room.CreatedAt) < grace {
 			continue
 		}
+		if room.Settings.IsPersistent {
+			log.Debug().Str("room", room.Name).Msg("Skipping idle check for persistent room")
+			continue
+		}
 		count, exists := lkRooms[room.Name]
 		if !exists || count == 0 {
-			if err := roomRepo.SetRoomIdle(room.ID); err == nil {
+			if err := roomRepo.SetRoomIdle(room.ID); err != nil {
+				log.Error().Err(err).Str("room", room.Name).Msg("Scheduler: failed to set room idle")
+			} else {
+				// Re-check LK: someone may have joined between our ListRooms snapshot and now
+				recheck, recheckErr := client.ListParticipants(ctx, &livekit.ListParticipantsRequest{Room: room.Name})
+				if recheckErr == nil && len(recheck.Participants) > 0 {
+					// Someone joined — reactivate the room
+					if err := roomRepo.UpdateRoom(&models.Room{ID: room.ID, IsActive: true}); err != nil {
+						log.Warn().Err(err).Str("room", room.Name).Msg("Scheduler: failed to reactivate room")
+					} else {
+						log.Info().Int("participants", len(recheck.Participants)).Str("room", room.Name).Msg("Room reactivated (participant joined during idle check)")
+						continue
+					}
+				}
 				log.Info().Str("room", room.Name).Msg("Room set to idle (no participants)")
+				if err := roomRepo.DeactivateRoomParticipants(room.ID); err != nil {
+					log.Warn().Err(err).Str("room", room.Name).Msg("Scheduler: failed to deactivate participants")
+				}
 			}
 		}
 	}
+}
+
+func checkCertExpiry() {
+	if certFile == "" || keyFile == "" {
+		return
+	}
+
+	data, err := os.ReadFile(certFile)
+	if err != nil {
+		log.Error().Err(err).Str("path", certFile).Msg("Scheduler: cannot read TLS certificate")
+		return
+	}
+
+	block, _ := pem.Decode(data)
+	if block == nil {
+		log.Error().Str("path", certFile).Msg("Scheduler: failed to decode TLS certificate PEM")
+		return
+	}
+
+	cert, err := x509.ParseCertificate(block.Bytes)
+	if err != nil {
+		log.Error().Err(err).Str("path", certFile).Msg("Scheduler: failed to parse TLS certificate")
+		return
+	}
+
+	daysRemaining := int((time.Until(cert.NotAfter).Hours() + 23) / 24)
+	if daysRemaining <= 0 {
+		log.Error().Int("daysRemaining", daysRemaining).Str("expires", cert.NotAfter.Format(time.RFC3339)).Msg("TLS certificate has EXPIRED — attempting renewal")
+		renewSelfSignedCert()
+	} else if daysRemaining <= utils.CertWarnDays {
+		log.Warn().Int("daysRemaining", daysRemaining).Str("expires", cert.NotAfter.Format(time.RFC3339)).Msg("TLS certificate is expiring soon — attempting renewal")
+		renewSelfSignedCert()
+	}
+}
+
+func renewSelfSignedCert() {
+	if certFile == "" || keyFile == "" || len(certHosts) == 0 {
+		return
+	}
+
+	certMu.Lock()
+	defer certMu.Unlock()
+
+	hosts := make([]string, len(certHosts))
+	copy(hosts, certHosts)
+	if outIP := utils.OutboundIP(); outIP != nil && !outIP.IsLoopback() && !outIP.IsUnspecified() {
+		found := false
+		for _, h := range hosts {
+			if h == outIP.String() {
+				found = true
+				break
+			}
+		}
+		if !found {
+			hosts = append(hosts, outIP.String())
+		}
+	}
+
+	if err := utils.RenewSelfSignedCert(certFile, keyFile, hosts...); err != nil {
+		log.Error().Err(err).Str("certFile", certFile).Msg("Scheduler: failed to renew self-signed TLS certificate")
+		return
+	}
+	certHosts = hosts
+	log.Info().Strs("hosts", certHosts).Msg("Scheduler: self-signed TLS certificate renewed successfully")
 }

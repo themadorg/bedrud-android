@@ -47,6 +47,10 @@ func (r *SettingsRepository) GetEffectiveSettings() (*models.SystemSettings, err
 }
 
 // mergeFromConfig fills in zero/empty fields from the config file.
+// NOTE: Boolean fields from config can override explicit DB false values (e.g.
+// setting ServerEnableTLS=false in admin settings then config's enableTls:true wins).
+// This is a known limitation — a full design change would track which fields
+// have been explicitly set via admin API vs loaded from config.yaml.
 func mergeFromConfig(s *models.SystemSettings, cfg *config.Config) {
 	// Auth
 	if s.GoogleClientID == "" && cfg.Auth.Google.ClientID != "" {
@@ -80,7 +84,7 @@ func mergeFromConfig(s *models.SystemSettings, cfg *config.Config) {
 		s.JWTSecret = cfg.Auth.JWTSecret
 	}
 	if s.TokenDuration == 0 && cfg.Auth.TokenDuration != 0 {
-		s.TokenDuration = cfg.Auth.TokenDuration
+		s.TokenDuration = cfg.Auth.TokenDuration.Int()
 	}
 	if s.SessionSecret == "" {
 		s.SessionSecret = cfg.Auth.SessionSecret
@@ -146,7 +150,7 @@ func mergeFromConfig(s *models.SystemSettings, cfg *config.Config) {
 		s.CORSAllowCredentials = cfg.Cors.AllowCredentials
 	}
 	if s.CORSMaxAge == 0 && cfg.Cors.MaxAge != 0 {
-		s.CORSMaxAge = cfg.Cors.MaxAge
+		s.CORSMaxAge = cfg.Cors.MaxAge.Int()
 	}
 
 	// Chat uploads
@@ -154,10 +158,10 @@ func mergeFromConfig(s *models.SystemSettings, cfg *config.Config) {
 		s.ChatUploadBackend = cfg.Chat.Uploads.Backend
 	}
 	if s.ChatUploadMaxBytes == 0 && cfg.Chat.Uploads.MaxBytes != 0 {
-		s.ChatUploadMaxBytes = cfg.Chat.Uploads.MaxBytes
+		s.ChatUploadMaxBytes = cfg.Chat.Uploads.MaxBytes.Int64()
 	}
 	if s.ChatUploadInlineMax == 0 && cfg.Chat.Uploads.InlineMaxBytes != 0 {
-		s.ChatUploadInlineMax = cfg.Chat.Uploads.InlineMaxBytes
+		s.ChatUploadInlineMax = cfg.Chat.Uploads.InlineMaxBytes.Int64()
 	}
 	if s.ChatUploadDiskDir == "" {
 		s.ChatUploadDiskDir = cfg.Chat.Uploads.DiskDir
@@ -179,6 +183,30 @@ func mergeFromConfig(s *models.SystemSettings, cfg *config.Config) {
 	}
 	if s.ChatUploadS3PublicURL == "" {
 		s.ChatUploadS3PublicURL = cfg.Chat.Uploads.S3.PublicBaseURL
+	}
+
+	// Room limits
+	if s.MaxParticipantsLimit == 0 && cfg.Server.MaxParticipantsLimit != 0 {
+		s.MaxParticipantsLimit = cfg.Server.MaxParticipantsLimit
+	}
+	if s.MaxRoomsPerUser == 0 && cfg.Server.MaxRoomsPerUser != 0 {
+		s.MaxRoomsPerUser = cfg.Server.MaxRoomsPerUser
+	}
+
+	// Upload quotas
+	if s.MaxUploadBytesPerUser == 0 && cfg.Chat.MaxUploadBytesPerUser != 0 {
+		s.MaxUploadBytesPerUser = cfg.Chat.MaxUploadBytesPerUser
+	}
+	if s.GlobalDiskThresholdBytes == 0 && cfg.Chat.GlobalDiskThresholdBytes != 0 {
+		s.GlobalDiskThresholdBytes = cfg.Chat.GlobalDiskThresholdBytes
+	}
+
+	// Chat message retention
+	if s.ChatMaxMessageCount == 0 && cfg.Chat.MaxMessageCount != 0 {
+		s.ChatMaxMessageCount = cfg.Chat.MaxMessageCount
+	}
+	if s.ChatMessageTTLHours == 0 && cfg.Chat.MessageTTLHours != 0 {
+		s.ChatMessageTTLHours = cfg.Chat.MessageTTLHours
 	}
 
 	// Logger

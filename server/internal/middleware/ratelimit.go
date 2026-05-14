@@ -3,15 +3,27 @@ package middleware
 import (
 	"time"
 
+	"bedrud/config"
+
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/limiter"
 )
 
-// AuthRateLimiter limits auth endpoints to 10 requests per minute per IP.
-func AuthRateLimiter() fiber.Handler {
+func AuthRateLimiter(cfg config.RateLimitConfig) fiber.Handler {
+	max := 10
+	if cfg.AuthMaxRequests != nil {
+		max = *cfg.AuthMaxRequests
+	}
+	if max == 0 {
+		return func(c *fiber.Ctx) error { return c.Next() }
+	}
+	window := 60
+	if cfg.AuthWindowSecs != nil {
+		window = *cfg.AuthWindowSecs
+	}
 	return limiter.New(limiter.Config{
-		Max:        10,
-		Expiration: 1 * time.Minute,
+		Max:        max,
+		Expiration: time.Duration(window) * time.Second,
 		KeyGenerator: func(c *fiber.Ctx) string {
 			return c.IP()
 		},
@@ -23,17 +35,54 @@ func AuthRateLimiter() fiber.Handler {
 	})
 }
 
-// GuestRateLimiter limits guest join to 5 requests per minute per IP.
-func GuestRateLimiter() fiber.Handler {
+func GuestRateLimiter(cfg config.RateLimitConfig) fiber.Handler {
+	max := 5
+	if cfg.GuestMaxRequests != nil {
+		max = *cfg.GuestMaxRequests
+	}
+	if max == 0 {
+		return func(c *fiber.Ctx) error { return c.Next() }
+	}
+	window := 60
+	if cfg.GuestWindowSecs != nil {
+		window = *cfg.GuestWindowSecs
+	}
 	return limiter.New(limiter.Config{
-		Max:        5,
-		Expiration: 1 * time.Minute,
+		Max:        max,
+		Expiration: time.Duration(window) * time.Second,
 		KeyGenerator: func(c *fiber.Ctx) string {
 			return c.IP()
 		},
 		LimitReached: func(c *fiber.Ctx) error {
 			return c.Status(fiber.StatusTooManyRequests).JSON(fiber.Map{
 				"error": "too many guest join attempts",
+			})
+		},
+	})
+}
+
+// APIRateLimiter provides rate limiting for room creation and chat uploads.
+func APIRateLimiter(cfg config.RateLimitConfig) fiber.Handler {
+	max := 30
+	if cfg.APIMaxRequests != nil {
+		max = *cfg.APIMaxRequests
+	}
+	if max == 0 {
+		return func(c *fiber.Ctx) error { return c.Next() }
+	}
+	window := 60
+	if cfg.APIWindowSecs != nil {
+		window = *cfg.APIWindowSecs
+	}
+	return limiter.New(limiter.Config{
+		Max:        max,
+		Expiration: time.Duration(window) * time.Second,
+		KeyGenerator: func(c *fiber.Ctx) string {
+			return c.IP()
+		},
+		LimitReached: func(c *fiber.Ctx) error {
+			return c.Status(fiber.StatusTooManyRequests).JSON(fiber.Map{
+				"error": "too many requests",
 			})
 		},
 	})

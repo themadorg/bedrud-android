@@ -1,12 +1,15 @@
 package main
 
 import (
+	"bedrud/config"
 	"bedrud/internal/install"
 	"bedrud/internal/livekit"
 	"bedrud/internal/server"
 	"bedrud/internal/usercli"
+	"bedrud/internal/utils"
 	"flag"
 	"fmt"
+	"net"
 	"os"
 	"strings"
 )
@@ -102,6 +105,7 @@ func main() {
 		lkDomainFlag := installCmd.String("livekit-domain", "", "Separate domain for the local LiveKit server (e.g. lk.example.com, bypasses CDN)")
 		lkIPFlag := installCmd.String("lk-ip", "", "Separate IP for LiveKit NodeIP (when server behind CDN, LiveKit needs direct-reachable IP)")
 		lkUDPPortRangeFlag := installCmd.String("lk-udp-range", "", "UDP port range for WebRTC media, e.g. 50000-60000 (default 50000-60000)")
+		certAlgoFlag := installCmd.String("cert-algorithm", "", "Key algorithm for self-signed cert: ed25519 (default), ecdsa256, rsa2048, rsa4096")
 		_ = installCmd.Parse(os.Args[2:])
 
 		lkUDPPortRangeStart := ""
@@ -137,6 +141,7 @@ func main() {
 			ExternalLKURL:       *externalLKFlag,
 			LKDomain:            *lkDomainFlag,
 			LKIP:                *lkIPFlag,
+			CertAlgorithm:       *certAlgoFlag,
 		}
 
 		if err := install.LinuxInstall(&cfg); err != nil {
@@ -156,7 +161,7 @@ func main() {
 		_ = userCmd.Parse(os.Args[2:])
 
 		if len(userCmd.Args()) == 0 {
-			fmt.Println("Usage: bedrud user <subcommand> [flags]")
+			fmt.Println("Usage: bedrud user [--config <path>] <subcommand> [flags]")
 			fmt.Println("  create  --email <email> --password <password> --name <name>")
 			fmt.Println("  delete  --email <email>")
 			fmt.Println("  promote --email <email>")
@@ -204,6 +209,40 @@ func main() {
 			os.Exit(1)
 		}
 
+	case "cert":
+		certCmd := flag.NewFlagSet("cert", flag.ExitOnError)
+		certConfigPath := certCmd.String("config", "", "Path to Bedrud config file")
+		_ = certCmd.Parse(os.Args[2:])
+
+		if len(certCmd.Args()) == 0 {
+			fmt.Println("Usage: bedrud cert [--config <path>] <subcommand>")
+			fmt.Println("  renew   Renew the self-signed TLS certificate")
+			fmt.Println("  info    Show TLS certificate status")
+			os.Exit(1)
+		}
+
+		certSub := certCmd.Args()[0]
+		path := *certConfigPath
+		if path == "" {
+			path = os.Getenv("CONFIG_PATH")
+			if path == "" {
+				path = "/etc/bedrud/config.yaml"
+			}
+		}
+
+		switch certSub {
+		case "renew":
+			renewFlags := flag.NewFlagSet("renew", flag.ExitOnError)
+			renewAlgo := renewFlags.String("algo", "", "Key algorithm: ed25519, ecdsa256, rsa2048, rsa4096 (default: detect from existing cert)")
+			renewFlags.Parse(certCmd.Args()[1:])
+			runCertRenew(path, *renewAlgo)
+		case "info":
+			runCertInfo(path)
+		default:
+			fmt.Fprintf(os.Stderr, "Unknown cert subcommand: %s\n", certSub)
+			os.Exit(1)
+		}
+
 	case "version":
 		fmt.Println("bedrud " + version)
 
@@ -215,6 +254,97 @@ func main() {
 		printUsage()
 		os.Exit(1)
 	}
+}
+
+func runCertRenew(configPath, algoStr string) {
+	cfg, err := config.Load(configPath)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error loading config: %v\n", err)
+		os.Exit(1)
+	}
+
+	certFile := cfg.Server.CertFile
+	keyFile := cfg.Server.KeyFile
+	if certFile == "" {
+		certFile = "/etc/bedrud/cert.pem"
+	}
+	if keyFile == "" {
+		keyFile = "/etc/bedrud/key.pem"
+	}
+
+	var hosts []string
+	if cfg.Server.Domain != "" {
+		hosts = append(hosts, cfg.Server.Domain)
+	}
+	if ip := net.ParseIP(cfg.Server.Host); ip != nil && !ip.IsLoopback() && !ip.IsUnspecified() {
+		hosts = append(hosts, cfg.Server.Host)
+	}
+	if outIP := utils.OutboundIP(); outIP != nil && !outIP.IsLoopback() && !outIP.IsUnspecified() {
+		found := false
+		for _, h := range hosts {
+			if h == outIP.String() {
+				found = true
+				break
+			}
+		}
+		if !found {
+			hosts = append(hosts, outIP.String())
+		}
+	}
+	hosts = append(hosts, "localhost", "127.0.0.1", "::1")
+
+	if algoStr != "" {
+		if err := utils.RenewSelfSignedCertWithAlgo(certFile, keyFile, utils.KeyAlgorithm(algoStr), hosts...); err != nil {
+			fmt.Fprintf(os.Stderr, "Error renewing certificate: %v\n", err)
+			os.Exit(1)
+		}
+	} else {
+		if err := utils.RenewSelfSignedCert(certFile, keyFile, hosts...); err != nil {
+			fmt.Fprintf(os.Stderr, "Error renewing certificate: %v\n", err)
+			os.Exit(1)
+		}
+	}
+	fmt.Println("Self-signed TLS certificate renewed successfully")
+	fmt.Printf("  Cert: %s\n", certFile)
+	fmt.Printf("  Key:  %s\n", keyFile)
+	fmt.Printf("  SANs: %v\n", hosts)
+	fmt.Printf("  Valid for %d days\n", utils.SelfSignedCertDays)
+}
+
+func runCertInfo(configPath string) {
+	cfg, err := config.Load(configPath)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error loading config: %v\n", err)
+		os.Exit(1)
+	}
+
+	if !cfg.Server.EnableTLS || cfg.Server.DisableTLS {
+		fmt.Println("TLS: not enabled")
+		return
+	}
+
+	certFile := cfg.Server.CertFile
+	keyFile := cfg.Server.KeyFile
+	if certFile == "" {
+		certFile = "/etc/bedrud/cert.pem"
+	}
+	if keyFile == "" {
+		keyFile = "/etc/bedrud/key.pem"
+	}
+
+	info, err := utils.ValidateTLSCertPair(certFile, keyFile)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "TLS certificate error: %v\n", err)
+		os.Exit(1)
+	}
+
+	fmt.Printf("Subject:        %s\n", info.Subject)
+	fmt.Printf("Issuer:         %s\n", info.Issuer)
+	fmt.Printf("Not Before:     %s\n", info.NotBefore.Format("2006-01-02 15:04:05 MST"))
+	fmt.Printf("Not After:      %s\n", info.NotAfter.Format("2006-01-02 15:04:05 MST"))
+	fmt.Printf("Days Remaining: %d\n", info.DaysRemaining)
+	fmt.Printf("Status:         %s\n", info.Status)
+	fmt.Printf("SANs:           %v\n", info.SANs)
 }
 
 func printUsage() {
@@ -237,6 +367,9 @@ func printUsage() {
 	fmt.Println("                   --livekit-domain <domain>  (local LK on its own domain)")
 	fmt.Println("                   --external-livekit <url>   (fully separate LK machine)")
 	fmt.Println("  uninstall Uninstall Bedrud from the system")
+	fmt.Println("  cert      Manage TLS certificates")
+	fmt.Println("            renew [--config <path>]   Renew self-signed certificate")
+	fmt.Println("            info  [--config <path>]   Show certificate status")
 	fmt.Println("  user      Manage users")
 	fmt.Println("            create  --email <email> --password <password> --name <name>")
 	fmt.Println("            delete  --email <email>")

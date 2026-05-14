@@ -8,6 +8,7 @@ import {
   MessageSquare,
   Mic,
   Minus,
+  Pin,
   Plus,
   ShieldCheck,
   UserCheck,
@@ -24,6 +25,7 @@ interface RoomSettings {
   allowAudio: boolean
   requireApproval: boolean
   e2ee: boolean
+  isPersistent: boolean
 }
 
 interface CreateRoomData {
@@ -37,6 +39,7 @@ interface Props {
   open: boolean
   onOpenChange: (open: boolean) => void
   onCreate: (data: CreateRoomData) => Promise<void>
+  isAdmin?: boolean
 }
 
 const DEFAULT_SETTINGS: RoomSettings = {
@@ -45,6 +48,7 @@ const DEFAULT_SETTINGS: RoomSettings = {
   allowAudio: true,
   requireApproval: false,
   e2ee: false,
+  isPersistent: false,
 }
 
 const FEATURES = [
@@ -53,9 +57,10 @@ const FEATURES = [
   { key: 'allowChat' as const, icon: MessageSquare, label: 'Chat' },
   { key: 'e2ee' as const, icon: ShieldCheck, label: 'E2E' },
   { key: 'requireApproval' as const, icon: UserCheck, label: 'Gate' },
+  { key: 'isPersistent' as const, icon: Pin, label: 'Persistent', adminOnly: true },
 ]
 
-export function CreateRoomDialog({ open, onOpenChange, onCreate }: Props) {
+export function CreateRoomDialog({ open, onOpenChange, onCreate, isAdmin }: Props) {
   const [isLoading, setIsLoading] = useState(false)
   const [createError, setCreateError] = useState<string | null>(null)
   const [name, setName] = useState('')
@@ -108,8 +113,14 @@ export function CreateRoomDialog({ open, onOpenChange, onCreate }: Props) {
         <form onSubmit={handleSubmit}>
           {/* ── Name section ── */}
           <div className="px-6 pt-6 pb-5">
-            <label className="text-[10px] tracking-widest uppercase font-semibold text-muted-foreground/50">Name</label>
+            <label
+              htmlFor="room-name"
+              className="text-[10px] tracking-widest uppercase font-semibold text-muted-foreground/50"
+            >
+              Name
+            </label>
             <input
+              id="room-name"
               value={name}
               onChange={(e) => {
                 const v = e.target.value
@@ -124,7 +135,9 @@ export function CreateRoomDialog({ open, onOpenChange, onCreate }: Props) {
               autoFocus
               className="mt-2 w-full bg-transparent font-mono text-xl font-semibold tracking-tight outline-none placeholder:text-muted-foreground/30"
             />
-            <p className="mt-1.5 font-mono text-[11px] text-muted-foreground/50">bedrud.app/m/{displaySlug}</p>
+            <p className="mt-1.5 font-mono text-[11px] text-muted-foreground/50">
+              {window.location.host}/m/{displaySlug}
+            </p>
             {!name.trim() && (
               <p className="mt-0.5 text-[10px] text-muted-foreground/40">Leave blank to auto-generate a name</p>
             )}
@@ -132,9 +145,7 @@ export function CreateRoomDialog({ open, onOpenChange, onCreate }: Props) {
 
           {/* ── Access section ── */}
           <div className="border-t px-6 py-5">
-            <label className="text-[10px] tracking-widest uppercase font-semibold text-muted-foreground/50">
-              Access
-            </label>
+            <span className="text-[10px] tracking-widest uppercase font-semibold text-muted-foreground/50">Access</span>
             <div className="mt-3 grid grid-cols-2 gap-3">
               {/* Private card */}
               <button
@@ -182,9 +193,9 @@ export function CreateRoomDialog({ open, onOpenChange, onCreate }: Props) {
           <div className="border-t px-6 py-5">
             <div className="flex items-center justify-between">
               <div>
-                <label className="text-[10px] tracking-widest uppercase font-semibold text-muted-foreground/50">
+                <span className="text-[10px] tracking-widest uppercase font-semibold text-muted-foreground/50">
                   Capacity
-                </label>
+                </span>
                 <p className="mt-0.5 text-[11px] text-muted-foreground/60">{maxParticipants} seats</p>
               </div>
               <div className="flex items-center gap-1">
@@ -211,11 +222,11 @@ export function CreateRoomDialog({ open, onOpenChange, onCreate }: Props) {
 
           {/* ── Features section ── */}
           <div className="border-t px-6 py-5">
-            <label className="text-[10px] tracking-widest uppercase font-semibold text-muted-foreground/50">
+            <span className="text-[10px] tracking-widest uppercase font-semibold text-muted-foreground/50">
               Features
-            </label>
+            </span>
             <div className="mt-3 flex flex-wrap gap-2">
-              {FEATURES.map(({ key, icon: Icon, label }) => {
+              {FEATURES.filter((f) => !f.adminOnly || isAdmin).map(({ key, icon: Icon, label }) => {
                 const active = settings[key]
                 return (
                   <button

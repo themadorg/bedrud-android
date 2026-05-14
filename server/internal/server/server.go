@@ -22,10 +22,13 @@ import (
 	"bedrud/internal/database"
 	"bedrud/internal/handlers"
 	"bedrud/internal/livekit"
+	"bedrud/internal/lkutil"
 	"bedrud/internal/middleware"
 	"bedrud/internal/models"
 	"bedrud/internal/repository"
 	"bedrud/internal/scheduler"
+	"bedrud/internal/services"
+	"bedrud/internal/storage"
 	"bedrud/internal/utils"
 	"context"
 	"crypto/tls"
@@ -35,6 +38,7 @@ import (
 	"net/url"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"strings"
 	"syscall"
 	"time"
@@ -45,6 +49,7 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/adaptor"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/filesystem"
+	"github.com/gofiber/fiber/v2/middleware/helmet"
 	"github.com/gofiber/fiber/v2/middleware/recover"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -61,6 +66,37 @@ func Run(configPath string) error {
 	logLevel, _ := zerolog.ParseLevel(cfg.Logger.Level)
 	zerolog.SetGlobalLevel(logLevel)
 	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stdout, TimeFormat: time.RFC3339})
+
+	if cfg.Auth.JWTSecret == "" {
+		return fmt.Errorf("jwtSecret is required: set AUTH_JWT_SECRET env or auth.jwtSecret in config.yaml")
+	}
+	if len(cfg.Auth.JWTSecret) < 32 {
+		log.Warn().Int("length", len(cfg.Auth.JWTSecret)).Msg("jwtSecret is shorter than recommended 32 characters")
+	}
+	if cfg.Auth.SessionSecret == "" {
+		return fmt.Errorf("sessionSecret is required: set AUTH_SESSION_SECRET env or auth.sessionSecret in config.yaml")
+	}
+
+	tlsEnabled := cfg.Server.EnableTLS && !cfg.Server.DisableTLS
+	if tlsEnabled && !cfg.Server.UseACME {
+		certFile := cfg.Server.CertFile
+		keyFile := cfg.Server.KeyFile
+		if certFile == "" {
+			certFile = "/etc/bedrud/cert.pem"
+		}
+		if keyFile == "" {
+			keyFile = "/etc/bedrud/key.pem"
+		}
+		certInfo, err := utils.ValidateTLSCertPair(certFile, keyFile)
+		if err != nil {
+			return fmt.Errorf("TLS certificate validation failed: %w", err)
+		}
+		if certInfo.DaysRemaining <= utils.CertWarnDays {
+			log.Warn().Int("daysRemaining", certInfo.DaysRemaining).Str("expires", certInfo.NotAfter.Format(time.RFC3339)).Msg("TLS certificate is expiring soon")
+		} else {
+			log.Info().Str("subject", certInfo.Subject).Int("daysRemaining", certInfo.DaysRemaining).Str("expires", certInfo.NotAfter.Format(time.RFC3339)).Msg("TLS certificate validated")
+		}
+	}
 
 	// Start embedded LiveKit unless an external deployment is configured.
 	internalHost := strings.ToLower(cfg.LiveKit.InternalHost)
@@ -87,12 +123,17 @@ func Run(configPath string) error {
 			keyFile = cfg.Server.KeyFile
 			if certFile == "" {
 				certFile = "/etc/bedrud/cert.pem"
+			} else if abs, err := filepath.Abs(certFile); err == nil {
+				certFile = abs
 			}
 			if keyFile == "" {
 				keyFile = "/etc/bedrud/key.pem"
+			} else if abs, err := filepath.Abs(keyFile); err == nil {
+				keyFile = abs
 			}
 		}
-		if err := livekit.StartInternalServer(context.Background(), cfg.LiveKit.APIKey, cfg.LiveKit.APISecret, 7880, certFile, keyFile, cfg.LiveKit.ConfigPath); err != nil {
+		nodeIP := livekit.ResolveNodeIP(cfg.LiveKit.NodeIP, cfg.Server.Host)
+		if err := livekit.StartInternalServer(context.Background(), cfg.LiveKit.APIKey, cfg.LiveKit.APISecret, 7880, certFile, keyFile, cfg.LiveKit.ConfigPath, nodeIP, cfg.Server.Host); err != nil {
 			log.Error().Err(err).Msg("Failed to start internal LiveKit server")
 		}
 	} else if cfg.LiveKit.External {
@@ -108,11 +149,21 @@ func Run(configPath string) error {
 		log.Error().Err(err).Msg("Failed to run database migrations")
 	}
 	roomRepo := repository.NewRoomRepository(database.GetDB())
-	scheduler.Initialize(roomRepo, &cfg.LiveKit)
+	userRepo := repository.NewUserRepository(database.GetDB())
+	scheduler.Initialize(roomRepo, userRepo, &cfg.LiveKit, &cfg.Server)
 	defer scheduler.Stop()
 	auth.Init(cfg)
 
-	fiberCfg := fiber.Config{AppName: "Bedrud API"}
+	// Load deactivated users into in-memory ban set for fast middleware checks
+	inactiveUsers, _ := userRepo.GetInactiveUserIDs()
+	if len(inactiveUsers) > 0 {
+		auth.LoadBannedUsersFromDB(inactiveUsers)
+	}
+
+	fiberCfg := fiber.Config{
+		AppName:   "Bedrud API",
+		BodyLimit: 2 * 1024 * 1024,
+	}
 	// Enable trusted-proxy mode when: explicit trustedProxies list is set,
 	// OR behindProxy=true (CDN / nginx in front), OR DisableTLS with a domain.
 	if len(cfg.Server.TrustedProxies) > 0 || cfg.Server.BehindProxy {
@@ -154,6 +205,12 @@ func Run(configPath string) error {
 	}
 
 	app.Use(recover.New())
+	app.Use(helmet.New(helmet.Config{
+		XSSProtection:      "1; mode=block",
+		ContentTypeNosniff: "nosniff",
+		XFrameOptions:      "DENY",
+		ReferrerPolicy:     "strict-origin-when-cross-origin",
+	}))
 	corsConfig := cors.Config{
 		AllowHeaders:     cfg.Cors.AllowedHeaders,
 		AllowMethods:     "GET,POST,PUT,DELETE,OPTIONS",
@@ -161,10 +218,10 @@ func Run(configPath string) error {
 	}
 	if cfg.Cors.AllowCredentials {
 		if cfg.Cors.AllowedOrigins == "*" || cfg.Cors.AllowedOrigins == "" {
-			log.Warn().Msg("CORS: AllowCredentials is true but AllowedOrigins is wildcard. Refusing to allow all origins with credentials.")
-		} else {
-			corsConfig.AllowOrigins = cfg.Cors.AllowedOrigins
+			log.Error().Msg("CORS: AllowCredentials=true requires explicit AllowedOrigins (not '*'). Refusing to start.")
+			return fmt.Errorf("CORS misconfiguration: allowCredentials=true with wildcard origins is insecure")
 		}
+		corsConfig.AllowOrigins = cfg.Cors.AllowedOrigins
 	} else {
 		if cfg.Cors.AllowedOrigins == "" || cfg.Cors.AllowedOrigins == "*" {
 			corsConfig.AllowOrigins = "*"
@@ -175,23 +232,53 @@ func Run(configPath string) error {
 	app.Use(cors.New(corsConfig))
 
 	api := app.Group("/api")
-	userRepo := repository.NewUserRepository(database.GetDB())
+
+	// Health & readiness
+	api.Get("/health", func(c *fiber.Ctx) error {
+		return c.JSON(fiber.Map{"status": "healthy", "time": time.Now().Unix()})
+	})
+	api.Get("/ready", func(c *fiber.Ctx) error {
+		if sqlDB, err := database.GetDB().DB(); err != nil || sqlDB.Ping() != nil {
+			return c.Status(503).JSON(fiber.Map{"status": "not_ready", "error": "database unavailable"})
+		}
+		return c.JSON(fiber.Map{"status": "ready", "time": time.Now().Unix()})
+	})
+	app.Get("/health", func(c *fiber.Ctx) error { return c.Redirect("/api/health") })
+	app.Get("/ready", func(c *fiber.Ctx) error { return c.Redirect("/api/ready") })
+
 	passkeyRepo := repository.NewPasskeyRepository(database.GetDB())
 	settingsRepo := repository.NewSettingsRepository(database.GetDB())
 	settingsRepo.SetConfig(cfg)
 	inviteTokenRepo := repository.NewInviteTokenRepository(database.GetDB())
+	uploadDir := cfg.Chat.Uploads.DiskDir
+	if uploadDir == "" {
+		uploadDir = "./data/uploads/chat"
+	}
+	var s3Deleter storage.ObjectDeleter
+	if cfg.Chat.Uploads.Backend == "s3" &&
+		cfg.Chat.Uploads.S3.Endpoint != "" &&
+		cfg.Chat.Uploads.S3.Bucket != "" &&
+		cfg.Chat.Uploads.S3.AccessKey != "" {
+		s3Deleter = storage.NewS3Deleter(cfg.Chat.Uploads.S3)
+	}
+	uploadTracker := storage.NewChatUploadTracker(database.GetDB(), uploadDir, s3Deleter)
+	lkClient := lkutil.NewClient(&cfg.LiveKit)
+	cleanupSvc := services.NewRoomCleanupService(roomRepo, lkClient, cfg.LiveKit.APIKey, cfg.LiveKit.APISecret, uploadTracker)
 	authService := auth.NewAuthService(userRepo, passkeyRepo)
-	authHandler := handlers.NewAuthHandler(authService, cfg, settingsRepo, inviteTokenRepo)
-	roomHandler := handlers.NewRoomHandler(&cfg.LiveKit, &cfg.Chat, roomRepo)
+	challengeStore := auth.NewChallengeStore(cfg.Auth.PasskeyChallengeTTL)
+	authHandler := handlers.NewAuthHandler(authService, cfg, settingsRepo, inviteTokenRepo, challengeStore)
+	roomHandler := handlers.NewRoomHandler(&cfg.LiveKit, &cfg.Chat, roomRepo, settingsRepo, uploadTracker, cleanupSvc)
 
-	api.Post("/auth/register", authHandler.Register)
-	api.Post("/auth/login", authHandler.Login)
-	api.Post("/auth/guest-login", authHandler.GuestLogin)
-	api.Post("/auth/refresh", authHandler.RefreshToken)
+	api.Post("/auth/register", middleware.AuthRateLimiter(cfg.RateLimit), authHandler.Register)
+	api.Post("/auth/login", middleware.AuthRateLimiter(cfg.RateLimit), authHandler.Login)
+	api.Post("/auth/guest-login", middleware.AuthRateLimiter(cfg.RateLimit), authHandler.GuestLogin)
+	api.Post("/auth/refresh", middleware.AuthRateLimiter(cfg.RateLimit), authHandler.RefreshToken)
 	api.Post("/auth/logout", middleware.Protected(), authHandler.Logout)
 	api.Get("/auth/me", middleware.Protected(), authHandler.GetMe)
 	api.Put("/auth/me", middleware.Protected(), authHandler.UpdateProfile)
 	api.Put("/auth/password", middleware.Protected(), authHandler.ChangePassword)
+	api.Get("/auth/:provider/login", middleware.AuthRateLimiter(cfg.RateLimit), handlers.BeginAuthHandler)
+	api.Get("/auth/:provider/callback", middleware.AuthRateLimiter(cfg.RateLimit), authHandler.CallbackHandler)
 
 	prefsRepo := repository.NewUserPreferencesRepository(database.GetDB())
 	preferencesHandler := handlers.NewPreferencesHandler(prefsRepo)
@@ -201,14 +288,14 @@ func Run(configPath string) error {
 	// Passkey routes
 	api.Post("/auth/passkey/register/begin", middleware.Protected(), authHandler.PasskeyRegisterBegin)
 	api.Post("/auth/passkey/register/finish", middleware.Protected(), authHandler.PasskeyRegisterFinish)
-	api.Post("/auth/passkey/login/begin", authHandler.PasskeyLoginBegin)
-	api.Post("/auth/passkey/login/finish", authHandler.PasskeyLoginFinish)
-	api.Post("/auth/passkey/signup/begin", authHandler.PasskeySignupBegin)
-	api.Post("/auth/passkey/signup/finish", authHandler.PasskeySignupFinish)
+	api.Post("/auth/passkey/login/begin", middleware.AuthRateLimiter(cfg.RateLimit), authHandler.PasskeyLoginBegin)
+	api.Post("/auth/passkey/login/finish", middleware.AuthRateLimiter(cfg.RateLimit), authHandler.PasskeyLoginFinish)
+	api.Post("/auth/passkey/signup/begin", middleware.AuthRateLimiter(cfg.RateLimit), authHandler.PasskeySignupBegin)
+	api.Post("/auth/passkey/signup/finish", middleware.AuthRateLimiter(cfg.RateLimit), authHandler.PasskeySignupFinish)
 
-	api.Post("/room/create", middleware.Protected(), roomHandler.CreateRoom)
+	api.Post("/room/create", middleware.Protected(), middleware.APIRateLimiter(cfg.RateLimit), roomHandler.CreateRoom)
 	api.Post("/room/join", middleware.Protected(), roomHandler.JoinRoom)
-	api.Post("/room/guest-join", roomHandler.GuestJoinRoom)
+	api.Post("/room/guest-join", middleware.GuestRateLimiter(cfg.RateLimit), roomHandler.GuestJoinRoom)
 	api.Get("/room/list", middleware.Protected(), roomHandler.ListRooms)
 	api.Post("/room/:roomId/kick/:identity", middleware.Protected(), roomHandler.KickParticipant)
 	api.Post("/room/:roomId/mute/:identity", middleware.Protected(), roomHandler.MuteParticipant)
@@ -227,22 +314,30 @@ func Run(configPath string) error {
 	api.Post("/room/:roomId/stage/:identity/remove", middleware.Protected(), roomHandler.RemoveFromStage)
 	api.Put("/room/:roomId/settings", middleware.Protected(), roomHandler.UpdateSettings)
 	api.Delete("/room/:roomId", middleware.Protected(), roomHandler.DeleteRoom)
-	api.Post("/room/:roomId/chat/upload", middleware.Protected(), roomHandler.UploadChatImage)
+	api.Post("/room/:roomId/chat/upload", middleware.Protected(), middleware.APIRateLimiter(cfg.RateLimit), roomHandler.UploadChatImage)
 
 	// Serve disk-backed chat image uploads as static files.
 	// Inline (base64) and S3-hosted images are not served from here.
-	uploadDir := cfg.Chat.Uploads.DiskDir
-	if uploadDir == "" {
-		uploadDir = "./data/uploads/chat"
-	}
 	if err := os.MkdirAll(uploadDir, 0o755); err != nil {
 		log.Warn().Err(err).Str("dir", uploadDir).Msg("Could not create chat upload dir")
 	}
-	app.Static("/uploads/chat", uploadDir, fiber.Static{Browse: false})
+	// Protected chat upload endpoint with path traversal prevention
+	app.Get("/uploads/chat/*", middleware.Protected(), func(c *fiber.Ctx) error {
+		path := c.Params("*")
+		if path == "" {
+			return c.Status(400).JSON(fiber.Map{"error": "Missing file path"})
+		}
+		resolved := filepath.Join(uploadDir, path)
+		if !strings.HasPrefix(resolved, filepath.Clean(uploadDir)+string(os.PathSeparator)) && resolved != filepath.Clean(uploadDir) {
+			return c.Status(400).JSON(fiber.Map{"error": "Invalid path"})
+		}
+		return c.SendFile(resolved)
+	})
 
 	// Admin routes
-	usersHandler := handlers.NewUsersHandler(userRepo, roomRepo)
+	usersHandler := handlers.NewUsersHandler(userRepo, roomRepo, passkeyRepo, prefsRepo, cleanupSvc)
 	adminHandler := handlers.NewAdminHandler(settingsRepo, inviteTokenRepo)
+	certHandler := handlers.NewCertHandler(cfg)
 	adminGroup := api.Group("/admin",
 		middleware.Protected(),
 		middleware.RequireAccess(models.AccessSuperAdmin),
@@ -250,22 +345,28 @@ func Run(configPath string) error {
 	adminGroup.Get("/users", usersHandler.ListUsers)
 	adminGroup.Put("/users/:id/status", usersHandler.UpdateUserStatus)
 	adminGroup.Put("/users/:id/accesses", usersHandler.UpdateUserAccesses)
+	adminGroup.Post("/users/:id/force-logout", usersHandler.ForceLogout)
 	adminGroup.Get("/rooms", roomHandler.AdminListRooms)
 	adminGroup.Post("/rooms/:roomId/token", roomHandler.AdminGenerateToken)
 	adminGroup.Delete("/rooms/:roomId", roomHandler.AdminCloseRoom)
+	adminGroup.Post("/rooms/:roomId/suspend", roomHandler.AdminSuspendRoom)
+	adminGroup.Post("/rooms/:roomId/reactivate", roomHandler.AdminReactivateRoom)
 	adminGroup.Put("/rooms/:roomId", roomHandler.AdminUpdateRoom)
 	adminGroup.Get("/online-count", roomHandler.GetOnlineCount)
 	adminGroup.Get("/livekit/stats", roomHandler.AdminLiveKitStats)
 	adminGroup.Get("/users/:id", usersHandler.GetUserDetail)
+	adminGroup.Delete("/users/:id", usersHandler.DeleteUser)
 	adminGroup.Get("/rooms/:roomId/participants", roomHandler.AdminGetRoomParticipants)
 	adminGroup.Post("/rooms/:roomId/participants/:identity/kick", roomHandler.AdminKickParticipant)
 	adminGroup.Post("/rooms/:roomId/participants/:identity/mute", roomHandler.AdminMuteParticipant)
 	api.Get("/auth/settings", adminHandler.GetPublicSettings)
+	api.Get("/cert", certHandler.GetCert)
 	adminGroup.Get("/settings", adminHandler.GetSettings)
 	adminGroup.Put("/settings", adminHandler.UpdateSettings)
 	adminGroup.Get("/invite-tokens", adminHandler.ListInviteTokens)
 	adminGroup.Post("/invite-tokens", adminHandler.CreateInviteToken)
 	adminGroup.Delete("/invite-tokens/:id", adminHandler.DeleteInviteToken)
+	adminGroup.Get("/cert-info", certHandler.GetCertInfo)
 
 	app.Use("/", filesystem.New(filesystem.Config{Root: http.FS(root.UI), PathPrefix: "frontend"}))
 
@@ -318,7 +419,9 @@ func Run(configPath string) error {
 				// fall through to the plain-HTTP / manual-TLS block below
 			} else {
 				log.Info().Msgf("➜ Bedrud is running on HTTPS %s (bound 0.0.0.0:443)", utils.DisplayAddr("0.0.0.0", "443"))
-				_ = app.Listener(ln)
+				if err := app.Listener(ln); err != nil {
+					log.Error().Err(err).Msg("ACME TLS listener failed")
+				}
 				return
 			}
 		}
@@ -340,15 +443,20 @@ func Run(configPath string) error {
 			}()
 			// Start HTTPS on primary port
 			log.Info().Msgf("➜ Bedrud is running on HTTPS %s (bound %s)", utils.DisplayAddr(cfg.Server.Host, cfg.Server.Port), addr)
-			_ = app.ListenTLS(addr, cfg.Server.CertFile, cfg.Server.KeyFile)
+			if err := app.ListenTLS(addr, cfg.Server.CertFile, cfg.Server.KeyFile); err != nil {
+				log.Error().Err(err).Str("addr", addr).Msg("TLS listener failed")
+			}
 		} else {
 			log.Info().Msgf("➜ Bedrud is running on HTTP %s (bound %s)", utils.DisplayAddr(cfg.Server.Host, cfg.Server.Port), addr)
-			_ = app.Listen(addr)
+			if err := app.Listen(addr); err != nil {
+				log.Error().Err(err).Str("addr", addr).Msg("HTTP listener failed")
+			}
 		}
 	}()
 
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
+	usersHandler.Shutdown()
 	return app.Shutdown()
 }

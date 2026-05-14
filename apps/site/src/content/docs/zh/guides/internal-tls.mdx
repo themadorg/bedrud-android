@@ -10,6 +10,65 @@ order: 30
 
 ## 生成私有 CA 和服务器证书
 
+现代浏览器要求证书中包含使用者备用名称 (SAN)。安装程序会自动处理此问题。
+
+### 选项 1：使用安装程序（推荐）
+
+`bedrud install` 命令会为指定的 IP 和域生成带有正确 SAN 的自签名证书：
+
+```bash
+sudo bedrud install --tls --ip YOUR_SERVER_IP
+```
+
+要同时包含域名：
+
+```bash
+sudo bedrud install --tls --ip YOUR_SERVER_IP --domain your.domain.com
+```
+
+### 选项 2：手动生成证书
+
+如果安装程序的内置生成不适合你的工作流程，请向 openssl 命令添加 `-addext` 参数：
+
+```bash
+#### Ed25519 (matches Bedrud's built-in generation, recommended)
+
+```bash
+openssl genpkey -algorithm ed25519 -out ca.key
+openssl req -new -x509 -days 3650 -key ca.key -out ca.crt \
+  -subj "/CN=Bedrud Internal CA"
+
+openssl genpkey -algorithm ed25519 -out server.key
+openssl req -new -key server.key -out server.csr \
+  -subj "/CN=<your-server-ip-or-hostname>" \
+  -addext "subjectAltName=IP:YOUR_SERVER_IP"
+openssl x509 -req -days 1825 -in server.csr \
+  -CA ca.crt -CAkey ca.key -CAcreateserial -out server.crt \
+  -addext "subjectAltName=IP:YOUR_SERVER_IP"
+
+sudo ./bedrud install --tls --cert server.crt --key server.key --ip YOUR_SERVER_IP
+```
+
+#### ECDSA P256 (alternative)
+
+```bash
+openssl ecparam -genkey -name prime256v1 -out ca.key
+openssl req -new -x509 -days 3650 -key ca.key -out ca.crt \
+  -subj "/CN=Bedrud Internal CA"
+
+openssl ecparam -genkey -name prime256v1 -out server.key
+openssl req -new -key server.key -out server.csr \
+  -subj "/CN=<your-server-ip-or-hostname>" \
+  -addext "subjectAltName=IP:YOUR_SERVER_IP"
+openssl x509 -req -days 1825 -in server.csr \
+  -CA ca.crt -CAkey ca.key -CAcreateserial -out server.crt \
+  -addext "subjectAltName=IP:YOUR_SERVER_IP"
+
+sudo ./bedrud install --tls --cert server.crt --key server.key --ip YOUR_SERVER_IP
+```
+
+#### RSA (legacy compatibility, larger keys)
+
 ```bash
 openssl genrsa -out ca.key 4096
 openssl req -new -x509 -days 3650 -key ca.key -out ca.crt \
@@ -17,9 +76,11 @@ openssl req -new -x509 -days 3650 -key ca.key -out ca.crt \
 
 openssl genrsa -out server.key 2048
 openssl req -new -key server.key -out server.csr \
-  -subj "/CN=<your-server-ip-or-hostname>"
+  -subj "/CN=<your-server-ip-or-hostname>" \
+  -addext "subjectAltName=IP:YOUR_SERVER_IP"
 openssl x509 -req -days 365 -in server.csr \
-  -CA ca.crt -CAkey ca.key -CAcreateserial -out server.crt
+  -CA ca.crt -CAkey ca.key -CAcreateserial -out server.crt \
+  -addext "subjectAltName=IP:YOUR_SERVER_IP"
 
 sudo ./bedrud install --tls --cert server.crt --key server.key --ip YOUR_SERVER_IP
 ```
@@ -63,8 +124,9 @@ sudo update-ca-trust
 |---------|-----|
 | 浏览器仍然警告证书不受信任 | 清除浏览器缓存，安装 CA 后重启浏览器 |
 | 摄像头/麦克风被阻止 | 验证 CA 位于受信任的根证书颁发机构中，而不是中间证书颁发机构 |
-| 证书已过期 | 使用更长的 `-days` 值重新生成 |
-| CN 不匹配 | 确保服务器证书的 CN 与 URL 中的 IP 或主机名匹配 |
+| 证书已过期 | 运行 `sudo bedrud cert renew` 重新生成（每 24 小时在 09:00 自动续期） |
+| CN 不匹配 | 现代浏览器会忽略 CN 字段 — SAN 是权威依据。使用安装程序的内置证书生成（推荐）或向 openssl 命令添加 `-addext 'subjectAltName=...'` |
+| 缺少 SAN | 现代浏览器会忽略 CN 字段。使用安装程序的内置证书生成（推荐）或向 openssl 命令添加 `-addext 'subjectAltName=...'` |
 
 ---
 

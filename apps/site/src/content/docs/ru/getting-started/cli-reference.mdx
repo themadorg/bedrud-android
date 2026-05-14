@@ -156,7 +156,7 @@ bedrud uninstall
 Управление пользователями в базе данных Bedrud.
 
 ```bash
-bedrud user <subcommand> [--config <path>] <flags>
+bedrud user [--config <path>] <subcommand> [flags]
 ```
 
 | Глобальный флаг | По умолчанию                   | Описание                                     |
@@ -168,7 +168,7 @@ bedrud user <subcommand> [--config <path>] <flags>
 Создать нового пользователя с локальной аутентификацией (пароль хешируется bcrypt).
 
 ```bash
-bedrud user create --email <email> --password <password> --name <name>
+bedrud user [--config <path>] create --email <email> --password <password> --name <name>
 ```
 
 **Обязательные флаги:**
@@ -183,7 +183,7 @@ bedrud user create --email <email> --password <password> --name <name>
 Удалить пользователя по email.
 
 ```bash
-bedrud user delete --email <email>
+bedrud user [--config <path>] delete --email <email>
 ```
 
 #### `promote`
@@ -191,7 +191,7 @@ bedrud user delete --email <email>
 Предоставить пользователю доступ уровня `superadmin`.
 
 ```bash
-bedrud user promote --email <email>
+bedrud user [--config <path>] promote --email <email>
 ```
 
 #### `demote`
@@ -199,10 +199,51 @@ bedrud user promote --email <email>
 Отозвать доступ `superadmin` у пользователя (понижает до уровня `user`).
 
 ```bash
-bedrud user demote --email <email>
+bedrud user [--config <path>] demote --email <email>
 ```
 
 **Реализация:** `server/internal/usercli/usercli.go`
+
+---
+
+### `cert`
+
+Управление TLS-сертификатами. Актуально только при использовании самоподписанных сертификатов (созданных `bedrud install --self-signed`).
+
+```bash
+bedrud cert [--config <path>] <subcommand>
+```
+
+| Глобальный флаг | По умолчанию               | Описание                                |
+|-----------------|----------------------------|-----------------------------------------|
+| `--config`      | `/etc/bedrud/config.yaml`  | Путь к файлу конфигурации Bedrud        |
+| `--algo`        | `""`                        | Алгоритм ключа: ed25519, ecdsa256, rsa2048, rsa4096 (по умолчанию: определить из существующего сертификата) |
+
+#### `renew`
+
+Принудительное обновление самоподписанного TLS-сертификата. Определяет алгоритм ключа существующего сертификата и воссоздаёт с тем же типом (по умолчанию: Ed25519). Новый сертификат действителен в течение 1825 дней (~5 лет).
+
+```bash
+bedrud cert renew [--config <path>]
+```
+
+Сервер также автоматически обновляет сертификат ежедневно через встроенный планировщик, когда до истечения срока действия остаётся менее 30 дней. Эта команда предназначена для ручного или внепланового обновления.
+
+**SANs:** Берутся из конфигурации сервера — `domain` (если задан), а также `localhost`, `127.0.0.1` и `::1`.
+
+**Реализация:** `server/internal/utils/tls.go` (`RenewSelfSignedCert`)
+
+#### `info`
+
+Показать метаданные TLS-сертификата в stdout.
+
+```bash
+bedrud cert info [--config <path>]
+```
+
+**Поля вывода:** subject, issuer, notBefore, notAfter, daysRemaining, status (valid/expiring/error), SANs.
+
+**Реализация:** `server/internal/utils/tls.go` (`ValidateTLSCertPair`)
 
 ---
 
@@ -268,19 +309,19 @@ bedrud install --fresh --domain example.com --email admin@example.com
 
 ```bash
 # Создание первого пользователя-администратора
-bedrud user create --email admin@example.com --password secret123 --name "Admin User"
+bedrud user [--config <path>] create --email admin@example.com --password secret123 --name "Admin User"
 
 # Предоставление прав superadmin
-bedrud user promote --email admin@example.com
+bedrud user [--config <path>] promote --email admin@example.com
 
 # Создание обычного пользователя
-bedrud user create --email user@example.com --password pass456 --name "Regular User"
+bedrud user [--config <path>] create --email user@example.com --password pass456 --name "Regular User"
 
 # Удаление пользователя
-bedrud user delete --email user@example.com
+bedrud user [--config <path>] delete --email user@example.com
 
 # Отзыв прав администратора
-bedrud user demote --email admin@example.com
+bedrud user [--config <path>] demote --email admin@example.com
 ```
 
 ---

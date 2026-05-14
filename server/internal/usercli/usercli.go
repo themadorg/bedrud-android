@@ -2,17 +2,21 @@ package usercli
 
 import (
 	"bedrud/config"
+	"bedrud/internal/auth"
 	"bedrud/internal/database"
+	"bedrud/internal/lkutil"
 	"bedrud/internal/models"
 	"bedrud/internal/repository"
+	"bedrud/internal/services"
+	"bedrud/internal/storage"
+	"context"
 	"fmt"
 	"time"
 
 	"github.com/google/uuid"
-	"golang.org/x/crypto/bcrypt"
+	"github.com/rs/zerolog/log"
 )
 
-// PromoteUser grants superadmin access to the user with the given email.
 func PromoteUser(configPath, email string) error {
 	return withUser(configPath, email, func(repo *repository.UserRepository, user *models.User) error {
 		for _, a := range user.Accesses {
@@ -30,7 +34,6 @@ func PromoteUser(configPath, email string) error {
 	})
 }
 
-// DemoteUser removes superadmin access from the user with the given email.
 func DemoteUser(configPath, email string) error {
 	return withUser(configPath, email, func(repo *repository.UserRepository, user *models.User) error {
 		filtered := user.Accesses[:0]
@@ -51,7 +54,6 @@ func DemoteUser(configPath, email string) error {
 	})
 }
 
-// CreateUser creates a new user with local authentication.
 func CreateUser(configPath, email, password, name string) error {
 	cfg, err := config.Load(configPath)
 	if err != nil {
@@ -66,7 +68,7 @@ func CreateUser(configPath, email, password, name string) error {
 		return fmt.Errorf("failed to run migrations: %w", err)
 	}
 
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	hashedPassword, err := auth.HashPassword(password)
 	if err != nil {
 		return fmt.Errorf("failed to hash password: %w", err)
 	}
@@ -100,7 +102,6 @@ func CreateUser(configPath, email, password, name string) error {
 	return nil
 }
 
-// DeleteUser removes a user by email address.
 func DeleteUser(configPath, email string) error {
 	cfg, err := config.Load(configPath)
 	if err != nil {
@@ -115,8 +116,8 @@ func DeleteUser(configPath, email string) error {
 		return fmt.Errorf("failed to run migrations: %w", err)
 	}
 
-	repo := repository.NewUserRepository(database.GetDB())
-	user, err := repo.GetUserByEmail(email)
+	userRepo := repository.NewUserRepository(database.GetDB())
+	user, err := userRepo.GetUserByEmail(email)
 	if err != nil {
 		return fmt.Errorf("database error: %w", err)
 	}
@@ -124,11 +125,48 @@ func DeleteUser(configPath, email string) error {
 		return fmt.Errorf("user not found: %s", email)
 	}
 
-	if err := repo.DeleteUser(user.ID); err != nil {
+	roomRepo := repository.NewRoomRepository(database.GetDB())
+	rooms, err := roomRepo.GetRoomsCreatedByUser(user.ID)
+	if err != nil {
+		return fmt.Errorf("failed to fetch user rooms: %w", err)
+	}
+
+	if len(rooms) > 0 {
+		client := lkutil.NewClient(&cfg.LiveKit)
+		uploadDir := cfg.Chat.Uploads.DiskDir
+		if uploadDir == "" {
+			uploadDir = "./data/uploads/chat"
+		}
+		var s3Deleter storage.ObjectDeleter
+		if cfg.Chat.Uploads.Backend == "s3" &&
+			cfg.Chat.Uploads.S3.Endpoint != "" &&
+			cfg.Chat.Uploads.S3.Bucket != "" &&
+			cfg.Chat.Uploads.S3.AccessKey != "" {
+			s3Deleter = storage.NewS3Deleter(cfg.Chat.Uploads.S3)
+		}
+		uploadTracker := storage.NewChatUploadTracker(database.GetDB(), uploadDir, s3Deleter)
+		cleanupSvc := services.NewRoomCleanupService(roomRepo, client, cfg.LiveKit.APIKey, cfg.LiveKit.APISecret, uploadTracker)
+
+		if err := cleanupSvc.DeleteUserRooms(context.Background(), rooms, user.ID); err != nil {
+			fmt.Printf("⚠ Room cleanup had errors (proceeding with user deletion): %v\n", err)
+			log.Warn().Err(err).Msg("room cleanup had errors during CLI user deletion")
+		}
+	}
+
+	passkeyRepo := repository.NewPasskeyRepository(database.GetDB())
+	prefsRepo := repository.NewUserPreferencesRepository(database.GetDB())
+
+	if err := passkeyRepo.DeleteByUserID(user.ID); err != nil {
+		return fmt.Errorf("failed to delete passkeys: %w", err)
+	}
+	if err := prefsRepo.DeleteByUserID(user.ID); err != nil {
+		return fmt.Errorf("failed to delete preferences: %w", err)
+	}
+	if err := userRepo.DeleteUser(user.ID); err != nil {
 		return fmt.Errorf("failed to delete user: %w", err)
 	}
 
-	fmt.Printf("✓ Deleted user: %s\n", user.Email)
+	fmt.Printf("✓ Deleted user: %s (%d room(s) cleaned up)\n", user.Email, len(rooms))
 	return nil
 }
 

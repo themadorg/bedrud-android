@@ -36,3 +36,7 @@ func (r *UserPreferencesRepository) Upsert(userID, prefsJSON string) error {
 	}
 	return r.db.Clauses(clause.OnConflict{UpdateAll: true}).Create(&p).Error
 }
+
+func (r *UserPreferencesRepository) DeleteByUserID(userID string) error {
+	return r.db.Delete(&models.UserPreferences{}, "user_id = ?", userID).Error
+}

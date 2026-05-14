@@ -3,25 +3,25 @@ package models
 import "time"
 
 type SystemSettings struct {
-	ID                    uint      `gorm:"primaryKey;autoIncrement" json:"id"`
-	RegistrationEnabled   bool      `gorm:"not null;default:true" json:"registrationEnabled"`
-	TokenRegistrationOnly bool      `gorm:"not null;default:false" json:"tokenRegistrationOnly"`
+	ID                    uint `gorm:"primaryKey;autoIncrement" json:"id"`
+	RegistrationEnabled   bool `gorm:"not null;default:true" json:"registrationEnabled"`
+	TokenRegistrationOnly bool `gorm:"not null;default:false" json:"tokenRegistrationOnly"`
 
 	// Auth
-	PasskeysEnabled      bool   `gorm:"not null;default:true" json:"passkeysEnabled"`
-	GoogleClientID       string `gorm:"size:512" json:"googleClientId"`
-	GoogleClientSecret   string `gorm:"size:512" json:"googleClientSecret"`
-	GoogleRedirectURL    string `gorm:"size:512" json:"googleRedirectUrl"`
-	GithubClientID       string `gorm:"size:512" json:"githubClientId"`
-	GithubClientSecret   string `gorm:"size:512" json:"githubClientSecret"`
-	GithubRedirectURL    string `gorm:"size:512" json:"githubRedirectUrl"`
-	TwitterClientID      string `gorm:"size:512" json:"twitterClientId"`
-	TwitterClientSecret  string `gorm:"size:512" json:"twitterClientSecret"`
-	TwitterRedirectURL   string `gorm:"size:512" json:"twitterRedirectUrl"`
-	JWTSecret            string `gorm:"size:512" json:"jwtSecret"`
-	TokenDuration        int    `gorm:"default:24" json:"tokenDuration"`
-	SessionSecret        string `gorm:"size:512" json:"sessionSecret"`
-	FrontendURL          string `gorm:"size:512" json:"frontendUrl"`
+	PasskeysEnabled     bool   `gorm:"not null;default:true" json:"passkeysEnabled"`
+	GoogleClientID      string `gorm:"size:512" json:"googleClientId"`
+	GoogleClientSecret  string `gorm:"size:512" json:"googleClientSecret"`
+	GoogleRedirectURL   string `gorm:"size:512" json:"googleRedirectUrl"`
+	GithubClientID      string `gorm:"size:512" json:"githubClientId"`
+	GithubClientSecret  string `gorm:"size:512" json:"githubClientSecret"`
+	GithubRedirectURL   string `gorm:"size:512" json:"githubRedirectUrl"`
+	TwitterClientID     string `gorm:"size:512" json:"twitterClientId"`
+	TwitterClientSecret string `gorm:"size:512" json:"twitterClientSecret"`
+	TwitterRedirectURL  string `gorm:"size:512" json:"twitterRedirectUrl"`
+	JWTSecret           string `gorm:"size:512" json:"jwtSecret"`
+	TokenDuration       int    `gorm:"default:24" json:"tokenDuration"`
+	SessionSecret       string `gorm:"size:512" json:"sessionSecret"`
+	FrontendURL         string `gorm:"size:512" json:"frontendUrl"`
 
 	// Server
 	ServerPort      string `gorm:"size:20" json:"serverPort"`
@@ -35,10 +35,10 @@ type SystemSettings struct {
 	BehindProxy     bool   `json:"behindProxy"`
 
 	// LiveKit
-	LiveKitHost     string `gorm:"size:255" json:"livekitHost"`
-	LiveKitAPIKey   string `gorm:"size:255" json:"livekitApiKey"`
+	LiveKitHost      string `gorm:"size:255" json:"livekitHost"`
+	LiveKitAPIKey    string `gorm:"size:255" json:"livekitApiKey"`
 	LiveKitAPISecret string `gorm:"size:255" json:"livekitApiSecret"`
-	LiveKitExternal bool   `json:"livekitExternal"`
+	LiveKitExternal  bool   `json:"livekitExternal"`
 
 	// CORS
 	CORSAllowedOrigins   string `gorm:"size:1024" json:"corsAllowedOrigins"`
@@ -59,6 +59,18 @@ type SystemSettings struct {
 	ChatUploadS3SecretKey string `gorm:"size:255" json:"chatUploadS3SecretKey"`
 	ChatUploadS3PublicURL string `gorm:"size:512" json:"chatUploadS3PublicUrl"`
 
+	// Room limits
+	MaxParticipantsLimit int `gorm:"default:1000" json:"maxParticipantsLimit"`
+	MaxRoomsPerUser      int `gorm:"default:100" json:"maxRoomsPerUser"`
+
+	// Upload quotas
+	MaxUploadBytesPerUser    int64 `gorm:"default:524288000" json:"maxUploadBytesPerUser"`
+	GlobalDiskThresholdBytes int64 `gorm:"default:0" json:"globalDiskThresholdBytes"`
+
+	// Chat message retention
+	ChatMaxMessageCount int `gorm:"default:10000" json:"chatMaxMessageCount"`
+	ChatMessageTTLHours int `gorm:"default:2160" json:"chatMessageTTLHours"`
+
 	// Logger
 	LogLevel string `gorm:"size:20" json:"logLevel"`
 
@@ -73,6 +85,7 @@ var SecretFields = []string{
 	"jwtSecret",
 	"sessionSecret",
 	"livekitApiSecret",
+	"chatUploadS3AccessKey",
 	"chatUploadS3SecretKey",
 }
 

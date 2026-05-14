@@ -7,37 +7,52 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/rs/zerolog/log"
 	"gopkg.in/yaml.v3"
 )
 
 type Config struct {
-	Server   ServerConfig   `yaml:"server"`
-	Database DatabaseConfig `yaml:"database"`
-	LiveKit  LiveKitConfig  `yaml:"livekit"`
-	Auth     AuthConfig     `yaml:"auth"`
-	Logger   LoggerConfig   `yaml:"logger"`
-	Cors     CorsConfig     `yaml:"cors"`
-	Chat     ChatConfig     `yaml:"chat"`
+	Server    ServerConfig    `yaml:"server"`
+	Database  DatabaseConfig  `yaml:"database"`
+	LiveKit   LiveKitConfig   `yaml:"livekit"`
+	Auth      AuthConfig      `yaml:"auth"`
+	Logger    LoggerConfig    `yaml:"logger"`
+	Cors      CorsConfig      `yaml:"cors"`
+	Chat      ChatConfig      `yaml:"chat"`
+	RateLimit RateLimitConfig `yaml:"rateLimit"`
 }
 
 type ServerConfig struct {
-	Port           string   `yaml:"port"`
-	HTTPPort       string   `yaml:"httpPort"`
-	Host           string   `yaml:"host"`
-	ReadTimeout    int      `yaml:"readTimeout"`
-	WriteTimeout   int      `yaml:"writeTimeout"`
-	EnableTLS      bool     `yaml:"enableTLS" env:"SERVER_ENABLE_TLS"`
-	DisableTLS     bool     `yaml:"disableTLS"`
-	CertFile       string   `yaml:"certFile" env:"SERVER_CERT_FILE"`
-	KeyFile        string   `yaml:"keyFile" env:"SERVER_KEY_FILE"`
-	Domain         string   `yaml:"domain" env:"SERVER_DOMAIN"`
-	Email          string   `yaml:"email" env:"SERVER_EMAIL"`
-	UseACME        bool     `yaml:"useACME" env:"SERVER_USE_ACME"`
-	TrustedProxies []string `yaml:"trustedProxies"`
-	ProxyHeader    string   `yaml:"proxyHeader"`
+	Port           string    `yaml:"port"`
+	HTTPPort       string    `yaml:"httpPort"`
+	Host           string    `yaml:"host"`
+	ReadTimeout    ConfigInt `yaml:"readTimeout"`
+	WriteTimeout   ConfigInt `yaml:"writeTimeout"`
+	EnableTLS      bool      `yaml:"enableTLS" env:"SERVER_ENABLE_TLS"`
+	DisableTLS     bool      `yaml:"disableTLS"`
+	CertFile       string    `yaml:"certFile" env:"SERVER_CERT_FILE"`
+	KeyFile        string    `yaml:"keyFile" env:"SERVER_KEY_FILE"`
+	Domain         string    `yaml:"domain" env:"SERVER_DOMAIN"`
+	Email          string    `yaml:"email" env:"SERVER_EMAIL"`
+	UseACME        bool      `yaml:"useACME" env:"SERVER_USE_ACME"`
+	TrustedProxies []string  `yaml:"trustedProxies"`
+	ProxyHeader    string    `yaml:"proxyHeader"`
 	// BehindProxy enables trusted-proxy mode. Set to true when running
 	// behind Cloudflare, nginx, or any reverse proxy that terminates TLS.
 	BehindProxy bool `yaml:"behindProxy"`
+	// CertAlgorithm selects the key algorithm for self-signed certificate generation.
+	// Supported: "ed25519" (default), "ecdsa256", "rsa2048", or "rsa4096".
+	// Renewal auto-detects and preserves the existing cert's algorithm.
+	// Env: SERVER_CERT_ALGORITHM
+	CertAlgorithm string `yaml:"certAlgorithm" env:"SERVER_CERT_ALGORITHM"`
+	// MaxParticipantsLimit is the hard ceiling for room maxParticipants.
+	// 0 means use internal default (1000).
+	// Env: SERVER_MAX_PARTICIPANTS_LIMIT
+	MaxParticipantsLimit int `yaml:"maxParticipantsLimit" env:"SERVER_MAX_PARTICIPANTS_LIMIT"`
+	// MaxRoomsPerUser caps the number of active rooms a single user can create.
+	// 0 means unlimited. Default when used as fallback: 100.
+	// Env: SERVER_MAX_ROOMS_PER_USER
+	MaxRoomsPerUser int `yaml:"maxRoomsPerUser" env:"SERVER_MAX_ROOMS_PER_USER"`
 }
 
 type DatabaseConfig struct {
@@ -64,16 +79,22 @@ type LiveKitConfig struct {
 	// External skips the embedded LiveKit server and /livekit proxy.
 	// Set to true when using a separate LiveKit deployment (e.g. lk.bedrud.org).
 	External bool `yaml:"external"`
+	// NodeIP is the explicit IP address for embedded LiveKit's RTC node_ip.
+	// When set, LiveKit uses this IP directly (use_external_ip=false) instead of
+	// STUN-based detection. Required for air-gapped, Docker, or firewalled environments.
+	// Env: LIVEKIT_NODE_IP
+	NodeIP string `yaml:"nodeIP"`
 }
 
 type AuthConfig struct {
-	JWTSecret     string       `yaml:"jwtSecret"`
-	TokenDuration int          `yaml:"tokenDuration"` // in hours
-	Google        OAuth2Config `yaml:"google"`
-	Github        OAuth2Config `yaml:"github"`
-	Twitter       OAuth2Config `yaml:"twitter"`
-	FrontendURL   string       `yaml:"frontendURL"`
-	SessionSecret string       `yaml:"sessionSecret"`
+	JWTSecret           string       `yaml:"jwtSecret"`
+	TokenDuration       ConfigInt    `yaml:"tokenDuration"` // in hours
+	Google              OAuth2Config `yaml:"google"`
+	Github              OAuth2Config `yaml:"github"`
+	Twitter             OAuth2Config `yaml:"twitter"`
+	FrontendURL         string       `yaml:"frontendURL"`
+	SessionSecret       string       `yaml:"sessionSecret"`
+	PasskeyChallengeTTL int          `yaml:"passkeyChallengeTTL"` // minutes, default 5. Env: AUTH_PASSKEY_CHALLENGE_TTL
 }
 
 type OAuth2Config struct {
@@ -88,17 +109,32 @@ type LoggerConfig struct {
 }
 
 type CorsConfig struct {
-	AllowedOrigins   string `yaml:"allowedOrigins"`
-	AllowedHeaders   string `yaml:"allowedHeaders"`
-	AllowedMethods   string `yaml:"allowedMethods"`
-	AllowCredentials bool   `yaml:"allowCredentials"`
-	ExposeHeaders    string `yaml:"exposeHeaders"`
-	MaxAge           int    `yaml:"maxAge"`
+	AllowedOrigins   string    `yaml:"allowedOrigins"`
+	AllowedHeaders   string    `yaml:"allowedHeaders"`
+	AllowedMethods   string    `yaml:"allowedMethods"`
+	AllowCredentials bool      `yaml:"allowCredentials"`
+	ExposeHeaders    string    `yaml:"exposeHeaders"`
+	MaxAge           ConfigInt `yaml:"maxAge"`
 }
 
-// ChatConfig holds settings for in-room chat, including image upload storage.
+// ChatConfig holds settings for in-room chat, including image upload storage and quotas.
 type ChatConfig struct {
 	Uploads ChatUploadConfig `yaml:"uploads"`
+	// MaxUploadBytesPerUser caps total bytes a user can store via chat uploads.
+	// 0 means unlimited. Default when used as fallback: 524288000 (500 MB).
+	// Env: CHAT_MAX_UPLOAD_BYTES_PER_USER
+	MaxUploadBytesPerUser int64 `yaml:"maxUploadBytesPerUser" env:"CHAT_MAX_UPLOAD_BYTES_PER_USER"`
+	// GlobalDiskThresholdBytes is the total upload storage ceiling across all users.
+	// When exceeded, all uploads are rejected until an admin frees space.
+	// 0 means unlimited. Env: CHAT_GLOBAL_DISK_THRESHOLD_BYTES
+	GlobalDiskThresholdBytes int64 `yaml:"globalDiskThresholdBytes" env:"CHAT_GLOBAL_DISK_THRESHOLD_BYTES"`
+	// MaxMessageCount caps the number of chat messages kept per room.
+	// 0 means unlimited. Default: 10000. Env: CHAT_MAX_MESSAGE_COUNT
+	MaxMessageCount int `yaml:"maxMessageCount" env:"CHAT_MAX_MESSAGE_COUNT"`
+	// MessageTTLHours is the max age of a chat message in hours.
+	// Messages older than this are purged. 0 means forever. Default: 2160 (90 days).
+	// Env: CHAT_MESSAGE_TTL_HOURS
+	MessageTTLHours int `yaml:"messageTTLHours" env:"CHAT_MESSAGE_TTL_HOURS"`
 }
 
 // ChatUploadConfig controls where and how chat image uploads are stored.
@@ -109,10 +145,10 @@ type ChatUploadConfig struct {
 	// Backend is "disk" (default), "s3", or "inline".
 	Backend string `yaml:"backend"`
 	// MaxBytes is the hard upload size limit (default 10 MB).
-	MaxBytes int64 `yaml:"maxBytes"`
+	MaxBytes ConfigInt `yaml:"maxBytes"`
 	// InlineMaxBytes: images smaller than this are returned as data: URIs instead
 	// of stored on disk / S3. Set to 0 to disable inline encoding. Default 512000 (500 KB).
-	InlineMaxBytes int64 `yaml:"inlineMaxBytes"`
+	InlineMaxBytes ConfigInt `yaml:"inlineMaxBytes"`
 	// DiskDir is the directory for disk-backend uploads. Default: ./data/uploads/chat
 	DiskDir string `yaml:"diskDir"`
 	// S3 holds connection info for the S3-compatible storage backend.
@@ -127,6 +163,49 @@ type ChatUploadS3Config struct {
 	SecretKey     string `yaml:"secretKey"`
 	PublicBaseURL string `yaml:"publicBaseUrl"`
 }
+
+// RateLimitConfig controls rate limiting for auth and guest endpoints.
+// Nil fields = use defaults. Set to 0 to disable.
+type RateLimitConfig struct {
+	AuthMaxRequests  *int `yaml:"authMaxRequests"`
+	AuthWindowSecs   *int `yaml:"authWindowSecs"`
+	GuestMaxRequests *int `yaml:"guestMaxRequests"`
+	GuestWindowSecs  *int `yaml:"guestWindowSecs"`
+	APIMaxRequests   *int `yaml:"apiMaxRequests"`
+	APIWindowSecs    *int `yaml:"apiWindowSecs"`
+}
+
+// ConfigInt accepts YAML int or quoted-string numeric values.
+// Logs warning when string path triggered to encourage migration to bare int.
+type ConfigInt int64
+
+func (f *ConfigInt) UnmarshalYAML(unmarshal func(any) error) error {
+	var i int64
+	if err := unmarshal(&i); err == nil {
+		*f = ConfigInt(i)
+		return nil
+	}
+
+	var s string
+	if err := unmarshal(&s); err != nil {
+		return err
+	}
+	if s == "" {
+		*f = 0
+		return nil
+	}
+	n, err := strconv.ParseInt(s, 10, 64)
+	if err != nil {
+		return err
+	}
+	log.Warn().Str("value", s).Msg("config field uses quoted string, use bare integer instead")
+	*f = ConfigInt(n)
+	return nil
+}
+
+func (f ConfigInt) MarshalYAML() (any, error) { return int64(f), nil }
+func (f ConfigInt) Int() int                  { return int(f) }
+func (f ConfigInt) Int64() int64              { return int64(f) }
 
 var (
 	config *Config
@@ -197,6 +276,14 @@ func Load(configPath string) (*Config, error) {
 		if envProxyHeader := os.Getenv("SERVER_PROXY_HEADER"); envProxyHeader != "" {
 			config.Server.ProxyHeader = envProxyHeader
 		}
+		if envCertAlgorithm := os.Getenv("SERVER_CERT_ALGORITHM"); envCertAlgorithm != "" {
+			config.Server.CertAlgorithm = envCertAlgorithm
+		}
+		if envMaxRoomsPerUser := os.Getenv("SERVER_MAX_ROOMS_PER_USER"); envMaxRoomsPerUser != "" {
+			if i, err := strconv.Atoi(envMaxRoomsPerUser); err == nil {
+				config.Server.MaxRoomsPerUser = i
+			}
+		}
 		if dbHost := os.Getenv("DB_HOST"); dbHost != "" {
 			config.Database.Host = dbHost
 		}
@@ -230,11 +317,22 @@ func Load(configPath string) (*Config, error) {
 		if livekitApiSecret := os.Getenv("LIVEKIT_API_SECRET"); livekitApiSecret != "" {
 			config.LiveKit.APISecret = livekitApiSecret
 		}
+		if livekitConfigPath := os.Getenv("LIVEKIT_CONFIG_PATH"); livekitConfigPath != "" {
+			config.LiveKit.ConfigPath = livekitConfigPath
+		}
+		if livekitNodeIP := os.Getenv("LIVEKIT_NODE_IP"); livekitNodeIP != "" {
+			config.LiveKit.NodeIP = livekitNodeIP
+		}
 		if jwtSecret := os.Getenv("JWT_SECRET"); jwtSecret != "" {
 			config.Auth.JWTSecret = jwtSecret
 		}
 		if frontendURL := os.Getenv("AUTH_FRONTEND_URL"); frontendURL != "" {
 			config.Auth.FrontendURL = frontendURL
+		}
+		if ttl := os.Getenv("AUTH_PASSKEY_CHALLENGE_TTL"); ttl != "" {
+			if n, err := strconv.Atoi(ttl); err == nil {
+				config.Auth.PasskeyChallengeTTL = n
+			}
 		}
 
 		// CORS environment variable overrides
@@ -257,7 +355,63 @@ func Load(configPath string) (*Config, error) {
 		}
 		if corsMaxAge := os.Getenv("CORS_MAX_AGE"); corsMaxAge != "" {
 			if i, err := strconv.Atoi(corsMaxAge); err == nil {
-				config.Cors.MaxAge = i
+				config.Cors.MaxAge = ConfigInt(i)
+			}
+		}
+
+		// Chat upload quota environment variable overrides
+		if v := os.Getenv("CHAT_MAX_UPLOAD_BYTES_PER_USER"); v != "" {
+			if i, err := strconv.ParseInt(v, 10, 64); err == nil {
+				config.Chat.MaxUploadBytesPerUser = i
+			}
+		}
+		if v := os.Getenv("CHAT_GLOBAL_DISK_THRESHOLD_BYTES"); v != "" {
+			if i, err := strconv.ParseInt(v, 10, 64); err == nil {
+				config.Chat.GlobalDiskThresholdBytes = i
+			}
+		}
+		if v := os.Getenv("CHAT_MAX_MESSAGE_COUNT"); v != "" {
+			if i, err := strconv.Atoi(v); err == nil {
+				config.Chat.MaxMessageCount = i
+			}
+		}
+		if v := os.Getenv("CHAT_MESSAGE_TTL_HOURS"); v != "" {
+			if i, err := strconv.Atoi(v); err == nil {
+				config.Chat.MessageTTLHours = i
+			}
+		}
+
+		// Rate limit environment variable overrides
+		if v := os.Getenv("RATELIMIT_AUTH_MAX"); v != "" {
+			if i, err := strconv.Atoi(v); err == nil {
+				config.RateLimit.AuthMaxRequests = &i
+			}
+		}
+		if v := os.Getenv("RATELIMIT_AUTH_WINDOW"); v != "" {
+			if i, err := strconv.Atoi(v); err == nil {
+				config.RateLimit.AuthWindowSecs = &i
+			}
+		}
+		if v := os.Getenv("RATELIMIT_GUEST_MAX"); v != "" {
+			if i, err := strconv.Atoi(v); err == nil {
+				config.RateLimit.GuestMaxRequests = &i
+			}
+		}
+		if v := os.Getenv("RATELIMIT_GUEST_WINDOW"); v != "" {
+			if i, err := strconv.Atoi(v); err == nil {
+				config.RateLimit.GuestWindowSecs = &i
+			}
+		}
+
+		// API rate limit environment variable overrides
+		if v := os.Getenv("RATELIMIT_API_MAX"); v != "" {
+			if i, err := strconv.Atoi(v); err == nil {
+				config.RateLimit.APIMaxRequests = &i
+			}
+		}
+		if v := os.Getenv("RATELIMIT_API_WINDOW"); v != "" {
+			if i, err := strconv.Atoi(v); err == nil {
+				config.RateLimit.APIWindowSecs = &i
 			}
 		}
 	})

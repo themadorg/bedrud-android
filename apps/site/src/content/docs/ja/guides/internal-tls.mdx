@@ -10,6 +10,65 @@ order: 30
 
 ## プライベート CA とサーバー証明書の生成
 
+最新のブラウザでは証明書に Subject Alternative Names (SANs) が必要です。インストーラーが自動的に処理します。
+
+### オプション 1：インストーラーを使用（推奨）
+
+`bedrud install` コマンドは、指定された IP とドメインに対して適切な SAN を持つ自己署名証明書を生成します：
+
+```bash
+sudo bedrud install --tls --ip YOUR_SERVER_IP
+```
+
+ドメイン名も含める場合：
+
+```bash
+sudo bedrud install --tls --ip YOUR_SERVER_IP --domain your.domain.com
+```
+
+### オプション 2：手動による証明書生成
+
+インストーラーの組み込み生成がワークフローに合わない場合は、openssl コマンドに `-addext` フラグを追加します：
+
+```bash
+#### Ed25519 (matches Bedrud's built-in generation, recommended)
+
+```bash
+openssl genpkey -algorithm ed25519 -out ca.key
+openssl req -new -x509 -days 3650 -key ca.key -out ca.crt \
+  -subj "/CN=Bedrud Internal CA"
+
+openssl genpkey -algorithm ed25519 -out server.key
+openssl req -new -key server.key -out server.csr \
+  -subj "/CN=<your-server-ip-or-hostname>" \
+  -addext "subjectAltName=IP:YOUR_SERVER_IP"
+openssl x509 -req -days 1825 -in server.csr \
+  -CA ca.crt -CAkey ca.key -CAcreateserial -out server.crt \
+  -addext "subjectAltName=IP:YOUR_SERVER_IP"
+
+sudo ./bedrud install --tls --cert server.crt --key server.key --ip YOUR_SERVER_IP
+```
+
+#### ECDSA P256 (alternative)
+
+```bash
+openssl ecparam -genkey -name prime256v1 -out ca.key
+openssl req -new -x509 -days 3650 -key ca.key -out ca.crt \
+  -subj "/CN=Bedrud Internal CA"
+
+openssl ecparam -genkey -name prime256v1 -out server.key
+openssl req -new -key server.key -out server.csr \
+  -subj "/CN=<your-server-ip-or-hostname>" \
+  -addext "subjectAltName=IP:YOUR_SERVER_IP"
+openssl x509 -req -days 1825 -in server.csr \
+  -CA ca.crt -CAkey ca.key -CAcreateserial -out server.crt \
+  -addext "subjectAltName=IP:YOUR_SERVER_IP"
+
+sudo ./bedrud install --tls --cert server.crt --key server.key --ip YOUR_SERVER_IP
+```
+
+#### RSA (legacy compatibility, larger keys)
+
 ```bash
 openssl genrsa -out ca.key 4096
 openssl req -new -x509 -days 3650 -key ca.key -out ca.crt \
@@ -17,9 +76,11 @@ openssl req -new -x509 -days 3650 -key ca.key -out ca.crt \
 
 openssl genrsa -out server.key 2048
 openssl req -new -key server.key -out server.csr \
-  -subj "/CN=<your-server-ip-or-hostname>"
+  -subj "/CN=<your-server-ip-or-hostname>" \
+  -addext "subjectAltName=IP:YOUR_SERVER_IP"
 openssl x509 -req -days 365 -in server.csr \
-  -CA ca.crt -CAkey ca.key -CAcreateserial -out server.crt
+  -CA ca.crt -CAkey ca.key -CAcreateserial -out server.crt \
+  -addext "subjectAltName=IP:YOUR_SERVER_IP"
 
 sudo ./bedrud install --tls --cert server.crt --key server.key --ip YOUR_SERVER_IP
 ```
@@ -63,8 +124,9 @@ sudo update-ca-trust
 |---------|-----|
 | ブラウザがまだ証明書を信頼できないと警告する | ブラウザキャッシュをクリアし、CA インストール後にブラウザを再起動 |
 | カメラ/マイクがブロックされる | CA が中間 CA ではなく信頼済みルート CA にあることを確認 |
-| 証明書の有効期限切れ | より長い `-days` 値で再生成 |
-| CN の不一致 | サーバー証明書の CN が URL の IP またはホスト名と一致していることを確認 |
+| 証明書の有効期限切れ | `sudo bedrud cert renew` を実行して再生成（毎日 09:00 に自動更新） |
+| CN の不一致 | 最新のブラウザは CN フィールドを無視します — SAN が優先されます。インストーラーの組み込み証明書生成（推奨）を使用するか、openssl コマンドに `-addext 'subjectAltName=...'` を追加してください |
+| SANs 不足 | 最新のブラウザは CN フィールドを無視します。インストーラーの組み込み証明書生成（推奨）を使用するか、openssl コマンドに `-addext 'subjectAltName=...'` を追加してください |
 
 ---
 

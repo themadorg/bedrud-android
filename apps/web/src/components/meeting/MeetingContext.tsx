@@ -1,16 +1,33 @@
 import { useRoomContext } from '@livekit/components-react'
 import { RoomEvent } from 'livekit-client'
 import { createContext, type ReactNode, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
+import { getPublicSettings } from '#/lib/use-public-settings'
 import { useUserStore } from '#/lib/user.store'
 import { useChatPersistence } from './chat/useChatPersistence'
 
+export type SystemEventName =
+  | 'kick'
+  | 'ban'
+  | 'ask_unmute'
+  | 'ask_camera'
+  | 'spotlight'
+  | 'deafen'
+  | 'undeafen'
+  | 'room_deleted'
+  | 'room_ended'
+  | 'room_closed'
+
 export interface SystemMessage {
   type: 'system'
-  event: 'kick' | 'ban' | 'ask_unmute' | 'ask_camera' | 'spotlight' | 'deafen' | 'undeafen'
-  actor: string
-  target: string
+  event: SystemEventName
+  actor?: string
+  target?: string
+  message?: string
+  deletedIdentity?: string
   ts: number
 }
+
+export type RoomDeletionEvent = Extract<SystemEventName, 'room_deleted' | 'room_ended' | 'room_closed'>
 
 export interface ChatAttachment {
   kind: 'image'
@@ -31,7 +48,20 @@ export interface ChatMessage {
   isLocal: boolean
 }
 
-const KNOWN_SYSTEM_EVENTS = new Set(['kick', 'ban', 'ask_unmute', 'ask_camera', 'spotlight', 'deafen', 'undeafen'])
+const KNOWN_SYSTEM_EVENTS = new Set([
+  'kick',
+  'ban',
+  'ask_unmute',
+  'ask_camera',
+  'spotlight',
+  'deafen',
+  'undeafen',
+  'room_deleted',
+  'room_ended',
+  'room_closed',
+])
+
+const ROOM_DELETION_EVENTS: Set<string> = new Set(['room_deleted', 'room_ended', 'room_closed'])
 
 // ── Room context (static / slow-changing metadata) ──────────────────────────
 
@@ -86,22 +116,53 @@ export function useMeetingContext(): MeetingContextValue {
   return useMemo(() => ({ ...room, ...chat }), [room, chat])
 }
 
+// ── Chat retention helpers ──────────────────────────────────────────────────
+
+function applyChatRetention(messages: ChatMessage[], retention: { maxCount: number; ttlHours: number }): ChatMessage[] {
+  let result = messages
+
+  if (retention.ttlHours > 0) {
+    const cutoff = Date.now() - retention.ttlHours * 60 * 60 * 1000
+    result = result.filter((m) => m.timestamp >= cutoff)
+  }
+
+  if (retention.maxCount > 0 && result.length > retention.maxCount) {
+    result = result.slice(result.length - retention.maxCount)
+  }
+
+  return result
+}
+
 // ── Provider ────────────────────────────────────────────────────────────────
 
 interface MeetingProviderProps {
   roomId: string
   roomName: string
   adminId: string
+  onRoomDeletionMessage?: (event: RoomDeletionEvent, message: string, isCurrentUserDeleted: boolean) => void
   children: ReactNode
 }
 
-export function MeetingProvider({ roomId, roomName, adminId, children }: MeetingProviderProps) {
+export function MeetingProvider({ roomId, roomName, adminId, onRoomDeletionMessage, children }: MeetingProviderProps) {
   const user = useUserStore((s) => s.user)
   const currentUserId = user?.id ?? ''
   const accesses = user?.accesses ?? []
   const room = useRoomContext()
 
-  const [initialMessages, persistMessages] = useChatPersistence(roomId)
+  const [retention, setRetention] = useState({ maxCount: 10000, ttlHours: 2160 })
+
+  useEffect(() => {
+    getPublicSettings()
+      .then((s) => {
+        setRetention({
+          maxCount: s.chatMaxMessageCount ?? 10000,
+          ttlHours: s.chatMessageTTLHours ?? 2160,
+        })
+      })
+      .catch(() => {})
+  }, [])
+
+  const [initialMessages, persistMessages] = useChatPersistence(roomId, retention.maxCount, retention.ttlHours)
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>(initialMessages)
   useEffect(() => {
     persistMessages(chatMessages)
@@ -115,28 +176,39 @@ export function MeetingProvider({ roomId, roomName, adminId, children }: Meeting
   // Track how many messages existed at the last markRead() so we only count new arrivals
   const chatSeenRef = useRef(0)
   const systemSeenRef = useRef(0)
+  const onRoomDeletionMessageRef = useRef(onRoomDeletionMessage)
+  onRoomDeletionMessageRef.current = onRoomDeletionMessage
 
-  // Unified data channel listener — handles both "chat" and "system" topics
   useEffect(() => {
     const handler = (payload: Uint8Array, participant: unknown, _kind: unknown, topic?: string) => {
       try {
         const raw = JSON.parse(new TextDecoder().decode(payload))
 
         if (topic === 'system') {
-          if (
-            raw.type === 'system' &&
-            typeof raw.event === 'string' &&
-            KNOWN_SYSTEM_EVENTS.has(raw.event) &&
-            typeof raw.actor === 'string' &&
-            raw.actor.length > 0 &&
-            typeof raw.target === 'string' &&
-            raw.target.length > 0
-          ) {
-            const msg = { ...(raw as SystemMessage), ts: Date.now() }
-            setSystemMessages((prev) => [...prev, msg])
-            if (msg.target === currentUserId) {
-              if (msg.event === 'deafen') setIsServerDeafened(true)
-              else if (msg.event === 'undeafen') setIsServerDeafened(false)
+          if (raw.type === 'system' && typeof raw.event === 'string' && KNOWN_SYSTEM_EVENTS.has(raw.event)) {
+            if (ROOM_DELETION_EVENTS.has(raw.event)) {
+              const msg = { ...(raw as SystemMessage), ts: Date.now() }
+              setSystemMessages((prev) => [...prev, msg])
+              const isCurrentUserDeleted = raw.deletedIdentity === room.localParticipant.identity
+              onRoomDeletionMessageRef.current?.(
+                raw.event as RoomDeletionEvent,
+                raw.message ?? '',
+                isCurrentUserDeleted,
+              )
+              return
+            }
+            if (
+              typeof raw.actor === 'string' &&
+              raw.actor.length > 0 &&
+              typeof raw.target === 'string' &&
+              raw.target.length > 0
+            ) {
+              const msg = { ...(raw as SystemMessage), ts: Date.now() }
+              setSystemMessages((prev) => [...prev, msg])
+              if (msg.target === currentUserId) {
+                if (msg.event === 'deafen') setIsServerDeafened(true)
+                else if (msg.event === 'undeafen') setIsServerDeafened(false)
+              }
             }
           }
           return
@@ -157,7 +229,10 @@ export function MeetingProvider({ roomId, roomName, adminId, children }: Meeting
             attachments: Array.isArray(raw.attachments) ? (raw.attachments as ChatAttachment[]) : [],
             isLocal: false,
           }
-          setChatMessages((prev) => [...prev, msg])
+          setChatMessages((prev) => {
+            const updated = [...prev, msg]
+            return applyChatRetention(updated, retention)
+          })
         }
       } catch {
         // Silently discard malformed data messages — a malicious participant
@@ -168,7 +243,7 @@ export function MeetingProvider({ roomId, roomName, adminId, children }: Meeting
     return () => {
       room.off(RoomEvent.DataReceived, handler)
     }
-  }, [room, currentUserId])
+  }, [room, currentUserId, retention])
 
   // Increment unread counter only for messages that arrive after the last markRead()
   useEffect(() => {
@@ -213,20 +288,23 @@ export function MeetingProvider({ roomId, roomName, adminId, children }: Meeting
       })
 
       // Local echo so the sender sees the message immediately
-      setChatMessages((prev) => [
-        ...prev,
-        {
-          id,
-          timestamp,
-          senderName,
-          senderIdentity,
-          message: text,
-          attachments: attachments ?? [],
-          isLocal: true,
-        },
-      ])
+      setChatMessages((prev) => {
+        const updated = [
+          ...prev,
+          {
+            id,
+            timestamp,
+            senderName,
+            senderIdentity,
+            message: text,
+            attachments: attachments ?? [],
+            isLocal: true,
+          },
+        ]
+        return applyChatRetention(updated, retention)
+      })
     },
-    [room],
+    [room, retention],
   )
 
   const toggleSelfDeafen = useCallback(() => {

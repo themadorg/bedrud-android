@@ -535,6 +535,8 @@
       "guides/makefile": "Makefile-Referenz",
       "guides/packages": "Paket-Installation",
       "guides/appliance": "Appliance-Modus",
+      "guides/admin-dashboard": "Admin-Dashboard",
+      "guides/behind-proxy": "Hinter einem Proxy/CDN",
       contributing: "Mitwirken",
     },
   },

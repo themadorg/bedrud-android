@@ -1,6 +1,7 @@
 package install
 
 import (
+	"bedrud/internal/livekit"
 	"bedrud/internal/utils"
 	"errors"
 	"fmt"
@@ -10,6 +11,7 @@ import (
 	"os"
 	"os/exec"
 	"runtime"
+	"strconv"
 	"strings"
 	"time"
 
@@ -56,32 +58,6 @@ type installConfigYAML struct {
 		AllowedOrigins   string `yaml:"allowedOrigins"`
 		AllowCredentials bool   `yaml:"allowCredentials"`
 	} `yaml:"cors"`
-}
-
-type livekitConfigYAML struct {
-	Port          string            `yaml:"port"`
-	BindAddresses []string          `yaml:"bind_addresses"`
-	Keys          map[string]string `yaml:"keys"`
-	RTC           struct {
-		TCPPort        string `yaml:"tcp_port"`
-		UDPPort        string `yaml:"udp_port,omitempty"`
-		PortRangeStart string `yaml:"port_range_start,omitempty"`
-		PortRangeEnd   string `yaml:"port_range_end,omitempty"`
-		UseExternalIP  bool   `yaml:"use_external_ip"`
-		NodeIP         string `yaml:"node_ip"`
-	} `yaml:"rtc"`
-	TURN struct {
-		Enabled  bool   `yaml:"enabled"`
-		Domain   string `yaml:"domain"`
-		UDPPort  int    `yaml:"udp_port"`
-		TLSPort  int    `yaml:"tls_port,omitempty"`
-		CertFile string `yaml:"cert_file,omitempty"`
-		KeyFile  string `yaml:"key_file,omitempty"`
-	} `yaml:"turn"`
-	Logging struct {
-		JSON  bool   `yaml:"json"`
-		Level string `yaml:"level"`
-	} `yaml:"logging"`
 }
 
 func LinuxInstall(cfg *InstallConfig) error {
@@ -280,19 +256,39 @@ func LinuxInstall(cfg *InstallConfig) error {
 			lkBindAddr = "0.0.0.0"
 		}
 
-		var lkYAML livekitConfigYAML
-		lkYAML.Port = cfg.LKPort
+		var lkYAML livekit.ConfigYAML
+		lkPort, err := strconv.Atoi(cfg.LKPort)
+		if err != nil || lkPort < 1 || lkPort > 65535 {
+			return fmt.Errorf("invalid livekit port %q: must be 1-65535", cfg.LKPort)
+		}
+		lkYAML.Port = lkPort
 		lkYAML.BindAddresses = []string{lkBindAddr}
 		lkYAML.Keys = map[string]string{apiKey: apiSecret}
-		lkYAML.RTC.TCPPort = cfg.LKTcpPort
+		lkTcpPort, err := strconv.Atoi(cfg.LKTcpPort)
+		if err != nil || lkTcpPort < 1 || lkTcpPort > 65535 {
+			return fmt.Errorf("invalid livekit TCP port %q: must be 1-65535", cfg.LKTcpPort)
+		}
+		lkYAML.RTC.TCPPort = lkTcpPort
 		lkYAML.RTC.UseExternalIP = false
 		lkYAML.RTC.NodeIP = lkNodeIP
 
 		if cfg.LKUDPPortRangeStart != "" && cfg.LKUDPPortRangeEnd != "" {
-			lkYAML.RTC.PortRangeStart = cfg.LKUDPPortRangeStart
-			lkYAML.RTC.PortRangeEnd = cfg.LKUDPPortRangeEnd
+			prStart, err := strconv.Atoi(cfg.LKUDPPortRangeStart)
+			if err != nil || prStart < 1 || prStart > 65535 {
+				return fmt.Errorf("invalid livekit UDP port range start %q: must be 1-65535", cfg.LKUDPPortRangeStart)
+			}
+			prEnd, err := strconv.Atoi(cfg.LKUDPPortRangeEnd)
+			if err != nil || prEnd < 1 || prEnd > 65535 {
+				return fmt.Errorf("invalid livekit UDP port range end %q: must be 1-65535", cfg.LKUDPPortRangeEnd)
+			}
+			lkYAML.RTC.PortRangeStart = prStart
+			lkYAML.RTC.PortRangeEnd = prEnd
 		} else {
-			lkYAML.RTC.UDPPort = cfg.LKUdpPort
+			lkUdpPort, err := strconv.Atoi(cfg.LKUdpPort)
+			if err != nil || lkUdpPort < 1 || lkUdpPort > 65535 {
+				return fmt.Errorf("invalid livekit UDP port %q: must be 1-65535", cfg.LKUdpPort)
+			}
+			lkYAML.RTC.UDPPort = lkUdpPort
 		}
 		lkYAML.TURN.Enabled = true
 		lkYAML.TURN.Domain = turnDomain
@@ -318,7 +314,18 @@ func LinuxInstall(cfg *InstallConfig) error {
 	if cfg.EnableTLS && cfg.CertPath == "" && cfg.KeyPath == "" {
 		cp, kp := "/etc/bedrud/cert.pem", "/etc/bedrud/key.pem"
 		if _, err := os.Stat(cp); os.IsNotExist(err) {
-			if err := utils.GenerateSelfSignedCert(cp, kp); err != nil {
+			hosts := []string{"localhost", "127.0.0.1", "::1"}
+			if cfg.OverrideIP != "" && cfg.OverrideIP != "127.0.0.1" && cfg.OverrideIP != "localhost" {
+				hosts = append(hosts, cfg.OverrideIP)
+			}
+			if cfg.Domain != "" {
+				hosts = append(hosts, cfg.Domain)
+			}
+			algo := utils.KeyAlgorithm(cfg.CertAlgorithm)
+			if algo == "" {
+				algo = utils.KeyEd25519
+			}
+			if err := utils.GenerateSelfSignedCertWithAlgo(cp, kp, algo, hosts...); err != nil {
 				return fmt.Errorf("failed to generate self-signed cert: %w", err)
 			}
 		}

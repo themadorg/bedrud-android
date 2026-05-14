@@ -4,30 +4,67 @@ description: Opérations administratives
 order: 25
 ---
 
-Les points de terminaison d'administration sont sous `/api/admin/`. Ils nécessitent le rôle **Super Admin**.
+Les points de terminaison d'administration sont sous `/api/admin/`. Tous nécessitent le niveau d'accès **superadmin** et un JWT valide dans l'en-tête `Authorization: Bearer <token>`.
 
 ## Vue d'ensemble
 
 | Point de terminaison | Méthode | Description |
-|---------------------|---------|-------------|
-| `/api/admin/users` | GET | Lister tous les utilisateurs |
+|---|---|---|
+| `/api/admin/users` | GET | Lister tous les utilisateurs (paginé) |
+| `/api/admin/users/:id` | GET | Obtenir le détail d'un utilisateur avec ses salles |
 | `/api/admin/users/:id/status` | PUT | Activer ou désactiver un utilisateur |
+| `/api/admin/users/:id/accesses` | PUT | Mettre à jour les niveaux d'accès d'un utilisateur |
+| `/api/admin/users/:id` | DELETE | Supprimer définitivement un utilisateur |
+| `/api/admin/rooms` | GET | Lister toutes les salles (paginé) |
+| `/api/admin/rooms/:roomId` | PUT | Modifier les paramètres d'une salle |
+| `/api/admin/rooms/:roomId` | DELETE | Fermer une salle (suppression en cascade) |
+| `/api/admin/rooms/:roomId/suspend` | POST | Suspendre une salle active |
+| `/api/admin/rooms/:roomId/participants` | GET | Obtenir les données des participants en direct de LiveKit |
+| `/api/admin/rooms/:roomId/participants/:identity/kick` | POST | Expulser un participant d'une salle |
+| `/api/admin/rooms/:roomId/participants/:identity/mute` | POST | Couper le micro d'un participant |
+| `/api/admin/settings` | GET | Obtenir les paramètres système (secrets masqués) |
+| `/api/admin/settings` | PUT | Mettre à jour les paramètres système |
+| `/api/admin/invite-tokens` | GET | Lister tous les jetons d'invitation |
+| `/api/admin/invite-tokens` | POST | Créer un nouveau jeton d'invitation |
+| `/api/admin/invite-tokens/:id` | DELETE | Supprimer un jeton d'invitation |
+| `/api/admin/online-count` | GET | Nombre total de participants actifs |
+| `/api/admin/livekit/stats` | GET | Statistiques agrégées du serveur LiveKit |
+| `/api/admin/cert-info` | GET | Métadonnées du certificat TLS |
+
+## Niveaux d'accès
+
+Bedrud utilise un système d'accès à plusieurs niveaux. Chaque utilisateur possède un tableau `accesses` qui peut contenir plusieurs niveaux simultanément.
+
+| Niveau d'accès | Description | Protection middleware |
+|---|---|---|
+| `superadmin` | Accès complet au système. Panneau d'administration, gestion des utilisateurs/salles, paramètres, jetons d'invitation. | `RequireAccess("superadmin")` sur `/api/admin/*` |
+| `admin` | Défini mais non appliqué par middleware. Informatif uniquement. | Aucun actuellement |
+| `moderator` | Modération au niveau de la salle. Bloquer le chat, couper le son, mettre en avant, désactiver la vidéo par salle. | Vérification `isRoomModerator()` au niveau de la salle |
+| `user` | Utilisateur authentifié standard. Créer/rejoindre des salles, gérer son profil. | `Protected()` sur les routes utilisateur |
+| `guest` | Utilisateur temporaire pour rejoindre des salles publiques. Connexion invité uniquement. | N/A |
+
+> **Note :** Le groupe de routes `/api/admin/*` vérifie la présence de `superadmin`, pas `admin`. Seuls les utilisateurs avec `superadmin` dans leur tableau `accesses` peuvent utiliser ces points de terminaison.
 
 ---
 
-## Points de terminaison
+## Gestion des utilisateurs
 
 ### Lister tous les utilisateurs
 
-Récupère la liste de tous les utilisateurs enregistrés.
+Récupère une liste paginée de tous les utilisateurs enregistrés.
 
 ```
-GET /api/admin/users
+GET /api/admin/users?page=1&limit=50
 ```
 
 **En-têtes :** `Authorization: Bearer <accessToken>`
 
-**Rôle requis :** Super Admin
+**Paramètres de requête :**
+
+| Paramètre | Type | Défaut | Description |
+|---|---|---|---|
+| `page` | int | 1 | Numéro de page |
+| `limit` | int | 50 | Utilisateurs par page |
 
 **Réponse (200) :**
 
@@ -35,23 +72,67 @@ GET /api/admin/users
 {
   "users": [
     {
-      "id": "uuid",
+      "id": "123e4567-e89b-12d3-a456-426614174000",
       "email": "user@example.com",
       "name": "John Doe",
-      "avatar": "https://...",
-      "role": "user",
-      "provider": "email",
+      "provider": "local",
       "isActive": true,
-      "createdAt": "2025-01-15T10:30:00Z"
+      "isAdmin": false,
+      "accesses": ["user"],
+      "createdAt": "2025-01-15 10:30:00"
     },
     {
-      "id": "uuid-2",
+      "id": "123e4567-e89b-12d3-a456-426614174001",
       "email": "admin@example.com",
       "name": "Admin User",
-      "role": "admin",
-      "provider": "email",
+      "provider": "local",
       "isActive": true,
-      "createdAt": "2025-01-10T08:00:00Z"
+      "isAdmin": true,
+      "accesses": ["user", "superadmin"],
+      "createdAt": "2025-01-10 08:00:00"
+    }
+  ],
+  "total": 42,
+  "page": 1,
+  "limit": 50
+}
+```
+
+---
+
+### Obtenir le détail d'un utilisateur
+
+Récupère le profil d'un utilisateur et les salles qu'il a créées.
+
+```
+GET /api/admin/users/:id
+```
+
+**Paramètres d'URL :**
+
+| Paramètre | Description |
+|---|---|
+| `id` | UUID de l'utilisateur |
+
+**Réponse (200) :**
+
+```json
+{
+  "user": {
+    "id": "123e4567-e89b-12d3-a456-426614174000",
+    "email": "user@example.com",
+    "name": "John Doe",
+    "provider": "local",
+    "isActive": true,
+    "isAdmin": false,
+    "accesses": ["user"],
+    "createdAt": "2025-01-15 10:30:00"
+  },
+  "rooms": [
+    {
+      "id": "room-uuid-1",
+      "name": "team-standup",
+      "createdAt": "2025-02-01T09:00:00Z"
     }
   ]
 }
@@ -61,27 +142,23 @@ GET /api/admin/users
 
 ### Mettre à jour le statut d'un utilisateur
 
-Activer ou désactiver un compte utilisateur. Les utilisateurs désactivés ne peuvent pas se connecter.
+Active ou désactive un compte utilisateur. Les utilisateurs désactivés ne peuvent pas se connecter ni rafraîchir leurs jetons.
 
 ```
 PUT /api/admin/users/:id/status
 ```
 
-**En-têtes :** `Authorization: Bearer <accessToken>`
-
-**Rôle requis :** Super Admin
-
 **Paramètres d'URL :**
 
 | Paramètre | Description |
-|-----------|-------------|
+|---|---|
 | `id` | UUID de l'utilisateur |
 
 **Corps de la requête :**
 
 ```json
 {
-  "isActive": false
+  "active": false
 }
 ```
 
@@ -89,38 +166,641 @@ PUT /api/admin/users/:id/status
 
 ```json
 {
-  "message": "user status updated",
-  "user": {
-    "id": "uuid",
-    "email": "user@example.com",
-    "isActive": false
-  }
+  "message": "User status updated successfully"
 }
 ```
 
 ---
 
-## Rôles d'utilisateur
+### Mettre à jour les accès d'un utilisateur
 
-| Rôle | Description | Autorisations |
-|------|-------------|---------------|
-| `guest` | Utilisateur temporaire | Rejoindre uniquement les salles |
-| `user` | Utilisateur régulier | Créer/rejoindre des salles, gérer son propre profil |
-| `admin` | Super Admin | Toutes les autorisations utilisateur + gérer les utilisateurs, voir toutes les salles |
+Modifie le tableau des niveaux d'accès d'un utilisateur. Utilisez cette méthode pour promouvoir en superadmin, rétrograder ou ajouter l'accès modérateur.
 
-### Créer un administrateur
-
-Les utilisateurs administrateurs sont créés via la CLI :
-
-```bash
-# Créer un utilisateur
-bedrud user create --email "admin@example.com" --password "securepassword" --name "Admin"
-
-# Promouvoir en administrateur
-bedrud user promote --email "admin@example.com"
+```
+PUT /api/admin/users/:id/accesses
 ```
 
-Il n'y a pas de point de terminaison API pour promouvoir les utilisateurs - c'est intentionnel pour des raisons de sécurité.
+**Paramètres d'URL :**
+
+| Paramètre | Description |
+|---|---|
+| `id` | UUID de l'utilisateur |
+
+**Corps de la requête :**
+
+```json
+{
+  "accesses": ["user", "superadmin"]
+}
+```
+
+| Champ | Type | Description |
+|---|---|---|
+| `accesses` | string[] | Tableau des niveaux d'accès. Valeurs valides : `user`, `superadmin`, `admin`, `moderator`, `guest` |
+
+**Réponse (200) :**
+
+```json
+{
+  "message": "User accesses updated"
+}
+```
+
+---
+
+### Supprimer un utilisateur
+
+Supprime définitivement un utilisateur et toutes ses données associées. S'exécute de manière asynchrone — renvoie `202 Accepted` immédiatement. Vous ne pouvez pas supprimer votre propre compte.
+
+```
+DELETE /api/admin/users/:id
+```
+
+**Paramètres d'URL :**
+
+| Paramètre | Description |
+|---|---|
+| `id` | UUID de l'utilisateur |
+
+**Réponse (202) :**
+
+```json
+{
+  "message": "User deletion queued",
+  "rooms": 3
+}
+```
+
+| Champ | Description |
+|---|---|
+| `message` | Confirmation que la suppression est en cours |
+| `rooms` | Nombre de salles créées par cet utilisateur (également supprimées) |
+
+La tâche en arrière-plan supprime en cascade :
+- Toutes les salles créées par l'utilisateur
+- Les passkeys associés (identifiants WebAuthn)
+- Les préférences de l'utilisateur
+- L'enregistrement utilisateur lui-même
+
+---
+
+## Gestion des salles
+
+### Lister toutes les salles
+
+Récupère une liste paginée de toutes les salles de l'instance (contourne le filtre du créateur).
+
+```
+GET /api/admin/rooms?page=1&limit=50
+```
+
+**Paramètres de requête :**
+
+| Paramètre | Type | Défaut | Description |
+|---|---|---|---|
+| `page` | int | 1 | Numéro de page |
+| `limit` | int | 50 | Salles par page |
+
+**Réponse (200) :**
+
+```json
+{
+  "rooms": [
+    {
+      "id": "room-uuid-1",
+      "name": "team-standup",
+      "createdBy": "user-uuid",
+      "maxParticipants": 25,
+      "isActive": true,
+      "settings": {
+        "allowChat": true,
+        "allowAudio": true,
+        "allowVideo": true,
+        "isPersistent": false
+      },
+      "createdAt": "2025-03-01T10:00:00Z"
+    }
+  ],
+  "total": 8,
+  "page": 1,
+  "limit": 50
+}
+```
+
+---
+
+### Modifier une salle
+
+Modifie les paramètres d'une salle, y compris le drapeau `isPersistent` réservé aux superadmins.
+
+```
+PUT /api/admin/rooms/:roomId
+```
+
+**Paramètres d'URL :**
+
+| Paramètre | Description |
+|---|---|
+| `roomId` | UUID de la salle |
+
+**Corps de la requête :**
+
+```json
+{
+  "maxParticipants": 50,
+  "settings": {
+    "allowChat": true,
+    "allowAudio": true,
+    "allowVideo": true,
+    "requireApproval": false,
+    "e2ee": false,
+    "isPersistent": true
+  }
+}
+```
+
+| Champ | Type | Description |
+|---|---|---|
+| `maxParticipants` | int | Nombre maximum de participants autorisé (optionnel) |
+| `settings.allowChat` | bool | Activer le chat dans la salle |
+| `settings.allowAudio` | bool | Activer les pistes audio |
+| `settings.allowVideo` | bool | Activer les pistes vidéo |
+| `settings.requireApproval` | bool | Exiger l'approbation de l'admin pour rejoindre |
+| `settings.e2ee` | bool | Activer le chiffrement de bout en bout |
+| `settings.isPersistent` | bool | **Admin uniquement.** Empêcher le nettoyage automatique des salles inactives |
+
+Tous les champs de paramètres sont optionnels — incluez uniquement ceux que vous souhaitez modifier.
+
+**Réponse (200) :** Renvoie l'objet salle mis à jour.
+
+---
+
+### Fermer une salle
+
+Ferme définitivement une salle avec suppression en cascade. Envoie un message système à tous les participants : « This room has been closed by an administrator ».
+
+```
+DELETE /api/admin/rooms/:roomId
+```
+
+**Paramètres d'URL :**
+
+| Paramètre | Description |
+|---|---|
+| `roomId` | UUID de la salle |
+
+**Réponse (200) :**
+
+```json
+{
+  "status": "success"
+}
+```
+
+---
+
+### Suspendre une salle
+
+Désactive une salle active et tous ses participants sans supprimer l'enregistrement de la salle. La salle peut être réactivée lorsqu'un participant la rejoint à nouveau.
+
+```
+POST /api/admin/rooms/:roomId/suspend
+```
+
+**Paramètres d'URL :**
+
+| Paramètre | Description |
+|---|---|
+| `roomId` | UUID de la salle |
+
+**Réponse (200) :**
+
+```json
+{
+  "status": "success"
+}
+```
+
+**Erreur (400) :** Renvoie `{"error": "Room is not active"}` si la salle est déjà inactive.
+
+---
+
+### Obtenir les participants d'une salle
+
+Récupère les données des participants en direct de LiveKit pour une salle spécifique. Inclut les informations des pistes par participant.
+
+```
+GET /api/admin/rooms/:roomId/participants
+```
+
+**Paramètres d'URL :**
+
+| Paramètre | Description |
+|---|---|
+| `roomId` | UUID de la salle |
+
+**Réponse (200) :**
+
+```json
+{
+  "participants": [
+    {
+      "sid": "PA_abc123",
+      "identity": "user-uuid",
+      "name": "John Doe",
+      "state": "ACTIVE",
+      "joinedAt": 1710338400,
+      "isPublisher": true,
+      "tracks": [
+        {
+          "sid": "TR_audio1",
+          "type": "AUDIO",
+          "source": "MICROPHONE",
+          "muted": false,
+          "bitrate": 32000
+        },
+        {
+          "sid": "TR_video1",
+          "type": "VIDEO",
+          "source": "CAMERA",
+          "muted": false,
+          "bitrate": 1500000
+        }
+      ]
+    }
+  ],
+  "room": {
+    "id": "room-uuid",
+    "name": "team-standup"
+  }
+}
+```
+
+Si la salle n'est pas active dans LiveKit, renvoie une liste de participants vide.
+
+---
+
+### Expulser un participant
+
+Retire un participant d'une salle (aucune vérification de propriété du créateur requise).
+
+```
+POST /api/admin/rooms/:roomId/participants/:identity/kick
+```
+
+**Paramètres d'URL :**
+
+| Paramètre | Description |
+|---|---|
+| `roomId` | UUID de la salle |
+| `identity` | Identité du participant (UUID de l'utilisateur) |
+
+**Réponse (200) :**
+
+```json
+{
+  "status": "success"
+}
+```
+
+---
+
+### Couper le micro d'un participant
+
+Coupe toutes les pistes audio d'un participant dans une salle.
+
+```
+POST /api/admin/rooms/:roomId/participants/:identity/mute
+```
+
+**Paramètres d'URL :**
+
+| Paramètre | Description |
+|---|---|
+| `roomId` | UUID de la salle |
+| `identity` | Identité du participant (UUID de l'utilisateur) |
+
+**Corps de la requête :**
+
+```json
+{
+  "muted": true
+}
+```
+
+**Réponse (200) :**
+
+```json
+{
+  "status": "success"
+}
+```
+
+---
+
+## Paramètres système
+
+### Obtenir les paramètres
+
+Récupère tous les paramètres système. Les champs secrets (secrets OAuth, secret JWT, secret API LiveKit, clé secrète S3) sont renvoyés sous la forme `"••••••••"` s'ils sont définis, ou chaîne vide s'ils ne sont pas configurés.
+
+```
+GET /api/admin/settings
+```
+
+**Réponse (200) :**
+
+```json
+{
+  "id": 1,
+  "registrationEnabled": true,
+  "tokenRegistrationOnly": false,
+  "passkeysEnabled": true,
+  "googleClientId": "",
+  "googleClientSecret": "",
+  "googleRedirectUrl": "",
+  "githubClientId": "",
+  "githubClientSecret": "",
+  "githubRedirectUrl": "",
+  "twitterClientId": "",
+  "twitterClientSecret": "",
+  "twitterRedirectUrl": "",
+  "jwtSecret": "••••••••",
+  "tokenDuration": 24,
+  "sessionSecret": "••••••••",
+  "frontendUrl": "",
+  "serverPort": "80",
+  "serverHost": "",
+  "serverDomain": "",
+  "serverEnableTls": false,
+  "serverCertFile": "",
+  "serverKeyFile": "",
+  "serverUseAcme": false,
+  "serverEmail": "",
+  "behindProxy": false,
+  "livekitHost": "",
+  "livekitApiKey": "",
+  "livekitApiSecret": "",
+  "livekitExternal": false,
+  "corsAllowedOrigins": "",
+  "corsAllowedHeaders": "",
+  "corsAllowedMethods": "",
+  "corsAllowCredentials": false,
+  "corsMaxAge": 0,
+  "chatUploadBackend": "disk",
+  "chatUploadMaxBytes": 10485760,
+  "chatUploadInlineMax": 524288,
+  "chatUploadDiskDir": "",
+  "chatUploadS3Endpoint": "",
+  "chatUploadS3Bucket": "",
+  "chatUploadS3Region": "",
+  "chatUploadS3AccessKey": "",
+  "chatUploadS3SecretKey": "",
+  "chatUploadS3PublicUrl": "",
+  "logLevel": "info",
+  "maxRoomsPerUser": 100,
+  "maxUploadBytesPerUser": 524288000,
+  "globalDiskThresholdBytes": 0,
+  "chatMaxMessageCount": 10000,
+  "chatMessageTTLHours": 2160,
+  "updatedAt": "2025-03-15T10:30:00Z"
+}
+```
+
+### Mettre à jour les paramètres
+
+Met à jour les paramètres système. Les champs secrets peuvent être envoyés sous la forme `"••••••••"` ou chaîne vide pour conserver la valeur existante — le serveur ne remplacera les secrets que lorsqu'une valeur réelle est envoyée.
+
+```
+PUT /api/admin/settings
+```
+
+**Corps de la requête (exemple partiel) :**
+
+```json
+{
+  "registrationEnabled": false,
+  "tokenRegistrationOnly": true,
+  "passkeysEnabled": true,
+  "googleClientId": "your-client-id.apps.googleusercontent.com",
+  "googleClientSecret": "GOCSPX-real-secret-value",
+  "googleRedirectUrl": "https://your-server.com/api/auth/google/callback",
+  "livekitHost": "127.0.0.1:7880",
+  "livekitApiKey": "APILiveKitKey123",
+  "livekitApiSecret": "real-livekit-secret",
+  "logLevel": "debug"
+}
+```
+
+**Réponse (200) :** Renvoie l'objet des paramètres complet avec les secrets masqués.
+
+Lors de la sauvegarde, le serveur recharge automatiquement les fournisseurs OAuth et la configuration CORS.
+
+> **Champs secrets :** `googleClientSecret`, `githubClientSecret`, `twitterClientSecret`, `jwtSecret`, `sessionSecret`, `livekitApiSecret`, `chatUploadS3SecretKey`
+
+---
+
+## Jetons d'invitation
+
+Les jetons d'invitation permettent une inscription contrôlée. Lorsque `tokenRegistrationOnly` est activé dans les paramètres, les nouveaux utilisateurs doivent fournir un jeton d'invitation valide et non utilisé lors de l'inscription.
+
+### Lister les jetons d'invitation
+
+Récupère tous les jetons d'invitation, du plus récent au plus ancien. Chaque jeton inclut un booléen `used` calculé à partir de `usedAt`.
+
+```
+GET /api/admin/invite-tokens
+```
+
+**Réponse (200) :**
+
+```json
+{
+  "tokens": [
+    {
+      "id": "token-uuid-1",
+      "token": "a1b2c3d4e5f6...",
+      "email": "invited@example.com",
+      "createdBy": "admin-uuid",
+      "expiresAt": "2025-06-15T10:30:00Z",
+      "usedAt": null,
+      "usedBy": "",
+      "createdAt": "2025-03-15T10:30:00Z",
+      "used": false
+    },
+    {
+      "id": "token-uuid-2",
+      "token": "f6e5d4c3b2a1...",
+      "email": "",
+      "createdBy": "admin-uuid",
+      "expiresAt": "2025-04-15T10:30:00Z",
+      "usedAt": "2025-03-20T14:00:00Z",
+      "usedBy": "new-user-uuid",
+      "createdAt": "2025-03-12T10:30:00Z",
+      "used": true
+    }
+  ]
+}
+```
+
+---
+
+### Créer un jeton d'invitation
+
+Génère un nouveau jeton d'invitation. La valeur du jeton est une chaîne hexadécimale aléatoire de 32 caractères.
+
+```
+POST /api/admin/invite-tokens
+```
+
+**Corps de la requête :**
+
+```json
+{
+  "email": "invited@example.com",
+  "expiresInHours": 168
+}
+```
+
+| Champ | Type | Requis | Défaut | Description |
+|---|---|---|---|---|
+| `email` | string | Non | _aucun_ | Restreindre le jeton à cette adresse e-mail |
+| `expiresInHours` | int | Non | 72 | Durée de validité du jeton en heures |
+
+**Réponse (201) :**
+
+```json
+{
+  "id": "uuid-string",
+  "token": "a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6",
+  "email": "invited@example.com",
+  "createdBy": "admin-uuid",
+  "expiresAt": "2025-03-22T10:30:00Z",
+  "usedAt": null,
+  "usedBy": "",
+  "createdAt": "2025-03-15T10:30:00Z"
+}
+```
+
+---
+
+### Supprimer un jeton d'invitation
+
+Révoque un jeton d'invitation par son ID. Après la suppression, le jeton ne peut plus être utilisé pour l'inscription.
+
+```
+DELETE /api/admin/invite-tokens/:id
+```
+
+**Paramètres d'URL :**
+
+| Paramètre | Description |
+|---|---|
+| `id` | UUID du jeton d'invitation |
+
+**Réponse (200) :**
+
+```json
+{
+  "status": "success"
+}
+```
+
+---
+
+## Observabilité
+
+### Nombre de participants en ligne
+
+Obtient le nombre total de participants actifs distincts dans toutes les salles.
+
+```
+GET /api/admin/online-count
+```
+
+**Réponse (200) :**
+
+```json
+{
+  "count": 12
+}
+```
+
+---
+
+### Statistiques LiveKit
+
+Obtient les statistiques agrégées du serveur média LiveKit.
+
+```
+GET /api/admin/livekit/stats
+```
+
+**Réponse (200) :**
+
+```json
+{
+  "totalParticipants": 15,
+  "totalPublishers": 8,
+  "activeRooms": 3,
+  "rooms": [
+    {
+      "name": "team-standup",
+      "numParticipants": 5,
+      "numPublishers": 3,
+      "creationTime": 1710338400
+    },
+    {
+      "name": "design-review",
+      "numParticipants": 7,
+      "numPublishers": 4,
+      "creationTime": 1710339000
+    }
+  ]
+}
+```
+
+---
+
+### Informations du certificat
+
+Obtient les métadonnées du certificat TLS, y compris le statut d'expiration.
+
+```
+GET /api/admin/cert-info
+```
+
+**Réponse (200) — TLS activé, certificat valide :**
+
+```json
+{
+  "enabled": true,
+  "status": "valid",
+  "daysRemaining": 78,
+  "notAfter": "2025-07-30T12:00:00Z",
+  "subject": "CN=bedrud.example.com",
+  "issuer": "CN=R3,O=Let's Encrypt,C=US",
+  "notBefore": "2025-04-01T12:00:00Z",
+  "sans": ["bedrud.example.com", "www.bedrud.example.com"]
+}
+```
+
+**Réponse (200) — TLS non activé :**
+
+```json
+{
+  "enabled": false,
+  "status": "not_configured"
+}
+```
+
+| Statut | Signification |
+|---|---|
+| `valid` | Le certificat est valide et n'approche pas de l'expiration |
+| `expiring_soon` | Le certificat expire dans les 30 jours |
+| `expired` | Le certificat a expiré |
+| `not_configured` | TLS est désactivé |
+| `error` | Fichier de certificat manquant ou invalide |
 
 ---
 
@@ -133,15 +813,21 @@ Il n'y a pas de point de terminaison API pour promouvoir les utilisateurs - c'es
 ```
 
 | Statut | Signification |
-|--------|--------------|
-| 401 | Non authentifié |
-| 403 | Pas un Super Admin |
-| 404 | Utilisateur non trouvé |
+|---|---|
+| 400 | Entrée invalide (ex : JSON mal formé, champs obligatoires manquants, suppression de son propre compte, suspension d'une salle inactive) |
+| 401 | Non authentifié — JWT manquant ou expiré |
+| 403 | Pas un superadmin — l'utilisateur n'a pas `superadmin` dans son tableau `accesses` |
+| 404 | Ressource non trouvée (utilisateur, salle ou jeton) |
+| 409 | Conflit — l'utilisateur ne peut pas supprimer son propre compte |
 | 500 | Erreur interne du serveur |
+| 501 | Non implémenté (ex : génération de jeton de salle admin) |
+| 503 | Informations du certificat indisponibles (erreur TLS) |
 
 ---
 
 ## Voir aussi
 
-- [Gestionnaires d'API et routage](/fr/docs/backend/api-handlers) - comment les routes d'administration sont implémentées
-- [API des salles](/fr/docs/api/rooms) - points de terminaison de gestion des salles
+- [Guide du tableau de bord administrateur](/fr/docs/guides/admin-dashboard) — gérer les utilisateurs, les salles et les paramètres depuis l'interface web
+- [API d'authentification](/fr/docs/api/authentication) — connexion, inscription, rafraîchissement de jeton
+- [API des salles](/fr/docs/api/rooms) — création de salle, rejoindre et gestion des participants
+- [Authentification](/fr/docs/backend/authentication) — niveaux d'accès et système de rôles

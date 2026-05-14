@@ -40,6 +40,8 @@ function RegisterPage() {
           tokenRegistrationOnly: false,
           passkeysEnabled: true,
           oauthProviders: [],
+          chatMaxMessageCount: 10000,
+          chatMessageTTLHours: 2160,
         }),
       )
   }, [])

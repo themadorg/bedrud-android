@@ -21,7 +21,7 @@ func NewRoomRepository(db *gorm.DB) *RoomRepository {
 // CreateRoom creates a new room with default admin permissions for creator.
 // If name is empty, a random URL-safe name is generated.
 // The name is validated to contain only lowercase letters, numbers, and hyphens.
-func (r *RoomRepository) CreateRoom(createdBy, name string, isPublic bool, mode string, settings *models.RoomSettings) (*models.Room, error) {
+func (r *RoomRepository) CreateRoom(createdBy, name string, isPublic bool, mode string, maxParticipants int, settings *models.RoomSettings) (*models.Room, error) {
 	// Normalize the name: trim whitespace and lowercase
 	name = strings.TrimSpace(strings.ToLower(name))
 
@@ -39,32 +39,57 @@ func (r *RoomRepository) CreateRoom(createdBy, name string, isPublic bool, mode 
 		return nil, err
 	}
 
-	// Check for duplicate name before creating
-	existing, err := r.GetRoomByName(name)
-	if err != nil {
-		return nil, err
-	}
-	if existing != nil {
-		return nil, models.ErrRoomNameTaken
-	}
-
 	var room *models.Room
 
-	err = r.db.Transaction(func(tx *gorm.DB) error {
-		// Create room first
-		newRoom := &models.Room{
-			ID:        uuid.New().String(),
-			Name:      name,
-			CreatedBy: createdBy,
-			AdminID:   createdBy,
-			IsActive:  true,
-			IsPublic:  isPublic,
-			Settings:  *settings,
-			Mode:      mode,
-			ExpiresAt: time.Now().Add(24 * time.Hour),
+	err := r.db.Transaction(func(tx *gorm.DB) error {
+		// Check for duplicate name inside transaction (TOCTOU-safe)
+		var existing models.Room
+		if err := tx.Where("name = ?", name).First(&existing).Error; err == nil {
+			return models.ErrRoomNameTaken
+		} else if !errors.Is(err, gorm.ErrRecordNotFound) {
+			return err
 		}
 
-		if err := tx.Create(newRoom).Error; err != nil {
+		now := time.Now()
+		newRoom := &models.Room{
+			ID:              uuid.New().String(),
+			Name:            name,
+			CreatedBy:       createdBy,
+			AdminID:         createdBy,
+			IsActive:        true,
+			IsPublic:        isPublic,
+			Settings:        *settings,
+			Mode:            mode,
+			MaxParticipants: maxParticipants,
+			ExpiresAt:       now.Add(24 * time.Hour),
+			CreatedAt:       now,
+			UpdatedAt:       now,
+		}
+
+		if err := tx.Model(&models.Room{}).Create(map[string]interface{}{
+			"ID":                        newRoom.ID,
+			"Name":                      newRoom.Name,
+			"CreatedBy":                 newRoom.CreatedBy,
+			"AdminID":                   newRoom.AdminID,
+			"IsActive":                  newRoom.IsActive,
+			"IsPublic":                  newRoom.IsPublic,
+			"Mode":                      newRoom.Mode,
+			"ExpiresAt":                 newRoom.ExpiresAt,
+			"MaxParticipants":           newRoom.MaxParticipants,
+			"CreatedAt":                 newRoom.CreatedAt,
+			"UpdatedAt":                 newRoom.UpdatedAt,
+			"settings_allow_chat":       newRoom.Settings.AllowChat,
+			"settings_allow_video":      newRoom.Settings.AllowVideo,
+			"settings_allow_audio":      newRoom.Settings.AllowAudio,
+			"settings_require_approval": newRoom.Settings.RequireApproval,
+			"settings_e2_ee":            newRoom.Settings.E2EE,
+			"settings_is_persistent":    newRoom.Settings.IsPersistent,
+		}).Error; err != nil {
+			newRoom = nil
+			// Catch unique constraint violations (TOCTOU race safety net)
+			if strings.Contains(err.Error(), "duplicate") || strings.Contains(err.Error(), "unique") || strings.Contains(err.Error(), "UNIQUE") {
+				return models.ErrRoomNameTaken
+			}
 			return err
 		}
 
@@ -136,40 +161,95 @@ func (r *RoomRepository) GetRoomByName(name string) (*models.Room, error) {
 
 // AddParticipant adds a participant to a room or reactivates them if they already exist
 func (r *RoomRepository) AddParticipant(roomID, userID string) error {
-	// Check if participant already exists
-	var existing models.RoomParticipant
-	err := r.db.Where("room_id = ? AND user_id = ?", roomID, userID).First(&existing).Error
+	return r.db.Transaction(func(tx *gorm.DB) error {
+		// Check if participant already exists
+		var existing models.RoomParticipant
+		err := tx.Where("room_id = ? AND user_id = ?", roomID, userID).First(&existing).Error
 
-	if err == nil {
-		// Check if participant is banned
-		if existing.IsBanned {
-			return errors.New("user is banned from this room")
+		if err == nil {
+			// Check if participant is banned
+			if existing.IsBanned {
+				return errors.New("user is banned from this room")
+			}
+
+			// Participant exists, update their status
+			return tx.Model(&existing).Updates(map[string]interface{}{
+				"is_active": true,
+				"left_at":   nil,
+				"joined_at": time.Now(),
+			}).Error
 		}
 
-		// Participant exists, update their status
-		return r.db.Model(&existing).Updates(map[string]interface{}{
-			"is_active": true,
-			"left_at":   nil,
-			"joined_at": time.Now(),
-		}).Error
-	}
+		if !errors.Is(err, gorm.ErrRecordNotFound) {
+			// Unexpected error
+			return err
+		}
 
-	if !errors.Is(err, gorm.ErrRecordNotFound) {
-		// Unexpected error
-		return err
-	}
+		// Create new participant
+		participant := &models.RoomParticipant{
+			ID:        uuid.New().String(),
+			RoomID:    roomID,
+			UserID:    userID,
+			IsActive:  true,
+			JoinedAt:  time.Now(),
+			IsOnStage: false, // Default to audience
+		}
 
-	// Create new participant
-	participant := &models.RoomParticipant{
-		ID:        uuid.New().String(),
-		RoomID:    roomID,
-		UserID:    userID,
-		IsActive:  true,
-		JoinedAt:  time.Now(),
-		IsOnStage: false, // Default to audience
-	}
+		return tx.Create(participant).Error
+	})
+}
 
-	return r.db.Create(participant).Error
+// AddParticipantWithCapacityCheck adds a participant with an atomic capacity check
+// inside the transaction. Prevents TOCTOU race between count check and insert.
+// Pass maxParticipants=0 to skip capacity limit.
+func (r *RoomRepository) AddParticipantWithCapacityCheck(roomID, userID string, maxParticipants int) error {
+	return r.db.Transaction(func(tx *gorm.DB) error {
+		// Check room capacity inside the transaction
+		if maxParticipants > 0 {
+			var count int64
+			if err := tx.Model(&models.RoomParticipant{}).
+				Where("room_id = ? AND is_active = ? AND is_banned = ?", roomID, true, false).
+				Count(&count).Error; err != nil {
+				return err
+			}
+			if count >= int64(maxParticipants) {
+				return errors.New("room is full")
+			}
+		}
+
+		// Check if participant already exists
+		var existing models.RoomParticipant
+		err := tx.Where("room_id = ? AND user_id = ?", roomID, userID).First(&existing).Error
+
+		if err == nil {
+			// Check if participant is banned
+			if existing.IsBanned {
+				return errors.New("user is banned from this room")
+			}
+
+			// Participant exists, update their status
+			return tx.Model(&existing).Updates(map[string]interface{}{
+				"is_active": true,
+				"left_at":   nil,
+				"joined_at": time.Now(),
+			}).Error
+		}
+
+		if !errors.Is(err, gorm.ErrRecordNotFound) {
+			return err
+		}
+
+		// Create new participant
+		participant := &models.RoomParticipant{
+			ID:        uuid.New().String(),
+			RoomID:    roomID,
+			UserID:    userID,
+			IsActive:  true,
+			JoinedAt:  time.Now(),
+			IsOnStage: false,
+		}
+		return tx.Create(participant).Error
+	})
 }
 
 // RemoveParticipant marks a participant as inactive and sets their leave time
@@ -191,17 +271,19 @@ func (r *RoomRepository) GetActiveParticipants(roomID string) ([]models.RoomPart
 	return participants, err
 }
 
-// CleanupExpiredRooms marks rooms as inactive if they've expired
+// CleanupExpiredRooms marks rooms as inactive if they've expired.
+// Persistent rooms are excluded from this cleanup.
 func (r *RoomRepository) CleanupExpiredRooms() error {
 	return r.db.Model(&models.Room{}).
-		Where("expires_at < ? AND is_active = ?", time.Now(), true).
+		Where("expires_at < ? AND is_active = ? AND settings_is_persistent = ?", time.Now(), true, false).
 		Update("is_active", false).Error
 }
 
 // UpdateParticipantPermissions updates a participant's permissions
-func (r *RoomRepository) UpdateParticipantPermissions(roomID, userID string, permissions *models.RoomPermissions) error {
-	return r.db.Where("room_id = ? AND user_id = ?", roomID, userID).
-		Updates(permissions).Error
+func (r *RoomRepository) UpdateParticipantPermissions(roomID, userID string, updates map[string]interface{}) error {
+	return r.db.Model(&models.RoomPermissions{}).
+		Where("room_id = ? AND user_id = ?", roomID, userID).
+		Updates(updates).Error
 }
 
 // BringToStage brings a participant to the stage
@@ -261,8 +343,14 @@ func (r *RoomRepository) KickParticipant(roomID, userID string) error {
 func (r *RoomRepository) UpdateRoomSettings(roomID string, settings *models.RoomSettings) error {
 	return r.db.Model(&models.Room{}).
 		Where("id = ?", roomID).
-		Select("Settings").
-		Updates(models.Room{Settings: *settings}).Error
+		Updates(map[string]interface{}{
+			"settings_allow_chat":       settings.AllowChat,
+			"settings_allow_video":      settings.AllowVideo,
+			"settings_allow_audio":      settings.AllowAudio,
+			"settings_require_approval": settings.RequireApproval,
+			"settings_e2_ee":            settings.E2EE,
+			"settings_is_persistent":    settings.IsPersistent,
+		}).Error
 }
 
 // DeleteRoom deletes a room and its related data. Only the creator can delete.
@@ -278,25 +366,27 @@ func (r *RoomRepository) DeleteRoom(roomID, userID string) error {
 		if err := tx.Where("room_id = ?", roomID).Delete(&models.RoomParticipant{}).Error; err != nil {
 			return err
 		}
+		if err := tx.Where("room_id = ?", roomID).Delete(&models.ChatUpload{}).Error; err != nil {
+			return err
+		}
 		return tx.Delete(&room).Error
 	})
 }
 
-// AdminDeleteRoom deletes a room without a created_by check. Use only after
-// verifying the caller has superadmin access in the handler layer.
-func (r *RoomRepository) AdminDeleteRoom(roomID string) error {
+// HardDeleteRoom deletes a room and its related data without a created_by check.
+// Callers must verify authorization before calling this.
+func (r *RoomRepository) HardDeleteRoom(roomID string) error {
 	return r.db.Transaction(func(tx *gorm.DB) error {
-		var room models.Room
-		if err := tx.Where("id = ?", roomID).First(&room).Error; err != nil {
-			return err
-		}
 		if err := tx.Where("room_id = ?", roomID).Delete(&models.RoomPermissions{}).Error; err != nil {
 			return err
 		}
 		if err := tx.Where("room_id = ?", roomID).Delete(&models.RoomParticipant{}).Error; err != nil {
 			return err
 		}
-		return tx.Delete(&room).Error
+		if err := tx.Where("room_id = ?", roomID).Delete(&models.ChatUpload{}).Error; err != nil {
+			return err
+		}
+		return tx.Where("id = ?", roomID).Delete(&models.Room{}).Error
 	})
 }
 
@@ -326,7 +416,16 @@ func (r *RoomRepository) GetAllRoomsPaginated(p PaginationParams) ([]models.Room
 
 func (r *RoomRepository) GetAllActiveRooms() ([]models.Room, error) {
 	var rooms []models.Room
-	err := r.db.Where("is_active = ?", true).Find(&rooms).Error
+	err := r.db.Where("is_active = ?", true).Limit(1000).Find(&rooms).Error
+	return rooms, err
+}
+
+func (r *RoomRepository) GetAllActiveRoomsWithLimit(limit int) ([]models.Room, error) {
+	var rooms []models.Room
+	if limit <= 0 || limit > 1000 {
+		limit = 1000
+	}
+	err := r.db.Where("is_active = ?", true).Limit(limit).Find(&rooms).Error
 	return rooms, err
 }
 
@@ -334,9 +433,15 @@ func (r *RoomRepository) SetRoomIdle(roomID string) error {
 	return r.db.Model(&models.Room{}).Where("id = ?", roomID).Update("is_active", false).Error
 }
 
+func (r *RoomRepository) DeactivateRoomParticipants(roomID string) error {
+	return r.db.Model(&models.RoomParticipant{}).
+		Where("room_id = ? AND is_active = ?", roomID, true).
+		Updates(map[string]interface{}{"is_active": false, "left_at": time.Now()}).Error
+}
+
 func (r *RoomRepository) GetRoomParticipantsWithUsers(roomID string) ([]models.RoomParticipant, error) {
 	var participants []models.RoomParticipant
-	err := r.db.Preload("User").Where("room_id = ?", roomID).Find(&participants).Error
+	err := r.db.Preload("User").Where("room_id = ? AND is_active = ?", roomID, true).Find(&participants).Error
 	return participants, err
 }
 
@@ -347,6 +452,15 @@ func (r *RoomRepository) GetUserByID(userID string) (*models.User, error) {
 		return nil, err
 	}
 	return &user, nil
+}
+
+// CountActiveRoomsByUser returns the number of active rooms created by a user.
+func (r *RoomRepository) CountActiveRoomsByUser(userID string) (int64, error) {
+	var count int64
+	err := r.db.Model(&models.Room{}).
+		Where("created_by = ? AND is_active = ?", userID, true).
+		Count(&count).Error
+	return count, err
 }
 
 // GetRoomsCreatedByUser retrieves rooms created by a specific user
@@ -419,7 +533,16 @@ func (r *RoomRepository) SetRoomModerator(roomID, userID string, isMod bool) err
 func (r *RoomRepository) GetParticipantCount(roomID string) (int, error) {
 	var count int64
 	err := r.db.Model(&models.RoomParticipant{}).
-		Where("room_id = ? AND is_banned = ?", roomID, false).
+		Where("room_id = ? AND is_active = ? AND is_banned = ?", roomID, true, false).
 		Count(&count).Error
 	return int(count), err
+}
+
+// IsParticipant returns true if the user is an active, non-banned participant in the room.
+func (r *RoomRepository) IsParticipant(roomID, userID string) (bool, error) {
+	var count int64
+	err := r.db.Model(&models.RoomParticipant{}).
+		Where("room_id = ? AND user_id = ? AND is_active = ? AND is_banned = ?", roomID, userID, true, false).
+		Count(&count).Error
+	return count > 0, err
 }

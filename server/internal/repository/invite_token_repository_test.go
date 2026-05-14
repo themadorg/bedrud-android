@@ -38,7 +38,7 @@ func TestInviteTokenRepository_List_Empty(t *testing.T) {
 	db := testutil.SetupTestDB(t)
 	repo := NewInviteTokenRepository(db)
 
-	tokens, err := repo.List()
+	tokens, _, err := repo.List(PaginationParams{Page: 1, Limit: 50})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -55,7 +55,7 @@ func TestInviteTokenRepository_List_MultipleTokens(t *testing.T) {
 	_ = repo.Create(newTestToken(t))
 	_ = repo.Create(newTestToken(t))
 
-	tokens, err := repo.List()
+	tokens, _, err := repo.List(PaginationParams{Page: 1, Limit: 50})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -133,7 +133,7 @@ func TestInviteTokenRepository_Delete(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	tokens, _ := repo.List()
+	tokens, _, _ := repo.List(PaginationParams{Page: 1, Limit: 50})
 	if len(tokens) != 0 {
 		t.Fatalf("expected 0 tokens after delete, got %d", len(tokens))
 	}

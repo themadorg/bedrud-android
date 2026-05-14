@@ -26,11 +26,10 @@ func tokenHash(token string) string {
 // revokedSet holds revoked access tokens keyed by their SHA-256 hash, with their expiry time.
 //
 // TRADE-OFF: The revocation list is kept in-memory and is lost on server restart.
-// With a default access token TTL of 24 hours, a revoked token could remain valid
-// after a restart for up to its remaining lifetime. This is an acceptable trade-off
-// for now: the impact is limited to tokens that were explicitly revoked (e.g. user
-// logout) and does not affect token validation itself. If stricter revocation is
-// needed in the future, persist this set to the database.
+// After a restart, revoked tokens remain valid until their natural expiry (up to TokenDuration).
+// This mainly affects tokens explicitly revoked on logout. To close the window:
+//   - Reduce tokenDuration in config.yaml (default 24h)
+//   - Or persist revoked hashes to a DB table (check BlockedRefreshToken model for pattern)
 type revokedSet struct {
 	mu sync.RWMutex
 	m  map[string]time.Time
@@ -71,6 +70,45 @@ func isRevoked(tokenStr string) bool {
 	return exists && time.Now().Before(exp)
 }
 
+// bannedUsers holds IDs of deactivated users for fast middleware checks.
+// Populated when an admin bans a user; removed when unbanned.
+var bannedUsers = &struct {
+	mu sync.RWMutex
+	m  map[string]struct{}
+}{m: make(map[string]struct{})}
+
+// BanUser adds a user ID to the in-memory banned set.
+func BanUser(userID string) {
+	bannedUsers.mu.Lock()
+	bannedUsers.m[userID] = struct{}{}
+	bannedUsers.mu.Unlock()
+}
+
+// UnbanUser removes a user ID from the in-memory banned set.
+func UnbanUser(userID string) {
+	bannedUsers.mu.Lock()
+	delete(bannedUsers.m, userID)
+	bannedUsers.mu.Unlock()
+}
+
+// LoadBannedUsersFromDB populates the in-memory banned set from a list of inactive user IDs.
+// Call once on server startup after DB initialization.
+func LoadBannedUsersFromDB(userIDs []string) {
+	bannedUsers.mu.Lock()
+	defer bannedUsers.mu.Unlock()
+	for _, id := range userIDs {
+		bannedUsers.m[id] = struct{}{}
+	}
+}
+
+// IsUserBanned checks if a user ID is in the banned set.
+func IsUserBanned(userID string) bool {
+	bannedUsers.mu.RLock()
+	defer bannedUsers.mu.RUnlock()
+	_, exists := bannedUsers.m[userID]
+	return exists
+}
+
 type Claims struct {
 	UserID   string   `json:"userId"`
 	Email    string   `json:"email"`
@@ -81,7 +119,7 @@ type Claims struct {
 }
 
 func GenerateToken(userID, email, name, provider string, accesses []string, cfg *config.Config) (string, error) {
-	expirationTime := time.Now().Add(time.Duration(cfg.Auth.TokenDuration) * time.Hour)
+	expirationTime := time.Now().Add(time.Duration(cfg.Auth.TokenDuration.Int()) * time.Hour)
 
 	claims := &Claims{
 		UserID:   userID,
@@ -116,7 +154,10 @@ func parseTokenUnchecked(tokenString string, cfg *config.Config) (*Claims, error
 			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
 		}
 		return []byte(cfg.Auth.JWTSecret), nil
-	})
+	},
+		jwt.WithIssuer("bedrud"),
+		jwt.WithAudience("bedrud"),
+	)
 	if err != nil {
 		return nil, err
 	}

@@ -1,5 +1,5 @@
 import { createFileRoute, Link, Outlet, useRouterState } from '@tanstack/react-router'
-import { Lock, Mic, User } from 'lucide-react'
+import { Camera, Lock, Mic, User } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 export const Route = createFileRoute('/dashboard/settings')({
@@ -10,6 +10,7 @@ const TABS = [
   { to: '/dashboard/settings' as const, label: 'Profile', icon: User, isIndex: true },
   { to: '/dashboard/settings/security' as const, label: 'Security', icon: Lock },
   { to: '/dashboard/settings/audio' as const, label: 'Audio', icon: Mic },
+  { to: '/dashboard/settings/video' as const, label: 'Video', icon: Camera },
 ]
 
 function SettingsLayout() {

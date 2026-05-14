@@ -503,6 +503,8 @@
       "guides/makefile": "Makefileリファレンス",
       "guides/packages": "パッケージインストール",
       "guides/appliance": "アプライアンスモード",
+      "guides/admin-dashboard": "管理ダッシュボード",
+      "guides/behind-proxy": "プロキシ/CDNの背後",
       contributing: "貢献する",
     },
   },

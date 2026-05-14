@@ -1,19 +1,34 @@
 package handlers
 
 import (
+	"bedrud/config"
 	"bedrud/internal/auth"
+	"bedrud/internal/lkutil"
 	"bedrud/internal/models"
 	"bedrud/internal/repository"
+	"bedrud/internal/services"
+	"bedrud/internal/storage"
 	"bedrud/internal/testutil"
 	"bytes"
 	"encoding/json"
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/gofiber/fiber/v2"
 )
+
+func testCleanupSvc(t *testing.T, roomRepo *repository.RoomRepository, uploadTracker *storage.ChatUploadTracker) *services.RoomCleanupService {
+	t.Helper()
+	client := lkutil.NewClient(&config.LiveKitConfig{Host: "http://localhost:7880", APIKey: "test", APISecret: "testsecret1234567890123456789012"})
+	return services.NewRoomCleanupService(roomRepo, client, "test", "testsecret1234567890123456789012", uploadTracker)
+}
+
+func testUsersHandler(userRepo *repository.UserRepository, roomRepo *repository.RoomRepository, passkeyRepo *repository.PasskeyRepository, prefsRepo *repository.UserPreferencesRepository, cleanupSvc *services.RoomCleanupService) *UsersHandler {
+	return NewUsersHandler(userRepo, roomRepo, passkeyRepo, prefsRepo, cleanupSvc)
+}
 
 // --- Helper ---
 
@@ -22,7 +37,11 @@ func setupUsersTestApp(t *testing.T) (*fiber.App, *repository.UserRepository) {
 	db := testutil.SetupTestDB(t)
 	userRepo := repository.NewUserRepository(db)
 	roomRepo := repository.NewRoomRepository(db)
-	usersHandler := NewUsersHandler(userRepo, roomRepo)
+	passkeyRepo := repository.NewPasskeyRepository(db)
+	prefsRepo := repository.NewUserPreferencesRepository(db)
+	uploadTracker := storage.NewChatUploadTracker(db, t.TempDir(), nil)
+	cleanupSvc := testCleanupSvc(t, roomRepo, uploadTracker)
+	usersHandler := testUsersHandler(userRepo, roomRepo, passkeyRepo, prefsRepo, cleanupSvc)
 
 	app := fiber.New()
 	// Simulate Protected middleware by injecting claims
@@ -38,6 +57,7 @@ func setupUsersTestApp(t *testing.T) (*fiber.App, *repository.UserRepository) {
 
 	app.Get("/admin/users", usersHandler.ListUsers)
 	app.Put("/admin/users/:id/status", usersHandler.UpdateUserStatus)
+	app.Put("/admin/users/:id/password", usersHandler.SetUserPassword)
 
 	return app, userRepo
 }
@@ -239,7 +259,11 @@ func TestUsersHandler_UpdateUserAccesses_Success(t *testing.T) {
 	db := testutil.SetupTestDB(t)
 	uRepo := repository.NewUserRepository(db)
 	rRepo := repository.NewRoomRepository(db)
-	h := NewUsersHandler(uRepo, rRepo)
+	pkRepo := repository.NewPasskeyRepository(db)
+	prRepo := repository.NewUserPreferencesRepository(db)
+	ut := storage.NewChatUploadTracker(db, t.TempDir(), nil)
+	cleanupSvc := testCleanupSvc(t, rRepo, ut)
+	h := testUsersHandler(uRepo, rRepo, pkRepo, prRepo, cleanupSvc)
 
 	app2 := fiber.New()
 	app2.Use(func(c *fiber.Ctx) error {
@@ -272,7 +296,11 @@ func TestUsersHandler_UpdateUserAccesses_NotFound(t *testing.T) {
 	db := testutil.SetupTestDB(t)
 	uRepo := repository.NewUserRepository(db)
 	rRepo := repository.NewRoomRepository(db)
-	h := NewUsersHandler(uRepo, rRepo)
+	pkRepo := repository.NewPasskeyRepository(db)
+	prRepo := repository.NewUserPreferencesRepository(db)
+	ut := storage.NewChatUploadTracker(db, t.TempDir(), nil)
+	cleanupSvc := testCleanupSvc(t, rRepo, ut)
+	h := testUsersHandler(uRepo, rRepo, pkRepo, prRepo, cleanupSvc)
 
 	app := fiber.New()
 	app.Use(func(c *fiber.Ctx) error {
@@ -295,7 +323,11 @@ func TestUsersHandler_UpdateUserAccesses_Forbidden(t *testing.T) {
 	db := testutil.SetupTestDB(t)
 	uRepo := repository.NewUserRepository(db)
 	rRepo := repository.NewRoomRepository(db)
-	h := NewUsersHandler(uRepo, rRepo)
+	pkRepo := repository.NewPasskeyRepository(db)
+	prRepo := repository.NewUserPreferencesRepository(db)
+	ut := storage.NewChatUploadTracker(db, t.TempDir(), nil)
+	cleanupSvc := testCleanupSvc(t, rRepo, ut)
+	h := testUsersHandler(uRepo, rRepo, pkRepo, prRepo, cleanupSvc)
 
 	app := fiber.New()
 	app.Use(func(c *fiber.Ctx) error {
@@ -318,7 +350,11 @@ func TestUsersHandler_GetUserDetail_Found(t *testing.T) {
 	db := testutil.SetupTestDB(t)
 	uRepo := repository.NewUserRepository(db)
 	rRepo := repository.NewRoomRepository(db)
-	h := NewUsersHandler(uRepo, rRepo)
+	pkRepo := repository.NewPasskeyRepository(db)
+	prRepo := repository.NewUserPreferencesRepository(db)
+	ut := storage.NewChatUploadTracker(db, t.TempDir(), nil)
+	cleanupSvc := testCleanupSvc(t, rRepo, ut)
+	h := testUsersHandler(uRepo, rRepo, pkRepo, prRepo, cleanupSvc)
 
 	app := fiber.New()
 	app.Use(func(c *fiber.Ctx) error {
@@ -351,7 +387,11 @@ func TestUsersHandler_GetUserDetail_NotFound(t *testing.T) {
 	db := testutil.SetupTestDB(t)
 	uRepo := repository.NewUserRepository(db)
 	rRepo := repository.NewRoomRepository(db)
-	h := NewUsersHandler(uRepo, rRepo)
+	pkRepo := repository.NewPasskeyRepository(db)
+	prRepo := repository.NewUserPreferencesRepository(db)
+	ut := storage.NewChatUploadTracker(db, t.TempDir(), nil)
+	cleanupSvc := testCleanupSvc(t, rRepo, ut)
+	h := testUsersHandler(uRepo, rRepo, pkRepo, prRepo, cleanupSvc)
 
 	app := fiber.New()
 	app.Use(func(c *fiber.Ctx) error {
@@ -365,6 +405,170 @@ func TestUsersHandler_GetUserDetail_NotFound(t *testing.T) {
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusNotFound {
 		t.Fatalf("expected 404, got %d", resp.StatusCode)
+	}
+}
+
+// --- SetUserPassword Tests ---
+
+func TestUsersHandler_SetUserPassword_Success(t *testing.T) {
+	app, userRepo := setupUsersTestApp(t)
+
+	_ = userRepo.CreateUser(&models.User{
+		ID:           "pw-target",
+		Email:        "pw@ex.com",
+		Name:         "PW Target",
+		Provider:     "local",
+		IsActive:     true,
+		RefreshToken: "old-refresh-hash",
+	})
+
+	body, _ := json.Marshal(map[string]string{"password": "newSecurePass123"})
+	req := httptest.NewRequest(http.MethodPut, "/admin/users/pw-target/password", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	resp, _ := app.Test(req, -1)
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("expected 200, got %d", resp.StatusCode)
+	}
+
+	user, _ := userRepo.GetUserByID("pw-target")
+	if err := auth.VerifyPassword("newSecurePass123", user.Password); err != nil {
+		t.Fatal("password was not updated correctly")
+	}
+	if user.RefreshToken != "" {
+		t.Fatal("expected refresh token to be cleared")
+	}
+}
+
+func TestUsersHandler_SetUserPassword_MaxLength(t *testing.T) {
+	app, userRepo := setupUsersTestApp(t)
+
+	_ = userRepo.CreateUser(&models.User{
+		ID:       "pw-max",
+		Email:    "pwmax@ex.com",
+		Name:     "Max",
+		Provider: "local",
+	})
+
+	pass := strings.Repeat("a", MaxPasswordLength)
+	body, _ := json.Marshal(map[string]string{"password": pass})
+	req := httptest.NewRequest(http.MethodPut, "/admin/users/pw-max/password", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	resp, _ := app.Test(req, -1)
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		t.Fatalf("expected 200, got %d: %s", resp.StatusCode, string(body))
+	}
+}
+
+func TestUsersHandler_SetUserPassword_TooShort(t *testing.T) {
+	app, userRepo := setupUsersTestApp(t)
+
+	_ = userRepo.CreateUser(&models.User{
+		ID:       "pw-short",
+		Email:    "pwshort@ex.com",
+		Name:     "Short",
+		Provider: "local",
+	})
+
+	body, _ := json.Marshal(map[string]string{"password": "short"})
+	req := httptest.NewRequest(http.MethodPut, "/admin/users/pw-short/password", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	resp, _ := app.Test(req, -1)
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusBadRequest {
+		t.Fatalf("expected 400, got %d", resp.StatusCode)
+	}
+}
+
+func TestUsersHandler_SetUserPassword_TooLong(t *testing.T) {
+	app, userRepo := setupUsersTestApp(t)
+
+	_ = userRepo.CreateUser(&models.User{
+		ID:       "pw-long",
+		Email:    "pwlong@ex.com",
+		Name:     "Long",
+		Provider: "local",
+	})
+
+	// 73 chars (exceeds MaxPasswordLength=72)
+	body, _ := json.Marshal(map[string]string{"password": strings.Repeat("a", MaxPasswordLength+1)})
+	req := httptest.NewRequest(http.MethodPut, "/admin/users/pw-long/password", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	resp, _ := app.Test(req, -1)
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusBadRequest {
+		t.Fatalf("expected 400, got %d", resp.StatusCode)
+	}
+}
+
+func TestUsersHandler_SetUserPassword_NotFound(t *testing.T) {
+	app, _ := setupUsersTestApp(t)
+
+	body, _ := json.Marshal(map[string]string{"password": "validPassword123"})
+	req := httptest.NewRequest(http.MethodPut, "/admin/users/nonexistent/password", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	resp, _ := app.Test(req, -1)
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusNotFound {
+		t.Fatalf("expected 404, got %d", resp.StatusCode)
+	}
+}
+
+func TestUsersHandler_SetUserPassword_InvalidBody(t *testing.T) {
+	app, _ := setupUsersTestApp(t)
+
+	req := httptest.NewRequest(http.MethodPut, "/admin/users/some-id/password", bytes.NewReader([]byte("not json")))
+	req.Header.Set("Content-Type", "application/json")
+	resp, _ := app.Test(req, -1)
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusBadRequest {
+		t.Fatalf("expected 400, got %d", resp.StatusCode)
+	}
+}
+
+func TestUsersHandler_SetUserPassword_Forbidden(t *testing.T) {
+	db := testutil.SetupTestDB(t)
+	uRepo := repository.NewUserRepository(db)
+	rRepo := repository.NewRoomRepository(db)
+	pkRepo := repository.NewPasskeyRepository(db)
+	prRepo := repository.NewUserPreferencesRepository(db)
+	ut := storage.NewChatUploadTracker(db, t.TempDir(), nil)
+	cleanupSvc := testCleanupSvc(t, rRepo, ut)
+	h := testUsersHandler(uRepo, rRepo, pkRepo, prRepo, cleanupSvc)
+
+	app := fiber.New()
+	app.Use(func(c *fiber.Ctx) error {
+		c.Locals("user", &auth.Claims{UserID: "regular-user", Accesses: []string{"user"}})
+		return c.Next()
+	})
+	app.Put("/admin/users/:id/password", h.SetUserPassword)
+
+	_ = uRepo.CreateUser(&models.User{ID: "target", Email: "t@ex.com", Name: "T", Provider: "local", Password: "original-hash"})
+
+	original, _ := uRepo.GetUserByID("target")
+	origPass := original.Password
+
+	body, _ := json.Marshal(map[string]string{"password": "newSecurePass123"})
+	req := httptest.NewRequest(http.MethodPut, "/admin/users/target/password", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	resp, _ := app.Test(req, -1)
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusForbidden {
+		t.Fatalf("expected 403, got %d", resp.StatusCode)
+	}
+
+	user, _ := uRepo.GetUserByID("target")
+	if user.Password != origPass {
+		t.Fatal("password was modified despite forbidden response")
 	}
 }
 

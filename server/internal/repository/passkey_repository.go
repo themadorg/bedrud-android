@@ -2,6 +2,7 @@ package repository
 
 import (
 	"bedrud/internal/models"
+	"fmt"
 
 	"gorm.io/gorm"
 )
@@ -34,11 +35,22 @@ func (r *PasskeyRepository) GetPasskeysByUserID(userID string) ([]models.Passkey
 }
 
 func (r *PasskeyRepository) UpdatePasskeyCounter(credentialID []byte, counter uint32) error {
-	return r.db.Model(&models.Passkey{}).
-		Where("credential_id = ?", credentialID).
-		Update("counter", counter).Error
+	result := r.db.Model(&models.Passkey{}).
+		Where("credential_id = ? AND counter < ?", credentialID, counter).
+		Update("counter", counter)
+	if result.Error != nil {
+		return result.Error
+	}
+	if result.RowsAffected == 0 {
+		return fmt.Errorf("passkey counter not updated: credential not found or possible cloned authenticator (counter not advancing)")
+	}
+	return nil
 }
 
-func (r *PasskeyRepository) DeletePasskey(passkeyID string) error {
-	return r.db.Delete(&models.Passkey{}, "id = ?", passkeyID).Error
+func (r *PasskeyRepository) DeletePasskey(passkeyID, userID string) error {
+	return r.db.Where("id = ? AND user_id = ?", passkeyID, userID).Delete(&models.Passkey{}).Error
+}
+
+func (r *PasskeyRepository) DeleteByUserID(userID string) error {
+	return r.db.Delete(&models.Passkey{}, "user_id = ?", userID).Error
 }

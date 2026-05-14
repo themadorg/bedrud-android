@@ -1,0 +1,280 @@
+---
+title: Admin-Dashboard
+description: Benutzer, Räume, Einstellungen und Einladungstokens über die Weboberfläche verwalten
+order: 35
+---
+
+Das Admin-Dashboard bietet eine Weboberfläche zur Verwaltung Ihrer Bedrud-Instanz. Superadmins können Systemstatistiken einsehen, Benutzer und Räume verwalten, instanzweite Einstellungen konfigurieren und Einladungstokens generieren.
+
+## Voraussetzungen
+
+- **Superadmin-Zugriff:** Sie müssen `superadmin` im `accesses`-Array Ihres Benutzers haben.
+- **Erste Admin-Einrichtung:** Erstellen Sie nach der Installation von Bedrud einen Benutzer und befördern Sie ihn über die CLI:
+
+```bash
+bedrud user create --email "admin@example.com" --password "securepassword" --name "Admin"
+bedrud user promote --email "admin@example.com"
+```
+
+Es gibt keine Weboberfläche oder API zum Erstellen des ersten Superadmins. Dies ist aus Sicherheitsgründen beabsichtigt.
+
+## Zugriff auf das Admin-Panel
+
+Sobald Sie Superadmin-Zugriff haben, ist das Admin-Panel unter `/dashboard/admin` in Ihrer Bedrud-Webanwendung verfügbar.
+
+**Navigation:**
+- Die **Seitenleiste** zeigt einen „Admin"-Bereich mit Links zu Übersicht, Benutzer, Räume und Einstellungen. Dieser Bereich ist nur für Superadmins sichtbar.
+- Das **Benutzermenü oben rechts** enthält einen „Admin-Panel"-Link mit einem Schild-Symbol.
+- Nicht-Admin-Benutzer, die versuchen, `/dashboard/admin/*`-URLs aufzurufen, werden automatisch zu `/dashboard` weitergeleitet.
+
+---
+
+## Übersichtsseite
+
+Die Übersichtsseite unter `/dashboard/admin` bietet ein Dashboard mit wichtigen Systemkennzahlen.
+
+### Systemstatistiken
+
+Karten zeigen:
+- **Online-Benutzer:** Gesamtzahl der eindeutigen aktiven Teilnehmer über alle Räume
+- **Gesamträume:** Gesamtzahl der Räume auf der Instanz
+- **Gesamtbenutzer:** Gesamtzahl der registrierten Benutzer
+
+### TLS-Zertifikatstatus
+
+Eine farbcodierte Anzeige zeigt den Zustand des TLS-Zertifikats Ihres Servers:
+
+| Status | Farbe | Bedeutung |
+|---|---|---|
+| Gültig | Grün | Zertifikat ist gültig |
+| Läuft bald ab | Gelb | Läuft innerhalb von 30 Tagen ab |
+| Abgelaufen | Rot | Zertifikat ist abgelaufen |
+| Nicht konfiguriert | Grau | TLS ist deaktiviert |
+
+Der Zertifikatstatus wird alle 5 Minuten aktualisiert.
+
+### Diagramme
+
+- **Raumerstellung:** Balkendiagramm der in den letzten 8 Wochen erstellten Räume
+- **Letzte Anmeldungen:** Liste der aktuellsten Benutzerregistrierungen
+
+---
+
+## Benutzerverwaltung
+
+### Benutzerliste
+
+Die Benutzerliste unter `/dashboard/admin/users` zeigt alle registrierten Benutzer in einer durchsuchbaren, sortierbaren Tabelle.
+
+**Spalten:**
+- **Name:** Anzeigename des Benutzers
+- **E-Mail:** E-Mail-Adresse des Benutzers
+- **Provider:** Authentifizierungsmethode (local, google, github, guest, passkey)
+- **Rolle:** Zugriffsebenen-Badge. Zeigt „Superadmin" für Benutzer mit `superadmin`-Zugriff.
+- **Erstellt:** Registrierungsdatum
+- **Status:** Aktiv/Gesperrt-Umschalter
+
+**Aktionen:**
+- **Suche:** In die Suchleiste tippen, um Benutzer nach Name oder E-Mail zu filtern (clientseitig).
+- **Sortieren:** Auf eine beliebige Spaltenüberschrift klicken, um zu sortieren. Erneut klicken, um aufsteigend/absteigend umzuschalten.
+- **Paginierung:** Navigationssteuerung zum Durchsuchen großer Benutzerlisten.
+
+### Benutzeraktionen
+
+Jede Benutzerzeile enthält Schnellaktionsschaltflächen:
+
+- **Befördern/Herabstufen:** Zwischen `["user"]` und `["user", "superadmin"]` Zugriffsebenen umschalten. In der Zugriffsebenen-Spalte sichtbar.
+- **Aktiv/Gesperrt:** Den Kontostatus des Benutzers umschalten. Gesperrte Benutzer können sich nicht anmelden oder Tokens aktualisieren.
+- **Details anzeigen:** Auf die Benutzerzeile klicken, um die Detailansicht zu öffnen.
+
+### Benutzerdetails
+
+Die Detailseite unter `/dashboard/admin/users/:userId` zeigt ein vollständiges Benutzerprofil.
+
+**Angezeigte Informationen:**
+- Benutzername, E-Mail, Provider und Registrierungsdatum
+- Zugriffsebenen-Badge (Superadmin/Benutzer)
+- Raumaktivitätsdiagramm (8-Wochen-Verlauf)
+- Liste der vom Benutzer erstellten Räume
+
+**Aktionen:**
+- **Befördern/Herabstufen:** Eigene Schaltfläche im Detail-Header
+- **Benutzer löschen:** Entfernt den Benutzer und alle seine Daten dauerhaft. Erfordert E-Mail-Bestätigung. Die Löschschaltfläche ist für das eigene Konto ausgeblendet (Sie können sich nicht selbst löschen).
+
+> **Löschen ist dauerhaft und asynchron.** Das Löschen eines Benutzers entfernt auch alle seine Räume, Passkeys und Einstellungen. Die Anfrage wird sofort zurückgegeben, während die Bereinigung im Hintergrund läuft.
+
+---
+
+## Raumverwaltung
+
+### Raumliste
+
+Die Raumliste unter `/dashboard/admin/rooms` zeigt alle Räume der Instanz.
+
+**Spalten:**
+- **Raumname:** Raumbezeichnung
+- **Sichtbarkeit:** Öffentlich, privat oder nicht gelistet
+- **Max. Teilnehmer:** Inline bearbeitbar – auf den Wert klicken, um ihn zu ändern
+- **Status:** Aktiv oder inaktiv
+- **Erstellt:** Raumerstellungsdatum
+
+**Aktionen:**
+- **Suche:** Räume nach Namen filtern (clientseitig)
+- **Sortieren:** Auf Spaltenüberschriften klicken, um zu sortieren
+- **Aussetzen:** Einen aktiven Anruf beenden, ohne den Raum zu löschen
+- **Löschen:** Einen Raum dauerhaft mit Kaskadenlöschung schließen
+
+### Raumdetails
+
+Die Detailseite unter `/dashboard/admin/rooms/:roomId` bietet tiefe Einblicke in einen Raum.
+
+**Raumeinstellungen:**
+- Raumname, Sichtbarkeitsmodus, max. Teilnehmer
+- **Persistent-Modus-Umschalter:** Aktivieren, um die automatische Bereinigung inaktiver Räume zu verhindern. Nur für Superadmins verfügbar – Raumersteller können dies nicht ändern.
+
+**Live-Teilnehmer:**
+- Echtzeit-Teilnehmerliste, die alle 3 Sekunden aktualisiert wird
+- Pro Teilnehmer: Name, Beitrittszeit, Spurinformationen (Audio/Video/Bildschirmfreigabe)
+- **Bitraten-Diagramm:** Live-Bitraten-Grafik für Audio- und Videospuren
+- **Entfernen:** Beliebigen Teilnehmer aus dem Raum entfernen
+- **Stummschalten:** Audiospuren eines beliebigen Teilnehmers stummschalten
+
+---
+
+## Systemeinstellungen
+
+Die Einstellungsseite unter `/dashboard/admin/settings` ist in 9 Tabs unterteilt. Klicken Sie auf „Änderungen speichern", nachdem Sie einen Tab bearbeitet haben (der Allgemein-Tab speichert bei Änderungen des Registrierungsmodus automatisch).
+
+### Allgemein-Tab
+
+- **Registrierungsmodus:**
+  - **Offen:** Jeder kann ein Konto registrieren
+  - **Nur auf Einladung:** Neue Benutzer müssen einen gültigen Einladungstoken angeben
+  - **Geschlossen:** Keine neuen Registrierungen – bestehende Benutzer können sich weiterhin anmelden
+  - Änderungen werden automatisch gespeichert, wenn Sie den Modus wechseln
+
+**Einladungstoken-Verwaltung (im Allgemein-Tab):**
+
+Tokens steuern, wer sich im Nur-auf-Einladung-Modus registrieren kann.
+
+- **Token generieren:** Geben Sie eine optionale E-Mail an, um den Token auf eine bestimmte Adresse zu beschränken, und wählen Sie einen Ablaufzeitraum (24 Stunden, 72 Stunden, 7 Tage oder 30 Tage).
+- **Token-Liste:** Zeigt alle Tokens mit ihrem Status. Ungenutzte Tokens haben ein grünes „Aktiv"-Badge, benutzte Tokens zeigen „Benutzt" in Grau.
+- **Token kopieren:** Klicken Sie auf die Kopierschaltfläche, um den 32-stelligen Token-Wert in die Zwischenablage zu kopieren.
+- **Widerrufen:** Löschen Sie einen Token, um seine Verwendung zu verhindern.
+
+### Authentifizierungs-Tab
+
+- **Passkeys:** FIDO2/WebAuthn passwortlose Authentifizierung umschalten
+- **OAuth-Provider:** Google, GitHub und Twitter OAuth konfigurieren:
+  - Client-ID
+  - Client-Secret
+  - Weiterleitungs-URL
+
+Jeder Provider hat eine eigene Konfigurationskarte. Aktivieren Sie einen Provider, indem Sie alle drei Felder ausfüllen.
+
+### LiveKit-Tab
+
+- **Externes LiveKit:** Umschalten, um einen externen LiveKit-Server anstelle des eingebetteten zu verwenden
+- **Host:** LiveKit-Server-Host und -Port (z. B. `127.0.0.1:7880`)
+- **API-Key:** LiveKit-Server-API-Key
+- **API-Secret:** LiveKit-Server-API-Secret
+
+### Server-Tab
+
+- **Port:** HTTP-Server-Port (Standard: `80`)
+- **Host:** Server-Hostname
+- **Domain:** Server-Domain
+- **E-Mail:** Administrative E-Mail (wird für ACME-Zertifikatsregistrierung verwendet)
+- **TLS:** HTTPS mit Zertifikatsdateien aktivieren
+- **ACME:** Automatische Let's-Encrypt-Zertifikatsverwaltung aktivieren
+- **Reverse-Proxy:** Angeben, dass der Server hinter einem Proxy steht (beeinflusst die Client-IP-Erkennung)
+- **Zertifikatspfade:** Zertifikats- und Schlüsseldateipfade (für manuelle TLS-Einrichtung)
+- **Zertifikatstatus:** Inline-Anzeige des aktuellen TLS-Zertifikatszustands
+
+### CORS-Tab
+
+- **Erlaubte Origins:** Kommagetrennte Liste der CORS-Origins
+- **Erlaubte Header:** Kommagetrennte Liste der erlaubten Anfrage-Header
+- **Erlaubte Methoden:** Kommagetrennte Liste der erlaubten HTTP-Methoden
+- **Anmeldeinformationen zulassen:** Umschalter für Anmeldeinformationen in Cross-Origin-Anfragen
+- **Max-Age:** Cache-Dauer für CORS-Preflight-Antworten (Sekunden)
+
+### Raumlimits-Tab
+
+Steuert, wie viele aktive Räume ein einzelner Benutzer erstellen kann:
+
+- **Max. Räume pro Benutzer:** Maximale Anzahl aktiver Räume, die ein Nicht-Superadmin-Benutzer erstellen kann (Standard: 100, 0 = unbegrenzt). Superadmins umgehen dieses Limit.
+
+### Upload-Kontingente-Tab
+
+Steuert Speicherlimits für Chat-Bild-Uploads:
+
+- **Max. Upload-Bytes pro Benutzer:** Speicherkontingent pro Benutzer über alle Räume hinweg (Standard: 524288000 = 500 MB, 0 = unbegrenzt). Superadmins umgehen dieses Limit.
+- **Globaler Datenträgerschwellenwert:** Gesamtspeichergrenze über alle Benutzer hinweg. Bei Überschreitung werden alle Uploads abgelehnt, bis ein Administrator Speicher freigibt (Standard: 0 = unbegrenzt). Dieses Limit gilt für alle, einschließlich Superadmins.
+
+### Chat-Uploads-Tab
+
+Konfigurieren Sie, wie Chat-Bild-Uploads gespeichert werden:
+
+- **Backend:** `disk` (lokales Dateisystem), `s3` (S3-kompatibler Speicher) oder `inline` (base64-eingebettet)
+- **Max. Upload-Bytes:** Maximale Dateigröße pro Upload
+- **Inline-Max:** Maximale Größe für Inline/Base64-Uploads
+- **Disk-Verzeichnis:** Lokales Verzeichnis für `disk`-Backend-Uploads
+
+**S3-Konfiguration (wenn Backend `s3` ist):**
+- Endpoint, Bucket, Region
+- Access Key, Secret Key
+- Öffentliche URL
+
+### Logging-Tab
+
+- **Log-Level:** `trace`, `debug`, `info`, `warn` oder `error`. Nützlich für die Fehlersuche – auf `debug` wechseln, um detaillierte Protokolle zu sehen, dann zurück zu `info` für die Produktion.
+
+---
+
+## Fehlerbehebung
+
+### „Admin-Panel nicht sichtbar"
+
+**Symptom:** Der Admin-Bereich erscheint nicht in der Seitenleiste, und der „Admin-Panel"-Link fehlt im Benutzermenü.
+
+**Ursache:** Der angemeldete Benutzer hat kein `superadmin` in seinem `accesses`-Array.
+
+**Lösung:** Verwenden Sie die CLI, um den Benutzer zu befördern:
+```bash
+bedrud user promote --email "your-email@example.com"
+```
+Melden Sie sich dann ab und wieder an, um ein neues JWT mit den aktualisierten Zugriffen zu erhalten.
+
+### „Einstellungen werden nicht gespeichert"
+
+**Symptom:** Das Speichern von Einstellungen wird erfolgreich zurückgegeben, aber geheime Werte erscheinen unverändert.
+
+**Ursache:** Der Server bewahrt bestehende geheime Werte, wenn Sie `"••••••••"` oder einen leeren String in der Aktualisierungsanfrage senden. Dies ist beabsichtigt – es verhindert das versehentliche Überschreiben von Secrets, wenn Sie nur nicht-geheime Felder ändern.
+
+**Lösung:** Senden Sie den tatsächlichen geheimen Wert (nicht den maskierten Platzhalter) in der Aktualisierungsanfrage.
+
+### „Eigenes Konto kann nicht gelöscht werden"
+
+**Symptom:** Die Löschschaltfläche ist auf Ihrer eigenen Benutzerdetailseite ausgeblendet, oder die API gibt einen 400-Fehler zurück.
+
+**Ursache:** Selbstlöschung ist aus Sicherheitsgründen blockiert. Sie können das Konto, mit dem Sie gerade angemeldet sind, nicht löschen.
+
+**Lösung:** Lassen Sie einen anderen Superadmin das Konto löschen oder verwenden Sie die CLI als anderer Benutzer.
+
+### „Weiterleitung zum Dashboard beim Aufrufen der Admin-URL"
+
+**Symptom:** Der direkte Aufruf von `/dashboard/admin` leitet zu `/dashboard` weiter.
+
+**Ursache:** Die Admin-Guard-Route prüft das `accesses`-Array Ihres JWTs. Wenn `superadmin` fehlt, leitet der Guard weiter.
+
+**Lösung:** Überprüfen Sie, ob Ihr Konto Superadmin-Zugriff hat. Wenn Ihr Zugriff kürzlich geändert wurde, melden Sie sich ab und wieder an, um Ihr JWT zu aktualisieren.
+
+---
+
+## Siehe auch
+
+- [Admin-API](/en/docs/api/admin) – vollständige API-Referenz für alle Admin-Endpunkte
+- [Authentifizierung](/en/docs/backend/authentication) – Zugriffsebenen und Rollensystem
+- [Konfiguration](/en/docs/getting-started/configuration) – config.yaml Einstellungsreferenz
+- [Schnellstart](/en/docs/getting-started/quickstart) – Anleitung zur ersten Admin-Einrichtung

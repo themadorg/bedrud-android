@@ -156,7 +156,7 @@ bedrud uninstall
 Gère les utilisateurs dans la base de données Bedrud.
 
 ```bash
-bedrud user <subcommand> [--config <path>] <flags>
+bedrud user [--config <path>] <subcommand> [flags]
 ```
 
 | Drapeau global | Par défaut                   | Description                                      |
@@ -168,7 +168,7 @@ bedrud user <subcommand> [--config <path>] <flags>
 Crée un nouvel utilisateur avec authentification locale (mot de passe haché avec bcrypt).
 
 ```bash
-bedrud user create --email <email> --password <password> --name <name>
+bedrud user [--config <path>] create --email <email> --password <password> --name <name>
 ```
 
 **Drapeaux requis :**
@@ -183,7 +183,7 @@ bedrud user create --email <email> --password <password> --name <name>
 Supprime un utilisateur par adresse e-mail.
 
 ```bash
-bedrud user delete --email <email>
+bedrud user [--config <path>] delete --email <email>
 ```
 
 #### `promote`
@@ -191,7 +191,7 @@ bedrud user delete --email <email>
 Accorde l'accès `superadmin` à un utilisateur.
 
 ```bash
-bedrud user promote --email <email>
+bedrud user [--config <path>] promote --email <email>
 ```
 
 #### `demote`
@@ -199,10 +199,51 @@ bedrud user promote --email <email>
 Retire l'accès `superadmin` d'un utilisateur (revient au niveau `user`).
 
 ```bash
-bedrud user demote --email <email>
+bedrud user [--config <path>] demote --email <email>
 ```
 
 **Implémentation :** `server/internal/usercli/usercli.go`
+
+---
+
+### `cert`
+
+Gérer les certificats TLS. Pertinent uniquement lors de l'utilisation de certificats auto-signés (générés par `bedrud install --self-signed`).
+
+```bash
+bedrud cert [--config <path>] <subcommand>
+```
+
+| Drapeau global | Défaut                     | Description                                |
+|----------------|----------------------------|--------------------------------------------|
+| `--config`     | `/etc/bedrud/config.yaml`  | Chemin vers le fichier de configuration    |
+| `--algo`       | `""`                        | Algorithme de clé : ed25519, ecdsa256, rsa2048, rsa4096 (par défaut : détection depuis le certificat existant) |
+
+#### `renew`
+
+Renouveler manuellement le certificat TLS auto-signé. Détecte l'algorithme de clé du certificat existant et régénère avec le même type (par défaut : Ed25519). Le nouveau certificat est valable 1825 jours (~5 ans).
+
+```bash
+bedrud cert renew [--config <path>]
+```
+
+Le serveur renouvelle également le certificat automatiquement chaque jour via son planificateur intégré lorsqu'il reste moins de 30 jours avant l'expiration. Cette commande est destinée au renouvellement manuel ou exceptionnel.
+
+**SANs :** Dérivés de la configuration du serveur — `domain` (si défini), ainsi que `localhost`, `127.0.0.1` et `::1`.
+
+**Implémentation :** `server/internal/utils/tls.go` (`RenewSelfSignedCert`)
+
+#### `info`
+
+Afficher les métadonnées du certificat TLS sur stdout.
+
+```bash
+bedrud cert info [--config <path>]
+```
+
+**Champs de sortie :** subject, issuer, notBefore, notAfter, daysRemaining, status (valid/expiring/error), SANs.
+
+**Implémentation :** `server/internal/utils/tls.go` (`ValidateTLSCertPair`)
 
 ---
 
@@ -268,19 +309,19 @@ bedrud install --fresh --domain example.com --email admin@example.com
 
 ```bash
 # Créer le premier utilisateur administrateur
-bedrud user create --email admin@example.com --password secret123 --name "Admin User"
+bedrud user [--config <path>] create --email admin@example.com --password secret123 --name "Admin User"
 
 # Accorder l'accès superadmin
-bedrud user promote --email admin@example.com
+bedrud user [--config <path>] promote --email admin@example.com
 
 # Créer un utilisateur régulier
-bedrud user create --email user@example.com --password pass456 --name "Regular User"
+bedrud user [--config <path>] create --email user@example.com --password pass456 --name "Regular User"
 
 # Supprimer un utilisateur
-bedrud user delete --email user@example.com
+bedrud user [--config <path>] delete --email user@example.com
 
 # Retirer l'accès administrateur
-bedrud user demote --email admin@example.com
+bedrud user [--config <path>] demote --email admin@example.com
 ```
 
 ---
