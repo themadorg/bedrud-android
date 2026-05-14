@@ -2,6 +2,8 @@ package scheduler
 
 import (
 	"bedrud/config"
+	"bedrud/internal/auth"
+	"bedrud/internal/models"
 	"bedrud/internal/repository"
 	"bedrud/internal/utils"
 	"context"
@@ -84,8 +86,10 @@ func Initialize(roomRepo *repository.RoomRepository, userRepo *repository.UserRe
 	lkClient := livekit.NewRoomServiceProtobufClient(apiHost, httpClient)
 
 	_, _ = scheduler.Every(1).Minute().Do(func() {
-		if err := roomRepo.CleanupExpiredRooms(); err != nil {
-			log.Error().Err(err).Msg("Scheduler: failed to clean up expired rooms")
+		if roomRepo != nil {
+			if err := roomRepo.CleanupExpiredRooms(); err != nil {
+				log.Error().Err(err).Msg("Scheduler: failed to clean up expired rooms")
+			}
 		}
 		checkIdleRooms(roomRepo, lkCfg, lkClient)
 	})
@@ -102,6 +106,22 @@ func Initialize(roomRepo *repository.RoomRepository, userRepo *repository.UserRe
 			}
 		})
 	}
+
+	// Periodic cleanup of expired blocked refresh tokens
+	_, _ = scheduler.Every(24).Hours().At("04:00").Do(func() {
+		if userRepo != nil {
+			if err := userRepo.CleanupBlockedTokens(); err != nil {
+				log.Error().Err(err).Msg("Scheduler: failed to clean up blocked tokens")
+			} else {
+				log.Info().Msg("Scheduler: cleaned up expired blocked tokens")
+			}
+		}
+	})
+
+	// Periodic pruning of in-memory revoked access token set
+	_, _ = scheduler.Every(1).Hour().Do(func() {
+		auth.PruneRevokedTokens()
+	})
 
 	if certFile != "" {
 		_, _ = scheduler.Every(1).Day().At("09:00").Do(func() {
@@ -172,6 +192,17 @@ func checkIdleRooms(roomRepo *repository.RoomRepository, cfg *config.LiveKitConf
 			if err := roomRepo.SetRoomIdle(room.ID); err != nil {
 				log.Error().Err(err).Str("room", room.Name).Msg("Scheduler: failed to set room idle")
 			} else {
+				// Re-check LK: someone may have joined between our ListRooms snapshot and now
+				recheck, recheckErr := client.ListParticipants(ctx, &livekit.ListParticipantsRequest{Room: room.Name})
+				if recheckErr == nil && len(recheck.Participants) > 0 {
+					// Someone joined — reactivate the room
+					if err := roomRepo.UpdateRoom(&models.Room{ID: room.ID, IsActive: true}); err != nil {
+						log.Warn().Err(err).Str("room", room.Name).Msg("Scheduler: failed to reactivate room")
+					} else {
+						log.Info().Int("participants", len(recheck.Participants)).Str("room", room.Name).Msg("Room reactivated (participant joined during idle check)")
+						continue
+					}
+				}
 				log.Info().Str("room", room.Name).Msg("Room set to idle (no participants)")
 				if err := roomRepo.DeactivateRoomParticipants(room.ID); err != nil {
 					log.Warn().Err(err).Str("room", room.Name).Msg("Scheduler: failed to deactivate participants")
