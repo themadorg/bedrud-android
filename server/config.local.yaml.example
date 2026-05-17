@@ -33,6 +33,12 @@ livekit:
   apiSecret: "CHANGE_ME_LIVEKIT_SECRET"
   # configPath: "/etc/bedrud/livekit.yaml"  # External LiveKit YAML. Env: LIVEKIT_CONFIG_PATH
   # When TLS is enabled (enableTLS: true), TURN/TLS is auto-configured using server certs.
+  #
+  # Webhook (disconnect detection):
+  #   Embedded LiveKit auto-configures webhook URL -> local API.
+  #   External LiveKit: configure webhook URL in your LiveKit dashboard:
+  #     https://<your-domain>/api/livekit/webhook
+  #   Uses same apiKey/apiSecret for JWT signing.
 
 auth:
   jwtSecret: "CHANGE_ME_32_CHAR_RANDOM_STRING"
@@ -70,3 +76,18 @@ chat:
   globalDiskThresholdBytes: 0       # Global storage ceiling across all users. 0 = unlimited. Env: CHAT_GLOBAL_DISK_THRESHOLD_BYTES
   maxMessageCount: 10000            # Max chat messages kept per room (0 = unlimited). Env: CHAT_MAX_MESSAGE_COUNT
   messageTTLHours: 2160             # Purge messages older than this (0 = forever). 2160 = 90 days. Env: CHAT_MESSAGE_TTL_HOURS
+
+queue:
+  pollInterval: 500    # ms between polls. Env: QUEUE_POLL_INTERVAL
+  maxAttempts: 3       # retries before failed. Env: QUEUE_MAX_ATTEMPTS
+  concurrency: 1       # worker goroutines. Env: QUEUE_CONCURRENCY
+
+email:
+  smtpHost: ""         # e.g. smtp.sendgrid.net. Env: EMAIL_SMTP_HOST
+  smtpPort: 587        # Env: EMAIL_SMTP_PORT
+  username: ""         # Env: EMAIL_USERNAME
+  password: ""         # Env: EMAIL_PASSWORD
+  fromAddress: ""      # e.g. noreply@bedrud.org. Env: EMAIL_FROM_ADDRESS
+  fromName: "Bedrud"   # Env: EMAIL_FROM_NAME
+  tlsSkipVerify: false # Skip TLS cert validation for self-signed SMTP. Env: EMAIL_TLS_SKIP_VERIFY
+  smtpsMode: false     # Direct TLS (SMTPS, port 465). Env: EMAIL_SMTPS_MODE

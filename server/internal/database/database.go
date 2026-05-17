@@ -136,6 +136,12 @@ func gormLogLevelFromZerolog(level zerolog.Level) logger.LogLevel {
 	}
 }
 
+// SetForTest sets the global database connection for testing.
+// This bypasses Initialize and should only be used in tests.
+func SetForTest(testDB *gorm.DB) {
+	db = testDB
+}
+
 // Close closes the database connection
 func Close() error {
 	if db != nil {

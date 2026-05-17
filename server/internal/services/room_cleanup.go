@@ -102,6 +102,41 @@ func (s *RoomCleanupService) SuspendRoom(ctx context.Context, room *models.Room)
 	return nil
 }
 
+// BulkSuspendRooms suspends multiple rooms, collecting per-room errors.
+// Non-fatal errors (LK failures) are logged but don't halt the batch.
+func (s *RoomCleanupService) BulkSuspendRooms(ctx context.Context, rooms []models.Room) map[string]error {
+	errors := make(map[string]error)
+	for i := range rooms {
+		if err := s.SuspendRoom(ctx, &rooms[i]); err != nil {
+			log.Error().Err(err).Str("roomID", rooms[i].ID).Msg("BulkSuspendRooms: room failed")
+			errors[rooms[i].ID] = err
+		}
+	}
+	if len(errors) == 0 {
+		return nil
+	}
+	return errors
+}
+
+// BulkCloseRooms permanently deletes multiple rooms, collecting per-room errors.
+func (s *RoomCleanupService) BulkCloseRooms(ctx context.Context, rooms []models.Room) map[string]error {
+	errors := make(map[string]error)
+	opts := CascadeDeleteOptions{
+		SystemEvent:   "room_closed",
+		SystemMessage: "This room has been closed by an administrator",
+	}
+	for i := range rooms {
+		if err := s.CascadeDeleteRoom(ctx, &rooms[i], opts); err != nil {
+			log.Error().Err(err).Str("roomID", rooms[i].ID).Msg("BulkCloseRooms: room failed")
+			errors[rooms[i].ID] = err
+		}
+	}
+	if len(errors) == 0 {
+		return nil
+	}
+	return errors
+}
+
 func (s *RoomCleanupService) DeleteUserRooms(ctx context.Context, rooms []models.Room, deletedUserID string) error {
 	var firstErr error
 	for _, r := range rooms {

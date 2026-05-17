@@ -150,15 +150,6 @@ func run() error {
 	// Initialize Goth providers (after session store is initialized)
 	auth.Init(cfg)
 
-	// Periodically prune expired entries from the in-memory access token revocation set.
-	go func() {
-		ticker := time.NewTicker(1 * time.Hour)
-		defer ticker.Stop()
-		for range ticker.C {
-			auth.PruneRevokedTokens()
-		}
-	}()
-
 	// Create new Fiber instance
 	app := fiber.New(fiber.Config{
 		AppName:      "Bedrud API",
@@ -219,19 +210,8 @@ func run() error {
 	}
 	inviteTokenRepo := repository.NewInviteTokenRepository(database.GetDB())
 
-	scheduler.Initialize(roomRepo, userRepo, &cfg.LiveKit, &cfg.Server)
+	scheduler.Initialize(database.GetDB(), roomRepo, userRepo, &cfg.LiveKit, &cfg.Server)
 	defer scheduler.Stop()
-
-	// Periodically clean up expired blocked refresh tokens from the database.
-	go func() {
-		ticker := time.NewTicker(1 * time.Hour)
-		defer ticker.Stop()
-		for range ticker.C {
-			if err := userRepo.CleanupBlockedTokens(); err != nil {
-				log.Error().Err(err).Msg("Failed to cleanup blocked tokens")
-			}
-		}
-	}()
 
 	// ===============================
 	// Services
@@ -331,7 +311,7 @@ func run() error {
 	uploadTracker := storage.NewChatUploadTracker(database.GetDB(), uploadDir, s3Deleter)
 	lkClient := lkutil.NewClient(&cfg.LiveKit)
 	cleanupSvc := services.NewRoomCleanupService(roomRepo, lkClient, cfg.LiveKit.APIKey, cfg.LiveKit.APISecret, uploadTracker)
-	roomHandler := handlers.NewRoomHandler(&cfg.LiveKit, &cfg.Chat, roomRepo, settingsRepo, uploadTracker, cleanupSvc)
+	roomHandler := handlers.NewRoomHandler(&cfg.LiveKit, &cfg.Chat, roomRepo, userRepo, settingsRepo, uploadTracker, cleanupSvc)
 
 	// Room routes
 	api.Post("/room/create", middleware.Protected(), middleware.APIRateLimiter(cfg.RateLimit), roomHandler.CreateRoom)
@@ -373,6 +353,7 @@ func run() error {
 	usersHandler := handlers.NewUsersHandler(userRepo, roomRepo, passkeyRepo, prefsRepo, cleanupSvc)
 	adminHandler := handlers.NewAdminHandler(settingsRepo, inviteTokenRepo)
 	certHandler := handlers.NewCertHandler(cfg)
+	overviewHandler := handlers.NewAdminOverviewHandler(roomRepo, userRepo, settingsRepo, &cfg.LiveKit, lkClient, database.GetDB(), time.Now(), "dev")
 
 	// Admin routes
 	adminGroup := api.Group("/admin",
@@ -380,11 +361,20 @@ func run() error {
 		middleware.RequireAccess(models.AccessSuperAdmin),
 	)
 	adminGroup.Get("/users", usersHandler.ListUsers)
+	adminGroup.Get("/users/recent", usersHandler.ListRecentSignups)
+	adminGroup.Post("/users/bulk/ban", usersHandler.BulkBanUsers)
+	adminGroup.Post("/users/bulk/promote", usersHandler.BulkPromoteUsers)
+	adminGroup.Post("/users/bulk/delete", usersHandler.BulkDeleteUsers)
 	adminGroup.Put("/users/:id/status", usersHandler.UpdateUserStatus)
 	adminGroup.Put("/users/:id/accesses", usersHandler.UpdateUserAccesses)
 	adminGroup.Post("/users/:id/force-logout", usersHandler.ForceLogout)
 	adminGroup.Put("/users/:id/password", usersHandler.SetUserPassword)
+	adminGroup.Get("/stats", roomHandler.GetAdminStats)
+	adminGroup.Get("/overview", overviewHandler.GetOverview)
 	adminGroup.Get("/rooms", roomHandler.AdminListRooms)
+	adminGroup.Get("/rooms/events", roomHandler.ListRoomEvents)
+	adminGroup.Post("/rooms/bulk/suspend", roomHandler.BulkSuspendRooms)
+	adminGroup.Post("/rooms/bulk/close", roomHandler.BulkCloseRooms)
 	adminGroup.Post("/rooms/:roomId/token", roomHandler.AdminGenerateToken)
 	adminGroup.Delete("/rooms/:roomId", roomHandler.AdminCloseRoom)
 	adminGroup.Post("/rooms/:roomId/suspend", roomHandler.AdminSuspendRoom)
@@ -401,10 +391,14 @@ func run() error {
 	api.Get("/cert", certHandler.GetCert)
 	adminGroup.Get("/settings", adminHandler.GetSettings)
 	adminGroup.Put("/settings", adminHandler.UpdateSettings)
+	adminGroup.Post("/settings/validate", adminHandler.ValidateSettingsConnectivity)
 	adminGroup.Get("/invite-tokens", adminHandler.ListInviteTokens)
 	adminGroup.Post("/invite-tokens", adminHandler.CreateInviteToken)
 	adminGroup.Delete("/invite-tokens/:id", adminHandler.DeleteInviteToken)
 	adminGroup.Get("/cert-info", certHandler.GetCertInfo)
+
+	queueHandler := handlers.NewAdminQueueHandler(database.GetDB())
+	adminGroup.Get("/queue", queueHandler.GetQueueStats)
 
 	// ------------------------------
 	// Serve static files

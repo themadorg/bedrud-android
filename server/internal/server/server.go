@@ -26,6 +26,7 @@ import (
 	"bedrud/internal/middleware"
 	"bedrud/internal/models"
 	"bedrud/internal/repository"
+	"bedrud/internal/queue"
 	"bedrud/internal/scheduler"
 	"bedrud/internal/services"
 	"bedrud/internal/storage"
@@ -56,7 +57,7 @@ import (
 	"golang.org/x/crypto/acme/autocert"
 )
 
-func Run(configPath string) error {
+func Run(configPath string, version string) error {
 	cfg, err := config.Load(configPath)
 	if err != nil {
 		return err
@@ -132,8 +133,19 @@ func Run(configPath string) error {
 				keyFile = abs
 			}
 		}
+		// Generate LiveKit API key/secret if not set (needed for webhook signing)
+		if cfg.LiveKit.APIKey == "" {
+			genKey, genSecret, err := utils.GenerateLiveKitKeypair()
+			if err != nil {
+				log.Error().Err(err).Msg("Failed to generate LiveKit keypair")
+			} else {
+				cfg.LiveKit.APIKey = genKey
+				cfg.LiveKit.APISecret = genSecret
+				log.Info().Msg("Generated LiveKit API key/secret (not set in config)")
+			}
+		}
 		nodeIP := livekit.ResolveNodeIP(cfg.LiveKit.NodeIP, cfg.Server.Host)
-		if err := livekit.StartInternalServer(context.Background(), cfg.LiveKit.APIKey, cfg.LiveKit.APISecret, 7880, certFile, keyFile, cfg.LiveKit.ConfigPath, nodeIP, cfg.Server.Host); err != nil {
+		if err := livekit.StartInternalServer(context.Background(), cfg.LiveKit.APIKey, cfg.LiveKit.APISecret, 7880, certFile, keyFile, cfg.LiveKit.ConfigPath, nodeIP, cfg.Server.Host, cfg.Server.HTTPPort); err != nil {
 			log.Error().Err(err).Msg("Failed to start internal LiveKit server")
 		}
 	} else if cfg.LiveKit.External {
@@ -150,7 +162,7 @@ func Run(configPath string) error {
 	}
 	roomRepo := repository.NewRoomRepository(database.GetDB())
 	userRepo := repository.NewUserRepository(database.GetDB())
-	scheduler.Initialize(roomRepo, userRepo, &cfg.LiveKit, &cfg.Server)
+	scheduler.Initialize(database.GetDB(), roomRepo, userRepo, &cfg.LiveKit, &cfg.Server)
 	defer scheduler.Stop()
 	auth.Init(cfg)
 
@@ -250,6 +262,7 @@ func Run(configPath string) error {
 	settingsRepo := repository.NewSettingsRepository(database.GetDB())
 	settingsRepo.SetConfig(cfg)
 	inviteTokenRepo := repository.NewInviteTokenRepository(database.GetDB())
+	prefsRepo := repository.NewUserPreferencesRepository(database.GetDB())
 	uploadDir := cfg.Chat.Uploads.DiskDir
 	if uploadDir == "" {
 		uploadDir = "./data/uploads/chat"
@@ -261,13 +274,31 @@ func Run(configPath string) error {
 		cfg.Chat.Uploads.S3.AccessKey != "" {
 		s3Deleter = storage.NewS3Deleter(cfg.Chat.Uploads.S3)
 	}
+	uploadStore := storage.NewChatUploadStore(&cfg.Chat.Uploads)
 	uploadTracker := storage.NewChatUploadTracker(database.GetDB(), uploadDir, s3Deleter)
 	lkClient := lkutil.NewClient(&cfg.LiveKit)
 	cleanupSvc := services.NewRoomCleanupService(roomRepo, lkClient, cfg.LiveKit.APIKey, cfg.LiveKit.APISecret, uploadTracker)
+
+	// Queue worker — runs async jobs for deletion, uploads, etc.
+	queueWorker := queue.NewWorker(database.GetDB(), map[string]queue.Handler{
+		"user_delete":       queue.NewUserDeleteHandler(cleanupSvc, userRepo, passkeyRepo, prefsRepo, roomRepo),
+		"room_delete":       queue.NewRoomDeleteHandler(cleanupSvc, roomRepo),
+		"room_suspend":      queue.NewRoomSuspendHandler(cleanupSvc, roomRepo),
+		"chat_upload_s3":    queue.NewChatUploadS3Handler(uploadStore, uploadTracker),
+		"send_email":        queue.NewSendEmailHandler(&cfg.Email),
+		"dispatch_webhook":  queue.HandleDispatchWebhook,
+		"process_recording": queue.NewProcessRecordingHandler(),
+	}, queue.WorkerOptions{
+		Interval:    time.Duration(cfg.Queue.PollInterval.Int64()) * time.Millisecond,
+		Concurrency: cfg.Queue.Concurrency,
+	})
+	queueWorker.Start(context.Background())
+	defer queueWorker.Stop()
+
 	authService := auth.NewAuthService(userRepo, passkeyRepo)
 	challengeStore := auth.NewChallengeStore(cfg.Auth.PasskeyChallengeTTL)
 	authHandler := handlers.NewAuthHandler(authService, cfg, settingsRepo, inviteTokenRepo, challengeStore)
-	roomHandler := handlers.NewRoomHandler(&cfg.LiveKit, &cfg.Chat, roomRepo, settingsRepo, uploadTracker, cleanupSvc)
+	roomHandler := handlers.NewRoomHandler(&cfg.LiveKit, &cfg.Chat, roomRepo, userRepo, settingsRepo, uploadTracker, cleanupSvc)
 
 	api.Post("/auth/register", middleware.AuthRateLimiter(cfg.RateLimit), authHandler.Register)
 	api.Post("/auth/login", middleware.AuthRateLimiter(cfg.RateLimit), authHandler.Login)
@@ -280,7 +311,6 @@ func Run(configPath string) error {
 	api.Get("/auth/:provider/login", middleware.AuthRateLimiter(cfg.RateLimit), handlers.BeginAuthHandler)
 	api.Get("/auth/:provider/callback", middleware.AuthRateLimiter(cfg.RateLimit), authHandler.CallbackHandler)
 
-	prefsRepo := repository.NewUserPreferencesRepository(database.GetDB())
 	preferencesHandler := handlers.NewPreferencesHandler(prefsRepo)
 	api.Get("/auth/preferences", middleware.Protected(), preferencesHandler.GetPreferences)
 	api.Put("/auth/preferences", middleware.Protected(), preferencesHandler.UpdatePreferences)
@@ -296,6 +326,7 @@ func Run(configPath string) error {
 	api.Post("/room/create", middleware.Protected(), middleware.APIRateLimiter(cfg.RateLimit), roomHandler.CreateRoom)
 	api.Post("/room/join", middleware.Protected(), roomHandler.JoinRoom)
 	api.Post("/room/guest-join", middleware.GuestRateLimiter(cfg.RateLimit), roomHandler.GuestJoinRoom)
+	api.Post("/room/refresh-token", middleware.Protected(), middleware.APIRateLimiter(cfg.RateLimit), roomHandler.RefreshLiveKitToken)
 	api.Get("/room/list", middleware.Protected(), roomHandler.ListRooms)
 	api.Post("/room/:roomId/kick/:identity", middleware.Protected(), roomHandler.KickParticipant)
 	api.Post("/room/:roomId/mute/:identity", middleware.Protected(), roomHandler.MuteParticipant)
@@ -338,15 +369,18 @@ func Run(configPath string) error {
 	usersHandler := handlers.NewUsersHandler(userRepo, roomRepo, passkeyRepo, prefsRepo, cleanupSvc)
 	adminHandler := handlers.NewAdminHandler(settingsRepo, inviteTokenRepo)
 	certHandler := handlers.NewCertHandler(cfg)
+	overviewHandler := handlers.NewAdminOverviewHandler(roomRepo, userRepo, settingsRepo, &cfg.LiveKit, lkClient, database.GetDB(), time.Now(), version)
 	adminGroup := api.Group("/admin",
 		middleware.Protected(),
 		middleware.RequireAccess(models.AccessSuperAdmin),
 	)
 	adminGroup.Get("/users", usersHandler.ListUsers)
+	adminGroup.Get("/users/recent", usersHandler.ListRecentSignups)
 	adminGroup.Put("/users/:id/status", usersHandler.UpdateUserStatus)
 	adminGroup.Put("/users/:id/accesses", usersHandler.UpdateUserAccesses)
 	adminGroup.Post("/users/:id/force-logout", usersHandler.ForceLogout)
 	adminGroup.Get("/rooms", roomHandler.AdminListRooms)
+	adminGroup.Get("/rooms/events", roomHandler.ListRoomEvents)
 	adminGroup.Post("/rooms/:roomId/token", roomHandler.AdminGenerateToken)
 	adminGroup.Delete("/rooms/:roomId", roomHandler.AdminCloseRoom)
 	adminGroup.Post("/rooms/:roomId/suspend", roomHandler.AdminSuspendRoom)
@@ -354,19 +388,31 @@ func Run(configPath string) error {
 	adminGroup.Put("/rooms/:roomId", roomHandler.AdminUpdateRoom)
 	adminGroup.Get("/online-count", roomHandler.GetOnlineCount)
 	adminGroup.Get("/livekit/stats", roomHandler.AdminLiveKitStats)
+	adminGroup.Get("/overview", overviewHandler.GetOverview)
 	adminGroup.Get("/users/:id", usersHandler.GetUserDetail)
+	adminGroup.Get("/users/:id/sessions", usersHandler.ListUserSessions)
 	adminGroup.Delete("/users/:id", usersHandler.DeleteUser)
 	adminGroup.Get("/rooms/:roomId/participants", roomHandler.AdminGetRoomParticipants)
 	adminGroup.Post("/rooms/:roomId/participants/:identity/kick", roomHandler.AdminKickParticipant)
 	adminGroup.Post("/rooms/:roomId/participants/:identity/mute", roomHandler.AdminMuteParticipant)
+	adminGroup.Post("/rooms/bulk/suspend", roomHandler.BulkSuspendRooms)
+	adminGroup.Post("/rooms/bulk/close", roomHandler.BulkCloseRooms)
 	api.Get("/auth/settings", adminHandler.GetPublicSettings)
 	api.Get("/cert", certHandler.GetCert)
 	adminGroup.Get("/settings", adminHandler.GetSettings)
 	adminGroup.Put("/settings", adminHandler.UpdateSettings)
+	adminGroup.Post("/settings/validate", adminHandler.ValidateSettingsConnectivity)
 	adminGroup.Get("/invite-tokens", adminHandler.ListInviteTokens)
 	adminGroup.Post("/invite-tokens", adminHandler.CreateInviteToken)
 	adminGroup.Delete("/invite-tokens/:id", adminHandler.DeleteInviteToken)
 	adminGroup.Get("/cert-info", certHandler.GetCertInfo)
+
+	queueHandler := handlers.NewAdminQueueHandler(database.GetDB())
+	adminGroup.Get("/queue", queueHandler.GetQueueStats)
+
+	// LiveKit webhook (no app auth middleware — uses LiveKit's own JWT signature)
+	livekitWebhookHandler := handlers.NewLiveKitWebhookHandler(&cfg.LiveKit, roomRepo, database.GetDB())
+	api.Post("/livekit/webhook", livekitWebhookHandler.Handle)
 
 	app.Use("/", filesystem.New(filesystem.Config{Root: http.FS(root.UI), PathPrefix: "frontend"}))
 
@@ -457,6 +503,5 @@ func Run(configPath string) error {
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
-	usersHandler.Shutdown()
 	return app.Shutdown()
 }

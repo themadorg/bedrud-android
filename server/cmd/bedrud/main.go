@@ -52,7 +52,7 @@ func main() {
 			if *skipMigrate {
 				os.Setenv("BEDRUD_SKIP_MIGRATE", "1")
 			}
-			if err := server.Run(path); err != nil {
+			if err := server.Run(path, version); err != nil {
 				fmt.Fprintf(os.Stderr, "Server error: %v\n", err)
 				os.Exit(1)
 			}
@@ -80,7 +80,7 @@ func main() {
 			os.Setenv("BEDRUD_SKIP_MIGRATE", "1")
 		}
 
-		if err := server.Run(path); err != nil {
+		if err := server.Run(path, version); err != nil {
 			fmt.Fprintf(os.Stderr, "Server error: %v\n", err)
 			os.Exit(1)
 		}
@@ -164,8 +164,10 @@ func main() {
 			fmt.Println("Usage: bedrud user [--config <path>] <subcommand> [flags]")
 			fmt.Println("  create  --email <email> --password <password> --name <name>")
 			fmt.Println("  delete  --email <email>")
-			fmt.Println("  promote --email <email>")
-			fmt.Println("  demote  --email <email>")
+			fmt.Println("  promote --email <email> [--role <role>]")
+			fmt.Println("          Roles: superadmin (default), admin, moderator, user, guest")
+			fmt.Println("  demote  --email <email> [--role <role>]")
+			fmt.Println("          Roles: superadmin (default), admin, moderator")
 			os.Exit(1)
 		}
 		sub := userCmd.Args()[0]
@@ -173,6 +175,7 @@ func main() {
 		emailFlag := subCmd.String("email", "", "User email address")
 		passwordFlag := subCmd.String("password", "", "User password")
 		nameFlag := subCmd.String("name", "", "User name")
+		roleFlag := subCmd.String("role", "", "User role (superadmin, admin, moderator, user, guest)")
 		_ = subCmd.Parse(userCmd.Args()[1:])
 
 		if *emailFlag == "" {
@@ -195,12 +198,20 @@ func main() {
 				os.Exit(1)
 			}
 		case "promote":
-			if err := usercli.PromoteUser(*configPath, *emailFlag); err != nil {
+			role := *roleFlag
+			if role == "" {
+				role = "superadmin"
+			}
+			if err := usercli.PromoteUser(*configPath, *emailFlag, role); err != nil {
 				fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 				os.Exit(1)
 			}
 		case "demote":
-			if err := usercli.DemoteUser(*configPath, *emailFlag); err != nil {
+			role := *roleFlag
+			if role == "" {
+				role = "superadmin"
+			}
+			if err := usercli.DemoteUser(*configPath, *emailFlag, role); err != nil {
 				fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 				os.Exit(1)
 			}

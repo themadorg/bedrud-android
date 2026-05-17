@@ -88,6 +88,7 @@ type Room struct {
 	IsPublic        bool         `json:"isPublic" gorm:"not null;default:false"`
 	Settings        RoomSettings `json:"settings" gorm:"embedded;embeddedPrefix:settings_"`
 	Mode            string       `json:"mode" gorm:"not null;default:'standard';type:varchar(20)"` // Room mode (e.g. 'standard')
+	LastActivityAt  *time.Time   `json:"lastActivityAt" gorm:"index"`                               // Updated on participant join; used for stale-room detection
 }
 
 // RoomSettings represents the global settings for a room

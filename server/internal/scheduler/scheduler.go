@@ -4,6 +4,7 @@ import (
 	"bedrud/config"
 	"bedrud/internal/auth"
 	"bedrud/internal/models"
+	"bedrud/internal/queue"
 	"bedrud/internal/repository"
 	"bedrud/internal/utils"
 	"context"
@@ -17,6 +18,7 @@ import (
 	"time"
 
 	"crypto/x509"
+	"gorm.io/gorm"
 	"github.com/go-co-op/gocron"
 	lkauth "github.com/livekit/protocol/auth"
 	"github.com/livekit/protocol/livekit"
@@ -31,7 +33,7 @@ var keyFile string
 var certHosts []string
 var certMu sync.Mutex
 
-func Initialize(roomRepo *repository.RoomRepository, userRepo *repository.UserRepository, lkCfg *config.LiveKitConfig, serverCfg *config.ServerConfig) {
+func Initialize(db *gorm.DB, roomRepo *repository.RoomRepository, userRepo *repository.UserRepository, lkCfg *config.LiveKitConfig, serverCfg *config.ServerConfig) {
 	scheduler = gocron.NewScheduler(time.Local)
 
 	certFile = ""
@@ -108,7 +110,7 @@ func Initialize(roomRepo *repository.RoomRepository, userRepo *repository.UserRe
 	}
 
 	// Periodic cleanup of expired blocked refresh tokens
-	_, _ = scheduler.Every(24).Hours().At("04:00").Do(func() {
+	_, _ = scheduler.Every(1).Hour().Do(func() {
 		if userRepo != nil {
 			if err := userRepo.CleanupBlockedTokens(); err != nil {
 				log.Error().Err(err).Msg("Scheduler: failed to clean up blocked tokens")
@@ -121,6 +123,12 @@ func Initialize(roomRepo *repository.RoomRepository, userRepo *repository.UserRe
 	// Periodic pruning of in-memory revoked access token set
 	_, _ = scheduler.Every(1).Hour().Do(func() {
 		auth.PruneRevokedTokens()
+	})
+
+	// Queue cleanup — done jobs older than 7 days, failed jobs older than 30 days
+	_, _ = scheduler.Every(1).Day().At("03:00").Do(func() {
+		queue.CleanupJobs(db, 7*24*time.Hour)
+		queue.CleanupFailedJobs(db, 30*24*time.Hour)
 	})
 
 	if certFile != "" {

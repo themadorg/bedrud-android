@@ -20,6 +20,8 @@ type Config struct {
 	Cors      CorsConfig      `yaml:"cors"`
 	Chat      ChatConfig      `yaml:"chat"`
 	RateLimit RateLimitConfig `yaml:"rateLimit"`
+	Queue     QueueConfig     `yaml:"queue"`
+	Email     EmailConfig     `yaml:"email"`
 }
 
 type ServerConfig struct {
@@ -162,6 +164,25 @@ type ChatUploadS3Config struct {
 	AccessKey     string `yaml:"accessKey"`
 	SecretKey     string `yaml:"secretKey"`
 	PublicBaseURL string `yaml:"publicBaseUrl"`
+}
+
+// QueueConfig controls the internal job queue worker.
+type QueueConfig struct {
+	PollInterval ConfigInt `yaml:"pollInterval"` // ms between polls, default 500. Env: QUEUE_POLL_INTERVAL
+	MaxAttempts  int       `yaml:"maxAttempts"`  // max retries before failed, default 3. Env: QUEUE_MAX_ATTEMPTS
+	Concurrency  int       `yaml:"concurrency"`  // worker goroutines, default 1. Env: QUEUE_CONCURRENCY
+}
+
+// EmailConfig controls SMTP settings for transactional email sending.
+type EmailConfig struct {
+	SMTPHost      string `yaml:"smtpHost"`      // Env: EMAIL_SMTP_HOST
+	SMTPPort      int    `yaml:"smtpPort"`      // Env: EMAIL_SMTP_PORT
+	Username      string `yaml:"username"`      // Env: EMAIL_USERNAME
+	Password      string `yaml:"password"`      // Env: EMAIL_PASSWORD
+	FromAddress   string `yaml:"fromAddress"`   // Env: EMAIL_FROM_ADDRESS
+	FromName      string `yaml:"fromName"`      // Env: EMAIL_FROM_NAME
+	TLSSkipVerify bool   `yaml:"tlsSkipVerify"` // Skip TLS cert validation. Env: EMAIL_TLS_SKIP_VERIFY
+	SMTPSMode     bool   `yaml:"smtpsMode"`     // Direct TLS (SMTPS, port 465). Env: EMAIL_SMTPS_MODE
 }
 
 // RateLimitConfig controls rate limiting for auth and guest endpoints.
@@ -413,6 +434,51 @@ func Load(configPath string) (*Config, error) {
 			if i, err := strconv.Atoi(v); err == nil {
 				config.RateLimit.APIWindowSecs = &i
 			}
+		}
+
+		// Queue environment variable overrides
+		if v := os.Getenv("QUEUE_POLL_INTERVAL"); v != "" {
+			if i, err := strconv.Atoi(v); err == nil {
+				config.Queue.PollInterval = ConfigInt(i)
+			}
+		}
+		if v := os.Getenv("QUEUE_MAX_ATTEMPTS"); v != "" {
+			if i, err := strconv.Atoi(v); err == nil {
+				config.Queue.MaxAttempts = i
+			}
+		}
+		if v := os.Getenv("QUEUE_CONCURRENCY"); v != "" {
+			if i, err := strconv.Atoi(v); err == nil {
+				config.Queue.Concurrency = i
+			}
+		}
+
+		// Email environment variable overrides
+		if v := os.Getenv("EMAIL_SMTP_HOST"); v != "" {
+			config.Email.SMTPHost = v
+		}
+		if v := os.Getenv("EMAIL_SMTP_PORT"); v != "" {
+			if i, err := strconv.Atoi(v); err == nil {
+				config.Email.SMTPPort = i
+			}
+		}
+		if v := os.Getenv("EMAIL_USERNAME"); v != "" {
+			config.Email.Username = v
+		}
+		if v := os.Getenv("EMAIL_PASSWORD"); v != "" {
+			config.Email.Password = v
+		}
+		if v := os.Getenv("EMAIL_FROM_ADDRESS"); v != "" {
+			config.Email.FromAddress = v
+		}
+		if v := os.Getenv("EMAIL_FROM_NAME"); v != "" {
+			config.Email.FromName = v
+		}
+		if v := os.Getenv("EMAIL_TLS_SKIP_VERIFY"); v == "true" || v == "1" {
+			config.Email.TLSSkipVerify = true
+		}
+		if v := os.Getenv("EMAIL_SMTPS_MODE"); v == "true" || v == "1" {
+			config.Email.SMTPSMode = true
 		}
 	})
 
