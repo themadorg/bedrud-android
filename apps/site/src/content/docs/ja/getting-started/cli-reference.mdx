@@ -188,19 +188,49 @@ bedrud user [--config <path>] delete --email <email>
 
 #### `promote`
 
-ユーザーに `superadmin` アクセスを付与します。
+ユーザーのロールをアクセス配列の置き換えで設定します。デフォルト: `superadmin`。
 
 ```bash
-bedrud user [--config <path>] promote --email <email>
+bedrud user [--config <path>] promote --email <email> [--role <role>]
 ```
+
+| フラグ   | デフォルト    | 説明                                                         |
+|---------|--------------|-------------------------------------------------------------|
+| `--role` | `superadmin` | 対象ロール: `superadmin`, `admin`, `moderator`, `user`, `guest` |
+
+例:
+
+```bash
+# superadmin 権限を付与 (デフォルト)
+bedrud user promote --email admin@example.com
+
+# admin 権限を付与
+bedrud user promote --email admin@example.com --role admin
+
+# moderator 権限を付与
+bedrud user promote --email mod@example.com --role moderator
+```
+
+各ロールは特定のアクセス配列にマップされます:
+- `superadmin` → `['superadmin', 'user']`
+- `admin` → `['admin', 'user']`
+- `moderator` → `['moderator', 'user']`
+- `user` → `['user']`
+- `guest` → `['guest']`
 
 #### `demote`
 
-ユーザーから `superadmin` アクセスを削除します（`user` レベルに戻る）。
+ユーザーから特定のロールを削除します。デフォルト: `superadmin`。
 
 ```bash
-bedrud user [--config <path>] demote --email <email>
+bedrud user [--config <path>] demote --email <email> [--role <role>]
 ```
+
+| フラグ   | デフォルト    | 説明                                         |
+|---------|--------------|---------------------------------------------|
+| `--role` | `superadmin` | 削除するロール: `superadmin`, `admin`, `moderator` |
+
+削除後、ユーザーにロールが残っていない場合、`user` アクセスが自動的に追加されます。
 
 **実装:** `server/internal/usercli/usercli.go`
 

@@ -188,19 +188,49 @@ bedrud user [--config <path>] delete --email <email>
 
 #### `promote`
 
-Предоставить пользователю доступ уровня `superadmin`.
+Устанавливает роль пользователя, заменяя массив доступов. По умолчанию: `superadmin`.
 
 ```bash
-bedrud user [--config <path>] promote --email <email>
+bedrud user [--config <path>] promote --email <email> [--role <role>]
 ```
+
+| Флаг    | По умолчанию | Описание                                                      |
+|---------|--------------|---------------------------------------------------------------|
+| `--role` | `superadmin` | Целевая роль: `superadmin`, `admin`, `moderator`, `user`, `guest` |
+
+Примеры:
+
+```bash
+# Предоставить superadmin (по умолчанию)
+bedrud user promote --email admin@example.com
+
+# Предоставить admin
+bedrud user promote --email admin@example.com --role admin
+
+# Предоставить moderator
+bedrud user promote --email mod@example.com --role moderator
+```
+
+Каждая роль соответствует определённому массиву доступов:
+- `superadmin` → `['superadmin', 'user']`
+- `admin` → `['admin', 'user']`
+- `moderator` → `['moderator', 'user']`
+- `user` → `['user']`
+- `guest` → `['guest']`
 
 #### `demote`
 
-Отозвать доступ `superadmin` у пользователя (понижает до уровня `user`).
+Удаляет определенную роль у пользователя. По умолчанию: `superadmin`.
 
 ```bash
-bedrud user [--config <path>] demote --email <email>
+bedrud user [--config <path>] demote --email <email> [--role <role>]
 ```
+
+| Флаг    | По умолчанию | Описание                                              |
+|---------|--------------|-------------------------------------------------------|
+| `--role` | `superadmin` | Удаляемая роль: `superadmin`, `admin`, `moderator`     |
+
+Если после удаления у пользователя не осталось ролей, доступ `user` добавляется автоматически.
 
 **Реализация:** `server/internal/usercli/usercli.go`
 

@@ -188,19 +188,49 @@ bedrud user [--config <path>] delete --email <email>
 
 #### `promote`
 
-Otorga acceso `superadmin` a un usuario.
+Establece el rol de un usuario reemplazando su array de accesos. Predeterminado: `superadmin`.
 
 ```bash
-bedrud user [--config <path>] promote --email <email>
+bedrud user [--config <path>] promote --email <email> [--role <role>]
 ```
+
+| Flag   | Predeterminado | Descripción                                                      |
+|--------|----------------|------------------------------------------------------------------|
+| `--role` | `superadmin`   | Rol destino: `superadmin`, `admin`, `moderator`, `user`, `guest` |
+
+Ejemplos:
+
+```bash
+# Otorgar superadmin (predeterminado)
+bedrud user promote --email admin@example.com
+
+# Otorgar admin
+bedrud user promote --email admin@example.com --role admin
+
+# Otorgar moderator
+bedrud user promote --email mod@example.com --role moderator
+```
+
+Cada rol se asigna a un array de accesos:
+- `superadmin` → `['superadmin', 'user']`
+- `admin` → `['admin', 'user']`
+- `moderator` → `['moderator', 'user']`
+- `user` → `['user']`
+- `guest` → `['guest']`
 
 #### `demote`
 
-Elimina el acceso `superadmin` de un usuario (revierte al nivel `user`).
+Elimina un rol específico de un usuario. Predeterminado: `superadmin`.
 
 ```bash
-bedrud user [--config <path>] demote --email <email>
+bedrud user [--config <path>] demote --email <email> [--role <role>]
 ```
+
+| Flag   | Predeterminado | Descripción                                              |
+|--------|----------------|----------------------------------------------------------|
+| `--role` | `superadmin`   | Rol a eliminar: `superadmin`, `admin`, `moderator`       |
+
+Si al usuario no le quedan roles después de la eliminación, se agrega acceso `user` automáticamente.
 
 **Implementación:** `server/internal/usercli/usercli.go`
 

@@ -53,10 +53,14 @@ logger:
 livekit:
   host: "http://localhost:8090/livekit"  # External LiveKit URL
   internalHost: "http://127.0.0.1:7880"  # Internal LiveKit URL
-  apiKey: "devkey"              # LiveKit API key
-  apiSecret: "devsecret"        # LiveKit API secret
+  apiKey: "devkey"              # LiveKit API key (auto-generated if empty)
+  apiSecret: "devsecret"        # LiveKit API secret (auto-generated if empty)
   # configPath: "/etc/bedrud/livekit.yaml"  # Path to LiveKit YAML. Env: LIVEKIT_CONFIG_PATH
   # When server TLS is enabled, TURN/TLS is auto-configured for embedded mode.
+  #
+  # Webhook (disconnect detection):
+  #   Embedded LiveKit: auto-configures webhook URL -> local API.
+  #   External LiveKit: configure URL in LiveKit dashboard -> https://<domain>/api/livekit/webhook
 
 auth:
   jwtSecret: "your-jwt-secret"           # Secret for signing JWT tokens
@@ -93,6 +97,21 @@ chat:
   globalDiskThresholdBytes: 0            # Global storage ceiling across all users. 0 = unlimited. Env: CHAT_GLOBAL_DISK_THRESHOLD_BYTES
   maxMessageCount: 10000                 # Max chat messages kept per room (0 = unlimited). Env: CHAT_MAX_MESSAGE_COUNT
   messageTTLHours: 2160                  # Purge messages older than this in hours (0 = forever). 2160 = 90 days. Env: CHAT_MESSAGE_TTL_HOURS
+
+queue:
+  pollInterval: 500          # ms between job polls. Env: QUEUE_POLL_INTERVAL
+  maxAttempts: 3             # max retries before failed. Env: QUEUE_MAX_ATTEMPTS
+  concurrency: 1             # worker goroutines. Env: QUEUE_CONCURRENCY
+
+email:
+  smtpHost: ""               # SMTP server hostname. Env: EMAIL_SMTP_HOST
+  smtpPort: 587              # SMTP port (STARTTLS). Env: EMAIL_SMTP_PORT
+  username: ""               # SMTP username. Env: EMAIL_USERNAME
+  password: ""               # SMTP password. Env: EMAIL_PASSWORD
+  fromAddress: ""            # Sender email address. Env: EMAIL_FROM_ADDRESS
+  fromName: "Bedrud"         # Sender display name. Env: EMAIL_FROM_NAME
+  tlsSkipVerify: false       # Skip TLS certificate validation. Env: EMAIL_TLS_SKIP_VERIFY
+  smtpsMode: false           # Direct TLS (SMTPS, port 465). Env: EMAIL_SMTPS_MODE
 ```
 
 ### Key Settings
@@ -137,11 +156,50 @@ Bedrud applies advisory retention limits to in-room chat messages. Since LiveKit
   Chat messages in Bedrud are transmitted exclusively through LiveKit data channels and are not stored on the server. The retention limits above control how many messages the frontend keeps in memory and sessionStorage. A dedicated chat history service (with server-side persistence) would be needed for true history across sessions — this is tracked as a future enhancement.
 </Callout>
 
+#### Queue (Job System)
+
+The internal job queue processes asynchronous background tasks like user/room deletion, suspension, and chat uploads.
+
+- **`pollInterval`** — how often the worker checks for new jobs (in ms). Lower values reduce latency at the cost of more database queries.
+- **`maxAttempts`** — maximum retry attempts before a job is marked as failed. Retries use exponential backoff (`2^attempt * 5s`, capped at 1h).
+- **`concurrency`** — number of worker goroutines. Increase for higher throughput on PostgreSQL. SQLite is limited to single-worker (one connection).
+
+#### Email Notifications
+
+Bedrud sends transactional emails (welcome, password change confirmation, room invites) via SMTP. Emails are processed asynchronously through the internal job queue — the HTTP request completes immediately, and the email is sent by a background worker.
+
+- **`smtpHost`** / **`smtpPort`** — SMTP server address. Port 587 (STARTTLS) is the default. Set `smtpsMode: true` for direct TLS on port 465.
+- **`username`** / **`password`** — SMTP authentication credentials. Uses PLAIN auth; requires STARTTLS or SMTPS mode (credentials are never sent over unencrypted connections).
+- **`fromAddress`** / **`fromName`** — sender identity for outgoing emails. Leave `fromAddress` empty to use `noreply@bedrud` (may be rejected by strict mail servers).
+- **`tlsSkipVerify`** — set to `true` if your SMTP server uses a self-signed certificate. Default: `false`.
+- **`smtpsMode`** — enable direct TLS (SMTPS) instead of STARTTLS. Use for port 465. Default: `false`.
+
+<Callout type="info">
+  Emails are only sent when SMTP is configured (`smtpHost` is non-empty). When SMTP is not set up, email jobs are silently marked done and the rendered message body is logged at WARN level for debugging.
+</Callout>
+
+**Available email templates:**
+
+| Template | Trigger | Data Keys |
+|----------|---------|-----------|
+| `welcome` | Registration | `Name`, `LoginURL` |
+| `password_changed` | Password change | `IPAddress` |
+| `password_reset` | Password reset flow | `ResetURL`, `IPAddress` |
+| `room_invite` | Room invite | `InviterName`, `RoomName`, `JoinURL` |
+
+Templates are embedded at build time and cannot be customized without recompiling Bedrud. Unknown template names fall back to a generic notification template with key-value data.
+
 ---
 
 ## LiveKit Configuration
 
 **Location:** `server/config/livekit.yaml` (development) or `/etc/bedrud/livekit.yaml` (production)
+
+Bedrud can run an embedded LiveKit server (single binary) or connect to an external LiveKit instance. The embedded mode auto-generates a temporary config file with room settings, TURN, and webhook URL.
+
+<Callout type="info">
+  If `livekit.apiKey` is not set in config, Bedrud generates a random keypair (`gen-<32hex>` / 64-char hex) at startup. The embedded LiveKit server and the webhook handler both use the same generated key — everything works out of the box with no manual configuration.
+</Callout>
 
 ```yaml
 port: 7880                      # LiveKit HTTP/WebSocket port
@@ -190,6 +248,33 @@ TURN is a last-resort relay - most clients (~80%) connect directly via UDP and n
 **TLS requirement:** TURN/TLS (port 5349) needs a valid TLS certificate. For production, set `turn.tls_port: 443` and point `cert_file`/`key_file` to your certificate, or place a Layer 4 load balancer in front with `external_tls: true`.
 
 See the [TURN Server Guide](/en/docs/architecture/turn-server) for architecture, config details, bandwidth calculations, and troubleshooting.
+
+### Webhook (Disconnect Detection)
+
+Bedrud receives webhook events from LiveKit to detect when participants disconnect unexpectedly (e.g., browser crash, network drop) and mark them as inactive in the database.
+
+**Endpoint:** `POST /api/livekit/webhook`
+
+**Authentication:** Uses LiveKit's JWT signing with the same `apiKey`/`apiSecret`. No separate secret needed.
+
+**Embedded LiveKit:** When Bedrud manages its own LiveKit server (default), the webhook URL is **auto-configured** in the generated LiveKit YAML. No user action needed.
+
+**External LiveKit** (Cloud or self-hosted with `external: true`): Manually configure the webhook URL in your LiveKit dashboard:
+
+```
+https://<your-domain>/api/livekit/webhook
+```
+
+**Events handled:**
+
+| Event | Action |
+|-------|--------|
+| `participant_disconnected` | Marks participant as inactive in `room_participants` |
+| `room_finished` | Marks all participants + room as inactive |
+
+<Callout type="info">
+  If `apiKey` is left empty in config, a random keypair is generated at startup. The embedded LiveKit server and webhook handler both use the same generated key — no manual configuration needed.
+</Callout>
 
 ### Room Settings
 
@@ -247,8 +332,8 @@ export LIVEKIT_API_SECRET=prodsecret
 | `DB_PATH` | `database.path` | SQLite file path or PostgreSQL connection string |
 | `LIVEKIT_HOST` | `livekit.host` | External LiveKit URL |
 | `LIVEKIT_INTERNAL_HOST` | `livekit.internalHost` | Internal LiveKit URL |
-| `LIVEKIT_API_KEY` | `livekit.apiKey` | LiveKit API key |
-| `LIVEKIT_API_SECRET` | `livekit.apiSecret` | LiveKit API secret |
+| `LIVEKIT_API_KEY` | `livekit.apiKey` | LiveKit API key (auto-generated as `gen-<32hex>` if empty) |
+| `LIVEKIT_API_SECRET` | `livekit.apiSecret` | LiveKit API secret (64-char hex auto-generated if empty) |
 | `LIVEKIT_CONFIG_PATH` | `livekit.configPath` | Path to external LiveKit YAML config |
 | `LIVEKIT_NODE_IP` | `livekit.nodeIP` | Explicit node IP for embedded LiveKit RTC (disables STUN) |
 | `SERVER_CERT_ALGORITHM` | `server.certAlgorithm` | Key algorithm for cert generation: `ed25519`, `ecdsa256`, `rsa2048`, `rsa4096` |
@@ -258,6 +343,17 @@ export LIVEKIT_API_SECRET=prodsecret
 | `CHAT_GLOBAL_DISK_THRESHOLD_BYTES` | `chat.globalDiskThresholdBytes` | Global upload storage ceiling in bytes (default 0 = unlimited) |
 | `CHAT_MAX_MESSAGE_COUNT` | `chat.maxMessageCount` | Max chat messages kept per room (default 10000, 0 = unlimited) |
 | `CHAT_MESSAGE_TTL_HOURS` | `chat.messageTTLHours` | Max age of chat messages in hours (default 2160 = 90 days, 0 = forever) |
+| `QUEUE_POLL_INTERVAL` | `queue.pollInterval` | Job poll interval in ms (default 500) |
+| `QUEUE_MAX_ATTEMPTS` | `queue.maxAttempts` | Max job retries before marking failed (default 3) |
+| `QUEUE_CONCURRENCY` | `queue.concurrency` | Worker goroutine count (default 1) |
+| `EMAIL_SMTP_HOST` | `email.smtpHost` | SMTP server hostname |
+| `EMAIL_SMTP_PORT` | `email.smtpPort` | SMTP server port (default 587) |
+| `EMAIL_USERNAME` | `email.username` | SMTP username |
+| `EMAIL_PASSWORD` | `email.password` | SMTP password |
+| `EMAIL_FROM_ADDRESS` | `email.fromAddress` | From email address |
+| `EMAIL_FROM_NAME` | `email.fromName` | From display name (default "Bedrud") |
+| `EMAIL_TLS_SKIP_VERIFY` | `email.tlsSkipVerify` | Skip TLS certificate validation for self-signed SMTP certs |
+| `EMAIL_SMTPS_MODE` | `email.smtpsMode` | Enable direct TLS (SMTPS) mode for port 465 |
 | `JWT_SECRET` | `auth.jwtSecret` | Secret for signing JWT tokens |
 | `AUTH_FRONTEND_URL` | `auth.frontendURL` | Frontend URL for OAuth redirects |
 | `AUTH_PASSKEY_CHALLENGE_TTL` | `auth.passkeyChallengeTTL` | Passkey challenge expiry in minutes |
