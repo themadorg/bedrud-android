@@ -259,6 +259,13 @@ export const sections: SidebarSection[] = [
           "Manage users, rooms, settings, and invite tokens from the web UI",
         order: 35,
       },
+      {
+        slug: "guides/roles",
+        title: "User Roles",
+        description:
+          "Role-based access control with 5 tiers: superadmin, admin, moderator, user, guest",
+        order: 36,
+      },
     ],
   },
   {
@@ -269,7 +276,7 @@ export const sections: SidebarSection[] = [
         slug: "contributing",
         title: "Contributing",
         description: "How to contribute to Bedrud",
-        order: 36,
+        order: 37,
       },
     ],
   },

@@ -1,6 +1,6 @@
 ---
-title: CLI Reference
-description: Command-line interface documentation
+title: CLI 参考
+description: 命令行界面文档
 order: 5
 ---
 
@@ -188,19 +188,49 @@ bedrud user [--config <path>] delete --email <email>
 
 #### `promote`
 
-授予用户 `superadmin` 访问权限。
+通过替换访问数组设置用户角色。默认值：`superadmin`。
 
 ```bash
-bedrud user [--config <path>] promote --email <email>
+bedrud user [--config <path>] promote --email <email> [--role <role>]
 ```
+
+| 标志     | 默认值       | 描述                                                     |
+|----------|--------------|----------------------------------------------------------|
+| `--role` | `superadmin` | 目标角色：`superadmin`、`admin`、`moderator`、`user`、`guest` |
+
+示例：
+
+```bash
+# 授予 superadmin 权限（默认）
+bedrud user promote --email admin@example.com
+
+# 授予 admin 权限
+bedrud user promote --email admin@example.com --role admin
+
+# 授予 moderator 权限
+bedrud user promote --email mod@example.com --role moderator
+```
+
+每个角色映射到一个特定的访问数组：
+- `superadmin` → `['superadmin', 'user']`
+- `admin` → `['admin', 'user']`
+- `moderator` → `['moderator', 'user']`
+- `user` → `['user']`
+- `guest` → `['guest']`
 
 #### `demote`
 
-移除用户的 `superadmin` 访问权限（降级为 `user` 级别）。
+移除用户的特定角色。默认值：`superadmin`。
 
 ```bash
-bedrud user [--config <path>] demote --email <email>
+bedrud user [--config <path>] demote --email <email> [--role <role>]
 ```
+
+| 标志     | 默认值       | 描述                                      |
+|----------|--------------|-------------------------------------------|
+| `--role` | `superadmin` | 要移除的角色：`superadmin`、`admin`、`moderator` |
+
+如果移除后用户没有剩余角色，将自动添加 `user` 访问权限。
 
 **实现：** `server/internal/usercli/usercli.go`
 
