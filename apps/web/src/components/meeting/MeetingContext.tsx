@@ -38,6 +38,8 @@ export interface ChatAttachment {
   size: number
 }
 
+export type ChatMessageStatus = 'sending' | 'sent' | 'failed'
+
 export interface ChatMessage {
   id: string
   timestamp: number
@@ -46,6 +48,7 @@ export interface ChatMessage {
   message: string
   attachments: ChatAttachment[]
   isLocal: boolean
+  status?: ChatMessageStatus
 }
 
 const KNOWN_SYSTEM_EVENTS = new Set([
@@ -116,21 +119,25 @@ export function useMeetingContext(): MeetingContextValue {
   return useMemo(() => ({ ...room, ...chat }), [room, chat])
 }
 
+// ── Chat memory & persistence limits ─────────────────────────────────────
+
+const MEMORY_CHAT_CAP = 400
+const MEMORY_SYSTEM_CAP = 100
+const PERSIST_CHAT_CAP = 200
+
+function capMessages<T>(arr: T[], max: number): T[] {
+  if (arr.length <= max) return arr
+  return arr.slice(arr.length - max)
+}
+
 // ── Chat retention helpers ──────────────────────────────────────────────────
 
-function applyChatRetention(messages: ChatMessage[], retention: { maxCount: number; ttlHours: number }): ChatMessage[] {
-  let result = messages
-
-  if (retention.ttlHours > 0) {
-    const cutoff = Date.now() - retention.ttlHours * 60 * 60 * 1000
-    result = result.filter((m) => m.timestamp >= cutoff)
+function applyChatRetention(messages: ChatMessage[], ttlHours: number): ChatMessage[] {
+  if (ttlHours > 0) {
+    const cutoff = Date.now() - ttlHours * 60 * 60 * 1000
+    return messages.filter((m) => m.timestamp >= cutoff)
   }
-
-  if (retention.maxCount > 0 && result.length > retention.maxCount) {
-    result = result.slice(result.length - retention.maxCount)
-  }
-
-  return result
+  return messages
 }
 
 // ── Provider ────────────────────────────────────────────────────────────────
@@ -149,23 +156,20 @@ export function MeetingProvider({ roomId, roomName, adminId, onRoomDeletionMessa
   const accesses = user?.accesses ?? []
   const room = useRoomContext()
 
-  const [retention, setRetention] = useState({ maxCount: 10000, ttlHours: 2160 })
+  const [ttlHours, setTtlHours] = useState(2160)
 
   useEffect(() => {
     getPublicSettings()
       .then((s) => {
-        setRetention({
-          maxCount: s.chatMaxMessageCount ?? 10000,
-          ttlHours: s.chatMessageTTLHours ?? 2160,
-        })
+        setTtlHours(s.chatMessageTTLHours ?? 2160)
       })
       .catch(() => {})
   }, [])
 
-  const [initialMessages, persistMessages] = useChatPersistence(roomId, retention.maxCount, retention.ttlHours)
+  const [initialMessages, persistMessages] = useChatPersistence(roomId, PERSIST_CHAT_CAP, ttlHours)
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>(initialMessages)
   useEffect(() => {
-    persistMessages(chatMessages)
+    persistMessages(chatMessages.map(({ status: _, ...m }) => m as ChatMessage))
   }, [chatMessages, persistMessages])
   const [systemMessages, setSystemMessages] = useState<SystemMessage[]>([])
   const [isServerDeafened, setIsServerDeafened] = useState(false)
@@ -188,7 +192,8 @@ export function MeetingProvider({ roomId, roomName, adminId, onRoomDeletionMessa
           if (raw.type === 'system' && typeof raw.event === 'string' && KNOWN_SYSTEM_EVENTS.has(raw.event)) {
             if (ROOM_DELETION_EVENTS.has(raw.event)) {
               const msg = { ...(raw as SystemMessage), ts: Date.now() }
-              setSystemMessages((prev) => [...prev, msg])
+              // If virtual scroll: index-based keys (sys-${i}) need stable IDs; scroll anchoring required when cap evicts old system events.
+              setSystemMessages((prev) => capMessages([...prev, msg], MEMORY_SYSTEM_CAP))
               const isCurrentUserDeleted = raw.deletedIdentity === room.localParticipant.identity
               onRoomDeletionMessageRef.current?.(
                 raw.event as RoomDeletionEvent,
@@ -204,7 +209,8 @@ export function MeetingProvider({ roomId, roomName, adminId, onRoomDeletionMessa
               raw.target.length > 0
             ) {
               const msg = { ...(raw as SystemMessage), ts: Date.now() }
-              setSystemMessages((prev) => [...prev, msg])
+              // If virtual scroll: index-based keys (sys-${i}) need stable IDs; scroll anchoring required when cap evicts old system events.
+              setSystemMessages((prev) => capMessages([...prev, msg], MEMORY_SYSTEM_CAP))
               if (msg.target === currentUserId) {
                 if (msg.event === 'deafen') setIsServerDeafened(true)
                 else if (msg.event === 'undeafen') setIsServerDeafened(false)
@@ -229,9 +235,11 @@ export function MeetingProvider({ roomId, roomName, adminId, onRoomDeletionMessa
             attachments: Array.isArray(raw.attachments) ? (raw.attachments as ChatAttachment[]) : [],
             isLocal: false,
           }
+          // If virtual scroll: index keys (cluster-${i}) need stable IDs; groupMessages output shifts on cap — virtualizer needs scroll anchoring.
           setChatMessages((prev) => {
+            if (prev.some((m) => m.id === msg.id)) return prev
             const updated = [...prev, msg]
-            return applyChatRetention(updated, retention)
+            return capMessages(applyChatRetention(updated, ttlHours), MEMORY_CHAT_CAP)
           })
         }
       } catch {
@@ -243,7 +251,7 @@ export function MeetingProvider({ roomId, roomName, adminId, onRoomDeletionMessa
     return () => {
       room.off(RoomEvent.DataReceived, handler)
     }
-  }, [room, currentUserId, retention])
+  }, [room, currentUserId, ttlHours])
 
   // Increment unread counter only for messages that arrive after the last markRead()
   useEffect(() => {
@@ -283,13 +291,19 @@ export function MeetingProvider({ roomId, roomName, adminId, onRoomDeletionMessa
       }
 
       const data = new TextEncoder().encode(JSON.stringify(payload))
-      lp.publishData(data, { reliable: true, topic: 'chat' }).catch((err) => {
-        if (import.meta.env.DEV) console.error('[MeetingContext] failed to publish chat message:', err)
-      })
+      lp.publishData(data, { reliable: true, topic: 'chat' })
+        .then(() => {
+          setChatMessages((prev) => prev.map((m): ChatMessage => (m.id === id ? { ...m, status: 'sent' } : m)))
+        })
+        .catch((err) => {
+          setChatMessages((prev) => prev.map((m): ChatMessage => (m.id === id ? { ...m, status: 'failed' } : m)))
+          if (import.meta.env.DEV) console.error('[MeetingContext] failed to publish chat message:', err)
+        })
 
       // Local echo so the sender sees the message immediately
+      // If virtual scroll: index keys (cluster-${i}) need stable IDs; groupMessages output shifts on cap — virtualizer needs scroll anchoring.
       setChatMessages((prev) => {
-        const updated = [
+        const updated: ChatMessage[] = [
           ...prev,
           {
             id,
@@ -299,12 +313,13 @@ export function MeetingProvider({ roomId, roomName, adminId, onRoomDeletionMessa
             message: text,
             attachments: attachments ?? [],
             isLocal: true,
+            status: 'sending',
           },
         ]
-        return applyChatRetention(updated, retention)
+        return capMessages(applyChatRetention(updated, ttlHours), MEMORY_CHAT_CAP)
       })
     },
-    [room, retention],
+    [room, ttlHours],
   )
 
   const toggleSelfDeafen = useCallback(() => {
