@@ -3,7 +3,10 @@ package handlers
 import (
 	"bedrud/config"
 	"bedrud/internal/auth"
+	"bedrud/internal/database"
+	"bedrud/internal/queue"
 	"bedrud/internal/repository"
+	"context"
 	"crypto/rand"
 	"encoding/base64"
 	"fmt"
@@ -121,6 +124,15 @@ func (h *AuthHandler) Register(c *fiber.Ctx) error {
 		})
 	}
 
+	// Sanitize name: strip control characters and HTML special chars
+	// Must run before length validation to prevent null byte / control char bypass
+	input.Name = strings.Map(func(r rune) rune {
+		if unicode.IsControl(r) || r == '<' || r == '>' || r == '&' || r == '"' || r == '\'' {
+			return -1
+		}
+		return r
+	}, input.Name)
+
 	// Validate name
 	if len(input.Name) < 2 {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
@@ -132,14 +144,6 @@ func (h *AuthHandler) Register(c *fiber.Ctx) error {
 			"error": "Name must be at most 255 characters",
 		})
 	}
-
-	// Sanitize name: strip control characters and HTML special chars (same as GuestJoinRoom)
-	input.Name = strings.Map(func(r rune) rune {
-		if unicode.IsControl(r) || r == '<' || r == '>' || r == '&' || r == '"' || r == '\'' {
-			return -1
-		}
-		return r
-	}, input.Name)
 
 	// Check registration settings
 	if h.settingsRepo != nil {
@@ -224,6 +228,26 @@ func (h *AuthHandler) Register(c *fiber.Ctx) error {
 		}
 	}
 
+	// Enqueue welcome email (non-blocking — log on error, don't fail the request).
+	loginURL := h.config.Auth.FrontendURL
+	if loginURL == "" && h.config.Server.Domain != "" {
+		loginURL = fmt.Sprintf("https://%s", h.config.Server.Domain)
+	}
+	if err := queue.Enqueue(context.Background(), database.GetDB(), "send_email",
+		queue.SendEmailPayload{
+			To:           user.Email,
+			Subject:      "Welcome to Bedrud",
+			TemplateName: "welcome",
+			TemplateData: map[string]any{
+				"Name":     user.Name,
+				"LoginURL": loginURL,
+			},
+		},
+	); err != nil {
+		log.Warn().Err(err).Str("userID", user.ID).Str("email", user.Email).
+			Msg("Failed to enqueue welcome email")
+	}
+
 	setAuthCookies(c, h.config, accessToken, refreshToken)
 	return c.JSON(auth.LoginResponse{
 		User: user,
@@ -285,6 +309,16 @@ func (h *AuthHandler) GuestLogin(c *fiber.Ctx) error {
 			"error": "Name is required",
 		})
 	}
+
+	// Sanitize name before length check to prevent control char bypass
+	// (e.g. "\x00a" has raw length 2 but sanitizes to "a")
+	input.Name = strings.Map(func(r rune) rune {
+		if unicode.IsControl(r) || r == '<' || r == '>' || r == '&' || r == '"' || r == '\'' {
+			return -1
+		}
+		return r
+	}, input.Name)
+
 	if len(input.Name) < 2 || len(input.Name) > 50 {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": "Name must be between 2 and 50 characters",
@@ -454,6 +488,22 @@ func (h *AuthHandler) ChangePassword(c *fiber.Ctx) error {
 	if err := h.authService.ChangePassword(claims.UserID, input.CurrentPassword, input.NewPassword, accessToken); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
 	}
+
+	// Enqueue password change confirmation email (non-blocking).
+	if err := queue.Enqueue(context.Background(), database.GetDB(), "send_email",
+		queue.SendEmailPayload{
+			To:           claims.Email,
+			Subject:      "Your Bedrud password was changed",
+			TemplateName: "password_changed",
+			TemplateData: map[string]any{
+				"IPAddress": c.IP(),
+			},
+		},
+	); err != nil {
+		log.Warn().Err(err).Str("userID", claims.UserID).Str("email", claims.Email).
+			Msg("Failed to enqueue password change email")
+	}
+
 	return c.JSON(fiber.Map{"message": "Password updated successfully"})
 }
 

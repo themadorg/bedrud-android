@@ -42,6 +42,33 @@ definitions:
       user:
         $ref: '#/definitions/handlers.UserResponse'
     type: object
+  handlers.BulkIDsRequest:
+    properties:
+      ids:
+        items:
+          type: string
+        type: array
+    type: object
+  handlers.BulkItemResult:
+    properties:
+      error:
+        type: string
+      name:
+        type: string
+      success:
+        type: boolean
+    type: object
+  handlers.BulkResult:
+    properties:
+      results:
+        additionalProperties:
+          $ref: '#/definitions/handlers.BulkItemResult'
+        type: object
+      totalFailed:
+        type: integer
+      totalProcessed:
+        type: integer
+    type: object
   handlers.ErrorResponse:
     properties:
       error:
@@ -55,10 +82,8 @@ definitions:
         type: string
     type: object
   handlers.UserDetails:
-    description: Detailed information about a user
     properties:
       accesses:
-        description: '@Description List of user''s access levels'
         example:
         - user
         - admin
@@ -66,39 +91,30 @@ definitions:
           type: string
         type: array
       createdAt:
-        description: '@Description Account creation timestamp'
         example: "2025-01-01 12:00:00"
         type: string
       email:
-        description: '@Description User''s email address'
         example: user@example.com
         type: string
       id:
-        description: '@Description User''s unique identifier'
         example: 123e4567-e89b-12d3-a456-426614174000
         type: string
       isActive:
-        description: '@Description Whether the user account is active'
         example: true
         type: boolean
       isAdmin:
-        description: '@Description Whether the user has admin access'
         example: false
         type: boolean
       name:
-        description: '@Description User''s display name'
         example: John Doe
         type: string
       provider:
-        description: '@Description Authentication provider'
         example: local
         type: string
     type: object
   handlers.UserListResponse:
-    description: Response containing a list of users
     properties:
       users:
-        description: '@Description List of user details'
         items:
           $ref: '#/definitions/handlers.UserDetails'
         type: array
@@ -121,18 +137,210 @@ definitions:
         example: google
         type: string
     type: object
-  handlers.UserStatusUpdateRequest:
-    description: Request body for updating user status
+  models.AttentionItem:
+    properties:
+      daysLeft:
+        type: integer
+      message:
+        type: string
+      roomId:
+        type: string
+      severity:
+        description: error, warning, info
+        type: string
+      type:
+        description: tls_expiry, stale_room, empty_room, auth_spike
+        type: string
+    type: object
+  models.DayActivity:
+    properties:
+      date:
+        type: string
+      participants:
+        type: integer
+      roomsActive:
+        type: integer
+      roomsCreated:
+        type: integer
+    type: object
+  models.FailedJobSummary:
+    properties:
+      age:
+        type: string
+      attempts:
+        type: integer
+      error:
+        type: string
+      id:
+        type: string
+      type:
+        type: string
+      updatedAt:
+        type: string
+    type: object
+  models.InstanceInfo:
+    properties:
+      name:
+        type: string
+      startedAt:
+        type: string
+      uptimeSeconds:
+        type: integer
+      version:
+        type: string
+    type: object
+  models.KpiEntry:
+    properties:
+      activeNow:
+        type: integer
+      delta:
+        type: integer
+      deltaLabel:
+        type: string
+      deltaPercent:
+        type: integer
+      peakToday:
+        type: integer
+      value:
+        type: integer
+    type: object
+  models.OverviewHealth:
+    properties:
+      alertsCount:
+        type: integer
+      dbStatus:
+        description: connected, error
+        type: string
+      realtime:
+        description: connected, disconnected
+        type: string
+      status:
+        description: healthy, degraded, down
+        type: string
+      tls:
+        $ref: '#/definitions/models.TLSStatus'
+      uptimeSeconds:
+        type: integer
+    type: object
+  models.OverviewKPIs:
+    properties:
+      activeSessions:
+        $ref: '#/definitions/models.KpiEntry'
+      onlineNow:
+        $ref: '#/definitions/models.KpiEntry'
+      pendingActions:
+        $ref: '#/definitions/models.KpiEntry'
+      totalRooms:
+        $ref: '#/definitions/models.KpiEntry'
+      totalUsers:
+        $ref: '#/definitions/models.KpiEntry'
+    type: object
+  models.OverviewResponse:
+    properties:
+      activityTrend:
+        items:
+          $ref: '#/definitions/models.DayActivity'
+        type: array
+      health:
+        $ref: '#/definitions/models.OverviewHealth'
+      instanceInfo:
+        $ref: '#/definitions/models.InstanceInfo'
+      kpis:
+        $ref: '#/definitions/models.OverviewKPIs'
+      needsAttention:
+        items:
+          $ref: '#/definitions/models.AttentionItem'
+        type: array
+      recentRoomEvents:
+        items:
+          $ref: '#/definitions/models.RoomEvent'
+        type: array
+      recentSignups:
+        items:
+          $ref: '#/definitions/models.RecentUser'
+        type: array
+      roomComposition:
+        $ref: '#/definitions/models.RoomComposition'
+    type: object
+  models.QueueStats:
     properties:
       active:
-        example: true
-        type: boolean
+        type: integer
+      done24h:
+        type: integer
+      failRate:
+        type: number
+      failed24h:
+        type: integer
+      failedPerMin:
+        type: number
+      maxDepth:
+        type: integer
+      oldestPending:
+        type: string
+      pending:
+        type: integer
+      processedPerMin:
+        type: number
+      recentFailures:
+        items:
+          $ref: '#/definitions/models.FailedJobSummary'
+        type: array
+      total:
+        type: integer
     type: object
-  handlers.UserStatusUpdateResponse:
-    description: Response for user status update
+  models.RecentUser:
     properties:
-      message:
-        example: User status updated successfully
+      createdAt:
+        type: string
+      email:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      provider:
+        type: string
+    type: object
+  models.RoomComposition:
+    properties:
+      live:
+        type: integer
+      persistent:
+        type: integer
+      private:
+        type: integer
+      public:
+        type: integer
+      stale:
+        type: integer
+    type: object
+  models.RoomEvent:
+    properties:
+      roomId:
+        type: string
+      roomName:
+        type: string
+      timestamp:
+        type: string
+      type:
+        description: room_created, room_joined
+        type: string
+      userId:
+        type: string
+      userName:
+        type: string
+    type: object
+  models.TLSStatus:
+    properties:
+      daysRemaining:
+        type: integer
+      enabled:
+        type: boolean
+      expiryDate:
+        type: string
+      status:
+        description: valid, expiring, expired, unknown
         type: string
     type: object
   models.User:
@@ -158,6 +366,25 @@ definitions:
       updatedAt:
         type: string
     type: object
+  utils.CertInfo:
+    properties:
+      daysRemaining:
+        type: integer
+      issuer:
+        type: string
+      notAfter:
+        type: string
+      notBefore:
+        type: string
+      sans:
+        items:
+          type: string
+        type: array
+      status:
+        type: string
+      subject:
+        type: string
+    type: object
 host: localhost:8090
 info:
   contact:
@@ -172,6 +399,235 @@ info:
   title: Bedrud Backend API
   version: "1.0"
 paths:
+  /admin/overview:
+    get:
+      consumes:
+      - application/json
+      description: |-
+        Aggregated system stats for the admin dashboard: health status, KPI metrics,
+        7-day activity trend, room composition breakdown, and recent user/room activity.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.OverviewResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Admin dashboard overview
+      tags:
+      - admin
+  /admin/queue:
+    get:
+      consumes:
+      - application/json
+      description: |-
+        Real-time queue status including pending/active/done/failed counts,
+        processed rates, and recent failure diagnostics.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.QueueStats'
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Queue statistics
+      tags:
+      - admin
+  /admin/rooms/{roomId}/close:
+    post:
+      consumes:
+      - application/json
+      description: Permanently delete a room by ID. Enqueues room deletion and returns
+        immediately.
+      parameters:
+      - description: Room ID
+        in: path
+        name: roomId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "202":
+          description: Deletion queued
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Room not found
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Close room (admin)
+      tags:
+      - admin
+  /admin/rooms/{roomId}/suspend:
+    post:
+      consumes:
+      - application/json
+      description: Suspend a room, ending all active calls but preserving room data.
+        Enqueues suspension and returns immediately.
+      parameters:
+      - description: Room ID
+        in: path
+        name: roomId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "202":
+          description: Suspension queued
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Room already inactive
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "404":
+          description: Room not found
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Suspend room (admin)
+      tags:
+      - admin
+  /admin/rooms/bulk/close:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Room IDs to close
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.BulkIDsRequest'
+      produces:
+      - application/json
+      responses:
+        "202":
+          description: Accepted
+          schema:
+            $ref: '#/definitions/handlers.BulkResult'
+      summary: Bulk close rooms
+      tags:
+      - admin
+  /admin/rooms/bulk/suspend:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Room IDs to suspend
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.BulkIDsRequest'
+      produces:
+      - application/json
+      responses:
+        "202":
+          description: Accepted
+          schema:
+            $ref: '#/definitions/handlers.BulkResult'
+      summary: Bulk suspend rooms
+      tags:
+      - admin
+  /admin/rooms/events:
+    get:
+      consumes:
+      - application/json
+      description: Get a paginated list of room activity events (room created, user
+        joined) (requires superadmin access)
+      parameters:
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 50
+        description: Items per page
+        in: query
+        name: limit
+        type: integer
+      - description: Search by room name or user name
+        in: query
+        name: q
+        type: string
+      - description: 'Comma-separated event types: room_created,room_joined'
+        in: query
+        name: type
+        type: string
+      - description: Start date (YYYY-MM-DD)
+        in: query
+        name: dateFrom
+        type: string
+      - description: End date (YYYY-MM-DD)
+        in: query
+        name: dateTo
+        type: string
+      - default: desc
+        description: 'Sort direction: asc, desc'
+        in: query
+        name: order
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: '{events, total, page, limit}'
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid parameters
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: List room events
+      tags:
+      - admin
   /admin/users:
     get:
       consumes:
@@ -201,30 +657,83 @@ paths:
       summary: List all users
       tags:
       - admin
-  /admin/users/{id}/status:
-    put:
+  /admin/users/{id}:
+    delete:
       consumes:
       - application/json
-      description: Activate or deactivate a user (requires superadmin access)
+      description: Permanently delete a user and all associated data (requires superadmin
+        access). Cannot delete your own account. Returns 202 Accepted — deletion runs
+        in background.
       parameters:
       - description: User ID
         in: path
         name: id
         required: true
         type: string
-      - description: Status update
+      produces:
+      - application/json
+      responses:
+        "202":
+          description: Deletion queued
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Cannot delete own account
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "404":
+          description: User not found
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete a user
+      tags:
+      - admin
+  /admin/users/{id}/accesses:
+    put:
+      consumes:
+      - application/json
+      description: Update user access levels (requires superadmin access). Invalidates
+        all existing sessions by clearing their refresh token.
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Access levels to assign
         in: body
         name: request
         required: true
         schema:
-          $ref: '#/definitions/handlers.UserStatusUpdateRequest'
+          properties:
+            accesses:
+              items:
+                type: string
+              type: array
+          type: object
       produces:
       - application/json
       responses:
         "200":
-          description: Status updated successfully
+          description: Accesses updated
           schema:
-            $ref: '#/definitions/handlers.UserStatusUpdateResponse'
+            additionalProperties: true
+            type: object
         "400":
           description: Invalid request
           schema:
@@ -247,13 +756,313 @@ paths:
             $ref: '#/definitions/handlers.ErrorResponse'
       security:
       - BearerAuth: []
-      summary: Update user status
+      summary: Update user accesses
+      tags:
+      - admin
+  /admin/users/{id}/force-logout:
+    post:
+      consumes:
+      - application/json
+      description: Revoke all active sessions for a user by clearing their refresh
+        token (superadmin only)
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Sessions revoked
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "404":
+          description: User not found
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Force logout a user
+      tags:
+      - admin
+  /admin/users/{id}/password:
+    put:
+      consumes:
+      - application/json
+      description: Force-set a user's password. Superadmin only. Invalidates all existing
+        sessions by clearing their refresh token.
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: New password (12-128 characters)
+        in: body
+        name: request
+        required: true
+        schema:
+          properties:
+            password:
+              type: string
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Password updated
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid password
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "404":
+          description: User not found
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Set user password (admin)
+      tags:
+      - admin
+  /admin/users/{id}/sessions:
+    get:
+      consumes:
+      - application/json
+      description: Get paginated room participation history for a user (superadmin
+        only)
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 50
+        description: Items per page
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: '{sessions, total, page, limit}'
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "404":
+          description: User not found
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: List user room sessions
+      tags:
+      - admin
+  /admin/users/bulk/ban:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: User IDs to ban
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.BulkIDsRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.BulkResult'
+      summary: Bulk ban users
+      tags:
+      - admin
+  /admin/users/bulk/delete:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: User IDs to delete
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.BulkIDsRequest'
+      produces:
+      - application/json
+      responses:
+        "202":
+          description: Accepted
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Bulk delete users
+      tags:
+      - admin
+  /admin/users/bulk/promote:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: User IDs to promote
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/handlers.BulkIDsRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/handlers.BulkResult'
+      summary: Bulk promote users to admin
+      tags:
+      - admin
+  /admin/users/recent:
+    get:
+      consumes:
+      - application/json
+      description: Get a paginated list of recently registered users (requires superadmin
+        access)
+      parameters:
+      - default: 1
+        description: Page number
+        in: query
+        name: page
+        type: integer
+      - default: 50
+        description: Items per page
+        in: query
+        name: limit
+        type: integer
+      - description: Search by name or email
+        in: query
+        name: q
+        type: string
+      - description: 'Comma-separated providers: local,google,github,guest'
+        in: query
+        name: provider
+        type: string
+      - description: Start date (YYYY-MM-DD)
+        in: query
+        name: dateFrom
+        type: string
+      - description: End date (YYYY-MM-DD)
+        in: query
+        name: dateTo
+        type: string
+      - default: createdAt
+        description: 'Sort field: createdAt, name'
+        in: query
+        name: sort
+        type: string
+      - default: desc
+        description: 'Sort direction: asc, desc'
+        in: query
+        name: order
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: '{users, total, page, limit}'
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid parameters
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: List recent signups
+      tags:
+      - admin
+  /api/admin/cert-info:
+    get:
+      description: Get TLS certificate metadata (subject, issuer, expiry, SANs, status).
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/utils.CertInfo'
+        "503":
+          description: Service Unavailable
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Certificate status
       tags:
       - admin
   /api/cert:
     get:
       description: Get the server's TLS certificate in PEM format. Only available
-        when TLS is enabled.
+        when TLS is enabled. Public endpoint — certs are transmitted during TLS handshake.
       produces:
       - application/x-pem-file
       responses:
@@ -510,6 +1319,46 @@ paths:
       summary: Readiness check endpoint
       tags:
       - health
+  /room/{roomId}:
+    delete:
+      consumes:
+      - application/json
+      description: Delete a room you created. Enqueues room deletion and returns immediately.
+      parameters:
+      - description: Room ID
+        in: path
+        name: roomId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "202":
+          description: Deletion queued
+          schema:
+            additionalProperties: true
+            type: object
+        "403":
+          description: Not the room creator
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "404":
+          description: Room not found
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "409":
+          description: Deletion already in progress
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete room
+      tags:
+      - rooms
 securityDefinitions:
   BearerAuth:
     description: Enter the token with the `Bearer ` prefix, e.g. "Bearer abcde12345"

@@ -18,6 +18,352 @@
     "host": "localhost:8090",
     "basePath": "/api",
     "paths": {
+        "/admin/overview": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Aggregated system stats for the admin dashboard: health status, KPI metrics,\n7-day activity trend, room composition breakdown, and recent user/room activity.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin"
+                ],
+                "summary": "Admin dashboard overview",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/models.OverviewResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/queue": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Real-time queue status including pending/active/done/failed counts,\nprocessed rates, and recent failure diagnostics.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin"
+                ],
+                "summary": "Queue statistics",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/models.QueueStats"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/rooms/bulk/close": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin"
+                ],
+                "summary": "Bulk close rooms",
+                "parameters": [
+                    {
+                        "description": "Room IDs to close",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handlers.BulkIDsRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "202": {
+                        "description": "Accepted",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.BulkResult"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/rooms/bulk/suspend": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin"
+                ],
+                "summary": "Bulk suspend rooms",
+                "parameters": [
+                    {
+                        "description": "Room IDs to suspend",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handlers.BulkIDsRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "202": {
+                        "description": "Accepted",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.BulkResult"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/rooms/events": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get a paginated list of room activity events (room created, user joined) (requires superadmin access)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin"
+                ],
+                "summary": "List room events",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "default": 1,
+                        "description": "Page number",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 50,
+                        "description": "Items per page",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Search by room name or user name",
+                        "name": "q",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Comma-separated event types: room_created,room_joined",
+                        "name": "type",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Start date (YYYY-MM-DD)",
+                        "name": "dateFrom",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "End date (YYYY-MM-DD)",
+                        "name": "dateTo",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "default": "desc",
+                        "description": "Sort direction: asc, desc",
+                        "name": "order",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{events, total, page, limit}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid parameters",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/rooms/{roomId}/close": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Permanently delete a room by ID. Enqueues room deletion and returns immediately.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin"
+                ],
+                "summary": "Close room (admin)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Room ID",
+                        "name": "roomId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "202": {
+                        "description": "Deletion queued",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "404": {
+                        "description": "Room not found",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/rooms/{roomId}/suspend": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Suspend a room, ending all active calls but preserving room data. Enqueues suspension and returns immediately.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin"
+                ],
+                "summary": "Suspend room (admin)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Room ID",
+                        "name": "roomId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "202": {
+                        "description": "Suspension queued",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Room already inactive",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Room not found",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/admin/users": {
             "get": {
                 "security": [
@@ -64,14 +410,8 @@
                 }
             }
         },
-        "/admin/users/{id}/status": {
-            "put": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Activate or deactivate a user (requires superadmin access)",
+        "/admin/users/bulk/ban": {
+            "post": {
                 "consumes": [
                     "application/json"
                 ],
@@ -81,7 +421,288 @@
                 "tags": [
                     "admin"
                 ],
-                "summary": "Update user status",
+                "summary": "Bulk ban users",
+                "parameters": [
+                    {
+                        "description": "User IDs to ban",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handlers.BulkIDsRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.BulkResult"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/users/bulk/delete": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin"
+                ],
+                "summary": "Bulk delete users",
+                "parameters": [
+                    {
+                        "description": "User IDs to delete",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handlers.BulkIDsRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "202": {
+                        "description": "Accepted",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/users/bulk/promote": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin"
+                ],
+                "summary": "Bulk promote users to admin",
+                "parameters": [
+                    {
+                        "description": "User IDs to promote",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/handlers.BulkIDsRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.BulkResult"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/users/recent": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get a paginated list of recently registered users (requires superadmin access)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin"
+                ],
+                "summary": "List recent signups",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "default": 1,
+                        "description": "Page number",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 50,
+                        "description": "Items per page",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Search by name or email",
+                        "name": "q",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Comma-separated providers: local,google,github,guest",
+                        "name": "provider",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Start date (YYYY-MM-DD)",
+                        "name": "dateFrom",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "End date (YYYY-MM-DD)",
+                        "name": "dateTo",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "default": "createdAt",
+                        "description": "Sort field: createdAt, name",
+                        "name": "sort",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "default": "desc",
+                        "description": "Sort direction: asc, desc",
+                        "name": "order",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{users, total, page, limit}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid parameters",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/users/{id}": {
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Permanently delete a user and all associated data (requires superadmin access). Cannot delete your own account. Returns 202 Accepted — deletion runs in background.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin"
+                ],
+                "summary": "Delete a user",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "User ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "202": {
+                        "description": "Deletion queued",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Cannot delete own account",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "User not found",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/users/{id}/accesses": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Update user access levels (requires superadmin access). Invalidates all existing sessions by clearing their refresh token.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin"
+                ],
+                "summary": "Update user accesses",
                 "parameters": [
                     {
                         "type": "string",
@@ -91,20 +712,29 @@
                         "required": true
                     },
                     {
-                        "description": "Status update",
+                        "description": "Access levels to assign",
                         "name": "request",
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/handlers.UserStatusUpdateRequest"
+                            "type": "object",
+                            "properties": {
+                                "accesses": {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "string"
+                                    }
+                                }
+                            }
                         }
                     }
                 ],
                 "responses": {
                     "200": {
-                        "description": "Status updated successfully",
+                        "description": "Accesses updated",
                         "schema": {
-                            "$ref": "#/definitions/handlers.UserStatusUpdateResponse"
+                            "type": "object",
+                            "additionalProperties": true
                         }
                     },
                     "400": {
@@ -140,9 +770,256 @@
                 }
             }
         },
+        "/admin/users/{id}/force-logout": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Revoke all active sessions for a user by clearing their refresh token (superadmin only)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin"
+                ],
+                "summary": "Force logout a user",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "User ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Sessions revoked",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "User not found",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/users/{id}/password": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Force-set a user's password. Superadmin only. Invalidates all existing sessions by clearing their refresh token.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin"
+                ],
+                "summary": "Set user password (admin)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "User ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "New password (12-128 characters)",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "password": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Password updated",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid password",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "User not found",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/users/{id}/sessions": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get paginated room participation history for a user (superadmin only)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin"
+                ],
+                "summary": "List user room sessions",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "User ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "default": 1,
+                        "description": "Page number",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 50,
+                        "description": "Items per page",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{sessions, total, page, limit}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "User not found",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/admin/cert-info": {
+            "get": {
+                "description": "Get TLS certificate metadata (subject, issuer, expiry, SANs, status).",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin"
+                ],
+                "summary": "Certificate status",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/utils.CertInfo"
+                        }
+                    },
+                    "503": {
+                        "description": "Service Unavailable",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
         "/api/cert": {
             "get": {
-                "description": "Get the server's TLS certificate in PEM format. Only available when TLS is enabled.",
+                "description": "Get the server's TLS certificate in PEM format. Only available when TLS is enabled. Public endpoint — certs are transmitted during TLS handshake.",
                 "produces": [
                     "application/x-pem-file"
                 ],
@@ -537,6 +1414,68 @@
                     }
                 }
             }
+        },
+        "/room/{roomId}": {
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Delete a room you created. Enqueues room deletion and returns immediately.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "rooms"
+                ],
+                "summary": "Delete room",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Room ID",
+                        "name": "roomId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "202": {
+                        "description": "Deletion queued",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "403": {
+                        "description": "Not the room creator",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Room not found",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Deletion already in progress",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    }
+                }
+            }
         }
     },
     "definitions": {
@@ -605,6 +1544,48 @@
                 }
             }
         },
+        "handlers.BulkIDsRequest": {
+            "type": "object",
+            "properties": {
+                "ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "handlers.BulkItemResult": {
+            "type": "object",
+            "properties": {
+                "error": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "success": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "handlers.BulkResult": {
+            "type": "object",
+            "properties": {
+                "results": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "$ref": "#/definitions/handlers.BulkItemResult"
+                    }
+                },
+                "totalFailed": {
+                    "type": "integer"
+                },
+                "totalProcessed": {
+                    "type": "integer"
+                }
+            }
+        },
         "handlers.ErrorResponse": {
             "type": "object",
             "properties": {
@@ -624,11 +1605,9 @@
             }
         },
         "handlers.UserDetails": {
-            "description": "Detailed information about a user",
             "type": "object",
             "properties": {
                 "accesses": {
-                    "description": "@Description List of user's access levels",
                     "type": "array",
                     "items": {
                         "type": "string"
@@ -639,48 +1618,39 @@
                     ]
                 },
                 "createdAt": {
-                    "description": "@Description Account creation timestamp",
                     "type": "string",
                     "example": "2025-01-01 12:00:00"
                 },
                 "email": {
-                    "description": "@Description User's email address",
                     "type": "string",
                     "example": "user@example.com"
                 },
                 "id": {
-                    "description": "@Description User's unique identifier",
                     "type": "string",
                     "example": "123e4567-e89b-12d3-a456-426614174000"
                 },
                 "isActive": {
-                    "description": "@Description Whether the user account is active",
                     "type": "boolean",
                     "example": true
                 },
                 "isAdmin": {
-                    "description": "@Description Whether the user has admin access",
                     "type": "boolean",
                     "example": false
                 },
                 "name": {
-                    "description": "@Description User's display name",
                     "type": "string",
                     "example": "John Doe"
                 },
                 "provider": {
-                    "description": "@Description Authentication provider",
                     "type": "string",
                     "example": "local"
                 }
             }
         },
         "handlers.UserListResponse": {
-            "description": "Response containing a list of users",
             "type": "object",
             "properties": {
                 "users": {
-                    "description": "@Description List of user details",
                     "type": "array",
                     "items": {
                         "$ref": "#/definitions/handlers.UserDetails"
@@ -713,23 +1683,315 @@
                 }
             }
         },
-        "handlers.UserStatusUpdateRequest": {
-            "description": "Request body for updating user status",
+        "models.AttentionItem": {
             "type": "object",
             "properties": {
-                "active": {
-                    "type": "boolean",
-                    "example": true
+                "daysLeft": {
+                    "type": "integer"
+                },
+                "message": {
+                    "type": "string"
+                },
+                "roomId": {
+                    "type": "string"
+                },
+                "severity": {
+                    "description": "error, warning, info",
+                    "type": "string"
+                },
+                "type": {
+                    "description": "tls_expiry, stale_room, empty_room, auth_spike",
+                    "type": "string"
                 }
             }
         },
-        "handlers.UserStatusUpdateResponse": {
-            "description": "Response for user status update",
+        "models.DayActivity": {
             "type": "object",
             "properties": {
-                "message": {
-                    "type": "string",
-                    "example": "User status updated successfully"
+                "date": {
+                    "type": "string"
+                },
+                "participants": {
+                    "type": "integer"
+                },
+                "roomsActive": {
+                    "type": "integer"
+                },
+                "roomsCreated": {
+                    "type": "integer"
+                }
+            }
+        },
+        "models.FailedJobSummary": {
+            "type": "object",
+            "properties": {
+                "age": {
+                    "type": "string"
+                },
+                "attempts": {
+                    "type": "integer"
+                },
+                "error": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "type": {
+                    "type": "string"
+                },
+                "updatedAt": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.InstanceInfo": {
+            "type": "object",
+            "properties": {
+                "name": {
+                    "type": "string"
+                },
+                "startedAt": {
+                    "type": "string"
+                },
+                "uptimeSeconds": {
+                    "type": "integer"
+                },
+                "version": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.KpiEntry": {
+            "type": "object",
+            "properties": {
+                "activeNow": {
+                    "type": "integer"
+                },
+                "delta": {
+                    "type": "integer"
+                },
+                "deltaLabel": {
+                    "type": "string"
+                },
+                "deltaPercent": {
+                    "type": "integer"
+                },
+                "peakToday": {
+                    "type": "integer"
+                },
+                "value": {
+                    "type": "integer"
+                }
+            }
+        },
+        "models.OverviewHealth": {
+            "type": "object",
+            "properties": {
+                "alertsCount": {
+                    "type": "integer"
+                },
+                "dbStatus": {
+                    "description": "connected, error",
+                    "type": "string"
+                },
+                "realtime": {
+                    "description": "connected, disconnected",
+                    "type": "string"
+                },
+                "status": {
+                    "description": "healthy, degraded, down",
+                    "type": "string"
+                },
+                "tls": {
+                    "$ref": "#/definitions/models.TLSStatus"
+                },
+                "uptimeSeconds": {
+                    "type": "integer"
+                }
+            }
+        },
+        "models.OverviewKPIs": {
+            "type": "object",
+            "properties": {
+                "activeSessions": {
+                    "$ref": "#/definitions/models.KpiEntry"
+                },
+                "onlineNow": {
+                    "$ref": "#/definitions/models.KpiEntry"
+                },
+                "pendingActions": {
+                    "$ref": "#/definitions/models.KpiEntry"
+                },
+                "totalRooms": {
+                    "$ref": "#/definitions/models.KpiEntry"
+                },
+                "totalUsers": {
+                    "$ref": "#/definitions/models.KpiEntry"
+                }
+            }
+        },
+        "models.OverviewResponse": {
+            "type": "object",
+            "properties": {
+                "activityTrend": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.DayActivity"
+                    }
+                },
+                "health": {
+                    "$ref": "#/definitions/models.OverviewHealth"
+                },
+                "instanceInfo": {
+                    "$ref": "#/definitions/models.InstanceInfo"
+                },
+                "kpis": {
+                    "$ref": "#/definitions/models.OverviewKPIs"
+                },
+                "needsAttention": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.AttentionItem"
+                    }
+                },
+                "recentRoomEvents": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.RoomEvent"
+                    }
+                },
+                "recentSignups": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.RecentUser"
+                    }
+                },
+                "roomComposition": {
+                    "$ref": "#/definitions/models.RoomComposition"
+                }
+            }
+        },
+        "models.QueueStats": {
+            "type": "object",
+            "properties": {
+                "active": {
+                    "type": "integer"
+                },
+                "done24h": {
+                    "type": "integer"
+                },
+                "failRate": {
+                    "type": "number"
+                },
+                "failed24h": {
+                    "type": "integer"
+                },
+                "failedPerMin": {
+                    "type": "number"
+                },
+                "maxDepth": {
+                    "type": "integer"
+                },
+                "oldestPending": {
+                    "type": "string"
+                },
+                "pending": {
+                    "type": "integer"
+                },
+                "processedPerMin": {
+                    "type": "number"
+                },
+                "recentFailures": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.FailedJobSummary"
+                    }
+                },
+                "total": {
+                    "type": "integer"
+                }
+            }
+        },
+        "models.RecentUser": {
+            "type": "object",
+            "properties": {
+                "createdAt": {
+                    "type": "string"
+                },
+                "email": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "provider": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.RoomComposition": {
+            "type": "object",
+            "properties": {
+                "live": {
+                    "type": "integer"
+                },
+                "persistent": {
+                    "type": "integer"
+                },
+                "private": {
+                    "type": "integer"
+                },
+                "public": {
+                    "type": "integer"
+                },
+                "stale": {
+                    "type": "integer"
+                }
+            }
+        },
+        "models.RoomEvent": {
+            "type": "object",
+            "properties": {
+                "roomId": {
+                    "type": "string"
+                },
+                "roomName": {
+                    "type": "string"
+                },
+                "timestamp": {
+                    "type": "string"
+                },
+                "type": {
+                    "description": "room_created, room_joined",
+                    "type": "string"
+                },
+                "userId": {
+                    "type": "string"
+                },
+                "userName": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.TLSStatus": {
+            "type": "object",
+            "properties": {
+                "daysRemaining": {
+                    "type": "integer"
+                },
+                "enabled": {
+                    "type": "boolean"
+                },
+                "expiryDate": {
+                    "type": "string"
+                },
+                "status": {
+                    "description": "valid, expiring, expired, unknown",
+                    "type": "string"
                 }
             }
         },
@@ -764,6 +2026,35 @@
                     "type": "string"
                 },
                 "updatedAt": {
+                    "type": "string"
+                }
+            }
+        },
+        "utils.CertInfo": {
+            "type": "object",
+            "properties": {
+                "daysRemaining": {
+                    "type": "integer"
+                },
+                "issuer": {
+                    "type": "string"
+                },
+                "notAfter": {
+                    "type": "string"
+                },
+                "notBefore": {
+                    "type": "string"
+                },
+                "sans": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "status": {
+                    "type": "string"
+                },
+                "subject": {
                     "type": "string"
                 }
             }
