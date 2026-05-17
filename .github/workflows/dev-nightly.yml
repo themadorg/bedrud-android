@@ -2,7 +2,7 @@ name: Dev & Nightly Release
 
 on:
   push:
-    branches: [main]
+    branches: [master]
   schedule:
     # Every night at 00:00 UTC
     - cron: "0 0 * * *"
@@ -657,7 +657,7 @@ jobs:
             if [ "$CHANNEL" = "nightly" ]; then
               echo "## Nightly Build"
               echo ""
-              echo "Automated nightly build from \`main\` at \`$SHA_SHORT\`."
+              echo "Automated nightly build from \`master\` at \`$SHA_SHORT\`."
             else
               echo "## Dev Build"
               echo ""

@@ -11,7 +11,7 @@ else
 fi
 VERSION="latest"
 BUILD=false
-BRANCH="main"
+BRANCH="master"
 SKIP_SHELL=false
 NO_SETUP=false
 CONFIG_FILE="/etc/bedrud/config.yaml"
@@ -443,7 +443,7 @@ Options:
   --install-dir <dir>   Install directory (default: ~/.local/bin, /usr/local/bin if root)
   --version <ver>       Install specific version (default: latest)
   --build               Build from source instead of downloading a release
-  --branch <name>       Git branch to clone (default: main, requires --build)
+  --branch <name>       Git branch to clone (default: master, requires --build)
   --skip-shell          Skip shell RC / PATH modification
   --no-setup            Download only, skip interactive server setup
   -h, --help            Show this help

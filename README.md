@@ -9,7 +9,7 @@
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
 [![Go](https://img.shields.io/badge/Go-1.25-00ADD8?logo=go&logoColor=white)](https://go.dev)
 [![Docker](https://img.shields.io/badge/Docker-ghcr.io-2496ED?logo=docker&logoColor=white)](https://github.com/themadorg/bedrud/pkgs/container/bedrud)
-[![Project Status](https://img.shields.io/badge/status-active--development-success)](https://github.com/themadorg/bedrud/commits/main)
+[![Project Status](https://img.shields.io/badge/status-active--development-success)](https://github.com/themadorg/bedrud/commits/master)
 
 [![Android](https://img.shields.io/badge/Android-API%2028+-3DDC84?logo=android&logoColor=white)](https://bedrud.org/en/docs/guides/packages/#android)
 [![iOS](https://img.shields.io/badge/iOS-18.0+-000000?logo=apple&logoColor=white)](https://bedrud.org/en/docs/guides/packages/#ios)
