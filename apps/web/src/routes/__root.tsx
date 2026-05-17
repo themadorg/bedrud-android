@@ -3,6 +3,7 @@ import { createRootRoute, HeadContent, Scripts } from '@tanstack/react-router'
 import { useEffect } from 'react'
 import { useAuthStore } from '#/lib/auth.store'
 import { applyTheme, useThemeStore } from '#/lib/theme.store'
+import { ErrorBoundary } from '@/components/ErrorBoundary'
 import appCss from '../styles.css?url'
 
 // Inline script that runs before first paint to avoid theme flash.
@@ -72,7 +73,9 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         <HeadContent />
       </head>
       <body className="font-sans antialiased">
-        <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+        <ErrorBoundary variant="server">
+          <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+        </ErrorBoundary>
         <Scripts />
       </body>
     </html>

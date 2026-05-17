@@ -28,7 +28,10 @@ import { Route as DashboardSettingsAudioRouteImport } from './routes/dashboard/s
 import { Route as DashboardAdminUsersRouteImport } from './routes/dashboard/admin/users'
 import { Route as DashboardAdminSettingsRouteImport } from './routes/dashboard/admin/settings'
 import { Route as DashboardAdminRoomsRouteImport } from './routes/dashboard/admin/rooms'
+import { Route as DashboardAdminQueueRouteImport } from './routes/dashboard/admin/queue'
+import { Route as DashboardAdminUsersRecentSignupsRouteImport } from './routes/dashboard/admin/users_.recent-signups'
 import { Route as DashboardAdminUsersUserIdRouteImport } from './routes/dashboard/admin/users_.$userId'
+import { Route as DashboardAdminRoomsEventsRouteImport } from './routes/dashboard/admin/rooms_.events'
 import { Route as DashboardAdminRoomsRoomIdRouteImport } from './routes/dashboard/admin/rooms_.$roomId'
 
 const DashboardRoute = DashboardRouteImport.update({
@@ -127,10 +130,27 @@ const DashboardAdminRoomsRoute = DashboardAdminRoomsRouteImport.update({
   path: '/rooms',
   getParentRoute: () => DashboardAdminRoute,
 } as any)
+const DashboardAdminQueueRoute = DashboardAdminQueueRouteImport.update({
+  id: '/queue',
+  path: '/queue',
+  getParentRoute: () => DashboardAdminRoute,
+} as any)
+const DashboardAdminUsersRecentSignupsRoute =
+  DashboardAdminUsersRecentSignupsRouteImport.update({
+    id: '/users_/recent-signups',
+    path: '/users/recent-signups',
+    getParentRoute: () => DashboardAdminRoute,
+  } as any)
 const DashboardAdminUsersUserIdRoute =
   DashboardAdminUsersUserIdRouteImport.update({
     id: '/users_/$userId',
     path: '/users/$userId',
+    getParentRoute: () => DashboardAdminRoute,
+  } as any)
+const DashboardAdminRoomsEventsRoute =
+  DashboardAdminRoomsEventsRouteImport.update({
+    id: '/rooms_/events',
+    path: '/rooms/events',
     getParentRoute: () => DashboardAdminRoute,
   } as any)
 const DashboardAdminRoomsRoomIdRoute =
@@ -152,6 +172,7 @@ export interface FileRoutesByFullPath {
   '/m/$meetId': typeof MMeetIdRoute
   '/auth/': typeof AuthIndexRoute
   '/dashboard/': typeof DashboardIndexRoute
+  '/dashboard/admin/queue': typeof DashboardAdminQueueRoute
   '/dashboard/admin/rooms': typeof DashboardAdminRoomsRoute
   '/dashboard/admin/settings': typeof DashboardAdminSettingsRoute
   '/dashboard/admin/users': typeof DashboardAdminUsersRoute
@@ -161,7 +182,9 @@ export interface FileRoutesByFullPath {
   '/dashboard/admin/': typeof DashboardAdminIndexRoute
   '/dashboard/settings/': typeof DashboardSettingsIndexRoute
   '/dashboard/admin/rooms/$roomId': typeof DashboardAdminRoomsRoomIdRoute
+  '/dashboard/admin/rooms/events': typeof DashboardAdminRoomsEventsRoute
   '/dashboard/admin/users/$userId': typeof DashboardAdminUsersUserIdRoute
+  '/dashboard/admin/users/recent-signups': typeof DashboardAdminUsersRecentSignupsRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -171,6 +194,7 @@ export interface FileRoutesByTo {
   '/m/$meetId': typeof MMeetIdRoute
   '/auth': typeof AuthIndexRoute
   '/dashboard': typeof DashboardIndexRoute
+  '/dashboard/admin/queue': typeof DashboardAdminQueueRoute
   '/dashboard/admin/rooms': typeof DashboardAdminRoomsRoute
   '/dashboard/admin/settings': typeof DashboardAdminSettingsRoute
   '/dashboard/admin/users': typeof DashboardAdminUsersRoute
@@ -180,7 +204,9 @@ export interface FileRoutesByTo {
   '/dashboard/admin': typeof DashboardAdminIndexRoute
   '/dashboard/settings': typeof DashboardSettingsIndexRoute
   '/dashboard/admin/rooms/$roomId': typeof DashboardAdminRoomsRoomIdRoute
+  '/dashboard/admin/rooms/events': typeof DashboardAdminRoomsEventsRoute
   '/dashboard/admin/users/$userId': typeof DashboardAdminUsersUserIdRoute
+  '/dashboard/admin/users/recent-signups': typeof DashboardAdminUsersRecentSignupsRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -195,6 +221,7 @@ export interface FileRoutesById {
   '/m/$meetId': typeof MMeetIdRoute
   '/auth/': typeof AuthIndexRoute
   '/dashboard/': typeof DashboardIndexRoute
+  '/dashboard/admin/queue': typeof DashboardAdminQueueRoute
   '/dashboard/admin/rooms': typeof DashboardAdminRoomsRoute
   '/dashboard/admin/settings': typeof DashboardAdminSettingsRoute
   '/dashboard/admin/users': typeof DashboardAdminUsersRoute
@@ -204,7 +231,9 @@ export interface FileRoutesById {
   '/dashboard/admin/': typeof DashboardAdminIndexRoute
   '/dashboard/settings/': typeof DashboardSettingsIndexRoute
   '/dashboard/admin/rooms_/$roomId': typeof DashboardAdminRoomsRoomIdRoute
+  '/dashboard/admin/rooms_/events': typeof DashboardAdminRoomsEventsRoute
   '/dashboard/admin/users_/$userId': typeof DashboardAdminUsersUserIdRoute
+  '/dashboard/admin/users_/recent-signups': typeof DashboardAdminUsersRecentSignupsRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -220,6 +249,7 @@ export interface FileRouteTypes {
     | '/m/$meetId'
     | '/auth/'
     | '/dashboard/'
+    | '/dashboard/admin/queue'
     | '/dashboard/admin/rooms'
     | '/dashboard/admin/settings'
     | '/dashboard/admin/users'
@@ -229,7 +259,9 @@ export interface FileRouteTypes {
     | '/dashboard/admin/'
     | '/dashboard/settings/'
     | '/dashboard/admin/rooms/$roomId'
+    | '/dashboard/admin/rooms/events'
     | '/dashboard/admin/users/$userId'
+    | '/dashboard/admin/users/recent-signups'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -239,6 +271,7 @@ export interface FileRouteTypes {
     | '/m/$meetId'
     | '/auth'
     | '/dashboard'
+    | '/dashboard/admin/queue'
     | '/dashboard/admin/rooms'
     | '/dashboard/admin/settings'
     | '/dashboard/admin/users'
@@ -248,7 +281,9 @@ export interface FileRouteTypes {
     | '/dashboard/admin'
     | '/dashboard/settings'
     | '/dashboard/admin/rooms/$roomId'
+    | '/dashboard/admin/rooms/events'
     | '/dashboard/admin/users/$userId'
+    | '/dashboard/admin/users/recent-signups'
   id:
     | '__root__'
     | '/'
@@ -262,6 +297,7 @@ export interface FileRouteTypes {
     | '/m/$meetId'
     | '/auth/'
     | '/dashboard/'
+    | '/dashboard/admin/queue'
     | '/dashboard/admin/rooms'
     | '/dashboard/admin/settings'
     | '/dashboard/admin/users'
@@ -271,7 +307,9 @@ export interface FileRouteTypes {
     | '/dashboard/admin/'
     | '/dashboard/settings/'
     | '/dashboard/admin/rooms_/$roomId'
+    | '/dashboard/admin/rooms_/events'
     | '/dashboard/admin/users_/$userId'
+    | '/dashboard/admin/users_/recent-signups'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -416,11 +454,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardAdminRoomsRouteImport
       parentRoute: typeof DashboardAdminRoute
     }
+    '/dashboard/admin/queue': {
+      id: '/dashboard/admin/queue'
+      path: '/queue'
+      fullPath: '/dashboard/admin/queue'
+      preLoaderRoute: typeof DashboardAdminQueueRouteImport
+      parentRoute: typeof DashboardAdminRoute
+    }
+    '/dashboard/admin/users_/recent-signups': {
+      id: '/dashboard/admin/users_/recent-signups'
+      path: '/users/recent-signups'
+      fullPath: '/dashboard/admin/users/recent-signups'
+      preLoaderRoute: typeof DashboardAdminUsersRecentSignupsRouteImport
+      parentRoute: typeof DashboardAdminRoute
+    }
     '/dashboard/admin/users_/$userId': {
       id: '/dashboard/admin/users_/$userId'
       path: '/users/$userId'
       fullPath: '/dashboard/admin/users/$userId'
       preLoaderRoute: typeof DashboardAdminUsersUserIdRouteImport
+      parentRoute: typeof DashboardAdminRoute
+    }
+    '/dashboard/admin/rooms_/events': {
+      id: '/dashboard/admin/rooms_/events'
+      path: '/rooms/events'
+      fullPath: '/dashboard/admin/rooms/events'
+      preLoaderRoute: typeof DashboardAdminRoomsEventsRouteImport
       parentRoute: typeof DashboardAdminRoute
     }
     '/dashboard/admin/rooms_/$roomId': {
@@ -450,21 +509,27 @@ const AuthRouteChildren: AuthRouteChildren = {
 const AuthRouteWithChildren = AuthRoute._addFileChildren(AuthRouteChildren)
 
 interface DashboardAdminRouteChildren {
+  DashboardAdminQueueRoute: typeof DashboardAdminQueueRoute
   DashboardAdminRoomsRoute: typeof DashboardAdminRoomsRoute
   DashboardAdminSettingsRoute: typeof DashboardAdminSettingsRoute
   DashboardAdminUsersRoute: typeof DashboardAdminUsersRoute
   DashboardAdminIndexRoute: typeof DashboardAdminIndexRoute
   DashboardAdminRoomsRoomIdRoute: typeof DashboardAdminRoomsRoomIdRoute
+  DashboardAdminRoomsEventsRoute: typeof DashboardAdminRoomsEventsRoute
   DashboardAdminUsersUserIdRoute: typeof DashboardAdminUsersUserIdRoute
+  DashboardAdminUsersRecentSignupsRoute: typeof DashboardAdminUsersRecentSignupsRoute
 }
 
 const DashboardAdminRouteChildren: DashboardAdminRouteChildren = {
+  DashboardAdminQueueRoute: DashboardAdminQueueRoute,
   DashboardAdminRoomsRoute: DashboardAdminRoomsRoute,
   DashboardAdminSettingsRoute: DashboardAdminSettingsRoute,
   DashboardAdminUsersRoute: DashboardAdminUsersRoute,
   DashboardAdminIndexRoute: DashboardAdminIndexRoute,
   DashboardAdminRoomsRoomIdRoute: DashboardAdminRoomsRoomIdRoute,
+  DashboardAdminRoomsEventsRoute: DashboardAdminRoomsEventsRoute,
   DashboardAdminUsersUserIdRoute: DashboardAdminUsersUserIdRoute,
+  DashboardAdminUsersRecentSignupsRoute: DashboardAdminUsersRecentSignupsRoute,
 }
 
 const DashboardAdminRouteWithChildren = DashboardAdminRoute._addFileChildren(

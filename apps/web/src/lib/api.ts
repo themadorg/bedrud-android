@@ -67,8 +67,10 @@ function redirectToAuth() {
 async function request<T>(path: string, options: RequestOptions = {}, isRetry = false): Promise<T> {
   const tokens = useAuthStore.getState().tokens
   const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
     ...(options.headers as Record<string, string> | undefined),
+  }
+  if (!(options.body instanceof FormData)) {
+    headers['Content-Type'] = 'application/json'
   }
 
   if (tokens?.accessToken) {
@@ -87,13 +89,20 @@ async function request<T>(path: string, options: RequestOptions = {}, isRetry = 
     ...options,
     headers,
     credentials: 'include', // always send HTTP-only cookies
-    body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
+    body:
+      options.body instanceof FormData
+        ? options.body
+        : options.body !== undefined
+          ? JSON.stringify(options.body)
+          : undefined,
   })
 
   // On 401, try to silently refresh once, then retry the original request.
   // Skip the interceptor on the refresh endpoint itself to avoid infinite loops,
   // and skip on retries (already refreshed once).
-  if (res.status === 401 && !isRetry && path !== '/api/auth/refresh') {
+  // Also skip if no access token was sent — 401 on an unauthenticated request
+  // (e.g. login with wrong credentials) means auth failed, not session expired.
+  if (res.status === 401 && !isRetry && path !== '/api/auth/refresh' && tokens?.accessToken) {
     if (!refreshPromise) {
       refreshPromise = doRefresh().finally(() => {
         refreshPromise = null
