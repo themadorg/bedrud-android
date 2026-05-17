@@ -19,7 +19,10 @@ import {
 } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
+import { toast } from 'sonner'
 import { api } from '#/lib/api'
+import { getErrorMessage } from '#/lib/errors'
+import { useAdminContext } from '#/routes/dashboard/admin.tsx'
 
 export const Route = createFileRoute('/dashboard/admin/rooms_/$roomId')({ component: RoomDetailPage })
 
@@ -89,6 +92,7 @@ function RoomDetailPage() {
   const { roomId } = Route.useParams()
   const navigate = useNavigate()
   const queryClient = useQueryClient()
+  const { isReadOnly } = useAdminContext()
   const [confirmKick, setConfirmKick] = useState<string | null>(null)
   const [confirmSuspend, setConfirmSuspend] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
@@ -138,17 +142,22 @@ function RoomDetailPage() {
   const suspendRoom = useMutation({
     mutationFn: () => api.post(`/api/admin/rooms/${roomId}/suspend`, {}),
     onSuccess: () => {
+      toast.success('Room suspension queued')
       queryClient.invalidateQueries({ queryKey: ['admin', 'room', roomId, 'participants'] })
+      queryClient.invalidateQueries({ queryKey: ['admin', 'rooms'], exact: false })
       setConfirmSuspend(false)
     },
+    onError: (err) => toast.error(getErrorMessage(err, 'Failed to queue suspension')),
   })
 
   const deleteRoom = useMutation({
     mutationFn: () => api.delete(`/api/admin/rooms/${roomId}`),
     onSuccess: () => {
+      toast.success('Room deletion queued — will be removed shortly')
       queryClient.invalidateQueries({ queryKey: ['admin', 'rooms'], exact: false })
-      navigate({ to: '/dashboard/admin/rooms' })
+      setTimeout(() => navigate({ to: '/dashboard/admin/rooms' }), 500)
     },
+    onError: (err) => toast.error(getErrorMessage(err, 'Failed to queue deletion')),
   })
 
   const togglePersistent = useMutation({
@@ -270,7 +279,7 @@ function RoomDetailPage() {
       )}
 
       {/* Room actions — suspend / delete */}
-      {room && (
+      {!isReadOnly && room && (
         <div className="flex items-center gap-3">
           {room.isActive ? (
             confirmSuspend ? (
@@ -507,49 +516,55 @@ function RoomDetailPage() {
                   </div>
 
                   {/* Actions */}
-                  <div className="flex items-center gap-1 shrink-0">
-                    {/* Mute */}
-                    <button
-                      type="button"
-                      onClick={() => mute.mutate(p.identity)}
-                      disabled={mute.isPending || audioTracks.every((t) => t.muted)}
-                      className="p-1.5 text-muted-foreground transition-colors hover:bg-amber-500/10 hover:text-amber-500 disabled:opacity-30 disabled:cursor-not-allowed"
-                      title="Mute audio"
-                    >
-                      {audioTracks.every((t) => t.muted) ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
-                    </button>
-
-                    {/* Kick */}
-                    {confirmKick === p.identity ? (
-                      <div className="flex items-center gap-1">
-                        <button
-                          type="button"
-                          onClick={() => kick.mutate(p.identity)}
-                          disabled={kick.isPending}
-                          className="px-2 py-1 text-xs font-semibold text-white"
-                          style={{ background: '#ef4444' }}
-                        >
-                          Kick
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setConfirmKick(null)}
-                          className="px-1.5 py-1 text-xs text-muted-foreground hover:text-foreground"
-                        >
-                          ×
-                        </button>
-                      </div>
-                    ) : (
+                  {!isReadOnly && (
+                    <div className="flex items-center gap-1 shrink-0">
+                      {/* Mute */}
                       <button
                         type="button"
-                        onClick={() => setConfirmKick(p.identity)}
-                        className="p-1.5 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
-                        title="Kick participant"
+                        onClick={() => mute.mutate(p.identity)}
+                        disabled={mute.isPending || audioTracks.every((t) => t.muted)}
+                        className="p-1.5 text-muted-foreground transition-colors hover:bg-amber-500/10 hover:text-amber-500 disabled:opacity-30 disabled:cursor-not-allowed"
+                        title="Mute audio"
                       >
-                        <UserX className="h-4 w-4" />
+                        {audioTracks.every((t) => t.muted) ? (
+                          <MicOff className="h-4 w-4" />
+                        ) : (
+                          <Mic className="h-4 w-4" />
+                        )}
                       </button>
-                    )}
-                  </div>
+
+                      {/* Kick */}
+                      {confirmKick === p.identity ? (
+                        <div className="flex items-center gap-1">
+                          <button
+                            type="button"
+                            onClick={() => kick.mutate(p.identity)}
+                            disabled={kick.isPending}
+                            className="px-2 py-1 text-xs font-semibold text-white"
+                            style={{ background: '#ef4444' }}
+                          >
+                            Kick
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setConfirmKick(null)}
+                            className="px-1.5 py-1 text-xs text-muted-foreground hover:text-foreground"
+                          >
+                            ×
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => setConfirmKick(p.identity)}
+                          className="p-1.5 text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+                          title="Kick participant"
+                        >
+                          <UserX className="h-4 w-4" />
+                        </button>
+                      )}
+                    </div>
+                  )}
                 </div>
               )
             })}
@@ -585,24 +600,35 @@ function RoomDetailPage() {
                 <p className="text-[10px] text-muted-foreground">{enabled ? 'allowed' : 'disabled'}</p>
               </div>
             ))}
-            <button
-              type="button"
-              onClick={() => togglePersistent.mutate(!room.settings!.isPersistent)}
-              disabled={togglePersistent.isPending}
-              className="flex flex-col items-center gap-1 py-5 transition-colors hover:bg-muted/30 disabled:opacity-50"
-              title={
-                room.settings.isPersistent
-                  ? 'Room stays active during idle periods'
-                  : 'Room will be deactivated when idle'
-              }
-            >
-              <Pin
-                className="h-2 w-2"
-                style={{ color: room.settings.isPersistent ? 'var(--primary)' : 'var(--muted-foreground)' }}
-              />
-              <p className="text-xs font-medium">Persistent</p>
-              <p className="text-[10px] text-muted-foreground">{room.settings.isPersistent ? 'on' : 'off'}</p>
-            </button>
+            {!isReadOnly ? (
+              <button
+                type="button"
+                onClick={() => togglePersistent.mutate(!room.settings!.isPersistent)}
+                disabled={togglePersistent.isPending}
+                className="flex flex-col items-center gap-1 py-5 transition-colors hover:bg-muted/30 disabled:opacity-50"
+                title={
+                  room.settings.isPersistent
+                    ? 'Room stays active during idle periods'
+                    : 'Room will be deactivated when idle'
+                }
+              >
+                <Pin
+                  className="h-2 w-2"
+                  style={{ color: room.settings.isPersistent ? 'var(--primary)' : 'var(--muted-foreground)' }}
+                />
+                <p className="text-xs font-medium">Persistent</p>
+                <p className="text-[10px] text-muted-foreground">{room.settings.isPersistent ? 'on' : 'off'}</p>
+              </button>
+            ) : (
+              <div className="flex flex-col items-center gap-1 py-5">
+                <Pin
+                  className="h-2 w-2"
+                  style={{ color: room.settings.isPersistent ? 'var(--primary)' : 'var(--muted-foreground)' }}
+                />
+                <p className="text-xs font-medium">Persistent</p>
+                <p className="text-[10px] text-muted-foreground">{room.settings.isPersistent ? 'on' : 'off'}</p>
+              </div>
+            )}
           </div>
         </div>
       )}
