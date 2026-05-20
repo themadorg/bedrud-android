@@ -63,7 +63,10 @@ export function FocusLayout({ pinnedIdentities, onTogglePin }: FocusLayoutProps)
   const STRIP_OUTER = STRIP_H + 18
 
   return (
-    <div className="absolute inset-0 z-0 flex flex-col pt-[calc(56px+env(safe-area-inset-top))] pb-[calc(88px+env(safe-area-inset-bottom))]">
+    <div
+      id="meet-grid"
+      className="absolute inset-0 z-0 flex flex-col pt-[calc(56px+env(safe-area-inset-top))] pb-[calc(88px+env(safe-area-inset-bottom))]"
+    >
       {/* ── Main focus area ─────────────────────────────────────── */}
       <div
         className="flex-1 grid gap-[5px] p-[5px_5px_0] min-h-0"
@@ -117,7 +120,7 @@ export function FocusLayout({ pinnedIdentities, onTogglePin }: FocusLayoutProps)
             style={{
               background: 'color-mix(in oklab, var(--primary) 18%, transparent)',
               border: '1px solid color-mix(in oklab, var(--primary) 30%, transparent)',
-              color: 'color-mix(in oklab, var(--sky-300) 80%, transparent)',
+              color: 'color-mix(in oklab, var(--accent-400) 80%, transparent)',
             }}
           >
             {stripParticipants.length}

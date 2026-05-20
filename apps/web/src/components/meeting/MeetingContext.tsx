@@ -1,9 +1,18 @@
+// TODO oncoming feature
 import { useRoomContext } from '@livekit/components-react'
 import { RoomEvent } from 'livekit-client'
 import { createContext, type ReactNode, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import { getPublicSettings } from '#/lib/use-public-settings'
 import { useUserStore } from '#/lib/user.store'
 import { useChatPersistence } from './chat/useChatPersistence'
+
+/** Generate a unique ID with fallback for non-secure contexts (HTTP). */
+function generateID(): string {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID()
+  }
+  return Date.now().toString(36) + Math.random().toString(36).slice(2, 10)
+}
 
 export type SystemEventName =
   | 'kick'
@@ -81,6 +90,19 @@ interface MeetingRoomContextValue {
   // Self-deafened: user toggled deafen from controls bar
   isSelfDeafened: boolean
   toggleSelfDeafen: () => void
+  // Recording state
+  // TODO oncoming feature
+  isRecording: boolean
+  // TODO oncoming feature
+  isRecordingStarting: boolean
+  // TODO oncoming feature
+  isRecordingStopping: boolean
+  // TODO oncoming feature
+  toggleRecording: () => void
+  // TODO oncoming feature
+  recordingsAllowed: boolean
+  // TODO oncoming feature
+  recordingsEnabled: boolean
 }
 
 const MeetingRoomContext = createContext<MeetingRoomContextValue | null>(null)
@@ -146,11 +168,21 @@ interface MeetingProviderProps {
   roomId: string
   roomName: string
   adminId: string
+  recordingsAllowed?: boolean
+  activeRecordingId?: string
   onRoomDeletionMessage?: (event: RoomDeletionEvent, message: string, isCurrentUserDeleted: boolean) => void
   children: ReactNode
 }
 
-export function MeetingProvider({ roomId, roomName, adminId, onRoomDeletionMessage, children }: MeetingProviderProps) {
+export function MeetingProvider({
+  roomId,
+  roomName,
+  adminId,
+  recordingsAllowed = true,
+  activeRecordingId,
+  onRoomDeletionMessage,
+  children,
+}: MeetingProviderProps) {
   const user = useUserStore((s) => s.user)
   const currentUserId = user?.id ?? ''
   const accesses = user?.accesses ?? []
@@ -158,10 +190,13 @@ export function MeetingProvider({ roomId, roomName, adminId, onRoomDeletionMessa
 
   const [ttlHours, setTtlHours] = useState(2160)
 
+  const [recordingsEnabled, setRecordingsEnabled] = useState(true)
+
   useEffect(() => {
     getPublicSettings()
       .then((s) => {
         setTtlHours(s.chatMessageTTLHours ?? 2160)
+        setRecordingsEnabled(false) // TODO oncoming feature
       })
       .catch(() => {})
   }, [])
@@ -174,7 +209,26 @@ export function MeetingProvider({ roomId, roomName, adminId, onRoomDeletionMessa
   const [systemMessages, setSystemMessages] = useState<SystemMessage[]>([])
   const [isServerDeafened, setIsServerDeafened] = useState(false)
   const [isSelfDeafened, setIsSelfDeafened] = useState(false)
+  const [isRecording, _setIsRecording] = useState(!!activeRecordingId)
+  const [isRecordingStarting, _setIsRecordingStarting] = useState(false)
+  const [isRecordingStopping, _setIsRecordingStopping] = useState(false)
   const micBeforeDeafenRef = useRef(true)
+  const toggleSelfDeafen = useCallback(() => {
+    if (isSelfDeafened) {
+      setIsSelfDeafened(false)
+      // Restore mic only if it was on before we deafened
+      if (micBeforeDeafenRef.current) room.localParticipant.setMicrophoneEnabled(true)
+      return
+    }
+    micBeforeDeafenRef.current = room.localParticipant.isMicrophoneEnabled
+    room.localParticipant.setMicrophoneEnabled(false)
+    setIsSelfDeafened(true)
+  }, [isSelfDeafened, room.localParticipant])
+
+  const toggleRecording = useCallback(async () => {
+    // TODO oncoming feature
+  }, [])
+
   const [unreadCount, setUnreadCount] = useState(0)
 
   // Track how many messages existed at the last markRead() so we only count new arrivals
@@ -227,7 +281,7 @@ export function MeetingProvider({ roomId, roomName, adminId, onRoomDeletionMessa
           const senderName = (raw.senderName as string) || p?.name || p?.identity || 'Unknown'
 
           const msg: ChatMessage = {
-            id: (raw.id as string) || crypto.randomUUID(),
+            id: (raw.id as string) || generateID(),
             timestamp: (raw.timestamp as number) || Date.now(),
             senderName,
             senderIdentity,
@@ -275,7 +329,7 @@ export function MeetingProvider({ roomId, roomName, adminId, onRoomDeletionMessa
   const sendChat = useCallback(
     (text: string, attachments?: ChatAttachment[]) => {
       const lp = room.localParticipant
-      const id = crypto.randomUUID()
+      const id = generateID()
       const timestamp = Date.now()
       const senderName = lp.name || lp.identity || 'You'
       const senderIdentity = lp.identity || ''
@@ -322,28 +376,6 @@ export function MeetingProvider({ roomId, roomName, adminId, onRoomDeletionMessa
     [room, ttlHours],
   )
 
-  const toggleSelfDeafen = useCallback(() => {
-    const lp = room.localParticipant
-    const newDeafened = !isSelfDeafened
-
-    if (newDeafened) {
-      micBeforeDeafenRef.current = lp.isMicrophoneEnabled
-      lp.setMicrophoneEnabled(false)
-    } else {
-      lp.setMicrophoneEnabled(micBeforeDeafenRef.current)
-    }
-
-    // Broadcast deafened state to all participants via metadata
-    let meta: Record<string, unknown> = {}
-    try {
-      meta = JSON.parse(lp.metadata ?? '{}')
-    } catch {
-      /* ignore */
-    }
-    lp.setMetadata(JSON.stringify({ ...meta, deafened: newDeafened }))
-    setIsSelfDeafened(newDeafened)
-  }, [room, isSelfDeafened])
-
   // Room context value — stable unless room metadata actually changes
   const roomValue = useMemo<MeetingRoomContextValue>(
     () => ({
@@ -353,10 +385,20 @@ export function MeetingProvider({ roomId, roomName, adminId, onRoomDeletionMessa
       currentUserId,
       isCreator: !!adminId && (currentUserId === adminId || room.localParticipant.identity === adminId),
       isAdmin: accesses.includes('admin') || accesses.includes('superadmin'),
-      isModerator: accesses.includes('moderator'),
+      isModerator:
+        accesses.includes('moderator') ||
+        accesses.includes('admin') ||
+        accesses.includes('superadmin') ||
+        (!!adminId && currentUserId === adminId),
       isServerDeafened,
       isSelfDeafened,
       toggleSelfDeafen,
+      isRecording,
+      isRecordingStarting,
+      isRecordingStopping,
+      toggleRecording,
+      recordingsAllowed,
+      recordingsEnabled,
     }),
     [
       roomId,
@@ -367,6 +409,12 @@ export function MeetingProvider({ roomId, roomName, adminId, onRoomDeletionMessa
       isServerDeafened,
       isSelfDeafened,
       toggleSelfDeafen,
+      isRecording,
+      isRecordingStarting,
+      isRecordingStopping,
+      toggleRecording,
+      recordingsAllowed,
+      recordingsEnabled,
       room.localParticipant.identity,
     ],
   )

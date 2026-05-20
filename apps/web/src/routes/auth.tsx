@@ -112,7 +112,7 @@ function AuthLayout() {
           rel="noopener noreferrer"
           className="relative text-xs text-white/20 transition-colors hover:text-white/40"
         >
-          © {new Date().getFullYear()} Bedrud
+          <span suppressHydrationWarning>© {new Date().getFullYear()} Bedrud</span>
         </a>
       </div>
 

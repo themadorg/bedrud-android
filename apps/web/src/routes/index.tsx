@@ -1,6 +1,6 @@
 import { createFileRoute, Link, redirect, useNavigate } from '@tanstack/react-router'
 import { AlertCircle, ArrowRight, Radio } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { api } from '#/lib/api'
 import { useAuthStore } from '#/lib/auth.store'
 import { useUserStore } from '#/lib/user.store'
@@ -30,6 +30,11 @@ function JoinForm() {
   const [code, setCode] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [checking, setChecking] = useState(false)
+  const [host, setHost] = useState('')
+
+  useEffect(() => {
+    setHost(window.location.host)
+  }, [])
 
   async function handleJoin(e: React.SyntheticEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -88,7 +93,7 @@ function JoinForm() {
         className="group flex items-center gap-0 border-b-2 border-transparent transition-colors focus-within:border-primary"
       >
         <span className="hidden font-mono text-sm text-muted-foreground/30 select-none whitespace-nowrap sm:block">
-          {typeof window !== 'undefined' ? window.location.host : ''}/m/
+          {host}/m/
         </span>
         <Input
           value={code}
@@ -196,7 +201,7 @@ function HomePage() {
 
       {/* ── Footer ───────────────────────────────────────────────────────── */}
       <footer className="relative z-10 flex items-center gap-4 border-t px-6 py-3 text-xs text-muted-foreground sm:px-10">
-        <span>&copy; {new Date().getFullYear()} Bedrud</span>
+        <span suppressHydrationWarning>&copy; {new Date().getFullYear()} Bedrud</span>
         <Separator orientation="vertical" className="h-3" />
         <a
           href="https://bedrud.org/en/docs/getting-started/quickstart/?utm_source=app&utm_medium=footer"

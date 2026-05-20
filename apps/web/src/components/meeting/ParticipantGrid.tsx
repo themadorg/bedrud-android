@@ -1,5 +1,4 @@
 import { useParticipants } from '@livekit/components-react'
-import { Video } from 'lucide-react'
 
 import { cn } from '#/lib/utils'
 import { ParticipantTile } from './ParticipantTile'
@@ -19,25 +18,11 @@ function gridCols(count: number): string {
 export function ParticipantGrid({ pinnedIdentities, onTogglePin }: ParticipantGridProps) {
   const participants = useParticipants()
 
-  if (participants.length === 0) {
-    return (
-      <div className="absolute inset-0 z-0 pt-[calc(56px+env(safe-area-inset-top))] pb-[calc(88px+env(safe-area-inset-bottom))] flex flex-col items-center justify-center gap-5">
-        <div
-          className="w-20 h-20 rounded-full flex items-center justify-center"
-          style={{
-            background: 'color-mix(in oklab, var(--primary) 10%, transparent)',
-            border: '1px solid color-mix(in oklab, var(--primary) 20%, transparent)',
-          }}
-        >
-          <Video size={32} className="text-[color-mix(in_oklab,var(--primary)_55%,transparent)]" />
-        </div>
-        <p className="text-white/30 text-sm">Waiting for others to join…</p>
-      </div>
-    )
-  }
-
   return (
-    <div className="absolute inset-0 z-0 pt-[calc(56px+env(safe-area-inset-top))] pb-[calc(88px+env(safe-area-inset-bottom))]">
+    <div
+      id="meet-grid"
+      className="absolute inset-0 z-0 pt-[calc(56px+env(safe-area-inset-top))] pb-[calc(88px+env(safe-area-inset-bottom))]"
+    >
       <div
         className={cn(
           'grid h-full w-full grid-auto-rows-[1fr]',

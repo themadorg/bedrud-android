@@ -53,7 +53,7 @@ export function MeetingControls({ onNavigate }: MeetingControlsProps) {
         <DialogContent className="sm:max-w-sm bg-[#0f0f1e] border-white/[0.08]">
           <DialogHeader>
             <DialogTitle className="text-white">Leave meeting?</DialogTitle>
-            <DialogDescription className="text-white/45">
+            <DialogDescription className="text-white/50">
               You created this meeting. End it for everyone, or just slip out.
             </DialogDescription>
           </DialogHeader>
@@ -76,7 +76,7 @@ export function MeetingControls({ onNavigate }: MeetingControlsProps) {
             </Button>
             <Button
               variant="ghost"
-              className="w-full text-white/40 hover:text-white/70"
+              className="w-full text-white/50 hover:text-white/70"
               onClick={() => setEndDialogOpen(false)}
             >
               Cancel

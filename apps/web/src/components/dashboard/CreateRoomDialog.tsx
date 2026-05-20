@@ -23,16 +23,18 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { getErrorMessage } from '@/lib/errors'
 import { cn } from '@/lib/utils'
 
-interface RoomSettings {
+export interface RoomSettings {
   allowChat: boolean
   allowVideo: boolean
   allowAudio: boolean
   requireApproval: boolean
   e2ee: boolean
   isPersistent: boolean
+  // TODO oncoming feature
+  recordingsAllowed?: boolean
 }
 
-interface CreateRoomData {
+export interface CreateRoomData {
   name?: string
   isPublic: boolean
   maxParticipants: number
@@ -53,6 +55,8 @@ const DEFAULT_SETTINGS: RoomSettings = {
   requireApproval: false,
   e2ee: false,
   isPersistent: false,
+  // TODO oncoming feature
+  recordingsAllowed: true,
 }
 
 const FEATURES = [

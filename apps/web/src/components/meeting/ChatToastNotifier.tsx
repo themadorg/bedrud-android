@@ -49,7 +49,7 @@ export function ChatToastNotifier({ chatOpen }: ChatToastNotifierProps) {
           className="chat-toast flex flex-col gap-[5px] bg-[#0f0f1c]/96 rounded-[14px] px-4 py-[13px] shadow-[0_8px_28px_rgba(0,0,0,0.5)] backdrop-blur-lg max-w-[min(340px,calc(100vw-32px))]"
           style={{ border: '1px solid color-mix(in oklab, var(--primary) 35%, transparent)' }}
         >
-          <span className="text-[13px] font-semibold text-sky-300">{toast.sender}</span>
+          <span className="text-[13px] font-semibold text-teal-400">{toast.sender}</span>
           <span className="text-sm text-white/75 overflow-hidden line-clamp-2 break-words">{toast.message}</span>
         </div>
       ))}

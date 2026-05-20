@@ -89,7 +89,7 @@ export function ChatMessageList({ chatMessages, systemMessages, onScrollUnreadCh
             >
               <MessageSquare size={18} className="text-[color-mix(in_oklab,var(--primary)_50%,transparent)]" />
             </div>
-            <p className="text-white/[0.22] text-xs text-center">
+            <p className="text-white/50 text-xs text-center">
               No messages yet.
               <br />
               Say hello!
@@ -101,7 +101,7 @@ export function ChatMessageList({ chatMessages, systemMessages, onScrollUnreadCh
               return (
                 <div key={item.id} className="flex items-center gap-2.5 py-1">
                   <div className="flex-1 h-px bg-white/[0.06]" />
-                  <span className="text-[11px] text-white/[0.28] font-medium">{item.label}</span>
+                  <span className="text-[11px] text-white/50 font-medium">{item.label}</span>
                   <div className="flex-1 h-px bg-white/[0.06]" />
                 </div>
               )
@@ -111,7 +111,7 @@ export function ChatMessageList({ chatMessages, systemMessages, onScrollUnreadCh
               const label = item.msg.event === 'kick' ? 'was kicked by' : 'was banned by'
               return (
                 <div key={item.id} className="flex justify-center py-0.5">
-                  <span className="text-[11px] text-white/30 bg-white/[0.05] border border-white/[0.08] rounded-full px-2.5 py-[3px] italic">
+                  <span className="text-[11px] text-white/50 bg-white/[0.05] border border-white/[0.08] rounded-full px-2.5 py-[3px] italic">
                     {item.msg.target} {label} {item.msg.actor}
                   </span>
                 </div>

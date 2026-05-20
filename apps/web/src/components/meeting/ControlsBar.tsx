@@ -1,3 +1,4 @@
+// TODO oncoming feature
 import { useLocalParticipant, useRoomContext } from '@livekit/components-react'
 import { ConnectionState, RoomEvent } from 'livekit-client'
 import {
@@ -62,7 +63,7 @@ function btnIconCn(active = false, danger = false, isMobile = false) {
     danger
       ? 'bg-red-500/20 text-red-400 hover:bg-red-500/30'
       : active
-        ? 'bg-primary/25 text-sky-300 hover:bg-primary/30'
+        ? 'bg-primary/25 text-teal-400 hover:bg-primary/30'
         : 'bg-white/[0.07] text-white/75 hover:bg-white/[0.12]',
   )
 }
@@ -265,7 +266,7 @@ export function ControlsBar({ onLeave }: Props) {
     <TooltipProvider delayDuration={300}>
       {/* Push-to-talk badge */}
       {pttVisible && (
-        <div className="fixed bottom-20 left-1/2 z-50 flex items-center gap-2 bg-primary/90 border border-sky-300/40 rounded-full px-4 py-1.5 text-white text-xs font-semibold shadow-[0_4px_24px_color-mix(in_oklab,var(--primary)_50%,transparent)]">
+        <div className="fixed bottom-20 left-1/2 z-50 flex items-center gap-2 bg-primary/90 border border-teal-400/40 rounded-full px-4 py-1.5 text-white text-xs font-semibold shadow-[0_4px_24px_color-mix(in_oklab,var(--primary)_50%,transparent)]">
           <Mic size={13} />
           {pttInitMic ? 'Push-to-Mute active' : 'Push-to-Talk active'}
         </div>
@@ -273,6 +274,7 @@ export function ControlsBar({ onLeave }: Props) {
 
       {/* Floating controls pill */}
       <div
+        id="meet-controls"
         className={cn(
           'absolute left-1/2 -translate-x-1/2 z-30 flex items-center bg-[#0c0c16]/90 backdrop-blur-xl border border-white/[0.07] whitespace-nowrap shadow-[0_8px_40px_rgba(0,0,0,0.55),inset_0_1px_0_rgba(255,255,255,0.04)]',
           isMobile
@@ -287,7 +289,7 @@ export function ControlsBar({ onLeave }: Props) {
             tip={camEnabled ? 'Disable camera' : 'Enable camera'}
             active={!camEnabled}
             isMobile={isMobile}
-            onClick={() => localParticipant?.setCameraEnabled(!camEnabled)}
+            onClick={() => localParticipant?.setCameraEnabled(!camEnabled).catch(() => {})}
           >
             {camEnabled ? <Video size={iconSize} /> : <VideoOff size={iconSize} />}
           </CtrlBtn>
@@ -298,11 +300,15 @@ export function ControlsBar({ onLeave }: Props) {
           tip={shareTip}
           danger={isScreenShareEnabled}
           isMobile={isMobile}
-          onClick={canShare ? () => localParticipant?.setScreenShareEnabled(!isScreenShareEnabled) : undefined}
+          onClick={
+            canShare ? () => localParticipant?.setScreenShareEnabled(!isScreenShareEnabled).catch(() => {}) : undefined
+          }
           className={cn(!canShare && 'opacity-40 cursor-not-allowed')}
         >
           {isScreenShareEnabled ? <MonitorOff size={iconSizeSm} /> : <MonitorUp size={iconSizeSm} />}
         </CtrlBtn>
+
+        {/* TODO oncoming feature — recording button removed */}
 
         {!isMobile && <div className={dividerCn} />}
 
@@ -341,7 +347,7 @@ export function ControlsBar({ onLeave }: Props) {
                 toggleSelfDeafen()
                 return
               }
-              localParticipant?.setMicrophoneEnabled(!micEnabled)
+              localParticipant?.setMicrophoneEnabled(!micEnabled).catch(() => {})
             }}
           >
             {micEnabled ? <Mic size={iconSize} /> : <MicOff size={iconSize} />}
@@ -362,7 +368,7 @@ export function ControlsBar({ onLeave }: Props) {
               <button
                 type="button"
                 className={cn(
-                  'flex items-center justify-center shrink-0 border-none bg-transparent cursor-pointer text-white/35 transition-colors duration-150 hover:text-white/60',
+                  'flex items-center justify-center shrink-0 border-none bg-transparent cursor-pointer text-white/50 transition-colors duration-150 hover:text-white/60',
                   isMobile ? 'w-5 h-[38px]' : 'w-6 h-11',
                   'rounded-lg',
                 )}
@@ -375,7 +381,7 @@ export function ControlsBar({ onLeave }: Props) {
               {/* Microphone devices */}
               {mics.devices.length > 0 && (
                 <>
-                  <DropdownMenuLabel className="text-white/30 text-[10px] uppercase tracking-wider px-2 pt-1.5 pb-0.5">
+                  <DropdownMenuLabel className="text-white/50 text-[10px] uppercase tracking-wider px-2 pt-1.5 pb-0.5">
                     Microphone
                   </DropdownMenuLabel>
                   {mics.devices.map((d, i) => (
@@ -387,7 +393,7 @@ export function ControlsBar({ onLeave }: Props) {
                       <Check
                         size={12}
                         className={cn(
-                          'shrink-0 text-sky-300',
+                          'shrink-0 text-teal-400',
                           mics.activeId === d.deviceId ? 'opacity-100' : 'opacity-0',
                         )}
                       />
@@ -401,7 +407,7 @@ export function ControlsBar({ onLeave }: Props) {
               {/* Speaker devices */}
               {speakers.devices.length > 0 && (
                 <>
-                  <DropdownMenuLabel className="text-white/30 text-[10px] uppercase tracking-wider px-2 pt-1.5 pb-0.5">
+                  <DropdownMenuLabel className="text-white/50 text-[10px] uppercase tracking-wider px-2 pt-1.5 pb-0.5">
                     Speaker
                   </DropdownMenuLabel>
                   {speakers.devices.map((d, i) => (
@@ -413,7 +419,7 @@ export function ControlsBar({ onLeave }: Props) {
                       <Check
                         size={12}
                         className={cn(
-                          'shrink-0 text-sky-300',
+                          'shrink-0 text-teal-400',
                           speakers.activeId === d.deviceId ? 'opacity-100' : 'opacity-0',
                         )}
                       />
@@ -425,7 +431,7 @@ export function ControlsBar({ onLeave }: Props) {
               )}
 
               {/* Noise suppression */}
-              <DropdownMenuLabel className="text-white/30 text-[10px] uppercase tracking-wider px-2 pt-1.5 pb-0.5">
+              <DropdownMenuLabel className="text-white/50 text-[10px] uppercase tracking-wider px-2 pt-1.5 pb-0.5">
                 Noise Suppression
               </DropdownMenuLabel>
               {NOISE_MODES.map(({ value, label }) => {
@@ -442,7 +448,7 @@ export function ControlsBar({ onLeave }: Props) {
                   >
                     <Check
                       size={12}
-                      className={cn('shrink-0 text-sky-300', noiseMode === value ? 'opacity-100' : 'opacity-0')}
+                      className={cn('shrink-0 text-teal-400', noiseMode === value ? 'opacity-100' : 'opacity-0')}
                     />
                     <span className="flex-1">{label}</span>
                     {disabled && <span className="text-[9px] text-red-400 bg-red-500/15 rounded-sm px-1">N/A</span>}
@@ -513,7 +519,7 @@ export function ControlsBar({ onLeave }: Props) {
 
             <DropdownMenuSeparator className="bg-white/[0.06]" />
 
-            <DropdownMenuItem disabled className="rounded-md gap-2 text-[11px] text-white/30 focus:text-white/30">
+            <DropdownMenuItem disabled className="rounded-md gap-2 text-[11px] text-white/50 focus:text-white/50">
               <Keyboard size={12} className="shrink-0" />
               Space — Push to talk/mute
             </DropdownMenuItem>

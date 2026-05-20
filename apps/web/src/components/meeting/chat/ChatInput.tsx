@@ -111,15 +111,18 @@ export const ChatInput = forwardRef<ChatInputHandle, Props>(function ChatInput({
   return (
     <div className="border-t border-white/[0.06] px-3 py-2.5">
       {error && <p className="m-0 mb-1.5 text-[11px] text-red-400/90">{error}</p>}
-      {uploading && (
-        <p className="m-0 mb-1.5 text-[11px] text-[color-mix(in_oklab,var(--sky-300)_70%,transparent)]">
-          Uploading image…
-        </p>
-      )}
+      {uploading && <p className="m-0 mb-1.5 text-[11px] text-accent-400/80">Uploading image…</p>}
 
-      <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={handleFileChange}
+        aria-label="Upload an image"
+      />
 
-      <div className="flex gap-2 items-end">
+      <div className="flex gap-2 items-center">
         {/* Attach image */}
         <button
           type="button"
@@ -128,8 +131,7 @@ export const ChatInput = forwardRef<ChatInputHandle, Props>(function ChatInput({
           title="Attach image"
           className="w-9 h-9 rounded-xl shrink-0 border border-white/[0.09] bg-white/[0.04] flex items-center justify-center"
           style={{
-            color:
-              uploading || disabled ? 'rgba(255,255,255,0.15)' : 'color-mix(in oklab, var(--sky-300) 70%, transparent)',
+            color: uploading || disabled ? 'rgba(255,255,255,0.25)' : 'var(--accent-400)',
             cursor: uploading || disabled ? 'default' : 'pointer',
           }}
           aria-label="Attach image"
@@ -141,6 +143,9 @@ export const ChatInput = forwardRef<ChatInputHandle, Props>(function ChatInput({
         <div className="flex-1 relative">
           <textarea
             ref={textareaRef}
+            id="chat-input"
+            name="chat-message"
+            aria-label="Chat message"
             value={draft}
             onChange={(e) => {
               setDraft(e.target.value)
@@ -151,7 +156,8 @@ export const ChatInput = forwardRef<ChatInputHandle, Props>(function ChatInput({
             placeholder="Type a message…"
             disabled={uploading || disabled}
             rows={1}
-            className="w-full resize-none overflow-y-auto bg-white/[0.06] border border-white/[0.09] rounded-xl px-3 py-2 text-white/85 text-[13px] outline-none box-border"
+            dir="auto"
+            className="w-full resize-none overflow-y-hidden bg-white/[0.06] border border-white/[0.09] rounded-xl px-3 py-[7px] text-white/85 text-[13px] outline-none box-border"
             style={{
               minHeight,
               maxHeight,
@@ -164,7 +170,7 @@ export const ChatInput = forwardRef<ChatInputHandle, Props>(function ChatInput({
             type="button"
             onClick={() => setExpanded((v) => !v)}
             title={expanded ? 'Collapse' : 'Expand'}
-            className="absolute top-2 right-2 w-[18px] h-[18px] p-0 bg-transparent border-none text-white/25 cursor-pointer flex items-center justify-center"
+            className="absolute top-2 right-2 w-[18px] h-[18px] p-0 bg-transparent border-none text-white/50 cursor-pointer flex items-center justify-center"
             aria-label={expanded ? 'Collapse input' : 'Expand input'}
           >
             {expanded ? <Minimize2 size={11} /> : <Maximize2 size={11} />}

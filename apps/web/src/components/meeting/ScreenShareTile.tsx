@@ -20,7 +20,7 @@ export function ScreenShareTile({ trackRef }: ScreenShareTileProps) {
     >
       <VideoTrack trackRef={trackRef as TrackReference} className="absolute inset-0 w-full h-full object-contain" />
       <div className="absolute bottom-2.5 left-2.5 flex items-center gap-1.5 bg-black/65 backdrop-blur-sm rounded-[7px] px-2.5 py-1">
-        <Monitor size={12} className="shrink-0 text-sky-300" />
+        <Monitor size={12} className="shrink-0 text-teal-400" />
         <span className="text-white text-xs font-medium">{displayName} is presenting</span>
       </div>
     </div>

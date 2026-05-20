@@ -17,17 +17,22 @@ import { Route as AuthIndexRouteImport } from './routes/auth.index'
 import { Route as MMeetIdRouteImport } from './routes/m.$meetId'
 import { Route as DashboardSettingsRouteImport } from './routes/dashboard/settings'
 import { Route as DashboardAdminRouteImport } from './routes/dashboard/admin'
+import { Route as AuthVerifyRouteImport } from './routes/auth.verify'
+import { Route as AuthResetPasswordRouteImport } from './routes/auth.reset-password'
 import { Route as AuthRegisterRouteImport } from './routes/auth.register'
 import { Route as AuthLoginRouteImport } from './routes/auth.login'
+import { Route as AuthForgotPasswordRouteImport } from './routes/auth.forgot-password'
 import { Route as AuthCallbackRouteImport } from './routes/auth.callback'
 import { Route as DashboardSettingsIndexRouteImport } from './routes/dashboard/settings/index'
 import { Route as DashboardAdminIndexRouteImport } from './routes/dashboard/admin/index'
 import { Route as DashboardSettingsVideoRouteImport } from './routes/dashboard/settings/video'
 import { Route as DashboardSettingsSecurityRouteImport } from './routes/dashboard/settings/security'
 import { Route as DashboardSettingsAudioRouteImport } from './routes/dashboard/settings/audio'
+import { Route as DashboardArchivedRoomIdRouteImport } from './routes/dashboard/archived_.$roomId'
 import { Route as DashboardAdminUsersRouteImport } from './routes/dashboard/admin/users'
 import { Route as DashboardAdminSettingsRouteImport } from './routes/dashboard/admin/settings'
 import { Route as DashboardAdminRoomsRouteImport } from './routes/dashboard/admin/rooms'
+import { Route as DashboardAdminRecordingsRouteImport } from './routes/dashboard/admin/recordings'
 import { Route as DashboardAdminQueueRouteImport } from './routes/dashboard/admin/queue'
 import { Route as DashboardAdminUsersRecentSignupsRouteImport } from './routes/dashboard/admin/users_.recent-signups'
 import { Route as DashboardAdminUsersUserIdRouteImport } from './routes/dashboard/admin/users_.$userId'
@@ -74,6 +79,16 @@ const DashboardAdminRoute = DashboardAdminRouteImport.update({
   path: '/admin',
   getParentRoute: () => DashboardRoute,
 } as any)
+const AuthVerifyRoute = AuthVerifyRouteImport.update({
+  id: '/verify',
+  path: '/verify',
+  getParentRoute: () => AuthRoute,
+} as any)
+const AuthResetPasswordRoute = AuthResetPasswordRouteImport.update({
+  id: '/reset-password',
+  path: '/reset-password',
+  getParentRoute: () => AuthRoute,
+} as any)
 const AuthRegisterRoute = AuthRegisterRouteImport.update({
   id: '/register',
   path: '/register',
@@ -82,6 +97,11 @@ const AuthRegisterRoute = AuthRegisterRouteImport.update({
 const AuthLoginRoute = AuthLoginRouteImport.update({
   id: '/login',
   path: '/login',
+  getParentRoute: () => AuthRoute,
+} as any)
+const AuthForgotPasswordRoute = AuthForgotPasswordRouteImport.update({
+  id: '/forgot-password',
+  path: '/forgot-password',
   getParentRoute: () => AuthRoute,
 } as any)
 const AuthCallbackRoute = AuthCallbackRouteImport.update({
@@ -115,6 +135,11 @@ const DashboardSettingsAudioRoute = DashboardSettingsAudioRouteImport.update({
   path: '/audio',
   getParentRoute: () => DashboardSettingsRoute,
 } as any)
+const DashboardArchivedRoomIdRoute = DashboardArchivedRoomIdRouteImport.update({
+  id: '/archived_/$roomId',
+  path: '/archived/$roomId',
+  getParentRoute: () => DashboardRoute,
+} as any)
 const DashboardAdminUsersRoute = DashboardAdminUsersRouteImport.update({
   id: '/users',
   path: '/users',
@@ -130,6 +155,12 @@ const DashboardAdminRoomsRoute = DashboardAdminRoomsRouteImport.update({
   path: '/rooms',
   getParentRoute: () => DashboardAdminRoute,
 } as any)
+const DashboardAdminRecordingsRoute =
+  DashboardAdminRecordingsRouteImport.update({
+    id: '/recordings',
+    path: '/recordings',
+    getParentRoute: () => DashboardAdminRoute,
+  } as any)
 const DashboardAdminQueueRoute = DashboardAdminQueueRouteImport.update({
   id: '/queue',
   path: '/queue',
@@ -165,17 +196,22 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRouteWithChildren
   '/dashboard': typeof DashboardRouteWithChildren
   '/auth/callback': typeof AuthCallbackRoute
+  '/auth/forgot-password': typeof AuthForgotPasswordRoute
   '/auth/login': typeof AuthLoginRoute
   '/auth/register': typeof AuthRegisterRoute
+  '/auth/reset-password': typeof AuthResetPasswordRoute
+  '/auth/verify': typeof AuthVerifyRoute
   '/dashboard/admin': typeof DashboardAdminRouteWithChildren
   '/dashboard/settings': typeof DashboardSettingsRouteWithChildren
   '/m/$meetId': typeof MMeetIdRoute
   '/auth/': typeof AuthIndexRoute
   '/dashboard/': typeof DashboardIndexRoute
   '/dashboard/admin/queue': typeof DashboardAdminQueueRoute
+  '/dashboard/admin/recordings': typeof DashboardAdminRecordingsRoute
   '/dashboard/admin/rooms': typeof DashboardAdminRoomsRoute
   '/dashboard/admin/settings': typeof DashboardAdminSettingsRoute
   '/dashboard/admin/users': typeof DashboardAdminUsersRoute
+  '/dashboard/archived/$roomId': typeof DashboardArchivedRoomIdRoute
   '/dashboard/settings/audio': typeof DashboardSettingsAudioRoute
   '/dashboard/settings/security': typeof DashboardSettingsSecurityRoute
   '/dashboard/settings/video': typeof DashboardSettingsVideoRoute
@@ -189,15 +225,20 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth/callback': typeof AuthCallbackRoute
+  '/auth/forgot-password': typeof AuthForgotPasswordRoute
   '/auth/login': typeof AuthLoginRoute
   '/auth/register': typeof AuthRegisterRoute
+  '/auth/reset-password': typeof AuthResetPasswordRoute
+  '/auth/verify': typeof AuthVerifyRoute
   '/m/$meetId': typeof MMeetIdRoute
   '/auth': typeof AuthIndexRoute
   '/dashboard': typeof DashboardIndexRoute
   '/dashboard/admin/queue': typeof DashboardAdminQueueRoute
+  '/dashboard/admin/recordings': typeof DashboardAdminRecordingsRoute
   '/dashboard/admin/rooms': typeof DashboardAdminRoomsRoute
   '/dashboard/admin/settings': typeof DashboardAdminSettingsRoute
   '/dashboard/admin/users': typeof DashboardAdminUsersRoute
+  '/dashboard/archived/$roomId': typeof DashboardArchivedRoomIdRoute
   '/dashboard/settings/audio': typeof DashboardSettingsAudioRoute
   '/dashboard/settings/security': typeof DashboardSettingsSecurityRoute
   '/dashboard/settings/video': typeof DashboardSettingsVideoRoute
@@ -214,17 +255,22 @@ export interface FileRoutesById {
   '/auth': typeof AuthRouteWithChildren
   '/dashboard': typeof DashboardRouteWithChildren
   '/auth/callback': typeof AuthCallbackRoute
+  '/auth/forgot-password': typeof AuthForgotPasswordRoute
   '/auth/login': typeof AuthLoginRoute
   '/auth/register': typeof AuthRegisterRoute
+  '/auth/reset-password': typeof AuthResetPasswordRoute
+  '/auth/verify': typeof AuthVerifyRoute
   '/dashboard/admin': typeof DashboardAdminRouteWithChildren
   '/dashboard/settings': typeof DashboardSettingsRouteWithChildren
   '/m/$meetId': typeof MMeetIdRoute
   '/auth/': typeof AuthIndexRoute
   '/dashboard/': typeof DashboardIndexRoute
   '/dashboard/admin/queue': typeof DashboardAdminQueueRoute
+  '/dashboard/admin/recordings': typeof DashboardAdminRecordingsRoute
   '/dashboard/admin/rooms': typeof DashboardAdminRoomsRoute
   '/dashboard/admin/settings': typeof DashboardAdminSettingsRoute
   '/dashboard/admin/users': typeof DashboardAdminUsersRoute
+  '/dashboard/archived_/$roomId': typeof DashboardArchivedRoomIdRoute
   '/dashboard/settings/audio': typeof DashboardSettingsAudioRoute
   '/dashboard/settings/security': typeof DashboardSettingsSecurityRoute
   '/dashboard/settings/video': typeof DashboardSettingsVideoRoute
@@ -242,17 +288,22 @@ export interface FileRouteTypes {
     | '/auth'
     | '/dashboard'
     | '/auth/callback'
+    | '/auth/forgot-password'
     | '/auth/login'
     | '/auth/register'
+    | '/auth/reset-password'
+    | '/auth/verify'
     | '/dashboard/admin'
     | '/dashboard/settings'
     | '/m/$meetId'
     | '/auth/'
     | '/dashboard/'
     | '/dashboard/admin/queue'
+    | '/dashboard/admin/recordings'
     | '/dashboard/admin/rooms'
     | '/dashboard/admin/settings'
     | '/dashboard/admin/users'
+    | '/dashboard/archived/$roomId'
     | '/dashboard/settings/audio'
     | '/dashboard/settings/security'
     | '/dashboard/settings/video'
@@ -266,15 +317,20 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/auth/callback'
+    | '/auth/forgot-password'
     | '/auth/login'
     | '/auth/register'
+    | '/auth/reset-password'
+    | '/auth/verify'
     | '/m/$meetId'
     | '/auth'
     | '/dashboard'
     | '/dashboard/admin/queue'
+    | '/dashboard/admin/recordings'
     | '/dashboard/admin/rooms'
     | '/dashboard/admin/settings'
     | '/dashboard/admin/users'
+    | '/dashboard/archived/$roomId'
     | '/dashboard/settings/audio'
     | '/dashboard/settings/security'
     | '/dashboard/settings/video'
@@ -290,17 +346,22 @@ export interface FileRouteTypes {
     | '/auth'
     | '/dashboard'
     | '/auth/callback'
+    | '/auth/forgot-password'
     | '/auth/login'
     | '/auth/register'
+    | '/auth/reset-password'
+    | '/auth/verify'
     | '/dashboard/admin'
     | '/dashboard/settings'
     | '/m/$meetId'
     | '/auth/'
     | '/dashboard/'
     | '/dashboard/admin/queue'
+    | '/dashboard/admin/recordings'
     | '/dashboard/admin/rooms'
     | '/dashboard/admin/settings'
     | '/dashboard/admin/users'
+    | '/dashboard/archived_/$roomId'
     | '/dashboard/settings/audio'
     | '/dashboard/settings/security'
     | '/dashboard/settings/video'
@@ -377,6 +438,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardAdminRouteImport
       parentRoute: typeof DashboardRoute
     }
+    '/auth/verify': {
+      id: '/auth/verify'
+      path: '/verify'
+      fullPath: '/auth/verify'
+      preLoaderRoute: typeof AuthVerifyRouteImport
+      parentRoute: typeof AuthRoute
+    }
+    '/auth/reset-password': {
+      id: '/auth/reset-password'
+      path: '/reset-password'
+      fullPath: '/auth/reset-password'
+      preLoaderRoute: typeof AuthResetPasswordRouteImport
+      parentRoute: typeof AuthRoute
+    }
     '/auth/register': {
       id: '/auth/register'
       path: '/register'
@@ -389,6 +464,13 @@ declare module '@tanstack/react-router' {
       path: '/login'
       fullPath: '/auth/login'
       preLoaderRoute: typeof AuthLoginRouteImport
+      parentRoute: typeof AuthRoute
+    }
+    '/auth/forgot-password': {
+      id: '/auth/forgot-password'
+      path: '/forgot-password'
+      fullPath: '/auth/forgot-password'
+      preLoaderRoute: typeof AuthForgotPasswordRouteImport
       parentRoute: typeof AuthRoute
     }
     '/auth/callback': {
@@ -433,6 +515,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardSettingsAudioRouteImport
       parentRoute: typeof DashboardSettingsRoute
     }
+    '/dashboard/archived_/$roomId': {
+      id: '/dashboard/archived_/$roomId'
+      path: '/archived/$roomId'
+      fullPath: '/dashboard/archived/$roomId'
+      preLoaderRoute: typeof DashboardArchivedRoomIdRouteImport
+      parentRoute: typeof DashboardRoute
+    }
     '/dashboard/admin/users': {
       id: '/dashboard/admin/users'
       path: '/users'
@@ -452,6 +541,13 @@ declare module '@tanstack/react-router' {
       path: '/rooms'
       fullPath: '/dashboard/admin/rooms'
       preLoaderRoute: typeof DashboardAdminRoomsRouteImport
+      parentRoute: typeof DashboardAdminRoute
+    }
+    '/dashboard/admin/recordings': {
+      id: '/dashboard/admin/recordings'
+      path: '/recordings'
+      fullPath: '/dashboard/admin/recordings'
+      preLoaderRoute: typeof DashboardAdminRecordingsRouteImport
       parentRoute: typeof DashboardAdminRoute
     }
     '/dashboard/admin/queue': {
@@ -494,15 +590,21 @@ declare module '@tanstack/react-router' {
 
 interface AuthRouteChildren {
   AuthCallbackRoute: typeof AuthCallbackRoute
+  AuthForgotPasswordRoute: typeof AuthForgotPasswordRoute
   AuthLoginRoute: typeof AuthLoginRoute
   AuthRegisterRoute: typeof AuthRegisterRoute
+  AuthResetPasswordRoute: typeof AuthResetPasswordRoute
+  AuthVerifyRoute: typeof AuthVerifyRoute
   AuthIndexRoute: typeof AuthIndexRoute
 }
 
 const AuthRouteChildren: AuthRouteChildren = {
   AuthCallbackRoute: AuthCallbackRoute,
+  AuthForgotPasswordRoute: AuthForgotPasswordRoute,
   AuthLoginRoute: AuthLoginRoute,
   AuthRegisterRoute: AuthRegisterRoute,
+  AuthResetPasswordRoute: AuthResetPasswordRoute,
+  AuthVerifyRoute: AuthVerifyRoute,
   AuthIndexRoute: AuthIndexRoute,
 }
 
@@ -510,6 +612,7 @@ const AuthRouteWithChildren = AuthRoute._addFileChildren(AuthRouteChildren)
 
 interface DashboardAdminRouteChildren {
   DashboardAdminQueueRoute: typeof DashboardAdminQueueRoute
+  DashboardAdminRecordingsRoute: typeof DashboardAdminRecordingsRoute
   DashboardAdminRoomsRoute: typeof DashboardAdminRoomsRoute
   DashboardAdminSettingsRoute: typeof DashboardAdminSettingsRoute
   DashboardAdminUsersRoute: typeof DashboardAdminUsersRoute
@@ -522,6 +625,7 @@ interface DashboardAdminRouteChildren {
 
 const DashboardAdminRouteChildren: DashboardAdminRouteChildren = {
   DashboardAdminQueueRoute: DashboardAdminQueueRoute,
+  DashboardAdminRecordingsRoute: DashboardAdminRecordingsRoute,
   DashboardAdminRoomsRoute: DashboardAdminRoomsRoute,
   DashboardAdminSettingsRoute: DashboardAdminSettingsRoute,
   DashboardAdminUsersRoute: DashboardAdminUsersRoute,
@@ -557,12 +661,14 @@ interface DashboardRouteChildren {
   DashboardAdminRoute: typeof DashboardAdminRouteWithChildren
   DashboardSettingsRoute: typeof DashboardSettingsRouteWithChildren
   DashboardIndexRoute: typeof DashboardIndexRoute
+  DashboardArchivedRoomIdRoute: typeof DashboardArchivedRoomIdRoute
 }
 
 const DashboardRouteChildren: DashboardRouteChildren = {
   DashboardAdminRoute: DashboardAdminRouteWithChildren,
   DashboardSettingsRoute: DashboardSettingsRouteWithChildren,
   DashboardIndexRoute: DashboardIndexRoute,
+  DashboardArchivedRoomIdRoute: DashboardArchivedRoomIdRoute,
 }
 
 const DashboardRouteWithChildren = DashboardRoute._addFileChildren(

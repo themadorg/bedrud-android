@@ -1,3 +1,4 @@
+// TODO oncoming feature
 import '@livekit/components-styles/components'
 import { LiveKitRoom, RoomAudioRenderer, useTracks } from '@livekit/components-react'
 import { useQueryClient } from '@tanstack/react-query'
@@ -34,9 +35,29 @@ interface JoinResponse {
   token: string
   livekitHost: string
   adminId: string
+  settings?: {
+    recordingsAllowed: boolean
+  }
+  activeRecordingId?: string
+}
+
+interface ArchivedOwnedResponse {
+  status: 'archived_owned'
+  name: string
+  mode: string
+  settings: {
+    allowChat: boolean
+    allowVideo: boolean
+    allowAudio: boolean
+    requireApproval: boolean
+    e2ee: boolean
+    isPersistent: boolean
+    recordingsAllowed: boolean
+  }
 }
 
 export const Route = createFileRoute('/m/$meetId')({
+  head: () => ({ meta: [{ title: 'Meeting — Bedrud' }] }),
   component: MeetingPage,
 })
 
@@ -79,6 +100,11 @@ function MeetingPage() {
   const [guestInput, setGuestInput] = useState('')
   const [wasKicked, setWasKicked] = useState(false)
   const [wasRoomDeleted, setWasRoomDeleted] = useState(false)
+  const [archivedRoom, setArchivedRoom] = useState<{
+    name: string
+    mode: string
+    settings: ArchivedOwnedResponse['settings']
+  } | null>(null)
   const redirectTargetRef = useRef({ to: '/auth/login', search: { redirect: undefined } as { redirect?: string } })
   const deletionTypeRef = useRef<'user_deleted' | 'room_closed'>('room_closed')
 
@@ -91,7 +117,7 @@ function MeetingPage() {
       checkUserStatus().then((exists) => {
         if (exists) {
           toast.success('Room closed', { id: toastId, description: 'This room is no longer available.' })
-          navigate({ to: '/dashboard', search: { redirect: undefined } })
+          navigate({ to: '/dashboard' })
         } else {
           toast.error('Account deleted', { id: toastId, description: 'Your account has been deleted.' })
           useAuthStore.getState().clear()
@@ -100,7 +126,7 @@ function MeetingPage() {
       })
     } else {
       toast.error('Room closed', { description: 'This room is no longer available.' })
-      setTimeout(() => navigate({ to: '/dashboard', search: { redirect: undefined } }), 5000)
+      setTimeout(() => navigate({ to: '/dashboard' }), 5000)
     }
   }, [navigate])
 
@@ -275,6 +301,12 @@ function MeetingPage() {
       api
         .post<JoinResponse>('/api/room/join', { roomName: meetId })
         .then((data) => {
+          // Archived room owned by current user — show recreate dialog
+          if ((data as unknown as ArchivedOwnedResponse).status === 'archived_owned') {
+            const ar = data as unknown as ArchivedOwnedResponse
+            setArchivedRoom({ name: ar.name, mode: ar.mode, settings: ar.settings })
+            return
+          }
           addRecent(meetId)
           setJoinData(data)
         })
@@ -307,7 +339,9 @@ function MeetingPage() {
   }
 
   // Show guest name dialog for unauthenticated users
-  if (!tokens && guestName === null) {
+  // Guard with mounted to avoid SSR flash — localStorage unavailable on server,
+  // so guestName is always null and tokens always null during SSR.
+  if (mounted && !tokens && guestName === null) {
     return (
       <div className="fixed inset-0 bg-[#07070f] flex items-center justify-center">
         <div
@@ -317,7 +351,7 @@ function MeetingPage() {
           <div>
             <p className="text-white text-[17px] font-semibold m-0">Join as guest</p>
             <p className="text-white/40 text-[13px] mt-1.5 m-0">
-              Enter your name to join <span className="text-sky-300">{meetId}</span>
+              Enter your name to join <span className="text-teal-400">{meetId}</span>
             </p>
           </div>
           <Input
@@ -352,6 +386,61 @@ function MeetingPage() {
     )
   }
 
+  // Archived room owned by current user — show recreate dialog
+  if (archivedRoom) {
+    return (
+      <div className="fixed inset-0 bg-[#07070f] flex items-center justify-center">
+        <div
+          className="bg-white/[0.04] border border-white/[0.08] rounded-2xl px-7 py-8 flex flex-col gap-5"
+          style={{ width: 'min(380px, calc(100vw - 32px))' }}
+        >
+          <div>
+            <p className="text-white text-[17px] font-semibold m-0">This meeting has ended</p>
+            <p className="text-white/40 text-[13px] mt-1.5 m-0">
+              <span className="text-teal-400">{archivedRoom.name}</span> was created by you. Start a new meeting with
+              this name?
+            </p>
+          </div>
+          <div className="flex gap-2.5">
+            <Button
+              type="button"
+              onClick={() => {
+                api
+                  .post<{ name: string }>('/api/room/create', {
+                    name: archivedRoom.name,
+                    mode: archivedRoom.mode,
+                    settings: archivedRoom.settings,
+                  })
+                  .then((room) => {
+                    setArchivedRoom(null)
+                    addRecent(room.name)
+                    api
+                      .post<JoinResponse>('/api/room/join', { roomName: room.name })
+                      .then((data) => {
+                        setJoinData(data)
+                      })
+                      .catch((err: Error) => setJoinError(err.message))
+                  })
+                  .catch((err: Error) => setJoinError(err.message))
+              }}
+              className="flex-1 py-2.5 rounded-lg"
+            >
+              Start new meeting
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => navigate({ to: '/dashboard' })}
+              className="px-3.5 py-2.5 rounded-lg border border-white/10 text-white/50 text-[13px]"
+            >
+              Dashboard
+            </Button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   if (joinError) {
     return (
       <ErrorPage
@@ -361,6 +450,7 @@ function MeetingPage() {
         onRetry={() => {
           setJoinError(null)
           setJoinData(null)
+          setArchivedRoom(null)
         }}
       />
     )
@@ -454,11 +544,28 @@ function MeetingPage() {
           </div>
         )}
         <div className="fixed inset-0 overflow-hidden" style={{ background: '#07070f' }}>
+          {/* Skip links */}
+          <a
+            href="#meet-grid"
+            className="fixed -top-40 left-2 z-[9999] rounded-md bg-white px-3 py-1.5 text-[13px] font-medium text-black focus:top-2 transition-all duration-150 pointer-events-none focus:pointer-events-auto"
+          >
+            Skip to video grid
+          </a>
+          <a
+            href="#meet-controls"
+            className="fixed -top-40 left-2 z-[9999] rounded-md bg-white px-3 py-1.5 text-[13px] font-medium text-black focus:top-[38px] transition-all duration-150 pointer-events-none focus:pointer-events-auto"
+          >
+            Skip to controls
+          </a>
           <SecureContextBanner />
           <MeetingProvider
             roomId={id}
             roomName={roomName}
             adminId={adminId ?? ''}
+            // TODO oncoming feature
+            recordingsAllowed={false}
+            // TODO oncoming feature
+            activeRecordingId={undefined}
             onRoomDeletionMessage={handleRoomDeletionMessage}
           >
             <BeforeUnloadLock />

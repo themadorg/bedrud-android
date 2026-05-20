@@ -1,11 +1,16 @@
 import { AlertTriangle, Shield, X } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
 export function SecureContextBanner() {
   const [dismissed, setDismissed] = useState(false)
+  const [show, setShow] = useState(false)
+
+  useEffect(() => {
+    if (!window.isSecureContext) setShow(true)
+  }, [])
 
   if (dismissed) return null
-  if (typeof window === 'undefined' || window.isSecureContext) return null
+  if (!show) return null
 
   const isLocalhost = /^(localhost|127\.0\.0\.1|::1)(:\d+)?$/.test(window.location.host)
 
@@ -25,7 +30,7 @@ export function SecureContextBanner() {
         <p className="text-white/85 text-xs font-medium m-0">
           {isLocalhost ? 'Media access limited' : 'HTTPS required for media'}
         </p>
-        <p className="text-white/45 text-[11px] mt-0.5 m-0">
+        <p className="text-white/50 text-[11px] mt-0.5 m-0">
           {isLocalhost
             ? 'Camera and microphone may not work over HTTP. Use HTTPS or localhost for full support.'
             : 'Camera and microphone require a secure connection. Enable TLS or access via localhost.'}
@@ -34,7 +39,7 @@ export function SecureContextBanner() {
       <button
         type="button"
         onClick={() => setDismissed(true)}
-        className="bg-none border-none p-1 cursor-pointer text-white/30 shrink-0 flex items-center"
+        className="bg-none border-none p-1 cursor-pointer text-white/50 shrink-0 flex items-center"
         aria-label="Dismiss"
       >
         <X size={14} />

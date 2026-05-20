@@ -1,4 +1,5 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
+import { Loader2 } from 'lucide-react'
 import { useEffect } from 'react'
 import { api } from '#/lib/api'
 import { useAuthStore } from '#/lib/auth.store'
@@ -53,7 +54,8 @@ function OAuthCallback() {
   }, [navigate, clearTokens, setUser])
 
   return (
-    <div className="flex min-h-screen items-center justify-center">
+    <div className="flex min-h-screen items-center justify-center gap-3">
+      <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
       <p className="text-muted-foreground text-sm">Signing you in…</p>
     </div>
   )

@@ -1,3 +1,4 @@
+// TODO oncoming feature
 import { createFileRoute, Link, Outlet, redirect, useNavigate, useRouterState } from '@tanstack/react-router'
 import { Activity, LayoutDashboard, LogOut, Menu, Radio, Settings, Shield, Users, Video } from 'lucide-react'
 import { useEffect, useState } from 'react'
@@ -56,6 +57,8 @@ const USER_NAV = [
 const ADMIN_NAV = [
   { to: '/dashboard/admin' as const, label: 'Overview', icon: Shield, exact: true },
   { to: '/dashboard/admin/queue' as const, label: 'Queue', icon: Activity },
+  // TODO oncoming feature
+  // { to: '/dashboard/admin/recordings' as const, label: 'Recordings', icon: Radio },
   { to: '/dashboard/admin/users' as const, label: 'Users', icon: Users },
   { to: '/dashboard/admin/rooms' as const, label: 'Rooms', icon: Video },
   { to: '/dashboard/admin/settings' as const, label: 'Settings', icon: Settings },
@@ -149,10 +152,10 @@ function SidebarContent({
             size="icon"
             type="button"
             onClick={onLogout}
-            className="h-6 w-6 rounded p-1 text-muted-foreground opacity-0 transition-all hover:bg-destructive/10 hover:text-destructive group-hover:opacity-100"
+            className="h-9 w-9 rounded p-1.5 text-muted-foreground opacity-60 transition-all hover:bg-destructive/10 hover:text-destructive hover:opacity-100"
             title="Sign out"
           >
-            <LogOut className="h-3 w-3" />
+            <LogOut className="h-4 w-4" />
           </Button>
         </div>
       </div>
@@ -280,43 +283,24 @@ function DashboardLayout() {
   const clearAuth = useAuthStore((s) => s.clear)
   const clearUser = useUserStore((s) => s.clear)
 
-  // SSR hydration fallback: beforeLoad/loader skip on the server, and TanStack
-  // Router doesn't re-run them during client hydration. This effect ensures auth
-  // init + user data fetch happen on the client regardless of SSR behavior.
+  // SSR hydration fallback: beforeLoad/loader skip on the server.
+  // This effect ensures auth init happens on the client — user data
+  // is handled by the route loader to avoid duplicate /api/auth/me calls.
   useEffect(() => {
-    if (user) return // already loaded (e.g. soft navigation)
+    if (user) return // already loaded
     let cancelled = false
     ;(async () => {
       await useAuthStore.getState().initialize()
       if (cancelled) return
       if (!useAuthStore.getState().tokens) {
         navigate({ to: '/auth' })
-        return
       }
-      try {
-        const u = await api.get<User & { accesses?: string[] }>('/api/auth/me')
-        if (cancelled) return
-        useUserStore.getState().setUser({
-          id: u.id,
-          email: u.email,
-          name: u.name,
-          provider: u.provider,
-          isSuperAdmin: u.accesses?.includes('superadmin') ?? false,
-          isAdmin: (u.accesses?.includes('admin') || u.accesses?.includes('superadmin')) ?? false,
-          accesses: u.accesses ?? [],
-          avatarUrl: u.avatarUrl,
-        })
-      } catch {
-        if (!cancelled) {
-          clearAuth()
-          navigate({ to: '/auth' })
-        }
-      }
+      // user data fetch is handled by the route loader — no duplicate call here
     })()
     return () => {
       cancelled = true
     }
-  }, [user, navigate, clearAuth])
+  }, [user, navigate])
 
   async function handleLogout() {
     try {
@@ -336,7 +320,7 @@ function DashboardLayout() {
     <div className="min-h-screen bg-background">
       <Sidebar user={user} onLogout={handleLogout} />
       <TopBar user={user} onLogout={handleLogout} />
-      <main className="p-4 lg:pl-52 lg:p-6">
+      <main id="main-content" className="p-4 lg:pl-52 lg:p-6">
         <Outlet />
       </main>
     </div>

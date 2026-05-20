@@ -6,6 +6,7 @@ import { useMeetingChatContext, useMeetingRoomContext } from '#/components/meeti
 import { api } from '#/lib/api'
 import { ChatInput, type ChatInputHandle } from './chat/ChatInput'
 import { ChatMessageList } from './chat/ChatMessageList'
+import { useFocusTrap } from './useFocusTrap'
 
 interface Props {
   onClose: () => void
@@ -32,21 +33,24 @@ export function ChatPanel({ onClose }: Props) {
     [roomId],
   )
 
+  const trapRef = useFocusTrap({ enabled: true, onClose })
+
   return (
     <aside
+      ref={trapRef}
       className="absolute right-0 top-0 bottom-0 z-30 flex flex-col bg-[#0a0a16]/94 backdrop-blur-2xl border-l border-white/[0.07] pt-[env(safe-area-inset-top)] pb-[calc(env(safe-area-inset-bottom))]"
       style={{ width: 'min(320px, 100vw)' }}
     >
       {/* Header */}
       <div className="h-[52px] shrink-0 flex items-center justify-between px-4 border-b border-white/[0.06]">
         <div className="flex items-center gap-[7px]">
-          <MessageSquare size={14} className="text-[color-mix(in_oklab,var(--sky-300)_70%,transparent)]" />
+          <MessageSquare size={14} className="text-[color-mix(in_oklab,var(--accent-400)_70%,transparent)]" />
           <span className="text-white/80 text-[13px] font-semibold">Chat</span>
         </div>
         <button
           type="button"
           onClick={onClose}
-          className="w-7 h-7 rounded-[7px] bg-transparent border-none flex items-center justify-center text-white/35 cursor-pointer"
+          className="w-7 h-7 rounded-[7px] bg-transparent border-none flex items-center justify-center text-white/50 cursor-pointer"
           aria-label="Close chat"
         >
           <X size={15} />

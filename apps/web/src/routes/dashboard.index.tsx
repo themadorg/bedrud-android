@@ -1,7 +1,8 @@
+// TODO oncoming feature
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
-import { ArrowRight, Check, Clock, Copy, Globe, Lock, Plus, Search, Settings2, Trash2, X } from 'lucide-react'
-import { useState } from 'react'
+import { Archive, ArrowRight, Check, Clock, Copy, Globe, Lock, Plus, Search, Settings2, Trash2, X } from 'lucide-react'
+import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { api } from '#/lib/api'
 import { type RecentRoom, useRecentRoomsStore } from '#/lib/recent-rooms.store'
@@ -33,7 +34,23 @@ interface Room {
   }
 }
 
-export const Route = createFileRoute('/dashboard/')({ component: DashboardPage })
+interface ArchivedRoom {
+  id: string
+  name: string
+  createdAt: string
+  deletedAt: string
+  // TODO oncoming feature
+  recordingCount: number
+}
+
+export const Route = createFileRoute('/dashboard/')({
+  component: DashboardPage,
+  head: () => ({ meta: [{ title: 'Dashboard — Bedrud' }] }),
+  validateSearch: (search: Record<string, string>): { emailVerified?: string } => {
+    if (search.emailVerified) return { emailVerified: search.emailVerified }
+    return {}
+  },
+})
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -96,11 +113,13 @@ function RoomRow({
   onJoin,
   onDelete,
   onSettings,
+  isDeleting,
 }: {
   room: Room
   onJoin: () => void
   onDelete: () => void
   onSettings: () => void
+  isDeleting?: boolean
 }) {
   const [copied, setCopied] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
@@ -125,12 +144,13 @@ function RoomRow({
             variant="destructive"
             size="sm"
             type="button"
+            disabled={isDeleting}
             onClick={() => {
               onDelete()
               setConfirmDelete(false)
             }}
           >
-            Delete
+            {isDeleting ? 'Deleting…' : 'Delete'}
           </Button>
         </div>
       </div>
@@ -220,6 +240,32 @@ function RoomRow({
   )
 }
 
+// ── Archived Room Row ────────────────────────────────────────────────────────
+
+function ArchivedRoomRow({ room }: { room: ArchivedRoom }) {
+  const navigate = useNavigate()
+  const createdAt = room.createdAt ? new Date(room.createdAt).toLocaleDateString() : '—'
+  const deletedAt = room.deletedAt ? new Date(room.deletedAt).toLocaleDateString() : '—'
+
+  return (
+    <button
+      type="button"
+      onClick={() => navigate({ to: '/dashboard/archived/$roomId', params: { roomId: room.id } })}
+      className="group flex w-full items-center gap-3 rounded-lg px-3 py-2 transition-colors hover:bg-accent/50 text-left"
+    >
+      <Archive className="h-3.5 w-3.5 shrink-0 text-muted-foreground/40" />
+      <div className="min-w-0 flex-1">
+        <span className="font-mono text-sm font-medium">{room.name}</span>
+        <div className="flex items-center gap-3 text-xs text-muted-foreground/60">
+          <span>Created {createdAt}</span>
+          <span>Ended {deletedAt}</span>
+        </div>
+      </div>
+      {/* TODO oncoming feature — recording count removed */}
+    </button>
+  )
+}
+
 // ── Recent Room Row ──────────────────────────────────────────────────────────
 
 function RecentRoomRow({ recent, onJoin, onRemove }: { recent: RecentRoom; onJoin: () => void; onRemove: () => void }) {
@@ -279,9 +325,25 @@ function DashboardPage() {
   const addRecent = useRecentRoomsStore((s) => s.add)
   const removeRecent = useRecentRoomsStore((s) => s.remove)
 
+  const { data: archivedData } = useQuery({
+    queryKey: ['archived-rooms'],
+    queryFn: () => api.get<{ rooms: ArchivedRoom[]; total: number }>('/api/room/archived'),
+    staleTime: 30_000,
+  })
+  const archivedRooms = archivedData?.rooms ?? []
+
+  const { emailVerified } = Route.useSearch()
+
+  useEffect(() => {
+    if (emailVerified === 'true') {
+      toast.success('Email verified successfully')
+      navigate({ to: '/dashboard', search: {}, replace: true })
+    }
+  }, [emailVerified, navigate])
+
   const [createOpen, setCreateOpen] = useState(false)
   const [settingsRoom, setSettingsRoom] = useState<Room | null>(null)
-  const [tab, setTab] = useState<'rooms' | 'recent'>('rooms')
+  const [tab, setTab] = useState<'rooms' | 'recent' | 'archived'>('rooms')
   const [query, setQuery] = useState('')
 
   const { data: rooms, isLoading } = useQuery({
@@ -344,12 +406,14 @@ function DashboardPage() {
       return a.name.localeCompare(b.name)
     })
 
-  const filteredRecent = recentRooms.filter((r) => !normalizedQuery || r.name.toLowerCase().includes(normalizedQuery))
+  const filteredRecent = recentRooms
+    .filter((r, i, arr) => arr.findIndex((x) => x.name === r.name) === i)
+    .filter((r) => !normalizedQuery || r.name.toLowerCase().includes(normalizedQuery))
 
   const firstName = user?.name?.split(' ')[0]
 
   return (
-    <div className="mx-auto max-w-3xl space-y-4">
+    <div className="mx-auto max-w-4xl space-y-4">
       {/* Header */}
       <div>
         <h1 className="text-lg font-semibold tracking-tight">{firstName ? `${firstName}'s rooms` : 'Rooms'}</h1>
@@ -361,7 +425,7 @@ function DashboardPage() {
 
       {/* Tabs + Search */}
       <div className="flex items-center justify-between gap-3">
-        <Tabs value={tab} onValueChange={(v) => setTab(v as 'rooms' | 'recent')}>
+        <Tabs value={tab} onValueChange={(v) => setTab(v as 'rooms' | 'recent' | 'archived')}>
           <TabsList>
             <TabsTrigger value="rooms" className="text-sm gap-1.5">
               My Rooms
@@ -370,6 +434,13 @@ function DashboardPage() {
             <TabsTrigger value="recent" className="text-sm gap-1.5">
               Recent
               {recentRooms.length > 0 && <span className="text-xs text-muted-foreground">{recentRooms.length}</span>}
+            </TabsTrigger>
+            <TabsTrigger value="archived" className="text-sm gap-1.5">
+              <Archive className="h-3.5 w-3.5" />
+              Archived
+              {archivedRooms.length > 0 && (
+                <span className="text-xs text-muted-foreground">{archivedRooms.length}</span>
+              )}
             </TabsTrigger>
           </TabsList>
         </Tabs>
@@ -401,6 +472,7 @@ function DashboardPage() {
                   onJoin={() => handleJoin(room.name)}
                   onDelete={() => deleteRoom.mutate(room.id)}
                   onSettings={() => setSettingsRoom(room)}
+                  isDeleting={deleteRoom.isPending}
                 />
               ))}
             </div>
@@ -449,6 +521,23 @@ function DashboardPage() {
               <Clock className="mx-auto h-5 w-5 text-muted-foreground/30" />
               <p className="mt-2 text-sm font-medium">No recent rooms</p>
               <p className="mt-1 text-xs text-muted-foreground">Rooms you join will appear here for quick access.</p>
+            </div>
+          ))}
+
+        {tab === 'archived' &&
+          (archivedRooms.length > 0 ? (
+            <div className="divide-y divide-border/50 p-1">
+              {archivedRooms.map((room) => (
+                <ArchivedRoomRow key={room.id} room={room} />
+              ))}
+            </div>
+          ) : (
+            <div className="px-4 py-12 text-center">
+              <Archive className="mx-auto h-5 w-5 text-muted-foreground/30" />
+              <p className="mt-2 text-sm font-medium">No archived rooms</p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Rooms you end will appear here with their recordings.
+              </p>
             </div>
           ))}
       </div>

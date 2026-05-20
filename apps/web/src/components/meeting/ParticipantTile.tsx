@@ -61,9 +61,17 @@ export function ParticipantTile({ participant, totalCount, index, isPinned = fal
     const effective = isSelfDeafened ? 0 : volume
 
     if (effective <= 1) {
-      // Normal range — native volume handles it, reset gain if active
+      // Normal range — native volume handles it, tear down gain graph
       remote.setVolume(effective)
-      if (gainRef.current) gainRef.current.gain.gain.value = 1
+      if (gainRef.current) {
+        gainRef.current.ctx.close().catch(() => {})
+        elementSourceUsed.delete(
+          (remote.getTrackPublication(Track.Source.Microphone)?.track?.attachedElements?.[0] as
+            | HTMLMediaElement
+            | undefined) ?? ({} as HTMLMediaElement),
+        )
+        gainRef.current = null
+      }
     } else {
       // Boost: set native volume to 1, let GainNode amplify beyond
       remote.setVolume(1)
@@ -183,7 +191,7 @@ export function ParticipantTile({ participant, totalCount, index, isPinned = fal
               <div className="flex items-center gap-1.5">
                 <span className="text-white/60 text-sm font-medium">
                   {displayName}
-                  {participant.isLocal && <span className="text-white/30 text-xs ml-1.5">you</span>}
+                  {participant.isLocal && <span className="text-white/50 text-xs ml-1.5">you</span>}
                 </span>
                 {isDeafened && <VolumeX size={13} className="shrink-0 text-red-400" />}
                 {!participant.isMicrophoneEnabled && <MicOff size={13} className="shrink-0 text-red-400" />}
@@ -222,7 +230,7 @@ export function ParticipantTile({ participant, totalCount, index, isPinned = fal
           <div className="absolute bottom-2 left-2 flex items-center gap-[5px] bg-black/60 backdrop-blur-sm rounded-[7px] px-2 py-[3px] max-w-[calc(100%-50px)]">
             <span className="text-white text-xs font-medium overflow-hidden text-ellipsis whitespace-nowrap">
               {displayName}
-              {participant.isLocal && <span className="text-white/40 text-[11px] ml-1">you</span>}
+              {participant.isLocal && <span className="text-white/50 text-[11px] ml-1">you</span>}
             </span>
             {isDeafened && <VolumeX size={11} className="shrink-0 text-red-400" />}
             {!participant.isMicrophoneEnabled ? (
@@ -267,7 +275,7 @@ export function ParticipantTile({ participant, totalCount, index, isPinned = fal
             style={{
               background: isPinned ? 'color-mix(in oklab, var(--primary) 70%, transparent)' : 'rgba(0,0,0,0.55)',
               backdropFilter: 'blur(8px)',
-              border: `1px solid ${isPinned ? 'color-mix(in oklab, var(--sky-300) 50%, transparent)' : 'rgba(255,255,255,0.1)'}`,
+              border: `1px solid ${isPinned ? 'color-mix(in oklab, var(--accent-400) 50%, transparent)' : 'rgba(255,255,255,0.1)'}`,
               color: isPinned ? '#e0e7ff' : 'rgba(255,255,255,0.8)',
             }}
             aria-label={isPinned ? 'Unpin participant' : 'Pin participant'}

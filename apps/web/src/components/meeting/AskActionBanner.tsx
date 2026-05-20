@@ -29,7 +29,7 @@ export function AskActionBanner() {
           border: '1px solid color-mix(in oklab, var(--primary) 30%, transparent)',
         }}
       >
-        {isUnmute ? <Mic size={15} className="text-sky-300" /> : <Video size={15} className="text-sky-300" />}
+        {isUnmute ? <Mic size={15} className="text-teal-400" /> : <Video size={15} className="text-teal-400" />}
       </div>
       <span className="text-white/80 text-[13px] flex-1">
         {isUnmute ? 'A moderator is asking you to unmute.' : 'A moderator is asking you to turn on your camera.'}
@@ -37,7 +37,7 @@ export function AskActionBanner() {
       <button
         type="button"
         onClick={() => setDismissed(lastAsk.ts)}
-        className="bg-none border-none p-1 cursor-pointer text-white/30 shrink-0 flex items-center"
+        className="bg-none border-none p-1 cursor-pointer text-white/50 shrink-0 flex items-center"
         aria-label="Dismiss"
       >
         <X size={14} />

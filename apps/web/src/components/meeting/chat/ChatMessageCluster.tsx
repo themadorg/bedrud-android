@@ -34,7 +34,7 @@ function bubblePosition(idx: number, total: number): 'only' | 'first' | 'middle'
 }
 
 function ChatMarkdown({ content, isLocal }: { content: string; isLocal: boolean }) {
-  const linkColor = isLocal ? 'rgba(255,255,255,0.9)' : 'color-mix(in oklab, var(--sky-300) 90%, transparent)'
+  const linkColor = isLocal ? 'rgba(255,255,255,0.9)' : 'color-mix(in oklab, var(--accent-400) 90%, transparent)'
   const codeBg = isLocal ? 'rgba(0,0,0,0.25)' : 'color-mix(in oklab, var(--primary) 15%, transparent)'
 
   type C = { children?: ReactNode }
@@ -87,7 +87,7 @@ function ChatMarkdown({ content, isLocal }: { content: string; isLocal: boolean 
         style={{
           margin: '4px 0',
           paddingLeft: 10,
-          borderLeft: `2px solid ${isLocal ? 'rgba(255,255,255,0.4)' : 'color-mix(in oklab, var(--sky-300) 40%, transparent)'}`,
+          borderLeft: `2px solid ${isLocal ? 'rgba(255,255,255,0.4)' : 'color-mix(in oklab, var(--accent-400) 40%, transparent)'}`,
           color: isLocal ? 'rgba(255,255,255,0.7)' : 'rgba(255,255,255,0.5)',
         }}
       >
@@ -119,7 +119,7 @@ export function ChatMessageCluster({ cluster }: Props) {
   return (
     <div className="flex flex-col gap-0.5" style={{ alignItems: isLocal ? 'flex-end' : 'flex-start' }}>
       {/* Sender name (remote only) */}
-      {!isLocal && <span className="text-white/35 text-[11px] pl-9">{sender}</span>}
+      {!isLocal && <span className="text-white/50 text-[11px] pl-9">{sender}</span>}
 
       {messages.map((msg, idx) => {
         const pos = bubblePosition(idx, total)
@@ -154,7 +154,7 @@ export function ChatMessageCluster({ cluster }: Props) {
                 borderRadius: bubbleRadius(isLocal, pos),
                 background: isLocal ? 'color-mix(in oklab, var(--primary) 75%, transparent)' : 'rgba(255,255,255,0.07)',
                 border: isLocal
-                  ? '1px solid color-mix(in oklab, var(--sky-300) 25%, transparent)'
+                  ? '1px solid color-mix(in oklab, var(--accent-400) 25%, transparent)'
                   : '1px solid rgba(255,255,255,0.06)',
                 color: isLocal ? 'rgba(255,255,255,0.95)' : 'rgba(255,255,255,0.75)',
               }}
@@ -196,7 +196,7 @@ export function ChatMessageCluster({ cluster }: Props) {
       {/* Timestamp on last bubble */}
       <span
         title={absoluteTime(messages[total - 1].timestamp)}
-        className="text-[10px] text-white/25 cursor-default select-none"
+        className="text-[10px] text-white/50 cursor-default select-none"
         style={{
           paddingLeft: isLocal ? 0 : 36,
           paddingRight: isLocal ? 2 : 0,

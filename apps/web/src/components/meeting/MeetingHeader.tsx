@@ -1,7 +1,7 @@
+// TODO oncoming feature
 import { useConnectionState } from '@livekit/components-react'
 import { ConnectionState } from 'livekit-client'
-import { Radio } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 import { cn } from '#/lib/utils'
 
@@ -9,38 +9,48 @@ interface MeetingHeaderProps {
   meetId: string
 }
 
-/** Top-of-screen header showing live indicator, room name, clock, and connection status. */
+function formatElapsed(ms: number): string {
+  const totalSec = Math.floor(ms / 1000)
+  const h = Math.floor(totalSec / 3600)
+  const m = Math.floor((totalSec % 3600) / 60)
+  const s = totalSec % 60
+  if (h > 0) return `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
+  return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
+}
+
+/** Top-of-screen header showing connection status, room name, and elapsed time. */
 export function MeetingHeader({ meetId }: MeetingHeaderProps) {
   const state = useConnectionState()
-  const [time, setTime] = useState(() => new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }))
-
-  useEffect(() => {
-    const id = setInterval(() => {
-      setTime(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }))
-    }, 10_000)
-    return () => clearInterval(id)
-  }, [])
-
   const isConnected = state === ConnectionState.Connected
+  const joinTimeRef = useRef<number | null>(null)
+  const [elapsed, setElapsed] = useState('00:00')
+
+  // Set join timestamp when first connected
+  useEffect(() => {
+    if (isConnected && joinTimeRef.current === null) {
+      joinTimeRef.current = Date.now()
+    }
+    if (!isConnected) {
+      joinTimeRef.current = null
+      setElapsed('00:00')
+    }
+  }, [isConnected])
+
+  // Tick elapsed every second while connected
+  useEffect(() => {
+    if (!isConnected) return
+    const id = setInterval(() => {
+      if (joinTimeRef.current !== null) {
+        setElapsed(formatElapsed(Date.now() - joinTimeRef.current))
+      }
+    }, 1000)
+    return () => clearInterval(id)
+  }, [isConnected])
 
   return (
     <header className="absolute left-0 right-0 top-0 z-20 flex items-center justify-center px-4 pointer-events-none h-[calc(56px+env(safe-area-inset-top))] pt-[env(safe-area-inset-top)]">
       <div className="flex items-center gap-2.5 pointer-events-auto">
-        <div
-          className="flex items-center gap-[5px] rounded-[7px] px-[9px] py-[3px]"
-          style={{
-            background: 'color-mix(in oklab, var(--accent-400) 20%, transparent)',
-            border: '1px solid color-mix(in oklab, var(--accent-400) 40%, transparent)',
-          }}
-        >
-          <Radio size={11} className="text-[var(--accent-400)]" />
-          <span className="text-[var(--accent-300)] text-[11px] font-bold tracking-widest">LIVE</span>
-        </div>
-        <span className="text-white/25 text-[13px]">·</span>
-        <span className="text-white/55 text-xs font-mono">{meetId}</span>
-        <span className="text-white/25 text-[13px]">·</span>
-        <span className="text-white/25 text-[11px] font-mono">{time}</span>
-        <span className="text-white/25 text-[13px]">·</span>
+        {/* Connected / Connecting badge */}
         <div
           className="flex items-center gap-[5px] rounded-[7px] px-[9px] py-[3px]"
           style={{
@@ -66,6 +76,12 @@ export function MeetingHeader({ meetId }: MeetingHeaderProps) {
             {isConnected ? 'Connected' : state}
           </span>
         </div>
+        <span className="text-white/50 text-[13px]">·</span>
+        <span className="text-white/55 text-xs font-mono">{meetId}</span>
+        <span className="text-white/50 text-[13px]">·</span>
+        <span className={cn('text-[11px] font-mono', isConnected ? 'text-white/55' : 'text-white/50')}>{elapsed}</span>
+
+        {/* TODO oncoming feature — recording badge removed */}
       </div>
     </header>
   )

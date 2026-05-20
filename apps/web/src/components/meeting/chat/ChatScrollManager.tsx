@@ -33,7 +33,7 @@ export function ChatScrollManager({ show, unreadCount, onScrollToBottom }: Props
         onClick={onScrollToBottom}
         aria-label="Scroll to latest messages"
         className="absolute bottom-[calc(88px+env(safe-area-inset-bottom)+56px)] right-3.5 w-[34px] h-[34px] rounded-full border border-white/[0.12] bg-[#1e1e32]/92 flex items-center justify-center cursor-pointer shadow-[0_2px_8px_rgba(0,0,0,0.4)] z-[5]"
-        style={{ color: 'color-mix(in oklab, var(--sky-300) 90%, transparent)' }}
+        style={{ color: 'color-mix(in oklab, var(--accent-400) 90%, transparent)' }}
       >
         <ArrowDown size={14} />
         {unreadCount > 0 && (
