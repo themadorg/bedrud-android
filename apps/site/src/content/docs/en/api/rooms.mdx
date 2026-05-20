@@ -29,6 +29,10 @@ Room management endpoints are under `/api/room/`. All endpoints require authenti
 | `/api/room/:roomId/participant/:identity/info` | GET | Get participant info |
 | `/api/room/guest-join` | POST | Join a public room as guest |
 | `/api/room/:roomId/screenshare/:identity/stop` | POST | Stop participant screen share |
+| `/api/rooms/:id/recording/start` | POST | Start a composite recording (moderator) |
+| `/api/rooms/:id/recording/stop` | POST | Stop the active recording (moderator) |
+| `/api/rooms/:id/recordings` | GET | List recordings for a room |
+| `/api/rooms/:id/recordings/:rid` | GET | Get a single recording's details |
 
 ---
 

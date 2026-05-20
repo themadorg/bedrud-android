@@ -91,6 +91,12 @@ chat:
   maxMessageCount: 10000                 # Max chat messages kept per room (0 = unlimited). Env: CHAT_MAX_MESSAGE_COUNT
   messageTTLHours: 2160                  # Purge messages older than this in hours (0 = forever). 2160 = 90 days. Env: CHAT_MESSAGE_TTL_HOURS
 
+
+recording:
+  maxFileSizeMB: 2048           # Max recording file size in MB (0 = unlimited). Env: RECORDING_MAX_FILE_SIZE_MB
+  storageDir: "./data/recordings"  # Local storage path for disk-backed recordings. Env: RECORDING_STORAGE_DIR
+  maxRecordingsPerRoom: 100     # Max total recordings per room (0 = unlimited). Env: RECORDING_MAX_PER_ROOM
+
 queue:
   pollInterval: 500              # ms between job polls. Env: QUEUE_POLL_INTERVAL
   maxAttempts: 3                 # retries before marking failed. Env: QUEUE_MAX_ATTEMPTS
@@ -148,6 +154,28 @@ Bedrud applies advisory retention limits to in-room chat messages. Since LiveKit
 <Callout type="info">
   Chat messages in Bedrud are transmitted exclusively through LiveKit data channels and are not stored on the server. The retention limits above control how many messages the frontend keeps in memory and sessionStorage. A dedicated chat history service (with server-side persistence) would be needed for true history across sessions — this is tracked as a future enhancement.
 </Callout>
+
+{/* TODO oncoming feature: recordings */}
+#### Recordings
+
+Room recording is controlled by the `RecordingsEnabled` system setting (toggle in admin Settings → General). When enabled:
+
+- Moderators can start/stop composite MP4 recordings from the meeting controls bar
+- Recordings are stored alongside chat uploads using the configured storage backend (disk/S3)
+- Each room has a per-room `recordingsAllowed` toggle that must also be enabled
+- Failed/pending recordings over 7 days old are automatically cleaned up daily
+- Non-persistent rooms have a configurable per-room recording cap (`maxRecordingsPerRoom`) to prevent abuse
+- After a room is deleted, the recording creator can still access their recordings from the same room URL
+
+**YAML Reference:**
+
+- **`maxFileSizeMB`** — maximum file size for a single recording in MB. 0 = unlimited. Default: 2048. Env: `RECORDING_MAX_FILE_SIZE_MB`
+- **`storageDir`** — directory for disk-backed recordings. Only used when S3 is not configured. Default: `./data/recordings`. Env: `RECORDING_STORAGE_DIR`
+- **`maxRecordingsPerRoom`** — caps total recordings per room (all statuses: completed, failed, etc.). 0 = unlimited. Only enforced for non-persistent rooms. Default: 100. Env: `RECORDING_MAX_PER_ROOM`
+
+See the [Recordings Guide](/en/docs/guides/recordings) for full details.
+
+
 
 #### قائمة الانتظار (نظام المهام)
 

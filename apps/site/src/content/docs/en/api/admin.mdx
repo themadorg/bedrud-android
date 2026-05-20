@@ -33,6 +33,12 @@ Admin endpoints are under `/api/admin/`. All require the **superadmin** access l
 | `/api/admin/online-count` | GET | Total active participants |
 | `/api/admin/livekit/stats` | GET | Aggregate LiveKit server stats |
 | `/api/admin/cert-info` | GET | TLS certificate metadata |
+| `/api/admin/webhooks` | GET | List all webhooks |
+| `/api/admin/webhooks` | POST | Create a new webhook |
+| `/api/admin/webhooks/:id` | PUT | Update a webhook |
+| `/api/admin/webhooks/:id` | DELETE | Delete a webhook |
+| `/api/admin/webhooks/:id/rotate-secret` | POST | Rotate HMAC signing secret |
+| `/api/admin/webhooks/:id/test` | POST | Send a test webhook event |
 
 ## Access Levels
 
