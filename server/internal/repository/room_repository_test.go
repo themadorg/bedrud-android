@@ -430,6 +430,41 @@ func TestRoomRepository_GetRoomsCreatedByUser(t *testing.T) {
 	}
 }
 
+func TestRoomRepository_GetLatestRoomsCreatedByUser_Dedup(t *testing.T) {
+	db := testutil.SetupTestDB(t)
+	repo := NewRoomRepository(db)
+
+	db.Create(&models.User{ID: testUserIDRoom, Email: "dedup@ex.com", Name: "Dedup", Provider: "local", IsActive: true})
+
+	room1, _ := repo.CreateRoom(testUserIDRoom, "dup-room", false, "standard", 0, &models.RoomSettings{})
+	// Deactivate first room so second can be created with same slug
+	db.Model(&models.Room{}).Where("id = ?", room1.ID).Update("is_active", false)
+	_, _ = repo.CreateRoom(testUserIDRoom, "dup-room", false, "standard", 0, &models.RoomSettings{})
+	_, _ = repo.CreateRoom(testUserIDRoom, "unique-room", false, "standard", 0, &models.RoomSettings{})
+
+	rooms, err := repo.GetLatestRoomsCreatedByUser(testUserIDRoom)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(rooms) != 2 {
+		t.Fatalf("expected 2 rooms (deduped), got %d", len(rooms))
+	}
+	// Verify dedup: no duplicate names
+	names := make(map[string]bool)
+	for _, r := range rooms {
+		if names[r.Name] {
+			t.Fatalf("duplicate name %s in result", r.Name)
+		}
+		names[r.Name] = true
+	}
+	if !names["dup-room"] {
+		t.Fatalf("expected dup-room in results")
+	}
+	if !names["unique-room"] {
+		t.Fatalf("expected unique-room in results")
+	}
+}
+
 func TestRoomRepository_GetUserParticipationsPaginated_Basic(t *testing.T) {
 	db := testutil.SetupTestDB(t)
 	repo := NewRoomRepository(db)
@@ -630,6 +665,68 @@ func TestRoomRepository_CreateRoom_DuplicateName(t *testing.T) {
 	}
 	if !errors.Is(err, models.ErrRoomNameTaken) {
 		t.Fatalf("expected ErrRoomNameTaken, got: %v", err)
+	}
+}
+
+// ====== Archived (soft-deleted) room name is reusable ======
+
+func TestRoomRepository_CreateRoom_ArchivedNameReusable(t *testing.T) {
+	db := testutil.SetupTestDB(t)
+	repo := NewRoomRepository(db)
+
+	db.Create(&models.User{ID: testUserIDRoom, Email: "u1@ex.com", Name: "U1", Provider: "local", IsActive: true})
+
+	room, err := repo.CreateRoom(testUserIDRoom, "archived-room", false, "standard", 0, &models.RoomSettings{})
+	if err != nil {
+		t.Fatalf("first creation failed: %v", err)
+	}
+
+	// Soft-delete (archive) the room
+	if err := repo.SoftDeleteRoom(room.ID); err != nil {
+		t.Fatalf("SoftDeleteRoom failed: %v", err)
+	}
+
+	// Creating a room with same name should succeed
+	newRoom, err := repo.CreateRoom(testUserIDRoom, "archived-room", false, "standard", 0, &models.RoomSettings{})
+	if err != nil {
+		t.Fatalf("expected reuse of archived room name, got error: %v", err)
+	}
+	if newRoom.ID == room.ID {
+		t.Fatal("expected new room ID, got same as archived room")
+	}
+	if !newRoom.IsActive {
+		t.Fatal("new room should be active")
+	}
+}
+
+// ====== Idle (inactive, not soft-deleted) room name is reusable ======
+
+func TestRoomRepository_CreateRoom_IdleNameReusable(t *testing.T) {
+	db := testutil.SetupTestDB(t)
+	repo := NewRoomRepository(db)
+
+	db.Create(&models.User{ID: testUserIDRoom, Email: "u1@ex.com", Name: "U1", Provider: "local", IsActive: true})
+
+	room, err := repo.CreateRoom(testUserIDRoom, "idle-room", false, "standard", 0, &models.RoomSettings{})
+	if err != nil {
+		t.Fatalf("first creation failed: %v", err)
+	}
+
+	// Set room idle (is_active=false, deleted_at remains NULL)
+	if err := repo.SetRoomIdle(room.ID); err != nil {
+		t.Fatalf("SetRoomIdle failed: %v", err)
+	}
+
+	// Creating a room with same name should succeed
+	newRoom, err := repo.CreateRoom(testUserIDRoom, "idle-room", false, "standard", 0, &models.RoomSettings{})
+	if err != nil {
+		t.Fatalf("expected reuse of idle room name, got error: %v", err)
+	}
+	if newRoom.ID == room.ID {
+		t.Fatal("expected new room ID, got same as idle room")
+	}
+	if !newRoom.IsActive {
+		t.Fatal("new room should be active")
 	}
 }
 

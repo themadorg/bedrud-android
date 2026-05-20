@@ -43,9 +43,11 @@ func (r *RoomRepository) CreateRoom(createdBy, name string, isPublic bool, mode 
 	var room *models.Room
 
 	err := r.db.Transaction(func(tx *gorm.DB) error {
-		// Check for duplicate name inside transaction (TOCTOU-safe)
+		// Check for duplicate name inside transaction (TOCTOU-safe).
+		// Only active rooms block re-creation — idle (inactive but not archived)
+		// and archived (soft-deleted) rooms allow name reuse.
 		var existing models.Room
-		if err := tx.Where("name = ?", name).First(&existing).Error; err == nil {
+		if err := tx.Where("name = ? AND is_active = ?", name, true).First(&existing).Error; err == nil {
 			return models.ErrRoomNameTaken
 		} else if !errors.Is(err, gorm.ErrRecordNotFound) {
 			return err
@@ -69,24 +71,25 @@ func (r *RoomRepository) CreateRoom(createdBy, name string, isPublic bool, mode 
 		}
 
 		if err := tx.Model(&models.Room{}).Create(map[string]interface{}{
-			"ID":                        newRoom.ID,
-			"Name":                      newRoom.Name,
-			"CreatedBy":                 newRoom.CreatedBy,
-			"AdminID":                   newRoom.AdminID,
-			"IsActive":                  newRoom.IsActive,
-			"IsPublic":                  newRoom.IsPublic,
-			"Mode":                      newRoom.Mode,
-			"ExpiresAt":                 newRoom.ExpiresAt,
-			"MaxParticipants":           newRoom.MaxParticipants,
-			"CreatedAt":                 newRoom.CreatedAt,
-			"UpdatedAt":                 newRoom.UpdatedAt,
-			"LastActivityAt":            now,
-			"settings_allow_chat":       newRoom.Settings.AllowChat,
-			"settings_allow_video":      newRoom.Settings.AllowVideo,
-			"settings_allow_audio":      newRoom.Settings.AllowAudio,
-			"settings_require_approval": newRoom.Settings.RequireApproval,
-			"settings_e2_ee":            newRoom.Settings.E2EE,
-			"settings_is_persistent":    newRoom.Settings.IsPersistent,
+			"ID":                          newRoom.ID,
+			"Name":                        newRoom.Name,
+			"CreatedBy":                   newRoom.CreatedBy,
+			"AdminID":                     newRoom.AdminID,
+			"IsActive":                    newRoom.IsActive,
+			"IsPublic":                    newRoom.IsPublic,
+			"Mode":                        newRoom.Mode,
+			"ExpiresAt":                   newRoom.ExpiresAt,
+			"MaxParticipants":             newRoom.MaxParticipants,
+			"CreatedAt":                   newRoom.CreatedAt,
+			"UpdatedAt":                   newRoom.UpdatedAt,
+			"LastActivityAt":              now,
+			"settings_allow_chat":         newRoom.Settings.AllowChat,
+			"settings_allow_video":        newRoom.Settings.AllowVideo,
+			"settings_allow_audio":        newRoom.Settings.AllowAudio,
+			"settings_require_approval":   newRoom.Settings.RequireApproval,
+			"settings_e2_ee":              newRoom.Settings.E2EE,
+			"settings_is_persistent":      newRoom.Settings.IsPersistent,
+			"settings_recordings_allowed": newRoom.Settings.RecordingsAllowed,
 		}).Error; err != nil {
 			newRoom = nil
 			// Catch unique constraint violations (TOCTOU race safety net)
@@ -384,12 +387,13 @@ func (r *RoomRepository) UpdateRoomSettings(roomID string, settings *models.Room
 	return r.db.Model(&models.Room{}).
 		Where("id = ?", roomID).
 		Updates(map[string]interface{}{
-			"settings_allow_chat":       settings.AllowChat,
-			"settings_allow_video":      settings.AllowVideo,
-			"settings_allow_audio":      settings.AllowAudio,
-			"settings_require_approval": settings.RequireApproval,
-			"settings_e2_ee":            settings.E2EE,
-			"settings_is_persistent":    settings.IsPersistent,
+			"settings_allow_chat":         settings.AllowChat,
+			"settings_allow_video":        settings.AllowVideo,
+			"settings_allow_audio":        settings.AllowAudio,
+			"settings_require_approval":   settings.RequireApproval,
+			"settings_e2_ee":              settings.E2EE,
+			"settings_is_persistent":      settings.IsPersistent,
+			"settings_recordings_allowed": settings.RecordingsAllowed,
 		}).Error
 }
 
@@ -430,6 +434,48 @@ func (r *RoomRepository) HardDeleteRoom(roomID string) error {
 	})
 }
 
+// SoftDeleteRoom marks a room as archived by setting deleted_at and is_active=false.
+// Recording rows and files are preserved.
+func (r *RoomRepository) SoftDeleteRoom(roomID string) error {
+	now := time.Now()
+	return r.db.Model(&models.Room{}).
+		Where("id = ?", roomID).
+		Updates(map[string]interface{}{
+			"deleted_at": now,
+			"is_active":  false,
+			"updated_at": now,
+		}).Error
+}
+
+// GetArchivedRoomsByUserPaginated returns archived rooms for a user with pagination.
+func (r *RoomRepository) GetArchivedRoomsByUserPaginated(userID string, page, limit int) ([]models.Room, int64, error) {
+	offset := (page - 1) * limit
+	var total int64
+	if err := r.db.Model(&models.Room{}).
+		Where("created_by = ? AND deleted_at IS NOT NULL", userID).
+		Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+	var rooms []models.Room
+	if err := r.db.Where("created_by = ? AND deleted_at IS NOT NULL", userID).
+		Order("deleted_at DESC").
+		Limit(limit).Offset(offset).
+		Find(&rooms).Error; err != nil {
+		return nil, 0, err
+	}
+	return rooms, total, nil
+}
+
+// FindArchivedRoomsNoRecordings returns archived rooms that have 0 recording rows.
+// Used by scheduler to fully purge rooms after all recordings cleared.
+func (r *RoomRepository) FindArchivedRoomsNoRecordings() ([]models.Room, error) {
+	var rooms []models.Room
+	err := r.db.Where("deleted_at IS NOT NULL").
+		Where("(SELECT COUNT(*) FROM recordings WHERE room_id = rooms.id) = 0").
+		Find(&rooms).Error
+	return rooms, err
+}
+
 func (r *RoomRepository) GetAllRooms() ([]models.Room, error) {
 	var rooms []models.Room
 	err := r.db.Find(&rooms).Error
@@ -442,7 +488,7 @@ type RoomFilterParams struct {
 	Limit      int
 	Search     string   // q — name LIKE search
 	Visibility []string // "public", "private"
-	Status     []string // "active", "suspended"
+	Status     []string // "active", "suspended", "archived"
 	Capacity   string   // "empty", "1-5", "6-20", "20+" — DEPRECATED: filters on max_participants, kept for backward compat
 	Occupancy  string   // "empty", "1-5", "6-20", "20+" — filters on actual participant count
 	Created    string   // "today", "7d", "30d"
@@ -474,6 +520,7 @@ type AdminRoomDetail struct {
 	LastActivityAt    *time.Time          `json:"lastActivityAt"`
 	OwnerName         string              `json:"ownerName"`
 	OwnerEmail        string              `json:"ownerEmail"`
+	DeletedAt         *time.Time          `json:"deletedAt,omitempty"`
 }
 
 func contains(slice []string, s string) bool {
@@ -521,10 +568,14 @@ func (r *RoomRepository) GetAllRoomsFiltered(p RoomFilterParams) ([]models.Room,
 	if len(p.Status) > 0 {
 		hasActive := contains(p.Status, "active")
 		hasSuspended := contains(p.Status, "suspended")
-		if hasActive && !hasSuspended {
-			query = query.Where("is_active = ?", true)
-		} else if hasSuspended && !hasActive {
-			query = query.Where("is_active = ?", false)
+		hasArchived := contains(p.Status, "archived")
+
+		if hasActive && !hasSuspended && !hasArchived {
+			query = query.Where("is_active = ? AND deleted_at IS NULL", true)
+		} else if hasSuspended && !hasActive && !hasArchived {
+			query = query.Where("is_active = ? AND deleted_at IS NULL", false)
+		} else if hasArchived && !hasActive && !hasSuspended {
+			query = query.Where("deleted_at IS NOT NULL")
 		}
 	}
 
@@ -738,6 +789,7 @@ func (r *RoomRepository) EnrichAdminRoomDetails(rooms []models.Room) ([]AdminRoo
 			Mode:              room.Mode,
 			ParticipantsCount: countMap[room.ID],
 			LastActivityAt:    activityMap[room.ID],
+			DeletedAt:         room.DeletedAt,
 		}
 		if o, ok := ownerMap[room.CreatedBy]; ok {
 			detail.OwnerName = o.Name
@@ -821,6 +873,25 @@ func (r *RoomRepository) GetRoomsCreatedByUser(userID string) ([]models.Room, er
 	var rooms []models.Room
 	err := r.db.Where("created_by = ?", userID).Order("created_at desc").Find(&rooms).Error
 	return rooms, err
+}
+
+// GetLatestRoomsCreatedByUser returns the latest room per slug created by a user.
+// If multiple rooms share the same name, only the most recently created one is kept.
+func (r *RoomRepository) GetLatestRoomsCreatedByUser(userID string) ([]models.Room, error) {
+	var allRooms []models.Room
+	err := r.db.Where("created_by = ?", userID).Order("created_at desc").Find(&allRooms).Error
+	if err != nil {
+		return nil, err
+	}
+	seen := make(map[string]bool)
+	rooms := make([]models.Room, 0, len(allRooms))
+	for _, room := range allRooms {
+		if !seen[room.Name] {
+			seen[room.Name] = true
+			rooms = append(rooms, room)
+		}
+	}
+	return rooms, nil
 }
 
 // GetRoomsParticipatedInByUser retrieves rooms a user has participated in (excluding those they created)
