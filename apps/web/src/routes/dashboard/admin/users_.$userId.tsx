@@ -78,9 +78,9 @@ function getRoleBadgeStyle(access: string): CSSProperties {
       }
     case 'admin':
       return {
-        borderColor: 'color-mix(in oklab, var(--sky-700) 30%, transparent)',
-        background: 'color-mix(in oklab, var(--sky-700) 8%, transparent)',
-        color: 'var(--sky-300)',
+        borderColor: 'color-mix(in oklab, var(--accent-700) 30%, transparent)',
+        background: 'color-mix(in oklab, var(--accent-700) 8%, transparent)',
+        color: 'var(--accent-400)',
       }
     case 'moderator':
       return { borderColor: '#f59e0b30', background: '#f59e0b15', color: '#fbbf24' }
@@ -113,7 +113,7 @@ interface Room {
 }
 
 const PROVIDER_STYLE: Record<string, { bg: string; color: string }> = {
-  local: { bg: 'color-mix(in oklab, var(--primary) 8%, transparent)', color: 'var(--sky-300)' },
+  local: { bg: 'color-mix(in oklab, var(--primary) 8%, transparent)', color: 'var(--accent-400)' },
   google: { bg: '#ef444415', color: '#f87171' },
   github: { bg: '#71717a15', color: '#a1a1aa' },
   guest: { bg: '#f59e0b15', color: '#fbbf24' },
@@ -123,7 +123,7 @@ const PROVIDER_STYLE: Record<string, { bg: string; color: string }> = {
 function ProviderBadge({ provider }: { provider: string }) {
   const s = PROVIDER_STYLE[provider] ?? {
     bg: 'color-mix(in oklab, var(--primary) 8%, transparent)',
-    color: 'var(--sky-300)',
+    color: 'var(--accent-400)',
   }
   return (
     <Badge
@@ -249,10 +249,18 @@ function UserDetailPage() {
     onError: (err) => toast.error(getErrorMessage(err, 'Failed to update user status')),
   })
 
+  const [pendingRole, setPendingRole] = useState<string | null>(null)
+
   const changeRole = useMutation({
     mutationFn: (accesses: string[]) => api.put(`/api/admin/users/${userId}/accesses`, { accesses }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin', 'user', userId] }),
-    onError: (err) => toast.error(getErrorMessage(err, 'Failed to update user role')),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'user', userId] })
+      setPendingRole(null)
+    },
+    onError: (err) => {
+      toast.error(getErrorMessage(err, 'Failed to update user role'))
+      setPendingRole(null)
+    },
   })
 
   const deleteUser = useMutation({
@@ -331,7 +339,7 @@ function UserDetailPage() {
             <div
               className="h-20 w-full"
               style={{
-                background: 'linear-gradient(135deg, var(--primary) 0%, var(--sky-700) 60%, var(--primary) 100%)',
+                background: 'linear-gradient(135deg, var(--primary) 0%, var(--accent-700) 60%, var(--primary) 100%)',
               }}
             />
 
@@ -341,7 +349,7 @@ function UserDetailPage() {
                 <div
                   className="flex h-16 w-16 items-center justify-center text-2xl font-bold text-white ring-4"
                   style={{
-                    background: 'linear-gradient(135deg, var(--primary), var(--sky-700))',
+                    background: 'linear-gradient(135deg, var(--primary), var(--accent-700))',
                     boxShadow: '0 0 0 4px var(--background)',
                   }}
                 >
@@ -351,22 +359,47 @@ function UserDetailPage() {
                 {/* Actions */}
                 <div className="flex items-center gap-2 pb-1">
                   {!isReadOnly ? (
-                    <Select
-                      value={currentRole}
-                      onValueChange={(role) => changeRole.mutate(ROLE_ACCESS_MAP[role])}
-                      disabled={changeRole.isPending}
-                    >
-                      <SelectTrigger className="h-8 w-[130px] text-xs">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {ROLE_OPTIONS.map(({ value, label }) => (
-                          <SelectItem key={value} value={value} className="text-xs">
-                            {label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <>
+                      <Select
+                        value={pendingRole ?? currentRole}
+                        onValueChange={(role) => setPendingRole(role)}
+                        disabled={changeRole.isPending}
+                      >
+                        <SelectTrigger className="h-8 w-[130px] text-xs">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {ROLE_OPTIONS.map(({ value, label }) => (
+                            <SelectItem key={value} value={value} className="text-xs">
+                              {label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      {pendingRole && (
+                        <div className="flex items-center gap-1">
+                          <Button
+                            type="button"
+                            size="sm"
+                            onClick={() => changeRole.mutate(ROLE_ACCESS_MAP[pendingRole])}
+                            disabled={changeRole.isPending}
+                            className="h-7 px-2 text-[11px]"
+                          >
+                            {changeRole.isPending ? 'Saving…' : 'Confirm'}
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setPendingRole(null)}
+                            disabled={changeRole.isPending}
+                            className="h-7 px-2 text-[11px]"
+                          >
+                            ×
+                          </Button>
+                        </div>
+                      )}
+                    </>
                   ) : (
                     <span
                       className="flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-semibold capitalize"
@@ -527,7 +560,7 @@ function UserDetailPage() {
                   className="flex items-center justify-between border-b px-5 py-3"
                   style={{
                     background:
-                      'linear-gradient(135deg, color-mix(in oklab, var(--primary) 3%, transparent), color-mix(in oklab, var(--sky-700) 3%, transparent))',
+                      'linear-gradient(135deg, color-mix(in oklab, var(--primary) 3%, transparent), color-mix(in oklab, var(--accent-700) 3%, transparent))',
                   }}
                 >
                   <p className="text-sm font-semibold">Room creation activity</p>
@@ -584,7 +617,7 @@ function UserDetailPage() {
                   className="flex items-center justify-between border-b px-5 py-3"
                   style={{
                     background:
-                      'linear-gradient(135deg, color-mix(in oklab, var(--sky-700) 3%, transparent), color-mix(in oklab, var(--primary) 3%, transparent))',
+                      'linear-gradient(135deg, color-mix(in oklab, var(--accent-700) 3%, transparent), color-mix(in oklab, var(--primary) 3%, transparent))',
                   }}
                 >
                   <p className="text-sm font-semibold">Rooms</p>
@@ -632,8 +665,8 @@ function UserDetailPage() {
                                       color: 'var(--primary)',
                                     }
                                   : {
-                                      background: 'color-mix(in oklab, var(--sky-700) 8%, transparent)',
-                                      color: 'var(--sky-300)',
+                                      background: 'color-mix(in oklab, var(--accent-700) 8%, transparent)',
+                                      color: 'var(--accent-400)',
                                     }
                               }
                             >
@@ -674,7 +707,7 @@ function UserDetailPage() {
                   className="flex items-center justify-between border-b px-5 py-3"
                   style={{
                     background:
-                      'linear-gradient(135deg, color-mix(in oklab, var(--sky-700) 3%, transparent), color-mix(in oklab, var(--primary) 3%, transparent))',
+                      'linear-gradient(135deg, color-mix(in oklab, var(--accent-700) 3%, transparent), color-mix(in oklab, var(--primary) 3%, transparent))',
                   }}
                 >
                   <p className="text-sm font-semibold">Room Sessions</p>

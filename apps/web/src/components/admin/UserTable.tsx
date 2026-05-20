@@ -55,9 +55,9 @@ function getRoleBadgeStyle(access: string): CSSProperties {
       }
     case 'admin':
       return {
-        borderColor: 'color-mix(in oklab, var(--sky-700) 30%, transparent)',
-        background: 'color-mix(in oklab, var(--sky-700) 8%, transparent)',
-        color: 'var(--sky-300)',
+        borderColor: 'color-mix(in oklab, var(--accent-700) 30%, transparent)',
+        background: 'color-mix(in oklab, var(--accent-700) 8%, transparent)',
+        color: 'var(--accent-400)',
       }
     case 'moderator':
       return { borderColor: 'rgb(245 158 11 / 0.3)', background: 'rgb(245 158 11 / 0.15)', color: '#fbbf24' }

@@ -79,6 +79,41 @@ export function ChatTab({
               error={errors?.chatUploadInlineMax}
             />
           </Field>
+          <Field
+            label="Max uploads per user (bytes)"
+            hint="Hard ceiling for total uploaded bytes per user. 0 = unlimited. Saved to database. Leave empty to use config.yaml value."
+          >
+            <TextInput
+              type="number"
+              min={0}
+              value={String(settings.maxUploadBytesPerUser || 0)}
+              onChange={(v) => {
+                ce('maxUploadBytesPerUser')
+                setSettings({ ...settings, maxUploadBytesPerUser: numOrPrev64(v, settings.maxUploadBytesPerUser) })
+              }}
+              placeholder="524288000"
+              error={errors?.maxUploadBytesPerUser}
+            />
+          </Field>
+          <Field
+            label="Global disk threshold (bytes)"
+            hint="Stop accepting uploads when disk usage exceeds this across all users. 0 = unlimited. Saved to database. Leave empty to use config.yaml value."
+          >
+            <TextInput
+              type="number"
+              min={0}
+              value={String(settings.globalDiskThresholdBytes || 0)}
+              onChange={(v) => {
+                ce('globalDiskThresholdBytes')
+                setSettings({
+                  ...settings,
+                  globalDiskThresholdBytes: numOrPrev64(v, settings.globalDiskThresholdBytes),
+                })
+              }}
+              placeholder="0"
+              error={errors?.globalDiskThresholdBytes}
+            />
+          </Field>
         </div>
         <Field
           label="Disk directory"

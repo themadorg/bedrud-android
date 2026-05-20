@@ -281,7 +281,7 @@ export function RoomTable({
                       className={cn(
                         'gap-1 text-[10px]',
                         room.isPublic
-                          ? 'border-sky-500/30 bg-sky-500/10 text-sky-500'
+                          ? 'border-teal-500/30 bg-teal-500/10 text-teal-500'
                           : 'border-violet-500/30 bg-violet-500/10 text-violet-500',
                       )}
                     >
@@ -395,7 +395,7 @@ export function RoomTable({
                   className={cn(
                     'text-[10px]',
                     room.isPublic
-                      ? 'border-sky-500/30 bg-sky-500/10 text-sky-500'
+                      ? 'border-teal-500/30 bg-teal-500/10 text-teal-500'
                       : 'border-violet-500/30 bg-violet-500/10 text-violet-500',
                   )}
                 >

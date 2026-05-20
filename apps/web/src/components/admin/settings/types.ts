@@ -2,6 +2,7 @@ export interface SystemSettings {
   id: number
   registrationEnabled: boolean
   tokenRegistrationOnly: boolean
+  guestLoginEnabled: boolean
   passkeysEnabled: boolean
   googleClientId: string
   googleClientSecret: string
@@ -25,6 +26,7 @@ export interface SystemSettings {
   serverUseAcme: boolean
   serverEmail: string
   behindProxy: boolean
+  serverName: string
   livekitHost: string
   livekitApiKey: string
   livekitApiSecret: string
@@ -51,6 +53,46 @@ export interface SystemSettings {
   globalDiskThresholdBytes: number
   chatMaxMessageCount: number
   chatMessageTTLHours: number
+
+  // TODO oncoming feature
+  // Recordings
+  recordingsEnabled: boolean
+  // TODO oncoming feature
+  recordingMaxDurationMins: number
+  // TODO oncoming feature
+  recordingMaxFileSizeMB: number
+
+  // Email branding
+  emailInstanceName: string
+  emailSupportEmail: string
+  emailInstanceUrl: string
+  emailHeaderBg: string
+  emailButtonBg: string
+
+  // Per-template subject overrides
+  emailSubjectVerify: string
+  emailSubjectWelcome: string
+  emailSubjectReset: string
+  emailSubjectChanged: string
+  emailSubjectInvite: string
+
+  // Per-template preheader text
+  emailPreheaderVerify: string
+  emailPreheaderWelcome: string
+  emailPreheaderReset: string
+  emailPreheaderChanged: string
+  emailPreheaderInvite: string
+
+  // SMTP settings
+  emailSmtpHost: string
+  emailSmtpPort: number
+  emailUsername: string
+  emailPassword: string
+  emailFromAddress: string
+  emailFromName: string
+  emailTlsSkipVerify: boolean
+  emailSmtpsMode: boolean
+
   updatedAt: string
 }
 

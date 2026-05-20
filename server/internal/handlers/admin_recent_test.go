@@ -46,12 +46,14 @@ func setupRecentSignupsTestApp(t *testing.T) (*fiber.App, *repository.UserReposi
 
 func seedUsers(t *testing.T, userRepo *repository.UserRepository) {
 	t.Helper()
+	// Use UTC midnight today as reference to avoid timezone/date-boundary flakiness
+	today := time.Now().UTC().Truncate(24 * time.Hour)
 	users := []*models.User{
-		{ID: "u1", Email: "alice@ex.com", Name: "Alice", Provider: "local", IsActive: true, Accesses: models.StringArray{"user"}, CreatedAt: time.Now().Add(-1 * time.Hour)},
-		{ID: "u2", Email: "bob@ex.com", Name: "Bob", Provider: "google", IsActive: true, Accesses: models.StringArray{"user"}, CreatedAt: time.Now().Add(-2 * time.Hour)},
-		{ID: "u3", Email: "carol@ex.com", Name: "Carol", Provider: "github", IsActive: false, Accesses: models.StringArray{"user"}, CreatedAt: time.Now().Add(-24 * time.Hour)},
-		{ID: "u4", Email: "dan@ex.com", Name: "Dan", Provider: "guest", IsActive: true, Accesses: models.StringArray{"guest"}, CreatedAt: time.Now().Add(-48 * time.Hour)},
-		{ID: "u5", Email: "eve@ex.com", Name: "Eve", Provider: "local", IsActive: true, Accesses: models.StringArray{"admin"}, CreatedAt: time.Now().Add(-72 * time.Hour)},
+		{ID: "u1", Email: "alice@ex.com", Name: "Alice", Provider: "local", IsActive: true, Accesses: models.StringArray{"user"}, CreatedAt: today.Add(10 * time.Hour)},             // today 10:00 UTC
+		{ID: "u2", Email: "bob@ex.com", Name: "Bob", Provider: "google", IsActive: true, Accesses: models.StringArray{"user"}, CreatedAt: today.Add(9 * time.Hour)},              // today 09:00 UTC
+		{ID: "u3", Email: "carol@ex.com", Name: "Carol", Provider: "github", IsActive: false, Accesses: models.StringArray{"user"}, CreatedAt: today.Add(-14 * time.Hour)},          // yesterday 10:00 UTC
+		{ID: "u4", Email: "dan@ex.com", Name: "Dan", Provider: "guest", IsActive: true, Accesses: models.StringArray{"guest"}, CreatedAt: today.Add(-38 * time.Hour)},                // 2 days ago 10:00 UTC
+		{ID: "u5", Email: "eve@ex.com", Name: "Eve", Provider: "local", IsActive: true, Accesses: models.StringArray{"admin"}, CreatedAt: today.Add(-62 * time.Hour)},                // 3 days ago 10:00 UTC
 	}
 	for _, u := range users {
 		if err := userRepo.CreateUser(u); err != nil {
@@ -263,29 +265,27 @@ func TestRecentSignups_DateFilter(t *testing.T) {
 	app, userRepo := setupRecentSignupsTestApp(t)
 	seedUsers(t, userRepo)
 
-	today := time.Now().Format("2006-01-02")
+	today := time.Now().UTC().Format("2006-01-02")
 
-	// dateFrom=today — should get all users created today (Alice, Bob)
+	// dateFrom=today — should get Alice and Bob (created today at 10:00 and 09:00 UTC)
 	req := httptest.NewRequest(http.MethodGet, "/admin/users/recent?dateFrom="+today, http.NoBody)
 	resp, _ := app.Test(req, -1)
 	defer resp.Body.Close()
 
 	var result recentSignupsResponse
 	json.NewDecoder(resp.Body).Decode(&result)
-	// Alice and Bob were created 1h and 2h ago
 	if len(result.Users) != 2 {
 		t.Fatalf("expected 2 users from today, got %d: %+v", len(result.Users), result.Users)
 	}
 
-	// dateTo=yesterday — only older users
-	yesterday := time.Now().Add(-24 * time.Hour).Format("2006-01-02")
+	// dateTo=yesterday — should include Carol, Dan, Eve
+	yesterday := time.Now().UTC().Add(-24 * time.Hour).Format("2006-01-02")
 	req2 := httptest.NewRequest(http.MethodGet, "/admin/users/recent?dateTo="+yesterday, http.NoBody)
 	resp2, _ := app.Test(req2, -1)
 	defer resp2.Body.Close()
 
 	var result2 recentSignupsResponse
 	json.NewDecoder(resp2.Body).Decode(&result2)
-	// Carol (24h ago), Dan (48h), Eve (72h) — but Carol is exactly at boundary
 	if len(result2.Users) == 0 {
 		t.Fatal("expected some older users")
 	}
@@ -386,7 +386,7 @@ func TestRecentSignups_CombinedFilters(t *testing.T) {
 	app, userRepo := setupRecentSignupsTestApp(t)
 	seedUsers(t, userRepo)
 
-	today := time.Now().Format("2006-01-02")
+	today := time.Now().UTC().Format("2006-01-02")
 
 	// Combined: provider=local + dateFrom=today
 	req := httptest.NewRequest(http.MethodGet, "/admin/users/recent?provider=local&dateFrom="+today, http.NoBody)
@@ -395,7 +395,7 @@ func TestRecentSignups_CombinedFilters(t *testing.T) {
 
 	var result recentSignupsResponse
 	json.NewDecoder(resp.Body).Decode(&result)
-	// local users created today: Alice, Bob is google, Carol is github, Dan is guest, Eve is local but 72h ago
+	// local users created today: Alice, Bob is google, Carol is github, Dan is guest, Eve is local but 3 days ago
 	// So only Alice should match (local + today)
 	if len(result.Users) != 1 || result.Users[0].Name != "Alice" {
 		t.Fatalf("expected 1 local user from today (Alice), got %d: %+v", len(result.Users), result.Users)

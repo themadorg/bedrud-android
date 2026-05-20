@@ -122,26 +122,43 @@ export function validateLocalSettings(s: SystemSettings): Record<string, string>
     errors.serverEmail = 'Invalid email format'
   }
 
-  // URLs — must be absolute http/https
-  const urlFields: [string, string][] = [
+  // Helper: check if string is a valid absolute URL (optional scheme — bare host:port OK)
+  function isValidURL(val: string, allowSchemeLess: boolean): boolean {
+    // If it parses as an absolute URL, check for supported scheme
+    try {
+      const u = new URL(val)
+      if (u.protocol !== 'http:' && u.protocol !== 'https:' && u.protocol !== 'ws:' && u.protocol !== 'wss:') {
+        return false
+      }
+      return true
+    } catch {
+      // Not an absolute URL — allow bare host:port if the field permits it
+      if (allowSchemeLess && /^[a-zA-Z0-9.-]+(:\d+)?$/.test(val)) {
+        return true
+      }
+      return false
+    }
+  }
+
+  // URL fields that require absolute URLs with scheme
+  const strictUrlFields: [string, string][] = [
     ['frontendUrl', s.frontendUrl],
-    ['livekitHost', s.livekitHost],
     ['googleRedirectUrl', s.googleRedirectUrl],
     ['githubRedirectUrl', s.githubRedirectUrl],
     ['twitterRedirectUrl', s.twitterRedirectUrl],
     ['chatUploadS3Endpoint', s.chatUploadS3Endpoint],
     ['chatUploadS3PublicUrl', s.chatUploadS3PublicUrl],
   ]
-  for (const [name, val] of urlFields) {
+  for (const [name, val] of strictUrlFields) {
     if (!val) continue
-    try {
-      const u = new URL(val)
-      if (u.protocol !== 'http:' && u.protocol !== 'https:' && u.protocol !== 'ws:' && u.protocol !== 'wss:') {
-        errors[name] = 'Unsupported URL scheme'
-      }
-    } catch {
+    if (!isValidURL(val, false)) {
       errors[name] = 'Invalid URL'
     }
+  }
+
+  // livekitHost — also accepts bare host:port (no scheme required)
+  if (s.livekitHost && !isValidURL(s.livekitHost, true)) {
+    errors.livekitHost = 'Invalid LiveKit host'
   }
 
   // CORS credentials + wildcard
@@ -198,6 +215,16 @@ export function validateLocalSettings(s: SystemSettings): Record<string, string>
     errors.chatMessageTTLHours = 'Cannot be negative'
   }
 
+  // TODO oncoming feature
+  // Recording limits
+  if (s.recordingMaxDurationMins < 0) {
+    errors.recordingMaxDurationMins = 'Cannot be negative'
+  }
+  // TODO oncoming feature
+  if (s.recordingMaxFileSizeMB < 0) {
+    errors.recordingMaxFileSizeMB = 'Cannot be negative'
+  }
+
   // JWT secret length
   if (s.jwtSecret !== '' && s.jwtSecret.length < 32) {
     errors.jwtSecret = 'Must be at least 32 characters'
@@ -219,6 +246,36 @@ export function validateLocalSettings(s: SystemSettings): Record<string, string>
   if (s.livekitExternal) {
     if (!s.livekitApiKey) errors.livekitApiKey = 'Required for external LiveKit'
     if (!s.livekitApiSecret) errors.livekitApiSecret = 'Required for external LiveKit'
+  }
+
+  // Email branding — hex colors
+  if (s.emailHeaderBg && !/^#[0-9a-fA-F]{6}$/.test(s.emailHeaderBg)) {
+    errors.emailHeaderBg = 'Must be a hex color (#rrggbb)'
+  }
+  if (s.emailButtonBg && !/^#[0-9a-fA-F]{6}$/.test(s.emailButtonBg)) {
+    errors.emailButtonBg = 'Must be a hex color (#rrggbb)'
+  }
+
+  // Email branding — support email
+  if (s.emailSupportEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s.emailSupportEmail)) {
+    errors.emailSupportEmail = 'Invalid email format'
+  }
+
+  // Email branding — instance URL
+  if (s.emailInstanceUrl) {
+    try {
+      const u = new URL(s.emailInstanceUrl)
+      if (u.protocol !== 'http:' && u.protocol !== 'https:') {
+        errors.emailInstanceUrl = 'Must be http or https URL'
+      }
+    } catch {
+      errors.emailInstanceUrl = 'Invalid URL'
+    }
+  }
+
+  // SMTP port
+  if (s.emailSmtpPort && (s.emailSmtpPort < 1 || s.emailSmtpPort > 65535)) {
+    errors.emailSmtpPort = 'Must be between 1 and 65535'
   }
 
   return errors

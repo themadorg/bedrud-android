@@ -1,4 +1,4 @@
-import { Activity, AlertTriangle, CheckCircle2, Clock, RefreshCw } from 'lucide-react'
+import { Activity, AlertTriangle, CheckCircle2, Clock, Mail, RefreshCw } from 'lucide-react'
 import { Badge } from '#/components/ui/badge'
 import { Button } from '#/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '#/components/ui/card'
@@ -153,6 +153,38 @@ export function QueueStatsPage() {
           icon={<AlertTriangle className="h-4 w-4" />}
           color="text-red-500"
         />
+      </section>
+
+      {/* Email queue health */}
+      <section className="grid gap-4 md:grid-cols-2">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-xs font-medium text-muted-foreground">Email Queue</CardTitle>
+            <Mail className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-semibold tabular-nums">
+              {data.pendingEmail ?? 0}
+              <span className="ml-1 text-xs font-normal text-muted-foreground">pending</span>
+            </div>
+            <p className="mt-1 flex items-center gap-2 text-xs">
+              <span className={data.failedEmail24h > 0 ? 'text-red-500 font-medium' : 'text-muted-foreground'}>
+                {data.failedEmail24h ?? 0} failed (24h)
+              </span>
+            </p>
+            {data.lastSendError && (
+              <div className="mt-2 rounded border border-red-500/20 bg-red-500/5 px-2 py-1.5 text-[10px]">
+                <p className="font-medium text-red-500">Last send error</p>
+                <p className="mt-0.5 break-all text-muted-foreground" title={data.lastSendError}>
+                  {data.lastSendError.length > 120 ? data.lastSendError.slice(0, 120) + '…' : data.lastSendError}
+                </p>
+                {data.lastSendErrorAt && (
+                  <p className="mt-0.5 italic text-muted-foreground">{oldestLabel(data.lastSendErrorAt)}</p>
+                )}
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </section>
 
       {/* Rate cards */}

@@ -96,6 +96,33 @@ export function AuthTab({
         />
       </Section>
 
+      <Section title="General" description="Authentication-wide settings">
+        <Field
+          label="Frontend URL"
+          hint="Public-facing URL of the frontend app. Used for redirect URIs and email links. Saved to database. Leave empty to use config.yaml value."
+        >
+          <TextInput
+            type="url"
+            value={settings.frontendUrl}
+            onChange={(v) => {
+              clearFieldError?.('frontendUrl')
+              setSettings({ ...settings, frontendUrl: v })
+            }}
+            placeholder="https://meet.example.com"
+            error={errors?.frontendUrl}
+          />
+        </Field>
+        <Toggle
+          checked={settings.guestLoginEnabled}
+          onChange={(v) => {
+            clearFieldError?.('guestLoginEnabled')
+            setSettings({ ...settings, guestLoginEnabled: v })
+          }}
+          label="Enable guest login"
+          hint="Allow users to join rooms without an account. Saved to database. Leave empty to use config.yaml value."
+        />
+      </Section>
+
       <OAuthProviderCard
         name="Google"
         clientId={settings.googleClientId}

@@ -34,6 +34,9 @@ const FILTER_LABELS: Record<string, string> = {
   dateTo: 'To',
   provider: 'Provider',
   role: 'Role',
+  // TODO oncoming feature
+  recordingType: 'Type',
+  downloadStatus: 'Download',
 }
 
 export function useTableState<T extends { id: string }>(opts: {
@@ -121,7 +124,16 @@ export function useTableState<T extends { id: string }>(opts: {
       result = result.filter((item: any) => {
         const name = (item.name ?? '').toLowerCase()
         const email = (item.email ?? '').toLowerCase()
-        return name.includes(q) || email.includes(q)
+        const roomName = (item.roomName ?? '').toLowerCase()
+        const createdBy = (item.createdBy ?? '').toLowerCase()
+        const recordingType = (item.recordingType ?? '').toLowerCase()
+        return (
+          name.includes(q) ||
+          email.includes(q) ||
+          roomName.includes(q) ||
+          createdBy.includes(q) ||
+          recordingType.includes(q)
+        )
       })
     }
 
@@ -139,14 +151,32 @@ export function useTableState<T extends { id: string }>(opts: {
 
     if (filters.status && (filters.status as string[]).length > 0) {
       const statusValues = filters.status as string[]
+      const hasActive = statusValues.includes('active')
+      const hasSuspended = statusValues.includes('suspended')
+      const hasArchived = statusValues.includes('archived')
       result = result.filter((item: any) => {
-        const isActive = statusValues.includes('active')
-        const isSuspended = statusValues.includes('suspended')
-        if (isActive && isSuspended) return true
-        if (isActive) return item.isActive === true
-        if (isSuspended) return item.isActive === false
-        return true
+        if ('isActive' in item && typeof item.isActive === 'boolean') {
+          const isArchived = !!item.deletedAt
+          const matchActive = hasActive && item.isActive === true && !isArchived
+          const matchSuspended = hasSuspended && item.isActive === false && !isArchived
+          const matchArchived = hasArchived && isArchived
+          if (hasActive && hasSuspended && hasArchived) return true
+          return matchActive || matchSuspended || matchArchived
+        }
+        return statusValues.includes(item.status)
       })
+    }
+
+    // TODO oncoming feature
+    if (filters.recordingType && (filters.recordingType as string[]).length > 0) {
+      const typeValues = filters.recordingType as string[]
+      result = result.filter((item: any) => typeValues.includes(item.recordingType))
+    }
+
+    // TODO oncoming feature
+    if (filters.downloadStatus && (filters.downloadStatus as string[]).length > 0) {
+      const dlValues = filters.downloadStatus as string[]
+      result = result.filter((item: any) => dlValues.includes(item.downloadStatus))
     }
 
     if (filters.provider && (filters.provider as string[]).length > 0) {
@@ -169,9 +199,25 @@ export function useTableState<T extends { id: string }>(opts: {
     const arr = [...filtered]
     arr.sort((a: any, b: any) => {
       let cmp = 0
-      if (sortKey === 'name' || sortKey === 'email' || sortKey === 'provider' || sortKey === 'mode') {
+      if (
+        sortKey === 'name' ||
+        sortKey === 'email' ||
+        sortKey === 'provider' ||
+        sortKey === 'mode' ||
+        sortKey === 'roomName' ||
+        // TODO oncoming feature
+        sortKey === 'recordingType' ||
+        sortKey === 'status'
+      ) {
         cmp = String(a[sortKey] ?? '').localeCompare(String(b[sortKey] ?? ''))
-      } else if (sortKey === 'maxParticipants' || sortKey === 'participantsCount') {
+      } else if (
+        sortKey === 'maxParticipants' ||
+        sortKey === 'participantsCount' ||
+        // TODO oncoming feature
+        sortKey === 'durationMs' ||
+        // TODO oncoming feature
+        sortKey === 'fileSize'
+      ) {
         cmp = (a[sortKey] ?? 0) - (b[sortKey] ?? 0)
       } else if (sortKey === 'createdAt' || sortKey === 'lastActivityAt') {
         cmp = new Date(a[sortKey] ?? 0).getTime() - new Date(b[sortKey] ?? 0).getTime()

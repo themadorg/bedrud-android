@@ -40,8 +40,11 @@ func (h *AdminQueueHandler) GetQueueStats(c *fiber.Ctx) error {
 
 	var pending, active, done24h, failed24h, done5min, failed5min, total int64
 	var oldestPending *time.Time
+	var pendingEmail, failedEmail24h int64
+	var lastSendError string
+	var lastSendErrorAt *time.Time
 
-	errCh := make(chan error, 8)
+	errCh := make(chan error, 12)
 	var errCount int32
 
 	queueQuery := func(fn func() error) {
@@ -95,11 +98,39 @@ func (h *AdminQueueHandler) GetQueueStats(c *fiber.Ctx) error {
 			Where("status = ? AND updated_at > ?", models.JobFailed, cutoff5min).Count(&failed5min).Error
 	})
 
+	// Email-specific stats
+	go queueQuery(func() error {
+		return h.db.Model(&models.Job{}).
+			Where("type = ? AND status = ?", "send_email", models.JobPending).Count(&pendingEmail).Error
+	})
+
+	go queueQuery(func() error {
+		return h.db.Model(&models.Job{}).
+			Where("type = ? AND status = ? AND updated_at > ?", "send_email", models.JobFailed, cutoff24h).Count(&failedEmail24h).Error
+	})
+
+	// Most recent failed send_email
+	go queueQuery(func() error {
+		var lastFail struct {
+			LastError string
+			UpdatedAt time.Time
+		}
+		if err := h.db.Model(&models.Job{}).
+			Where("type = ? AND status = ?", "send_email", models.JobFailed).
+			Order("updated_at DESC").Limit(1).Scan(&lastFail).Error; err == nil && lastFail.LastError != "" {
+			lastSendError = lastFail.LastError
+			lastSendErrorAt = &lastFail.UpdatedAt
+		}
+		return nil
+	})
+
 	go queueQuery(func() error {
 		return h.db.Model(&models.Job{}).Count(&total).Error
 	})
 
-	for i := 0; i < 8; i++ {
+	// Collect results from all goroutines (must match the count of go queueQuery calls above)
+	const numQueries = 11
+	for i := 0; i < numQueries; i++ {
 		if err := <-errCh; err != nil {
 			log.Error().Err(err).Msg("Queue stats: count query failed")
 			errCount++
@@ -169,6 +200,11 @@ func (h *AdminQueueHandler) GetQueueStats(c *fiber.Ctx) error {
 		ProcessedPerMin: processedPerMin,
 		FailedPerMin:    failedPerMin,
 		FailRate:        failRate,
+
+		PendingEmail:   pendingEmail,
+		FailedEmail24h: failedEmail24h,
+		LastSendError:  lastSendError,
+		LastSendErrorAt: lastSendErrorAt,
 	}
 
 	return c.JSON(stats)

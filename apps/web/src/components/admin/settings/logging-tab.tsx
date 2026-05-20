@@ -8,8 +8,6 @@ export function LoggingTab({
 }: {
   settings: SystemSettings
   setSettings: (s: SystemSettings) => void
-  errors?: Record<string, string>
-  clearFieldError?: (field: string) => void
 }) {
   return (
     <Section title="Logging" description="Server log verbosity">

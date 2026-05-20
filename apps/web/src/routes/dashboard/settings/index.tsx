@@ -17,7 +17,7 @@ function Alert({ type, message }: { type: 'success' | 'error'; message: string }
   return (
     <div
       className={cn(
-        'flex items-center gap-2 border px-3 py-2 text-xs',
+        'flex items-center gap-2 border px-3 py-3 text-xs',
         type === 'success'
           ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
           : 'border-destructive/30 bg-destructive/10 text-destructive',
@@ -158,7 +158,7 @@ function ProfilePage() {
             </div>
           )}
           {user?.accesses?.includes('admin') && !user?.accesses?.includes('superadmin') && (
-            <div className="pt-3 flex items-center gap-1.5 text-xs font-medium" style={{ color: 'var(--sky-300)' }}>
+            <div className="pt-3 flex items-center gap-1.5 text-xs font-medium" style={{ color: 'var(--accent-400)' }}>
               <Shield className="h-3 w-3" /> Admin — full admin panel access
             </div>
           )}

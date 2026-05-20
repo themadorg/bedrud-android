@@ -1,3 +1,4 @@
+// TODO oncoming feature
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import {
@@ -20,6 +21,7 @@ import {
 import { useEffect, useRef, useState } from 'react'
 import { CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { toast } from 'sonner'
+
 import { api } from '#/lib/api'
 import { getErrorMessage } from '#/lib/errors'
 import { useAdminContext } from '#/routes/dashboard/admin.tsx'
@@ -73,7 +75,7 @@ function TrackBadge({ track }: { track: Track }) {
           ? { background: 'var(--muted)', color: 'var(--muted-foreground)' }
           : isAudio
             ? { background: '#10b98115', color: '#10b981' }
-            : { background: 'color-mix(in oklab, var(--primary) 8%, transparent)', color: 'var(--sky-300)' }
+            : { background: 'color-mix(in oklab, var(--primary) 8%, transparent)', color: 'var(--accent-400)' }
       }
       title={isAudio ? `${track.source} · audio (bitrate N/A)` : `${track.source} · ${formatBitrate(track.bitrate)}`}
     >
@@ -182,6 +184,8 @@ function RoomDetailPage() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin', 'room', roomId, 'participants'] }),
   })
 
+  // ── Recordings section ──────────────────────────────────────────────────────
+
   const participants = data?.participants ?? []
   const room = data?.room
   const totalBitrate = participants.reduce(
@@ -200,7 +204,7 @@ function RoomDetailPage() {
     'var(--primary)',
     '#10b981',
     '#f59e0b',
-    'var(--sky-700)',
+    'var(--accent-700)',
     '#ec4899',
     '#f97316',
     '#a855f7',
@@ -260,7 +264,7 @@ function RoomDetailPage() {
               label: 'Visibility',
               value: room.isPublic ? 'Public' : 'Private',
               icon: room.isPublic ? Globe : Lock,
-              color: room.isPublic ? 'var(--primary)' : 'var(--sky-700)',
+              color: room.isPublic ? 'var(--primary)' : 'var(--accent-700)',
             },
           ].map(({ label, value, icon: Icon, color }) => (
             <div key={label} className="border p-5" style={{ borderColor: `${color}25`, background: `${color}07` }}>
@@ -436,7 +440,7 @@ function RoomDetailPage() {
           className="flex items-center justify-between border-b px-5 py-3"
           style={{
             background:
-              'linear-gradient(135deg, color-mix(in oklab, var(--primary) 3%, transparent), color-mix(in oklab, var(--sky-700) 3%, transparent))',
+              'linear-gradient(135deg, color-mix(in oklab, var(--primary) 3%, transparent), color-mix(in oklab, var(--accent-700) 3%, transparent))',
           }}
         >
           <p className="text-sm font-semibold">Live participants</p>
@@ -475,7 +479,7 @@ function RoomDetailPage() {
                   {/* Avatar */}
                   <div
                     className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-bold text-white"
-                    style={{ background: 'linear-gradient(135deg, var(--primary), var(--sky-700))' }}
+                    style={{ background: 'linear-gradient(135deg, var(--primary), var(--accent-700))' }}
                   >
                     {(p.name || p.identity).charAt(0).toUpperCase()}
                   </div>
@@ -579,7 +583,7 @@ function RoomDetailPage() {
             className="border-b px-5 py-3"
             style={{
               background:
-                'linear-gradient(135deg, color-mix(in oklab, var(--primary) 3%, transparent), color-mix(in oklab, var(--sky-700) 3%, transparent))',
+                'linear-gradient(135deg, color-mix(in oklab, var(--primary) 3%, transparent), color-mix(in oklab, var(--accent-700) 3%, transparent))',
             }}
           >
             <p className="text-sm font-semibold">Room configuration</p>
@@ -632,6 +636,8 @@ function RoomDetailPage() {
           </div>
         </div>
       )}
+
+      {/* TODO oncoming feature — Recordings section removed */}
 
       <p className="text-center text-xs text-muted-foreground">
         <Link to="/dashboard/admin/rooms" className="hover:text-foreground underline-offset-4 hover:underline">

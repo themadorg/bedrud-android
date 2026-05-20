@@ -1,3 +1,4 @@
+// TODO oncoming feature
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { createFileRoute, redirect } from '@tanstack/react-router'
 import { Loader2, Save } from 'lucide-react'
@@ -7,6 +8,7 @@ import {
   AuthTab,
   ChatTab,
   CorsTab,
+  EmailTab,
   GeneralTab,
   LiveKitTab,
   LoggingTab,
@@ -14,6 +16,7 @@ import {
   type SystemSettings,
   validateLocalSettings,
 } from '#/components/admin/settings'
+import { WebhookSection } from '#/components/admin/settings/webhook-section'
 import { api } from '#/lib/api'
 import { getErrorMessage } from '#/lib/errors'
 import { useUserStore } from '#/lib/user.store'
@@ -39,9 +42,13 @@ const TABS = [
   { id: 'auth', label: 'Authentication' },
   { id: 'livekit', label: 'LiveKit' },
   { id: 'server', label: 'Server' },
+  { id: 'email', label: 'Email' },
   { id: 'cors', label: 'CORS' },
   { id: 'chat', label: 'Chat' },
+  // TODO oncoming feature
+  // { id: 'recordings', label: 'Recordings' },
   { id: 'logging', label: 'Logging' },
+  { id: 'webhooks', label: 'Webhooks' },
 ] as const
 
 type TabId = (typeof TABS)[number]['id']
@@ -63,6 +70,8 @@ const TAB_FIELDS: Record<TabId, (keyof SystemSettings)[]> = {
     'jwtSecret',
     'sessionSecret',
     'tokenDuration',
+    'frontendUrl',
+    'guestLoginEnabled',
   ],
   livekit: ['livekitHost', 'livekitApiKey', 'livekitApiSecret', 'livekitExternal'],
   server: [
@@ -75,7 +84,34 @@ const TAB_FIELDS: Record<TabId, (keyof SystemSettings)[]> = {
     'serverKeyFile',
     'serverUseAcme',
     'behindProxy',
+    'serverName',
     'maxParticipantsLimit',
+    'maxRoomsPerUser',
+  ],
+  email: [
+    'emailInstanceName',
+    'emailSupportEmail',
+    'emailInstanceUrl',
+    'emailHeaderBg',
+    'emailButtonBg',
+    'emailSubjectVerify',
+    'emailSubjectWelcome',
+    'emailSubjectReset',
+    'emailSubjectChanged',
+    'emailSubjectInvite',
+    'emailPreheaderVerify',
+    'emailPreheaderWelcome',
+    'emailPreheaderReset',
+    'emailPreheaderChanged',
+    'emailPreheaderInvite',
+    'emailSmtpHost',
+    'emailSmtpPort',
+    'emailUsername',
+    'emailPassword',
+    'emailFromAddress',
+    'emailFromName',
+    'emailTlsSkipVerify',
+    'emailSmtpsMode',
   ],
   cors: ['corsAllowedOrigins', 'corsAllowedHeaders', 'corsAllowedMethods', 'corsAllowCredentials', 'corsMaxAge'],
   chat: [
@@ -91,8 +127,11 @@ const TAB_FIELDS: Record<TabId, (keyof SystemSettings)[]> = {
     'chatUploadS3PublicUrl',
     'chatMaxMessageCount',
     'chatMessageTTLHours',
+    'maxUploadBytesPerUser',
+    'globalDiskThresholdBytes',
   ],
   logging: ['logLevel'],
+  webhooks: [],
 }
 
 function AdminSettingsPage() {
@@ -184,12 +223,21 @@ function AdminSettingsPage() {
     const draft = drafts[activeTab]
     if (!draft) return
 
-    // Validate full merged state before saving
+    // Merge all drafts to build the full state for cross-field validation
     const merged = { ...settings }
     for (const d of Object.values(drafts)) {
       if (d) Object.assign(merged, d)
     }
-    const errors = validateLocalSettings(merged)
+    const allErrors = validateLocalSettings(merged)
+    // Only show errors for fields on the current tab — other tabs' bad values
+    // shouldn't block saving on this tab.
+    const tabFields = new Set(TAB_FIELDS[activeTab])
+    const errors: Record<string, string> = {}
+    for (const [field, msg] of Object.entries(allErrors)) {
+      if (tabFields.has(field as keyof SystemSettings)) {
+        errors[field] = msg
+      }
+    }
     setLocalErrors(errors)
     if (Object.keys(errors).length > 0) return
 
@@ -268,9 +316,16 @@ function AdminSettingsPage() {
                 </>
               )}
               {Object.keys(localErrors).length > 0 && (
-                <span className="text-xs text-destructive">
-                  {Object.keys(localErrors).length} field error{Object.keys(localErrors).length > 1 ? 's' : ''}
-                </span>
+                <div role="alert" aria-live="polite" aria-atomic="true" className="flex flex-col gap-0.5">
+                  <span className="text-xs font-medium text-destructive">
+                    {Object.keys(localErrors).length} field error{Object.keys(localErrors).length > 1 ? 's' : ''}
+                  </span>
+                  {Object.entries(localErrors).map(([field, msg]) => (
+                    <span key={field} className="text-[10px] text-destructive/80">
+                      {field}: {msg}
+                    </span>
+                  ))}
+                </div>
               )}
             </div>
             <TabsContent value="general">
@@ -300,6 +355,14 @@ function AdminSettingsPage() {
                 clearFieldError={clearFieldError}
               />
             </TabsContent>
+            <TabsContent value="email">
+              <EmailTab
+                settings={current}
+                setSettings={handleTabChange}
+                errors={localErrors}
+                clearFieldError={clearFieldError}
+              />
+            </TabsContent>
             <TabsContent value="cors">
               <CorsTab
                 settings={current}
@@ -316,13 +379,20 @@ function AdminSettingsPage() {
                 clearFieldError={clearFieldError}
               />
             </TabsContent>
-            <TabsContent value="logging">
-              <LoggingTab
+            {/* TODO oncoming feature — RecordingsTab removed */}
+            {/* <TabsContent value="recordings">
+              <RecordingsTab
                 settings={current}
                 setSettings={handleTabChange}
                 errors={localErrors}
                 clearFieldError={clearFieldError}
               />
+            </TabsContent> */}
+            <TabsContent value="logging">
+              <LoggingTab settings={current} setSettings={handleTabChange} />
+            </TabsContent>
+            <TabsContent value="webhooks">
+              <WebhookSection settings={current} />
             </TabsContent>
           </div>
         ) : null}

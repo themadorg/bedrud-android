@@ -29,7 +29,7 @@ export function AdminOverviewPage() {
             Refresh
           </Button>
           <Separator orientation="vertical" className="h-5" />
-          <Button size="sm" onClick={() => navigate({ to: '/dashboard/admin/rooms' })}>
+          <Button size="sm" onClick={() => navigate({ to: '/dashboard/admin/rooms', search: { create: true } })}>
             <Plus className="mr-1.5 h-3.5 w-3.5" />
             Create room
           </Button>

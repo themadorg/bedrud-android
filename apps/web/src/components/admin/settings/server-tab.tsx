@@ -70,6 +70,16 @@ export function ServerTab({
         Changes here require a server restart to take effect.
       </div>
       <div className="grid gap-4 sm:grid-cols-2">
+        <Field
+          label="Server name"
+          hint="Human-readable instance name shown in UI and emails. Saved to database. Leave empty to use config.yaml value."
+        >
+          <TextInput
+            value={settings.serverName}
+            onChange={(v) => setSettings({ ...settings, serverName: v })}
+            placeholder="Bedrud Meet"
+          />
+        </Field>
         <Field label="Port" hint="HTTP listen port. Saved to database. Leave empty to use config.yaml value.">
           <TextInput
             type="number"
@@ -196,22 +206,40 @@ export function ServerTab({
       {settings.serverUseAcme && (
         <ValidateButton label="Check email domain" group="email" payload={{ serverEmail: settings.serverEmail }} />
       )}
-      <Field
-        label="Max participants limit"
-        hint="Hard ceiling for room capacity. 0 = unlimited. Saved to database. Leave empty to use config.yaml value (default: 1000)."
-      >
-        <TextInput
-          type="number"
-          min={0}
-          max={100000}
-          value={String(settings.maxParticipantsLimit ?? 1000)}
-          onChange={(v) => {
-            ce('maxParticipantsLimit')
-            setSettings({ ...settings, maxParticipantsLimit: numOrPrev(v, settings.maxParticipantsLimit ?? 1000) })
-          }}
-          error={errors?.maxParticipantsLimit}
-        />
-      </Field>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <Field
+          label="Max participants limit"
+          hint="Hard ceiling for room capacity. 0 = unlimited. Saved to database. Leave empty to use config.yaml value (default: 1000)."
+        >
+          <TextInput
+            type="number"
+            min={0}
+            max={100000}
+            value={String(settings.maxParticipantsLimit ?? 1000)}
+            onChange={(v) => {
+              ce('maxParticipantsLimit')
+              setSettings({ ...settings, maxParticipantsLimit: numOrPrev(v, settings.maxParticipantsLimit ?? 1000) })
+            }}
+            error={errors?.maxParticipantsLimit}
+          />
+        </Field>
+        <Field
+          label="Max rooms per user"
+          hint="Maximum rooms a single user can create. 0 = unlimited. Saved to database. Leave empty to use config.yaml value (default: 100)."
+        >
+          <TextInput
+            type="number"
+            min={0}
+            max={100000}
+            value={String(settings.maxRoomsPerUser ?? 100)}
+            onChange={(v) => {
+              ce('maxRoomsPerUser')
+              setSettings({ ...settings, maxRoomsPerUser: numOrPrev(v, settings.maxRoomsPerUser ?? 100) })
+            }}
+            error={errors?.maxRoomsPerUser}
+          />
+        </Field>
+      </div>
       {settings.serverEnableTls && <CertStatusIndicator />}
     </Section>
   )

@@ -33,6 +33,7 @@ export interface AdminRoom {
   lastActivityAt?: string | null
   ownerName?: string
   ownerEmail?: string
+  deletedAt?: string | null
 }
 
 interface RowActionsDropdownProps {

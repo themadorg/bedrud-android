@@ -1,8 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
-import { useState } from 'react'
+import { Plus } from 'lucide-react'
+import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
-
 import { DataTableBulkBar } from '#/components/admin/DataTableBulkBar'
 import { DataTableFacetedFilter } from '#/components/admin/DataTableFacetedFilter'
 import { DataTablePagination } from '#/components/admin/DataTablePagination'
@@ -14,8 +14,18 @@ import { Button } from '#/components/ui/button'
 import { api } from '#/lib/api'
 import { getErrorMessage } from '#/lib/errors'
 import { useAdminContext } from '#/routes/dashboard/admin.tsx'
+import { CreateRoomDialog, type RoomSettings } from '@/components/dashboard/CreateRoomDialog'
 
-export const Route = createFileRoute('/dashboard/admin/rooms')({ component: AdminRoomsPage })
+interface RoomsSearch {
+  create?: boolean
+}
+
+export const Route = createFileRoute('/dashboard/admin/rooms')({
+  validateSearch: (search: Record<string, unknown>): RoomsSearch => ({
+    create: search.create === true || search.create === 'true',
+  }),
+  component: AdminRoomsPage,
+})
 
 const VISIBILITY_OPTS = [
   { label: 'Public', value: 'public' },
@@ -25,6 +35,7 @@ const VISIBILITY_OPTS = [
 const STATUS_OPTS = [
   { label: 'Live', value: 'active' },
   { label: 'Suspended', value: 'suspended' },
+  { label: 'Archived', value: 'archived' },
 ]
 
 const CAPACITY_OPTS = [
@@ -46,11 +57,25 @@ function AdminRoomsPage() {
   const { isReadOnly } = useAdminContext()
   const [pendingRoomIds, setPendingRoomIds] = useState<Set<string>>(new Set())
   const [confirmBulkAction, setConfirmBulkAction] = useState<'suspend' | 'close' | null>(null)
+  const [createOpen, setCreateOpen] = useState(false)
+
+  const [statusFilter, setStatusFilter] = useState<string[]>([])
+
+  const { create: autoCreate } = Route.useSearch()
+
+  useEffect(() => {
+    if (autoCreate) setCreateOpen(true)
+  }, [autoCreate])
 
   const { data, isLoading } = useQuery({
-    queryKey: ['admin', 'rooms', 'v2'],
-    queryFn: () =>
-      api.get<{ rooms: AdminRoom[]; total: number; page: number; limit: number }>('/api/admin/rooms?limit=1000'),
+    queryKey: ['admin', 'rooms', 'v2', ...statusFilter],
+    queryFn: () => {
+      let url = '/api/admin/rooms?limit=1000'
+      if (statusFilter.length > 0) {
+        url += '&status=' + statusFilter.join(',')
+      }
+      return api.get<{ rooms: AdminRoom[]; total: number; page: number; limit: number }>(url)
+    },
   })
 
   const table = useTableState({
@@ -97,6 +122,17 @@ function AdminRoomsPage() {
     onError: (err) => toast.error(getErrorMessage(err, 'Failed to delete room')),
   })
 
+  async function handleCreate(data: {
+    name?: string
+    isPublic: boolean
+    maxParticipants: number
+    settings: RoomSettings
+  }) {
+    await api.post('/api/room/create', data)
+    setCreateOpen(false)
+    queryClient.invalidateQueries({ queryKey: ['admin', 'rooms', 'v2'] })
+  }
+
   const updateLimit = useMutation({
     mutationFn: ({ id, max }: { id: string; max: number }) =>
       api.put(`/api/admin/rooms/${id}`, { maxParticipants: max }),
@@ -140,6 +176,10 @@ function AdminRoomsPage() {
           <h1 className="text-sm font-semibold">Rooms</h1>
           <p className="text-xs text-muted-foreground">{data?.total ?? 0} rooms in this instance</p>
         </div>
+        <Button size="sm" onClick={() => setCreateOpen(true)}>
+          <Plus className="mr-1.5 h-3.5 w-3.5" />
+          Create room
+        </Button>
       </div>
 
       {/* Sub-tabs */}
@@ -174,8 +214,11 @@ function AdminRoomsPage() {
         <DataTableFacetedFilter
           label="Status"
           options={STATUS_OPTS}
-          values={table.filters.status ?? []}
-          onChange={(v) => table.setFilter('status', v)}
+          values={statusFilter}
+          onChange={(v) => {
+            table.setFilter('status', v)
+            setStatusFilter(v)
+          }}
         />
         <DataTableFacetedFilter
           label="Capacity"
@@ -190,7 +233,15 @@ function AdminRoomsPage() {
           onChange={(v) => table.setFilter('created', v.length > 0 ? v[0] : null)}
         />
         {table.hasActiveFilters && (
-          <Button variant="ghost" size="sm" onClick={table.resetFilters} className="h-8 text-xs">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              table.resetFilters()
+              setStatusFilter([])
+            }}
+            className="h-8 text-xs"
+          >
             Reset
           </Button>
         )}
@@ -275,6 +326,8 @@ function AdminRoomsPage() {
           </div>
         </div>
       )}
+
+      <CreateRoomDialog open={createOpen} onOpenChange={setCreateOpen} onCreate={handleCreate} isAdmin />
     </div>
   )
 }
