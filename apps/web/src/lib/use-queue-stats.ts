@@ -22,6 +22,11 @@ export interface QueueStats {
   processedPerMin: number
   failedPerMin: number
   failRate: number
+
+  pendingEmail: number
+  failedEmail24h: number
+  lastSendError?: string
+  lastSendErrorAt?: string
 }
 
 export function useQueueStats() {
