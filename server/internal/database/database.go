@@ -129,10 +129,8 @@ func gormLogLevelFromZerolog(level zerolog.Level) logger.LogLevel {
 		return logger.Error
 	case level >= zerolog.WarnLevel:
 		return logger.Warn
-	case level >= zerolog.InfoLevel:
-		return logger.Info
-	default: // debug/trace — show everything
-		return logger.Info
+	default:
+		return logger.Warn
 	}
 }
 

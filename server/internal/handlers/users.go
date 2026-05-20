@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"bedrud/config"
 	"bedrud/internal/auth"
 	"bedrud/internal/database"
 	"bedrud/internal/models"
@@ -24,6 +25,7 @@ type UsersHandler struct {
 	passkeyRepo      *repository.PasskeyRepository
 	prefsRepo        *repository.UserPreferencesRepository
 	cleanupSvc       *services.RoomCleanupService
+	verifEventRepo   *repository.VerificationEventRepository
 	deletionInFlight sync.Map
 }
 
@@ -32,14 +34,15 @@ type UserListResponse struct {
 }
 
 type UserDetails struct {
-	ID        string   `json:"id" example:"123e4567-e89b-12d3-a456-426614174000"`
-	Email     string   `json:"email" example:"user@example.com"`
-	Name      string   `json:"name" example:"John Doe"`
-	Provider  string   `json:"provider" example:"local"`
-	IsActive  bool     `json:"isActive" example:"true"`
-	IsAdmin   bool     `json:"isAdmin" example:"false"`
-	Accesses  []string `json:"accesses" example:"user,admin"`
-	CreatedAt string   `json:"createdAt" example:"2025-01-01 12:00:00"`
+	ID              string   `json:"id" example:"123e4567-e89b-12d3-a456-426614174000"`
+	Email           string   `json:"email" example:"user@example.com"`
+	Name            string   `json:"name" example:"John Doe"`
+	Provider        string   `json:"provider" example:"local"`
+	IsActive        bool     `json:"isActive" example:"true"`
+	IsAdmin         bool     `json:"isAdmin" example:"false"`
+	Accesses        []string `json:"accesses" example:"user,admin"`
+	EmailVerifiedAt *string  `json:"emailVerifiedAt,omitempty" example:"2025-01-01 12:00:00"`
+	CreatedAt       string   `json:"createdAt" example:"2025-01-01 12:00:00"`
 }
 
 type UserStatusUpdateRequest struct {
@@ -56,13 +59,15 @@ func NewUsersHandler(
 	passkeyRepo *repository.PasskeyRepository,
 	prefsRepo *repository.UserPreferencesRepository,
 	cleanupSvc *services.RoomCleanupService,
+	verifEventRepo *repository.VerificationEventRepository,
 ) *UsersHandler {
 	return &UsersHandler{
-		userRepo:    userRepo,
-		roomRepo:    roomRepo,
-		passkeyRepo: passkeyRepo,
-		prefsRepo:   prefsRepo,
-		cleanupSvc:  cleanupSvc,
+		userRepo:       userRepo,
+		roomRepo:       roomRepo,
+		passkeyRepo:    passkeyRepo,
+		prefsRepo:      prefsRepo,
+		cleanupSvc:     cleanupSvc,
+		verifEventRepo: verifEventRepo,
 	}
 }
 
@@ -118,6 +123,20 @@ func (h *UsersHandler) ListUsers(c *fiber.Ctx) error {
 		}
 	}
 
+	// Parse verified filter
+	if v := c.Query("verified"); v != "" {
+		switch v {
+		case "true":
+			t := true
+			p.Verified = &t
+		case "false":
+			t := false
+			p.Verified = &t
+		default:
+			return c.Status(400).JSON(fiber.Map{"error": "Invalid verified filter, use true/false"})
+		}
+	}
+
 	// Parse created
 	p.Created = c.Query("created")
 	if p.Created != "" {
@@ -143,6 +162,11 @@ func (h *UsersHandler) ListUsers(c *fiber.Ctx) error {
 		p.Limit = 50
 	}
 
+	// Clamp page
+	if p.Page <= 0 {
+		p.Page = 1
+	}
+
 	users, total, err := h.userRepo.GetAllUsersFiltered(p)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
@@ -153,15 +177,21 @@ func (h *UsersHandler) ListUsers(c *fiber.Ctx) error {
 	response := make([]UserDetails, 0, len(users))
 	for i := range users {
 		user := &users[i]
+		var eva *string
+		if user.EmailVerifiedAt != nil {
+			s := user.EmailVerifiedAt.Format("2006-01-02 15:04:05")
+			eva = &s
+		}
 		response = append(response, UserDetails{
-			ID:        user.ID,
-			Email:     user.Email,
-			Name:      user.Name,
-			Provider:  user.Provider,
-			IsActive:  user.IsActive,
-			IsAdmin:   containsAccess(user.Accesses, "admin"),
-			Accesses:  user.Accesses,
-			CreatedAt: user.CreatedAt.Format("2006-01-02 15:04:05"),
+			ID:              user.ID,
+			Email:           user.Email,
+			Name:            user.Name,
+			Provider:        user.Provider,
+			IsActive:        user.IsActive,
+			IsAdmin:         containsAccess(user.Accesses, "admin"),
+			Accesses:        user.Accesses,
+			EmailVerifiedAt: eva,
+			CreatedAt:       user.CreatedAt.Format("2006-01-02 15:04:05"),
 		})
 	}
 
@@ -244,6 +274,23 @@ func (h *UsersHandler) UpdateUserAccesses(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{"message": "User accesses updated"})
 }
 
+// UpdateUserStatus activates or deactivates a user account.
+// PUT /api/admin/users/:id/status
+//
+// @Summary Update user status
+// @Description Activate or deactivate a user account. Superadmin access required. Cannot change own status.
+// @Tags admin
+// @Accept json
+// @Produce json
+// @Param id path string true "User ID"
+// @Param request body object true "{isActive: bool, reason?: string}"
+// @Success 200 {object} map[string]string "{message: status updated}"
+// @Failure 400 {object} ErrorResponse "Cannot change own status or invalid input"
+// @Failure 401 {object} ErrorResponse "Unauthorized"
+// @Failure 403 {object} ErrorResponse "Forbidden"
+// @Failure 404 {object} ErrorResponse "User not found"
+// @Failure 500 {object} ErrorResponse "Failed to update status"
+// @Router /admin/users/{id}/status [put]
 func (h *UsersHandler) UpdateUserStatus(c *fiber.Ctx) error {
 	claims, ok := c.Locals("user").(*auth.Claims)
 	if !ok || claims == nil || !containsAccess(claims.Accesses, "superadmin") {
@@ -849,6 +896,21 @@ func (h *UsersHandler) BulkDeleteUsers(c *fiber.Ctx) error {
 	})
 }
 
+// GetUserDetail returns detailed information about a specific user.
+// GET /api/admin/users/:id
+//
+// @Summary Get user detail
+// @Description Get detailed user information including room count and metadata. Superadmin access required.
+// @Tags admin
+// @Accept json
+// @Produce json
+// @Param id path string true "User ID"
+// @Success 200 {object} map[string]interface{} "User details with room count"
+// @Failure 401 {object} ErrorResponse "Unauthorized"
+// @Failure 403 {object} ErrorResponse "Forbidden"
+// @Failure 404 {object} ErrorResponse "User not found"
+// @Failure 500 {object} ErrorResponse "Failed to fetch user"
+// @Router /admin/users/{id} [get]
 func (h *UsersHandler) GetUserDetail(c *fiber.Ctx) error {
 	userID := c.Params("id")
 	user, err := h.userRepo.GetUserByID(userID)
@@ -864,19 +926,140 @@ func (h *UsersHandler) GetUserDetail(c *fiber.Ctx) error {
 		rooms = []models.Room{}
 	}
 
+	var eva *string
+	if user.EmailVerifiedAt != nil {
+		s := user.EmailVerifiedAt.Format("2006-01-02 15:04:05")
+		eva = &s
+	}
+
 	return c.JSON(fiber.Map{
 		"user": UserDetails{
-			ID:        user.ID,
-			Email:     user.Email,
-			Name:      user.Name,
-			Provider:  user.Provider,
-			IsActive:  user.IsActive,
-			IsAdmin:   containsAccess(user.Accesses, "admin"),
-			Accesses:  user.Accesses,
-			CreatedAt: user.CreatedAt.Format("2006-01-02 15:04:05"),
+			ID:              user.ID,
+			Email:           user.Email,
+			Name:            user.Name,
+			Provider:        user.Provider,
+			IsActive:        user.IsActive,
+			IsAdmin:         containsAccess(user.Accesses, "admin"),
+			Accesses:        user.Accesses,
+			EmailVerifiedAt: eva,
+			CreatedAt:       user.CreatedAt.Format("2006-01-02 15:04:05"),
 		},
 		"rooms": rooms,
 	})
+}
+
+// AdminVerifyEmail force-verifies a user's email (bypasses verification token).
+// AdminVerifyEmail force-verifies a user's email.
+// POST /api/admin/users/:id/verify
+//
+// @Summary Admin verify email
+// @Description Force-verify a user's email address. Superadmin access required.
+// @Tags admin
+// @Accept json
+// @Produce json
+// @Param id path string true "User ID"
+// @Success 200 {object} map[string]string "{message: email verified}"
+// @Failure 400 {object} ErrorResponse "Email already verified"
+// @Failure 401 {object} ErrorResponse "Unauthorized"
+// @Failure 403 {object} ErrorResponse "Forbidden"
+// @Failure 404 {object} ErrorResponse "User not found"
+// @Failure 500 {object} ErrorResponse "Failed to verify"
+// @Router /admin/users/{id}/verify [post]
+func (h *UsersHandler) AdminVerifyEmail(c *fiber.Ctx) error {
+	userID := c.Params("id")
+	user, err := h.userRepo.GetUserByID(userID)
+	if err != nil || user == nil {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "User not found"})
+	}
+
+	if user.EmailVerifiedAt != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "User email is already verified"})
+	}
+
+	now := time.Now()
+	user.EmailVerifiedAt = &now
+	if err := h.userRepo.UpdateUser(user); err != nil {
+		log.Error().Err(err).Str("userID", userID).Msg("AdminVerifyEmail: failed to update user")
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to verify email"})
+	}
+
+	// Audit log
+	if h.verifEventRepo != nil {
+		if claims, ok := c.Locals("user").(*auth.Claims); ok && claims != nil {
+			metadata := "admin_id: " + claims.UserID
+			h.verifEventRepo.RecordEvent(userID, user.Email, models.VerificationAdminForce, c.IP(), metadata)
+		}
+	}
+
+	return c.JSON(fiber.Map{"message": "Email verified successfully"})
+}
+
+// AdminResendVerification re-sends the verification email for a user.
+// AdminResendVerification resends the verification email for a user.
+// POST /api/admin/users/:id/verify/resend
+//
+// @Summary Admin resend verification
+// @Description Resend the email verification link for a user. Superadmin access required.
+// @Tags admin
+// @Accept json
+// @Produce json
+// @Param id path string true "User ID"
+// @Success 200 {object} map[string]string "{message: verification email sent}"
+// @Failure 400 {object} ErrorResponse "Email already verified"
+// @Failure 401 {object} ErrorResponse "Unauthorized"
+// @Failure 403 {object} ErrorResponse "Forbidden"
+// @Failure 404 {object} ErrorResponse "User not found"
+// @Failure 500 {object} ErrorResponse "Failed to send"
+// @Router /admin/users/{id}/verify/resend [post]
+func (h *UsersHandler) AdminResendVerification(c *fiber.Ctx) error {
+	userID := c.Params("id")
+	user, err := h.userRepo.GetUserByID(userID)
+	if err != nil || user == nil {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "User not found"})
+	}
+
+	if user.EmailVerifiedAt != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "User email is already verified"})
+	}
+
+	// Build context and enqueue
+	ctx := context.Background()
+	token, err := auth.GenerateVerificationToken(userID, user.Email, config.Get())
+	if err != nil {
+		log.Error().Err(err).Str("userID", userID).Msg("AdminResendVerification: failed to generate token")
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to generate verification token"})
+	}
+
+	frontendURL := strings.TrimRight(config.Get().Auth.FrontendURL, "/")
+	if frontendURL == "" && config.Get().Server.Domain != "" {
+		frontendURL = fmt.Sprintf("https://%s", strings.TrimRight(config.Get().Server.Domain, "/"))
+	}
+	verifyURL := frontendURL + "/auth/verify?token=" + token
+
+	if err := queue.Enqueue(ctx, database.GetDB(), "send_email",
+		queue.SendEmailPayload{
+			To:           user.Email,
+			Subject:      "Verify your Bedrud email (admin resend)",
+			TemplateName: "verify_email",
+			TemplateData: map[string]any{
+				"Name":      user.Name,
+				"VerifyURL": verifyURL,
+			},
+		},
+	); err != nil {
+		log.Error().Err(err).Str("userID", userID).Msg("AdminResendVerification: failed to enqueue email")
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to send verification email"})
+	}
+
+	// Audit log
+	if h.verifEventRepo != nil {
+		if claims, ok := c.Locals("user").(*auth.Claims); ok && claims != nil {
+			metadata := "admin_id: " + claims.UserID
+			h.verifEventRepo.RecordEvent(userID, user.Email, models.VerificationResent, c.IP(), metadata)
+		}
+	}
+
+	return c.JSON(fiber.Map{"message": "Verification email sent"})
 }
 
 // ListRecentSignups returns paginated recent user signups.

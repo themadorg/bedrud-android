@@ -15,6 +15,7 @@ import (
 	"bedrud/internal/testutil"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/google/uuid"
 	"github.com/livekit/protocol/auth"
 	"github.com/livekit/protocol/livekit"
 )
@@ -28,7 +29,7 @@ func TestLiveKitWebhook_InvalidSignature(t *testing.T) {
 	h := NewLiveKitWebhookHandler(&config.LiveKitConfig{
 		APIKey:    whTestAPIKey,
 		APISecret: whTestAPISecret,
-	}, nil, nil)
+	}, nil, nil, nil, nil)
 
 	app := fiber.New()
 	app.Post("/webhook", h.Handle)
@@ -46,7 +47,7 @@ func TestLiveKitWebhook_InvalidSignature(t *testing.T) {
 }
 
 func TestLiveKitWebhook_NotConfigured(t *testing.T) {
-	h := NewLiveKitWebhookHandler(&config.LiveKitConfig{}, nil, nil)
+	h := NewLiveKitWebhookHandler(&config.LiveKitConfig{}, nil, nil, nil, nil)
 
 	app := fiber.New()
 	app.Post("/webhook", h.Handle)
@@ -75,7 +76,7 @@ func TestLiveKitWebhook_ParticipantDisconnected(t *testing.T) {
 	_ = roomRepo.AddParticipant(room.ID, "wh-u2")
 
 	event := &livekit.WebhookEvent{
-		Event: "participant_disconnected",
+		Event: "participant_left",
 		Room:  &livekit.Room{Name: "wh-disco-room"},
 		Participant: &livekit.ParticipantInfo{
 			Identity: "wh-u2",
@@ -86,7 +87,7 @@ func TestLiveKitWebhook_ParticipantDisconnected(t *testing.T) {
 	h := NewLiveKitWebhookHandler(&config.LiveKitConfig{
 		APIKey:    whTestAPIKey,
 		APISecret: whTestAPISecret,
-	}, roomRepo, db)
+	}, roomRepo, nil, nil, db)
 
 	app := fiber.New()
 	app.Post("/webhook", h.Handle)
@@ -130,7 +131,7 @@ func TestLiveKitWebhook_RoomFinished(t *testing.T) {
 	h := NewLiveKitWebhookHandler(&config.LiveKitConfig{
 		APIKey:    whTestAPIKey,
 		APISecret: whTestAPISecret,
-	}, roomRepo, db)
+	}, roomRepo, nil, nil, db)
 
 	app := fiber.New()
 	app.Post("/webhook", h.Handle)
@@ -160,7 +161,7 @@ func TestLiveKitWebhook_RoomFinished(t *testing.T) {
 
 func TestLiveKitWebhook_UnknownRoom(t *testing.T) {
 	event := &livekit.WebhookEvent{
-		Event: "participant_disconnected",
+		Event: "participant_left",
 		Room:  &livekit.Room{Name: "nonexistent-room"},
 		Participant: &livekit.ParticipantInfo{
 			Identity: "some-user",
@@ -170,7 +171,7 @@ func TestLiveKitWebhook_UnknownRoom(t *testing.T) {
 	h := NewLiveKitWebhookHandler(&config.LiveKitConfig{
 		APIKey:    whTestAPIKey,
 		APISecret: whTestAPISecret,
-	}, nil, nil)
+	}, nil, nil, nil, nil)
 
 	req := newWebhookRequest(t, whTestAPIKey, whTestAPISecret, event)
 	app := fiber.New()
@@ -188,7 +189,7 @@ func TestLiveKitWebhook_UnknownRoom(t *testing.T) {
 
 func TestLiveKitWebhook_MissingParticipantInEvent(t *testing.T) {
 	event := &livekit.WebhookEvent{
-		Event: "participant_disconnected",
+		Event: "participant_left",
 		Room:  &livekit.Room{Name: "some-room"},
 		// No Participant
 	}
@@ -196,7 +197,7 @@ func TestLiveKitWebhook_MissingParticipantInEvent(t *testing.T) {
 	h := NewLiveKitWebhookHandler(&config.LiveKitConfig{
 		APIKey:    whTestAPIKey,
 		APISecret: whTestAPISecret,
-	}, nil, nil)
+	}, nil, nil, nil, nil)
 
 	req := newWebhookRequest(t, whTestAPIKey, whTestAPISecret, event)
 	app := fiber.New()
@@ -220,7 +221,7 @@ func TestLiveKitWebhook_MissingRoomInEvent(t *testing.T) {
 	h := NewLiveKitWebhookHandler(&config.LiveKitConfig{
 		APIKey:    whTestAPIKey,
 		APISecret: whTestAPISecret,
-	}, nil, nil)
+	}, nil, nil, nil, nil)
 
 	req := newWebhookRequest(t, whTestAPIKey, whTestAPISecret, event)
 	app := fiber.New()
@@ -243,7 +244,7 @@ func TestLiveKitWebhook_UnhandledEvent(t *testing.T) {
 	h := NewLiveKitWebhookHandler(&config.LiveKitConfig{
 		APIKey:    whTestAPIKey,
 		APISecret: whTestAPISecret,
-	}, nil, nil)
+	}, nil, nil, nil, nil)
 
 	req := newWebhookRequest(t, whTestAPIKey, whTestAPISecret, event)
 	app := fiber.New()
@@ -255,6 +256,179 @@ func TestLiveKitWebhook_UnhandledEvent(t *testing.T) {
 	}
 	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("expected 200, got %d", resp.StatusCode)
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Egress webhook event tests
+// ---------------------------------------------------------------------------
+
+func newEgressEvent(egressID, event string, status livekit.EgressStatus) *livekit.WebhookEvent {
+	return &livekit.WebhookEvent{
+		Event: event,
+		Room:  &livekit.Room{Name: "egress-test-room", Sid: "RM_test"},
+		EgressInfo: &livekit.EgressInfo{
+			EgressId: egressID,
+			RoomName: "egress-test-room",
+			Status:   status,
+			RoomId:   "RM_test",
+			FileResults: []*livekit.FileInfo{{
+				Filename: "https://storage.example.com/recordings/test.mp4",
+				Size:     1024 * 1024,
+				Duration: 2 * 60 * 1e9, // 2 minutes in nanoseconds
+			}},
+		},
+	}
+}
+
+func createEgressRecording(t *testing.T, recordingRepo *repository.RecordingRepository, egressID, roomID string, status models.RecordingStatus) *models.Recording {
+	t.Helper()
+	rec := &models.Recording{
+		ID:            uuid.NewString(),
+		RoomID:        roomID,
+		RoomName:      "egress-test-room",
+		EgressID:      egressID,
+		RecordingType: "composite",
+		Status:        status,
+		CreatedBy:     "mod-user",
+	}
+	if err := recordingRepo.Create(rec); err != nil {
+		t.Fatalf("failed to create recording: %v", err)
+	}
+	return rec
+}
+
+func TestLiveKitWebhook_EgressStarted(t *testing.T) {
+	t.Skip("TODO oncoming feature")
+	db := testutil.SetupTestDB(t)
+	recordingRepo := repository.NewRecordingRepository(db)
+
+	egressID := uuid.NewString()
+	_ = createEgressRecording(t, recordingRepo, egressID, "room-1", models.RecordingPending)
+
+	h := NewLiveKitWebhookHandler(&config.LiveKitConfig{
+		APIKey:    whTestAPIKey,
+		APISecret: whTestAPISecret,
+	}, nil, recordingRepo, nil, db)
+
+	app := fiber.New()
+	app.Post("/webhook", h.Handle)
+
+	event := newEgressEvent(egressID, "egress_started", livekit.EgressStatus_EGRESS_ACTIVE)
+	req := newWebhookRequest(t, whTestAPIKey, whTestAPISecret, event)
+	resp, err := app.Test(req, -1)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("expected 200, got %d", resp.StatusCode)
+	}
+
+	rec, _ := recordingRepo.GetByEgressID(egressID)
+	if rec.Status != models.RecordingStarted {
+		t.Fatalf("expected status 'started', got '%s'", rec.Status)
+	}
+}
+
+func TestLiveKitWebhook_EgressEnded(t *testing.T) {
+	t.Skip("TODO oncoming feature")
+	db := testutil.SetupTestDB(t)
+	recordingRepo := repository.NewRecordingRepository(db)
+
+	egressID := uuid.NewString()
+	_ = createEgressRecording(t, recordingRepo, egressID, "room-1", models.RecordingStarted)
+
+	h := NewLiveKitWebhookHandler(&config.LiveKitConfig{
+		APIKey:    whTestAPIKey,
+		APISecret: whTestAPISecret,
+	}, nil, recordingRepo, nil, db)
+
+	app := fiber.New()
+	app.Post("/webhook", h.Handle)
+
+	event := newEgressEvent(egressID, "egress_ended", livekit.EgressStatus_EGRESS_COMPLETE)
+	req := newWebhookRequest(t, whTestAPIKey, whTestAPISecret, event)
+	resp, err := app.Test(req, -1)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("expected 200, got %d", resp.StatusCode)
+	}
+
+	rec, _ := recordingRepo.GetByEgressID(egressID)
+	if rec.Status != models.RecordingProcessing {
+		t.Fatalf("expected status 'processing', got '%s'", rec.Status)
+	}
+}
+
+func TestLiveKitWebhook_EgressFailed(t *testing.T) {
+	t.Skip("TODO oncoming feature")
+	db := testutil.SetupTestDB(t)
+	recordingRepo := repository.NewRecordingRepository(db)
+
+	egressID := uuid.NewString()
+	_ = createEgressRecording(t, recordingRepo, egressID, "room-1", models.RecordingStarted)
+
+	h := NewLiveKitWebhookHandler(&config.LiveKitConfig{
+		APIKey:    whTestAPIKey,
+		APISecret: whTestAPISecret,
+	}, nil, recordingRepo, nil, db)
+
+	// egress_failed is reported via egress_ended event with EGRESS_FAILED status
+	event := newEgressEvent(egressID, "egress_ended", livekit.EgressStatus_EGRESS_FAILED)
+	event.EgressInfo.Error = "egress failed: test error"
+	req := newWebhookRequest(t, whTestAPIKey, whTestAPISecret, event)
+
+	app := fiber.New()
+	app.Post("/webhook", h.Handle)
+
+	resp, err := app.Test(req, -1)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("expected 200, got %d", resp.StatusCode)
+	}
+
+	rec, _ := recordingRepo.GetByEgressID(egressID)
+	if rec.Status != models.RecordingFailed {
+		t.Fatalf("expected status 'failed', got '%s'", rec.Status)
+	}
+	if rec.Error != "egress failed: test error" {
+		t.Fatalf("expected error 'egress failed: test error', got '%s'", rec.Error)
+	}
+}
+
+func TestLiveKitWebhook_EgressEnded_Duplicate(t *testing.T) {
+	t.Skip("TODO oncoming feature")
+	db := testutil.SetupTestDB(t)
+	recordingRepo := repository.NewRecordingRepository(db)
+
+	egressID := uuid.NewString()
+	_ = createEgressRecording(t, recordingRepo, egressID, "room-1", models.RecordingStarted)
+
+	h := NewLiveKitWebhookHandler(&config.LiveKitConfig{
+		APIKey:    whTestAPIKey,
+		APISecret: whTestAPISecret,
+	}, nil, recordingRepo, nil, db)
+
+	app := fiber.New()
+	app.Post("/webhook", h.Handle)
+
+	event := newEgressEvent(egressID, "egress_ended", livekit.EgressStatus_EGRESS_COMPLETE)
+	req := newWebhookRequest(t, whTestAPIKey, whTestAPISecret, event)
+	resp, err := app.Test(req, -1)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("expected 200, got %d", resp.StatusCode)
+	}
+
+	rec, _ := recordingRepo.GetByEgressID(egressID)
+	if rec.Status != models.RecordingProcessing {
+		t.Fatalf("expected status 'processing' (unchanged), got '%s'", rec.Status)
 	}
 }
 

@@ -170,7 +170,7 @@ func DeleteUser(configPath, email string) error {
 			s3Deleter = storage.NewS3Deleter(cfg.Chat.Uploads.S3)
 		}
 		uploadTracker := storage.NewChatUploadTracker(database.GetDB(), uploadDir, s3Deleter)
-		cleanupSvc := services.NewRoomCleanupService(roomRepo, client, cfg.LiveKit.APIKey, cfg.LiveKit.APISecret, uploadTracker)
+		cleanupSvc := services.NewRoomCleanupService(roomRepo, nil, client, nil, cfg.LiveKit.APIKey, cfg.LiveKit.APISecret, uploadTracker)
 
 		if err := cleanupSvc.DeleteUserRooms(context.Background(), rooms, user.ID); err != nil {
 			fmt.Printf("⚠ Room cleanup had errors (proceeding with user deletion): %v\n", err)
