@@ -256,10 +256,12 @@ func (r *UserRepository) ActivateUser(userID string) error {
 }
 
 func (r *UserRepository) UpdatePassword(userID, hashedPassword string) error {
+	now := time.Now()
 	result := r.db.Model(&models.User{}).Where("id = ?", userID).Updates(map[string]any{
-		"password":      hashedPassword,
-		"refresh_token": "",
-		"updated_at":    time.Now(),
+		"password":          hashedPassword,
+		"refresh_token":     "",
+		"password_changed_at": now,
+		"updated_at":        now,
 	})
 	if result.Error != nil {
 		log.Error().Err(result.Error).Str("userID", userID).Msg("Failed to update password")
@@ -323,6 +325,26 @@ func (r *UserRepository) DeleteUser(userID string) error {
 	})
 }
 
+// DeleteUnverifiedUsers hard-deletes local/passkey users who registered but never verified their email,
+// older than the specified cutoff. Uses existing DeleteUser cascade for related records.
+func (r *UserRepository) DeleteUnverifiedUsers(cutoff time.Time) (int64, error) {
+	var users []models.User
+	if err := r.db.Where("email_verified_at IS NULL AND provider IN ? AND updated_at < ?",
+		[]string{"local", "passkey"}, cutoff).
+		Find(&users).Error; err != nil {
+		return 0, err
+	}
+
+	count := int64(len(users))
+	for _, u := range users {
+		if err := r.DeleteUser(u.ID); err != nil {
+			log.Warn().Err(err).Str("userID", u.ID).Msg("Failed to delete unverified user")
+			count--
+		}
+	}
+	return count, nil
+}
+
 // DeleteGuestUsers removes guest users older than the specified cutoff who have no active room participations.
 func (r *UserRepository) DeleteGuestUsers(cutoff time.Time) (int64, error) {
 	subQuery := r.db.Table("room_participants").
@@ -348,6 +370,7 @@ type UserFilterParams struct {
 	Provider []string // "local", "google", "github", "guest"
 	Role     []string // "superadmin", "admin", "moderator", "user", "guest"
 	Status   []string // "active", "banned"
+	Verified *bool    // true = only verified, false = only unverified, nil = all
 	Created  string   // "today", "7d", "30d"
 	Sort     string   // "name", "email", "provider", "createdAt"
 	Order    string   // "asc", "desc"
@@ -413,6 +436,15 @@ func (r *UserRepository) GetAllUsersFiltered(p UserFilterParams) ([]models.User,
 			query = query.Where("is_active = ?", true)
 		} else if hasBanned && !hasActive {
 			query = query.Where("is_active = ?", false)
+		}
+	}
+
+	// Verified filter
+	if p.Verified != nil {
+		if *p.Verified {
+			query = query.Where("email_verified_at IS NOT NULL")
+		} else {
+			query = query.Where("email_verified_at IS NULL")
 		}
 	}
 
