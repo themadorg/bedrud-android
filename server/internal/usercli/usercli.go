@@ -83,7 +83,7 @@ func roleAccessSlice(role string) []string {
 	}
 }
 
-func CreateUser(configPath, email, password, name string) error {
+func CreateUser(configPath, email, password, name string, admin bool) error {
 	cfg, err := config.Load(configPath)
 	if err != nil {
 		return fmt.Errorf("failed to load config: %w", err)
@@ -112,13 +112,17 @@ func CreateUser(configPath, email, password, name string) error {
 		return nil
 	}
 
+	accesses := models.StringArray{"user"}
+	if admin {
+		accesses = roleAccessSlice("superadmin")
+	}
 	user := &models.User{
 		ID:        uuid.New().String(),
 		Email:     email,
 		Password:  string(hashedPassword),
 		Name:      name,
 		Provider:  "local",
-		Accesses:  models.StringArray{"user"},
+		Accesses:  accesses,
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
 	}
