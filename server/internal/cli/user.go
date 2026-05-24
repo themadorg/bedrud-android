@@ -72,7 +72,7 @@ func newUserPromoteCmd() *cobra.Command {
 			if email == "" {
 				return fmt.Errorf("--email is required")
 			}
-			return usercli.PromoteUser(resolveConfigPath(defaultEtcConfig), email)
+			return usercli.PromoteUser(resolveConfigPath(defaultEtcConfig), email, "superadmin")
 		},
 	}
 	cmd.Flags().StringVar(&email, "email", "", "User email")
@@ -89,7 +89,7 @@ func newUserDemoteCmd() *cobra.Command {
 			if email == "" {
 				return fmt.Errorf("--email is required")
 			}
-			return usercli.DemoteUser(resolveConfigPath(defaultEtcConfig), email)
+			return usercli.DemoteUser(resolveConfigPath(defaultEtcConfig), email, "superadmin")
 		},
 	}
 	cmd.Flags().StringVar(&email, "email", "", "User email")
