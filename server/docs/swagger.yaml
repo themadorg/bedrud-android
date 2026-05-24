@@ -529,6 +529,7 @@ definitions:
       isPersistent:
         type: boolean
       recordingsAllowed:
+        description: TODO oncoming feature
         type: boolean
       requireApproval:
         type: boolean
@@ -677,7 +678,9 @@ definitions:
         description: 0 = unlimited
         type: integer
       recordingsEnabled:
-        description: Recordings
+        description: |-
+          TODO oncoming feature: recordings
+          RecordingsEnabled, RecordingMaxDurationMins, RecordingMaxFileSizeMB
         type: boolean
       registrationEnabled:
         type: boolean
@@ -3210,22 +3213,42 @@ paths:
       tags:
       - system
   /auth/verify:
-    get:
+    post:
+      consumes:
+      - application/json
       description: Complete email verification with token from verification link.
-        Redirects to frontend on success or failure.
+        Returns tokens so frontend can auto-login.
       parameters:
-      - description: Verification token from email
-        in: query
-        name: token
+      - description: Verification token
+        in: body
+        name: request
         required: true
-        type: string
+        schema:
+          type: object
       produces:
       - application/json
       responses:
-        "302":
-          description: Redirects to /auth/verify?status=... on failure
+        "200":
+          description: OK
           schema:
-            type: string
+            $ref: '#/definitions/auth.TokenResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/auth.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/auth.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/auth.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            additionalProperties: true
+            type: object
       summary: Verify email
       tags:
       - auth
@@ -4628,6 +4651,54 @@ paths:
           schema:
             $ref: '#/definitions/handlers.ErrorResponse'
       summary: Get recording
+      tags:
+      - rooms
+  /rooms/{id}/recordings/{rid}/wait:
+    get:
+      consumes:
+      - application/json
+      description: Long-poll endpoint. Blocks up to 15s, returns when egress is confirmed
+        started or failed.
+      parameters:
+      - description: Room ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Recording ID
+        in: path
+        name: rid
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: '{status: active}'
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid room ID
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "401":
+          description: Not authenticated
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "404":
+          description: Recording not found
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "408":
+          description: Timeout waiting for egress
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+        "500":
+          description: Failed to check recording
+          schema:
+            $ref: '#/definitions/handlers.ErrorResponse'
+      summary: Wait for recording readiness
       tags:
       - rooms
 securityDefinitions:

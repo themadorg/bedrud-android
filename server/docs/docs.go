@@ -3568,8 +3568,11 @@ const docTemplate = `{
             }
         },
         "/auth/verify": {
-            "get": {
-                "description": "Complete email verification with token from verification link. Redirects to frontend on success or failure.",
+            "post": {
+                "description": "Complete email verification with token from verification link. Returns tokens so frontend can auto-login.",
+                "consumes": [
+                    "application/json"
+                ],
                 "produces": [
                     "application/json"
                 ],
@@ -3579,18 +3582,45 @@ const docTemplate = `{
                 "summary": "Verify email",
                 "parameters": [
                     {
-                        "type": "string",
-                        "description": "Verification token from email",
-                        "name": "token",
-                        "in": "query",
-                        "required": true
+                        "description": "Verification token",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object"
+                        }
                     }
                 ],
                 "responses": {
-                    "302": {
-                        "description": "Redirects to /auth/verify?status=... on failure",
+                    "200": {
+                        "description": "OK",
                         "schema": {
-                            "type": "string"
+                            "$ref": "#/definitions/auth.TokenResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/auth.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/auth.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/auth.ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
                         }
                     }
                 }
@@ -5757,6 +5787,76 @@ const docTemplate = `{
                     }
                 }
             }
+        },
+        "/rooms/{id}/recordings/{rid}/wait": {
+            "get": {
+                "description": "Long-poll endpoint. Blocks up to 15s, returns when egress is confirmed started or failed.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "rooms"
+                ],
+                "summary": "Wait for recording readiness",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Room ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Recording ID",
+                        "name": "rid",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "{status: active}",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid room ID",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Not authenticated",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Recording not found",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "408": {
+                        "description": "Timeout waiting for egress",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Failed to check recording",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ErrorResponse"
+                        }
+                    }
+                }
+            }
         }
     },
     "definitions": {
@@ -6558,6 +6658,7 @@ const docTemplate = `{
                     "type": "boolean"
                 },
                 "recordingsAllowed": {
+                    "description": "TODO oncoming feature",
                     "type": "boolean"
                 },
                 "requireApproval": {
@@ -6772,7 +6873,7 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "recordingsEnabled": {
-                    "description": "Recordings",
+                    "description": "TODO oncoming feature: recordings\nRecordingsEnabled, RecordingMaxDurationMins, RecordingMaxFileSizeMB",
                     "type": "boolean"
                 },
                 "registrationEnabled": {
