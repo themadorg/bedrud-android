@@ -143,7 +143,7 @@
   <string name="settings_section_about">About</string>
   <string name="settings_label_version">Version</string>
   <string name="settings_label_build">Build</string>
-  <string name="call_phone_account_label">Bedrud</string>
+  <string name="call_phone_account_label" translatable="false">Bedrud</string>
   <string name="call_channel_name">Active Calls</string>
   <string name="call_channel_description">Ongoing call notifications</string>
   <string name="call_action_mute">Mute</string>
