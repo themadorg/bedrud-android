@@ -178,7 +178,7 @@ Astro 6 SSG → `site/` (GitHub Pages). Landing, docs, blog. 10-locale i18n.
 
 **CI order:** `bun run check` → `bun run typecheck:astro` → `bun run build`.
 
-**Deploy:** GitHub Pages via `withastro/action`. Triggers after CI success on main. `deploy-site.yml`.
+**Deploy:** GitHub Pages via `withastro/action`. Triggers after CI success on master. `deploy-site.yml`.
 
 ---
 
