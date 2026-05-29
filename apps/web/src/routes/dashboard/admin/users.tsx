@@ -8,7 +8,6 @@ import { DataTableFacetedFilter } from '#/components/admin/DataTableFacetedFilte
 import { DataTablePagination } from '#/components/admin/DataTablePagination'
 import { DataTableSearch } from '#/components/admin/DataTableSearch'
 import { DataTableToolbar } from '#/components/admin/DataTableToolbar'
-import { type AdminUser, UserTable } from '#/components/admin/UserTable'
 import { useTableState } from '#/components/admin/useTableState'
 import { Button } from '#/components/ui/button'
 import { api } from '#/lib/api'
@@ -240,18 +239,25 @@ function AdminUsersPage() {
           </Button>
         </div>
       ) : (
-        <UserTable
-          users={table.paginated}
-          isLoading={isLoading}
-          table={table}
-          currentUserId={currentUserId}
-          onToggleStatus={(id, active) => toggleStatus.mutate({ id, active })}
-          statusPending={toggleStatus.isPending}
-          onRoleChange={isReadOnly ? undefined : (id, accesses) => changeRole.mutate({ id, accesses })}
-          rolePending={changeRole.isPending}
-          onDeleteUser={isReadOnly ? undefined : (id) => deleteUser.mutate(id)}
-          isReadOnly={isReadOnly}
-        />
+        <div className="border overflow-hidden">
+          {isLoading ? (
+            <div className="p-8 text-center text-sm text-muted-foreground">Loading users…</div>
+          ) : table.paginated.length === 0 ? (
+            <div className="p-8 text-center text-sm text-muted-foreground">No users found.</div>
+          ) : (
+            <div className="divide-y">
+              {table.paginated.map((user) => (
+                <div key={user.id} className="flex items-center justify-between px-4 py-3 text-sm">
+                  <div>
+                    <div className="font-medium">{user.name}</div>
+                    <div className="text-xs text-muted-foreground">{user.email}</div>
+                  </div>
+                  <div className="text-xs text-muted-foreground font-mono">{user.id.slice(0, 8)}…</div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       )}
 
       {/* Pagination */}

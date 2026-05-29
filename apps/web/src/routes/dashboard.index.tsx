@@ -8,6 +8,7 @@ import { api } from '#/lib/api'
 import { type RecentRoom, useRecentRoomsStore } from '#/lib/recent-rooms.store'
 import { useUserStore } from '#/lib/user.store'
 import { CreateRoomDialog } from '@/components/dashboard/CreateRoomDialog'
+import { RoomCard } from '@/components/dashboard/RoomCard'
 import { RoomSettingsDialog } from '@/components/dashboard/RoomSettingsDialog'
 
 import { Badge } from '@/components/ui/badge'
@@ -471,15 +472,27 @@ function DashboardPage() {
               <SkeletonRows />
             </div>
           ) : filtered.length > 0 ? (
-            <div className="divide-y divide-border/50 p-1">
+            <div className="grid grid-cols-1 gap-4 p-1 md:grid-cols-2 lg:grid-cols-3">
               {filtered.map((room) => (
-                <RoomRow
+                <RoomCard
                   key={room.id}
-                  room={room}
+                  room={{
+                    id: room.id,
+                    name: room.name,
+                    isPublic: room.isPublic,
+                    maxParticipants: room.maxParticipants,
+                    isActive: room.isActive,
+                    settings: {
+                      allowChat: true,
+                      allowVideo: true,
+                      allowAudio: true,
+                      requireApproval: false,
+                      e2ee: false,
+                    },
+                  }}
                   onJoin={() => handleJoin(room.name)}
                   onDelete={() => deleteRoom.mutate(room.id)}
                   onSettings={() => setSettingsRoom(room)}
-                  isDeleting={deleteRoom.isPending}
                 />
               ))}
             </div>

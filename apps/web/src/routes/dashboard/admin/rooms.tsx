@@ -8,7 +8,6 @@ import { DataTableFacetedFilter } from '#/components/admin/DataTableFacetedFilte
 import { DataTablePagination } from '#/components/admin/DataTablePagination'
 import { DataTableSearch } from '#/components/admin/DataTableSearch'
 import { DataTableToolbar } from '#/components/admin/DataTableToolbar'
-import { type AdminRoom, RoomTable } from '#/components/admin/RoomTable'
 import { useTableState } from '#/components/admin/useTableState'
 import { Button } from '#/components/ui/button'
 import { api } from '#/lib/api'
@@ -279,22 +278,28 @@ function AdminRoomsPage() {
           </Button>
         </div>
       ) : (
-        <RoomTable
-          rooms={table.paginated}
-          isLoading={isLoading}
-          table={table}
-          onSuspend={(id) => suspendRoom.mutate(id)}
-          onUnsuspend={(id) => unsuspendRoom.mutate(id)}
-          onClose={(id) => closeRoom.mutate(id)}
-          onDelete={(id) => deleteRoom.mutate(id)}
-          onUpdateLimit={(id, max) => updateLimit.mutate({ id, max })}
-          onRoomClick={(id) => navigate({ to: '/dashboard/admin/rooms/$roomId', params: { roomId: id } })}
-          isReadOnly={isReadOnly}
-          pendingRoomIds={pendingRoomIds}
-          suspendPending={suspendRoom.isPending}
-          deletePending={deleteRoom.isPending}
-          closePending={closeRoom.isPending}
-        />
+        <div className="border overflow-hidden">
+          {isLoading ? (
+            <div className="p-8 text-center text-sm text-muted-foreground">Loading rooms…</div>
+          ) : table.paginated.length === 0 ? (
+            <div className="p-8 text-center text-sm text-muted-foreground">No rooms found.</div>
+          ) : (
+            <div className="divide-y">
+              {table.paginated.map((room) => (
+                <div
+                  key={room.id}
+                  className="flex items-center justify-between px-4 py-3 text-sm cursor-pointer hover:bg-muted"
+                  onClick={() => navigate({ to: '/dashboard/admin/rooms/$roomId', params: { roomId: room.id } })}
+                >
+                  <div className="font-mono">{room.name}</div>
+                  <div className="text-xs text-muted-foreground">
+                    {room.isActive ? 'Active' : 'Inactive'} · {room.maxParticipants} max
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       )}
 
       {/* Pagination */}

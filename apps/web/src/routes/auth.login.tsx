@@ -1,12 +1,12 @@
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
-import { Eye, EyeOff, Fingerprint, Loader2, MailCheck } from 'lucide-react'
+import { Eye, EyeOff, Loader2, MailCheck } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { ApiError, api } from '#/lib/api'
 import { useAuthStore } from '#/lib/auth.store'
 import { getPublicSettings, type PublicSettings } from '#/lib/use-public-settings'
 import { useUserStore } from '#/lib/user.store'
-import { base64ToBuffer, bufferToBase64 } from '#/lib/webauthn'
 import { OAuthButtons } from '@/components/auth/OAuthButtons'
+import { PasskeyButton } from '@/components/auth/PasskeyButton'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -33,7 +33,6 @@ function LoginPage() {
 
   const [showPassword, setShowPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
-  const [isPasskeyLoading, setIsPasskeyLoading] = useState(false)
   const [fieldErrors, setFieldErrors] = useState<{ email?: string; password?: string }>({})
   const [error, setError] = useState('')
   const [settings, setSettings] = useState<PublicSettings | null>(null)
@@ -116,54 +115,6 @@ function LoginPage() {
       setError(err instanceof Error ? err.message : 'Login failed')
     } finally {
       setIsLoading(false)
-    }
-  }
-
-  async function handlePasskey() {
-    setIsPasskeyLoading(true)
-    setError('')
-    try {
-      const opts = await api.post<Record<string, unknown>>('/api/auth/passkey/login/begin')
-      const cred = (await navigator.credentials.get({
-        publicKey: {
-          challenge: base64ToBuffer(opts['challenge'] as string),
-          timeout: opts['timeout'] as number | undefined,
-          rpId: opts['rpId'] as string | undefined,
-          userVerification: opts['userVerification'] as UserVerificationRequirement | undefined,
-          allowCredentials: (opts['allowCredentials'] as Array<{ id: string; type: 'public-key' }> | undefined)?.map(
-            (c) => ({ id: base64ToBuffer(c.id), type: c.type }),
-          ),
-        },
-      })) as PublicKeyCredential
-      const assertion = cred.response as AuthenticatorAssertionResponse
-      const res = await api.post<AuthResponse>('/api/auth/passkey/login/finish', {
-        credentialId: bufferToBase64(cred.rawId),
-        clientDataJSON: bufferToBase64(assertion.clientDataJSON),
-        authenticatorData: bufferToBase64(assertion.authenticatorData),
-        signature: bufferToBase64(assertion.signature),
-      })
-      handleSuccess(res)
-    } catch (err) {
-      if (err instanceof ApiError && err.parsedBody?.requiresVerification) {
-        setUnverifiedEmail(err.parsedBody.email as string)
-        startCooldown(120)
-        return
-      }
-      // DOMException from user cancelling WebAuthn dialog
-      if (err instanceof DOMException) {
-        const friendly =
-          err.name === 'NotAllowedError'
-            ? 'Passkey cancelled or timeout'
-            : err.name === 'AbortError'
-              ? 'Passkey request was aborted'
-              : 'Passkey authentication failed'
-        setError(friendly)
-        return
-      }
-      const msg = err instanceof Error ? err.message : 'Passkey authentication failed'
-      setError(msg)
-    } finally {
-      setIsPasskeyLoading(false)
     }
   }
 
@@ -326,12 +277,7 @@ function LoginPage() {
       )}
 
       {/* Passkey */}
-      {showPasskey && (
-        <Button variant="outline" className="w-full gap-2" onClick={handlePasskey} disabled={isPasskeyLoading}>
-          {isPasskeyLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Fingerprint className="h-4 w-4" />}
-          {isPasskeyLoading ? 'Authenticating…' : 'Sign in with Passkey'}
-        </Button>
-      )}
+      {showPasskey && <PasskeyButton onSuccess={handleSuccess} />}
 
       {/* OAuth */}
       <OAuthButtons availableProviders={oauthProviders} />
