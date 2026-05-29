@@ -520,7 +520,7 @@ export default {
       "backend/livekit": "LiveKit 集成",
       "backend/deployment": "部署",
       "backend/advanced": "高级主题",
-      "api/api-refrence": "API 参考手册",
+      "api/api-reference": "API 参考手册",
       "api/admin": "管理 API",
       "api/system": "系统 API",
       "api/health": "健康 API",

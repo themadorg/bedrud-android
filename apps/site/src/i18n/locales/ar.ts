@@ -493,7 +493,7 @@ export default {
       "backend/livekit": "تكامل LiveKit",
       "backend/deployment": "النشر",
       "backend/advanced": "مواضيع متقدمة",
-      "api/api-refrence": "مرجع API",
+      "api/api-reference": "مرجع API",
       "api/admin": "API المشرف",
       "api/system": "API النظام",
       "api/health": "API الحالة والتشغيل",

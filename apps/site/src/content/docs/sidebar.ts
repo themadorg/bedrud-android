@@ -174,7 +174,7 @@ export const sections: SidebarSection[] = [
     titleKey: "api",
     items: [
       {
-        slug: "api/api-refrence",
+        slug: "api/api-reference",
         title: "API Reference",
         description: "Interactive OpenAPI/Swagger API reference",
         order: 23,

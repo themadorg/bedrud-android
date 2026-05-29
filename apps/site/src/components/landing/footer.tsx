@@ -133,7 +133,7 @@ export function Footer({ lang }: { lang: Locale }) {
               </li>
               <li>
                 <a
-                  href={`/${lang}/docs/api/api-refrence`}
+                  href={`/${lang}/docs/api/api-reference`}
                   className={linkClass}
                 >
                   {t(lang, "footer.api")}

@@ -492,7 +492,7 @@ export default {
       "backend/livekit": "LiveKit統合",
       "backend/deployment": "デプロイ",
       "backend/advanced": "高度なトピック",
-      "api/api-refrence": "APIリファレンス",
+      "api/api-reference": "APIリファレンス",
       "api/admin": "管理API",
       "api/system": "システムAPI",
       "api/health": "ヘルスチェックAPI",

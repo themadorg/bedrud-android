@@ -526,7 +526,7 @@ export default {
       "backend/livekit": "LiveKit Entegrasyonu",
       "backend/deployment": "Dağıtım",
       "backend/advanced": "İleri Düzey Konular",
-      "api/api-refrence": "API Referansı",
+      "api/api-reference": "API Referansı",
       "api/admin": "Yönetici API'si",
       "api/system": "Sistem API'si",
       "api/health": "Sağlık API'si",

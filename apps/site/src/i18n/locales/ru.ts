@@ -675,7 +675,7 @@ export default {
       "backend/livekit": "Интеграция LiveKit",
       "backend/deployment": "Развертывание",
       "backend/advanced": "Продвинутые темы",
-      "api/api-refrence": "Справочник API",
+      "api/api-reference": "Справочник API",
       "api/admin": "API администратора",
       "api/system": "Системный API",
       "api/health": "API работоспособности",

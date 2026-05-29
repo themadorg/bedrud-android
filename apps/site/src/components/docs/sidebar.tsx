@@ -74,39 +74,39 @@ function Sidebar({ lang, currentSlug = "" }: SidebarProps) {
 
   const getHref = (slug: string) => {
     const isReferencePage =
-      currentSlug === "api/api-refrence" || currentSlug === "api-docs";
+      currentSlug === "api/api-reference" || currentSlug === "api-docs";
     if (slug === "api/auth")
       return isReferencePage
         ? "#tag/auth"
-        : `/${lang}/docs/api/api-refrence#tag/auth`;
+        : `/${lang}/docs/api/api-reference#tag/auth`;
     if (slug === "api/rooms")
       return isReferencePage
         ? "#tag/rooms"
-        : `/${lang}/docs/api/api-refrence#tag/rooms`;
+        : `/${lang}/docs/api/api-reference#tag/rooms`;
     if (slug === "api/admin")
       return isReferencePage
         ? "#tag/admin"
-        : `/${lang}/docs/api/api-refrence#tag/admin`;
+        : `/${lang}/docs/api/api-reference#tag/admin`;
     if (slug === "api/system")
       return isReferencePage
         ? "#tag/system"
-        : `/${lang}/docs/api/api-refrence#tag/system`;
+        : `/${lang}/docs/api/api-reference#tag/system`;
     if (slug === "api/health")
       return isReferencePage
         ? "#tag/health"
-        : `/${lang}/docs/api/api-refrence#tag/health`;
+        : `/${lang}/docs/api/api-reference#tag/health`;
     if (slug === "api/models")
       return isReferencePage
         ? "#models"
-        : `/${lang}/docs/api/api-refrence#models`;
-    if (slug === "api/api-refrence" || slug === "api/reference")
-      return isReferencePage ? "#" : `/${lang}/docs/api/api-refrence`;
+        : `/${lang}/docs/api/api-reference#models`;
+    if (slug === "api/api-reference" || slug === "api/reference")
+      return isReferencePage ? "#" : `/${lang}/docs/api/api-reference`;
     return `/${lang}/docs/${slug}`;
   };
 
   const getIsActive = (slug: string) => {
-    if (currentSlug === "api/api-refrence" || currentSlug === "api-docs") {
-      if (slug === "api/api-refrence" || slug === "api/reference") {
+    if (currentSlug === "api/api-reference" || currentSlug === "api-docs") {
+      if (slug === "api/api-reference" || slug === "api/reference") {
         return (
           !currentHash ||
           (!currentHash.startsWith("#tag/auth") &&

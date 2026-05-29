@@ -716,7 +716,7 @@ export default {
       "backend/livekit": "LiveKit Integration",
       "backend/deployment": "Deployment",
       "backend/advanced": "Advanced Topics",
-      "api/api-refrence": "API Reference",
+      "api/api-reference": "API Reference",
       "api/admin": "Admin API",
       "api/system": "System API",
       "api/health": "Health API",

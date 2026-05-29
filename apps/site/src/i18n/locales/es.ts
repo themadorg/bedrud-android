@@ -493,7 +493,7 @@ export default {
       "backend/livekit": "Integración LiveKit",
       "backend/deployment": "Despliegue",
       "backend/advanced": "Temas avanzados",
-      "api/api-refrence": "Referencia de API",
+      "api/api-reference": "Referencia de API",
       "api/admin": "API de administración",
       "api/system": "API del sistema",
       "api/health": "API de salud",

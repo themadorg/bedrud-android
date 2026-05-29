@@ -524,7 +524,7 @@ export default {
       "backend/livekit": "LiveKit-Integration",
       "backend/deployment": "Deployment",
       "backend/advanced": "Erweiterte Themen",
-      "api/api-refrence": "API-Referenz",
+      "api/api-reference": "API-Referenz",
       "api/admin": "Admin-API",
       "api/system": "System-API",
       "api/health": "Gesundheits-API",

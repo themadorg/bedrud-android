@@ -730,7 +730,7 @@ export default {
       "backend/livekit": "یکپارچه‌سازی LiveKit",
       "backend/deployment": "دیپلوی",
       "backend/advanced": "موضوعات پیشرفته",
-      "api/api-refrence": "رفرنس API",
+      "api/api-reference": "رفرنس API",
       "api/admin": "API مدیریت",
       "api/system": "API سیستم",
       "api/health": "API سلامت سیستم",
