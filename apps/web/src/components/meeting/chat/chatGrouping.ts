@@ -95,6 +95,8 @@ export function groupMessages(chatMessages: ChatMessage[], systemMessages: Syste
   const result: DisplayItem[] = []
   let currentCluster: ClusterGroup | null = null
   let lastDateLabel: string | null = null
+  let separatorCounter = 0
+  let systemCounter = 0
 
   for (const item of raw) {
     const dateLabel = formatDateLabel(item.ts)
@@ -102,14 +104,14 @@ export function groupMessages(chatMessages: ChatMessage[], systemMessages: Syste
     if (dateLabel !== lastDateLabel) {
       lastDateLabel = dateLabel
       currentCluster = null
-      result.push({ kind: 'date-separator', id: `sep-${dateLabel}`, label: dateLabel })
+      result.push({ kind: 'date-separator', id: `sep-${separatorCounter++}`, label: dateLabel })
     }
 
     if (item.kind === 'system') {
       currentCluster = null
       result.push({
         kind: 'system',
-        id: `sys-${item.msg.event}-${item.msg.ts}-${item.msg.target ?? ''}`,
+        id: `sys-${systemCounter++}`,
         msg: item.msg,
       })
       continue
