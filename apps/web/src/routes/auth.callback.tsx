@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { Loader2 } from 'lucide-react'
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { api } from '#/lib/api'
 import { useAuthStore } from '#/lib/auth.store'
 import type { User } from '#/lib/user.store'
@@ -24,6 +24,7 @@ function OAuthCallback() {
   const clearTokens = useAuthStore((s) => s.clear)
   const setUser = useUserStore((s) => s.setUser)
   const cancelledRef = useRef(false)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     cancelledRef.current = false
@@ -51,14 +52,27 @@ function OAuthCallback() {
       })
       .catch(() => {
         if (cancelledRef.current) return
-        // Cookie missing, expired, or rejected — redirect to login
+        // Cookie missing, expired, or rejected — show error then redirect
         clearTokens()
-        navigate({ to: '/auth' })
+        setError('OAuth sign-in failed. Redirecting to login…')
+        setTimeout(() => {
+          if (!cancelledRef.current) {
+            navigate({ to: '/auth' })
+          }
+        }, 1500)
       })
     return () => {
       cancelledRef.current = true
     }
   }, [navigate, clearTokens, setUser])
+
+  if (error) {
+    return (
+      <div className="flex min-h-screen items-center justify-center gap-3">
+        <p className="text-destructive text-sm">{error}</p>
+      </div>
+    )
+  }
 
   return (
     <div className="flex min-h-screen items-center justify-center gap-3">
