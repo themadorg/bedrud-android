@@ -139,6 +139,7 @@ function RoomDetailPage() {
       queryClient.invalidateQueries({ queryKey: ['admin', 'room', roomId, 'participants'] })
       setConfirmKick(null)
     },
+    onError: (err) => toast.error(getErrorMessage(err, 'Failed to kick participant')),
   })
 
   const suspendRoom = useMutation({
@@ -177,11 +178,13 @@ function RoomDetailPage() {
       })
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin', 'room', roomId, 'participants'] }),
+    onError: (err) => toast.error(getErrorMessage(err, 'Failed to update room persistence')),
   })
 
   const mute = useMutation({
     mutationFn: (identity: string) => api.post(`/api/admin/rooms/${roomId}/participants/${identity}/mute`, {}),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin', 'room', roomId, 'participants'] }),
+    onError: (err) => toast.error(getErrorMessage(err, 'Failed to mute participant')),
   })
 
   // ── Recordings section ──────────────────────────────────────────────────────

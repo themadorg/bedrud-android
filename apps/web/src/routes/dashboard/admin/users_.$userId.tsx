@@ -280,8 +280,8 @@ function UserDetailPage() {
       toast.success('All sessions revoked')
       setForceLogoutDialogOpen(false)
     },
-    onError: () => {
-      toast.error('Failed to revoke sessions')
+    onError: (err) => {
+      toast.error(getErrorMessage(err, 'Failed to revoke sessions'))
     },
   })
 

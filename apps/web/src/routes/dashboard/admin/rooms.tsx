@@ -128,9 +128,13 @@ function AdminRoomsPage() {
     maxParticipants: number
     settings: RoomSettings
   }) {
-    await api.post('/api/room/create', data)
-    setCreateOpen(false)
-    queryClient.invalidateQueries({ queryKey: ['admin', 'rooms', 'v2'] })
+    try {
+      await api.post('/api/room/create', data)
+      setCreateOpen(false)
+      queryClient.invalidateQueries({ queryKey: ['admin', 'rooms', 'v2'] })
+    } catch (err) {
+      toast.error(getErrorMessage(err, 'Failed to create room'))
+    }
   }
 
   const updateLimit = useMutation({
