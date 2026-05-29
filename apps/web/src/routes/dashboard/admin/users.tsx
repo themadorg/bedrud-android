@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { useState } from 'react'
 import { toast } from 'sonner'
-
+import { AlertConfirmDialog } from '#/components/admin/AlertConfirmDialog'
 import { DataTableBulkBar } from '#/components/admin/DataTableBulkBar'
 import { DataTableFacetedFilter } from '#/components/admin/DataTableFacetedFilter'
 import { DataTablePagination } from '#/components/admin/DataTablePagination'
@@ -48,7 +48,7 @@ function AdminUsersPage() {
   const { isReadOnly, currentUserId } = useAdminContext()
   const [confirmBulkAction, setConfirmBulkAction] = useState<'ban' | 'promote' | 'delete' | null>(null)
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: ['admin', 'users', 'v2'],
     queryFn: () =>
       api.get<{ users: AdminUser[]; total: number; page: number; limit: number }>('/api/admin/users?limit=1000'),
@@ -231,18 +231,28 @@ function AdminUsersPage() {
       />
 
       {/* Table */}
-      <UserTable
-        users={table.paginated}
-        isLoading={isLoading}
-        table={table}
-        currentUserId={currentUserId}
-        onToggleStatus={(id, active) => toggleStatus.mutate({ id, active })}
-        statusPending={toggleStatus.isPending}
-        onRoleChange={isReadOnly ? undefined : (id, accesses) => changeRole.mutate({ id, accesses })}
-        rolePending={changeRole.isPending}
-        onDeleteUser={isReadOnly ? undefined : (id) => deleteUser.mutate(id)}
-        isReadOnly={isReadOnly}
-      />
+      {isError ? (
+        <div className="border border-destructive/30 bg-destructive/10 px-4 py-4 text-sm flex items-center justify-between">
+          <span className="text-destructive">{error instanceof Error ? error.message : 'Failed to load users.'}</span>
+          <Button variant="outline" size="sm" onClick={() => refetch()}>
+            <RefreshCw className="mr-1.5 h-3 w-3" />
+            Retry
+          </Button>
+        </div>
+      ) : (
+        <UserTable
+          users={table.paginated}
+          isLoading={isLoading}
+          table={table}
+          currentUserId={currentUserId}
+          onToggleStatus={(id, active) => toggleStatus.mutate({ id, active })}
+          statusPending={toggleStatus.isPending}
+          onRoleChange={isReadOnly ? undefined : (id, accesses) => changeRole.mutate({ id, accesses })}
+          rolePending={changeRole.isPending}
+          onDeleteUser={isReadOnly ? undefined : (id) => deleteUser.mutate(id)}
+          isReadOnly={isReadOnly}
+        />
+      )}
 
       {/* Pagination */}
       <DataTablePagination
@@ -254,52 +264,42 @@ function AdminUsersPage() {
       />
 
       {/* Bulk confirm dialog */}
-      {confirmBulkAction && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="bg-background border p-6 max-w-md w-full mx-4 space-y-4">
-            <h2 className="text-sm font-semibold">{bulkActionLabels[confirmBulkAction].title}</h2>
-            <p className="text-xs text-muted-foreground">{bulkActionLabels[confirmBulkAction].desc}</p>
-            <div className="flex justify-end gap-2">
-              <Button variant="outline" size="sm" onClick={() => setConfirmBulkAction(null)} disabled={isBulkPending}>
-                Cancel
-              </Button>
-              <Button
-                variant={bulkActionLabels[confirmBulkAction].color}
-                size="sm"
-                onClick={() => {
-                  const allIds = Array.from(table.selectedIds)
-                  const ids = currentUserId ? allIds.filter((id) => id !== currentUserId) : allIds
-                  if (ids.length === 0) {
-                    toast.warning('Cannot perform action on yourself')
-                    return
-                  }
-                  switch (confirmBulkAction) {
-                    case 'ban':
-                      bulkBan.mutate(ids)
-                      break
-                    case 'promote':
-                      bulkPromote.mutate(ids)
-                      break
-                    case 'delete':
-                      bulkDelete.mutate(ids)
-                      break
-                  }
-                }}
-                disabled={isBulkPending}
-              >
-                {isBulkPending
-                  ? 'Processing…'
-                  : confirmBulkAction === 'ban'
-                    ? 'Ban'
-                    : confirmBulkAction === 'promote'
-                      ? 'Promote'
-                      : 'Delete'}{' '}
-                {table.selectedIds.size} user{table.selectedIds.size !== 1 ? 's' : ''}
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
+      <AlertConfirmDialog
+        open={confirmBulkAction !== null}
+        onOpenChange={(open) => !open && setConfirmBulkAction(null)}
+        title={confirmBulkAction ? bulkActionLabels[confirmBulkAction].title : ''}
+        description={confirmBulkAction ? bulkActionLabels[confirmBulkAction].desc : ''}
+        confirmLabel={
+          confirmBulkAction
+            ? `${confirmBulkAction === 'ban' ? 'Ban' : confirmBulkAction === 'promote' ? 'Promote' : 'Delete'} ${table.selectedIds.size} user${table.selectedIds.size !== 1 ? 's' : ''}`
+            : 'Confirm'
+        }
+        onConfirm={() => {
+          if (!confirmBulkAction) return
+          const allIds = Array.from(table.selectedIds)
+          const ids = currentUserId ? allIds.filter((id) => id !== currentUserId) : allIds
+          if (ids.length === 0) {
+            toast.warning('Cannot perform action on yourself')
+            setConfirmBulkAction(null)
+            return
+          }
+          switch (confirmBulkAction) {
+            case 'ban':
+              bulkBan.mutate(ids)
+              break
+            case 'promote':
+              bulkPromote.mutate(ids)
+              break
+            case 'delete':
+              bulkDelete.mutate(ids)
+              break
+          }
+        }}
+        variant={
+          confirmBulkAction && bulkActionLabels[confirmBulkAction].color === 'destructive' ? 'destructive' : 'default'
+        }
+        isLoading={isBulkPending}
+      />
     </div>
   )
 }

@@ -17,6 +17,7 @@ import { type ComponentType, type ReactNode, useCallback, useEffect, useMemo, us
 import { api } from '#/lib/api'
 import { useAudioPreferencesStore } from '#/lib/audio-preferences.store'
 import { selectIsMuted, selectVolume, useParticipantOverridesStore } from '#/lib/participant-overrides.store'
+import { AlertConfirmDialog } from '@/components/admin/AlertConfirmDialog'
 import { useMeetingRoomContext } from '@/components/meeting/MeetingContext'
 import {
   ContextMenu,
@@ -162,6 +163,14 @@ export function ParticipantMenuContent({ participant, Item, Separator, Label, on
   // Action loading state
   const [loading, setLoading] = useState<string | null>(null)
 
+  // Confirmation for destructive admin actions (kick, ban, promote/demote)
+  const [pendingAdminAction, setPendingAdminAction] = useState<{
+    key: string
+    path: string
+    label: string
+    description: string
+  } | null>(null)
+
   // Stats panel
   const [statsOpen, setStatsOpen] = useState(false)
   const [stats, setStats] = useState<StatsData | null>(null)
@@ -257,7 +266,15 @@ export function ParticipantMenuContent({ participant, Item, Separator, Label, on
           {isMod ? (
             <Item
               disabled={loading === 'demote'}
-              onClick={() => act('demote', `/api/room/${roomId}/demote/${identity}`)}
+              onClick={() => {
+                setPendingAdminAction({
+                  key: 'demote',
+                  path: `/api/room/${roomId}/demote/${identity}`,
+                  label: 'Demote',
+                  description: `Remove moderator privileges from ${participant.name || 'this participant'}.`,
+                })
+                onClose?.()
+              }}
               style={ITEM_STYLE}
             >
               {loading === 'demote' ? (
@@ -270,7 +287,15 @@ export function ParticipantMenuContent({ participant, Item, Separator, Label, on
           ) : (
             <Item
               disabled={loading === 'promote'}
-              onClick={() => act('promote', `/api/room/${roomId}/promote/${identity}`)}
+              onClick={() => {
+                setPendingAdminAction({
+                  key: 'promote',
+                  path: `/api/room/${roomId}/promote/${identity}`,
+                  label: 'Promote',
+                  description: `Grant moderator privileges to ${participant.name || 'this participant'}.`,
+                })
+                onClose?.()
+              }}
               style={ITEM_STYLE}
             >
               {loading === 'promote' ? (
@@ -290,7 +315,15 @@ export function ParticipantMenuContent({ participant, Item, Separator, Label, on
         <>
           <Item
             disabled={loading === 'kick'}
-            onClick={() => act('kick', `/api/room/${roomId}/kick/${identity}`)}
+            onClick={() => {
+              setPendingAdminAction({
+                key: 'kick',
+                path: `/api/room/${roomId}/kick/${identity}`,
+                label: 'Kick',
+                description: `Remove ${participant.name || 'this participant'} from the meeting immediately. They can rejoin unless banned.`,
+              })
+              onClose?.()
+            }}
             style={{ color: '#f87171', fontSize: 13 }}
           >
             {loading === 'kick' ? (
@@ -302,7 +335,15 @@ export function ParticipantMenuContent({ participant, Item, Separator, Label, on
           </Item>
           <Item
             disabled={loading === 'ban'}
-            onClick={() => act('ban', `/api/room/${roomId}/ban/${identity}`)}
+            onClick={() => {
+              setPendingAdminAction({
+                key: 'ban',
+                path: `/api/room/${roomId}/ban/${identity}`,
+                label: 'Ban',
+                description: `Ban ${participant.name || 'this participant'} from the room. They will be removed and blocked from rejoining.`,
+              })
+              onClose?.()
+            }}
             style={{ color: '#f87171', fontSize: 13 }}
           >
             {loading === 'ban' ? (
@@ -506,6 +547,22 @@ export function ParticipantMenuContent({ participant, Item, Separator, Label, on
           )}
         </>
       )}
+
+      {/* Confirmation dialog for destructive admin actions */}
+      <AlertConfirmDialog
+        open={pendingAdminAction !== null}
+        onOpenChange={(open) => !open && setPendingAdminAction(null)}
+        title={pendingAdminAction ? `${pendingAdminAction.label} participant?` : ''}
+        description={pendingAdminAction?.description || ''}
+        confirmLabel={pendingAdminAction?.label || 'Confirm'}
+        onConfirm={() => {
+          if (pendingAdminAction) {
+            act(pendingAdminAction.key, pendingAdminAction.path)
+          }
+          setPendingAdminAction(null)
+        }}
+        variant="destructive"
+      />
     </>
   )
 }

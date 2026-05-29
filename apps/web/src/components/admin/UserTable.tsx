@@ -108,6 +108,7 @@ export function UserTable({
   isReadOnly,
 }: UserTableProps) {
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null)
+  const [confirmBan, setConfirmBan] = useState<{ id: string; active: boolean } | null>(null)
   const [roleDialog, setRoleDialog] = useState<{ id: string; role: string; accesses: string[] } | null>(null)
 
   if (isLoading) {
@@ -167,12 +168,15 @@ export function UserTable({
           {!isReadOnly && !isSelf && (
             <>
               {user.isActive ? (
-                <DropdownMenuItem onClick={() => onToggleStatus(user.id, false)} disabled={statusPending}>
+                <DropdownMenuItem
+                  onClick={() => setConfirmBan({ id: user.id, active: false })}
+                  disabled={statusPending}
+                >
                   <UserX className="me-2 h-3.5 w-3.5" />
                   Ban user
                 </DropdownMenuItem>
               ) : (
-                <DropdownMenuItem onClick={() => onToggleStatus(user.id, true)} disabled={statusPending}>
+                <DropdownMenuItem onClick={() => setConfirmBan({ id: user.id, active: true })} disabled={statusPending}>
                   <UserCheck className="me-2 h-3.5 w-3.5" />
                   Unban user
                 </DropdownMenuItem>
@@ -502,6 +506,26 @@ export function UserTable({
             onDeleteUser(confirmDelete)
           }
           setConfirmDelete(null)
+        }}
+        variant="destructive"
+      />
+
+      {/* Ban / Unban confirm */}
+      <AlertConfirmDialog
+        open={confirmBan !== null}
+        onOpenChange={(open) => !open && setConfirmBan(null)}
+        title={confirmBan?.active ? 'Unban user?' : 'Ban user?'}
+        description={
+          confirmBan?.active
+            ? 'This user will be able to sign in again.'
+            : 'This will immediately log the user out and prevent them from signing in again.'
+        }
+        confirmLabel={confirmBan?.active ? 'Unban' : 'Ban user'}
+        onConfirm={() => {
+          if (confirmBan) {
+            onToggleStatus(confirmBan.id, confirmBan.active)
+          }
+          setConfirmBan(null)
         }}
         variant="destructive"
       />
