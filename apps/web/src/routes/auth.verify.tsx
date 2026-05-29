@@ -57,7 +57,7 @@ function InvalidView({ reason }: { reason: string }) {
       </div>
       <div className="space-y-1">
         <h1 className="text-2xl font-bold tracking-tight">Verification failed</h1>
-        <p className="text-sm text-muted-foreground">
+        <p role="alert" aria-live="assertive" className="text-sm text-muted-foreground">
           {messages[reason] || 'The verification link is invalid or has expired.'}
         </p>
       </div>

@@ -191,7 +191,7 @@ export function ParticipantTile({ participant, totalCount, index, isPinned = fal
               <div className="flex items-center gap-1.5">
                 <span className="text-white/60 text-sm font-medium">
                   {displayName}
-                  {participant.isLocal && <span className="text-white/50 text-xs ml-1.5">you</span>}
+                  {participant.isLocal && <span className="text-white/75 text-xs ms-1.5">you</span>}
                 </span>
                 {isDeafened && <VolumeX size={13} className="shrink-0 text-red-400" />}
                 {!participant.isMicrophoneEnabled && <MicOff size={13} className="shrink-0 text-red-400" />}
@@ -230,7 +230,7 @@ export function ParticipantTile({ participant, totalCount, index, isPinned = fal
           <div className="absolute bottom-2 left-2 flex items-center gap-[5px] bg-black/60 backdrop-blur-sm rounded-[7px] px-2 py-[3px] max-w-[calc(100%-50px)]">
             <span className="text-white text-xs font-medium overflow-hidden text-ellipsis whitespace-nowrap">
               {displayName}
-              {participant.isLocal && <span className="text-white/50 text-[11px] ml-1">you</span>}
+              {participant.isLocal && <span className="text-white/75 text-[11px] ms-1">you</span>}
             </span>
             {isDeafened && <VolumeX size={11} className="shrink-0 text-red-400" />}
             {!participant.isMicrophoneEnabled ? (

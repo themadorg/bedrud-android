@@ -153,7 +153,7 @@ function SidebarContent({
             type="button"
             onClick={onLogout}
             className="h-9 w-9 rounded p-1.5 text-muted-foreground opacity-60 transition-all hover:bg-destructive/10 hover:text-destructive hover:opacity-100"
-            title="Sign out"
+            aria-label="Sign out"
           >
             <LogOut className="h-4 w-4" />
           </Button>

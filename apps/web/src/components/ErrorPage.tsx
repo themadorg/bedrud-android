@@ -133,7 +133,7 @@ export function ErrorPage({
         )}
 
         {/* Text */}
-        <div className="max-w-sm text-center">
+        <div className="max-w-sm text-center" role="alert" aria-live="assertive">
           <h1 className="text-lg font-semibold">{displayTitle}</h1>
           <p className="mt-2 text-sm text-muted-foreground">{displayDescription}</p>
         </div>
@@ -141,7 +141,7 @@ export function ErrorPage({
         {/* Parsed error detail */}
         {parsed?.message && !friendly && (
           <Card className="max-w-md px-4 py-3">
-            <p className="break-words text-xs text-muted-foreground/80">{parsed.message}</p>
+            <p className="break-words text-xs text-foreground/80">{parsed.message}</p>
           </Card>
         )}
 

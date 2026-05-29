@@ -210,7 +210,7 @@ function RoomRow({
         >
           {copied ? <Check className="h-3.5 w-3.5 text-emerald-500" /> : <Copy className="h-3.5 w-3.5" />}
         </Button>
-        <Button variant="ghost" size="icon" type="button" onClick={onSettings} className="h-7 w-7" title="Settings">
+        <Button variant="ghost" size="icon" type="button" onClick={onSettings} className="h-7 w-7" aria-label="Room settings">
           <Settings2 className="h-3.5 w-3.5" />
         </Button>
         <Button
@@ -287,7 +287,7 @@ function RecentRoomRow({ recent, onJoin, onRemove }: { recent: RecentRoom; onJoi
           type="button"
           onClick={onRemove}
           className="h-7 w-7 hover:bg-destructive/10 hover:text-destructive"
-          title="Remove from recent"
+          aria-label="Remove from recent rooms"
         >
           <X className="h-3.5 w-3.5" />
         </Button>

@@ -80,7 +80,13 @@ function ForgotPasswordPage() {
       </div>
 
       {error && (
-        <div className="border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">{error}</div>
+        <div
+          role="alert"
+          aria-live="assertive"
+          className="border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive"
+        >
+          {error}
+        </div>
       )}
 
       <form onSubmit={handleSubmit} className="space-y-4" noValidate>

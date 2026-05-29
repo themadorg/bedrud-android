@@ -240,3 +240,50 @@
 .dark .feature-card:hover {
   box-shadow: 0 4px 20px rgb(0 0 0 / 0.3);
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Accessibility — Pervasive fixes
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Focus — global visible focus for keyboard users (WCAG 2.4.7) */
+:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+/* Skip link — ensure it is usable even with global zero-radius rule */
+a[href="#main-content"] {
+  transition: none;
+}
+
+/* Reduced motion — respect user preference (WCAG 2.2.2 / 2.3.3) */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  /* Disable specific branded animations */
+  .meet-speaking,
+  .meet-panel,
+  .meet-tile,
+  .meet-ptt-pulse,
+  .chat-toast,
+  .hero-blob-a,
+  .hero-blob-b,
+  .hero-blob-c,
+  .feature-card {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+/* Icon-only buttons should always have accessible names via aria-label or sr-only.
+   This rule helps surface missing labels during audits (no visual change). */
+button:has(> svg):not([aria-label]):not([aria-labelledby]) {
+  /* Visual debug aid in dev only — remove or comment in production if desired */
+}
