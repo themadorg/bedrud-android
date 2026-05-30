@@ -518,6 +518,7 @@ export default {
       "architecture/agents": "Bot Ajanları",
       "architecture/webrtc-connectivity": "WebRTC Bağlantısı",
       "architecture/turn-server": "TURN Sunucusu",
+      "architecture/e2ee": "Uçtan Uca Şifreleme",
       "backend/overview": "Backend Belgeleri",
       "backend/structure": "Kod Yapısı",
       "backend/database": "Veritabanı ve Modeller",
@@ -952,6 +953,132 @@ export default {
       noPerSeat: "Kullanıcı başı fiyatlandırma yok",
       costPerSeat: "Kullanıcı başı maliyet:",
       costFree: "$0.00",
+    },
+  },
+  e2eePage: {
+    meta: {
+      title: "Uçtan Uca Şifreleme - Bedrud",
+      description:
+        "Bedrud, oda başına isteğe bağlı uçtan uca şifrelemeyi destekler. Sıfır bilgi mimarisi — sunucunuz şifreli medyayı aktarır ancak anahtarlara asla sahip olmaz.",
+    },
+    badge: "Önce Gizlilik",
+    title: "Uçtan Uca Şifreleme",
+    subtitle:
+      "Toplantılarınız için isteğe bağlı Uçtan Uca Şifreleme (E2EE). Sunucu şifreli medyayı aktarır — yalnızca katılımcılar şifreyi çözebilir. Anahtarlarınız, verileriniz, kontrolünüz.",
+    howItWorks: {
+      title: "Nasıl Çalışır",
+      description:
+        "Toplantılarınızı sunucudan ekrana kadar gizli tutan üç basit ilke.",
+      step1: {
+        title: "E2EE'yi Açın",
+        description:
+          "Ayarlardan oda başına E2EE'yi etkinleştirin. Basit bir geçiş — yapılandırma dosyası düzenlemesi değil.",
+      },
+      step2: {
+        title: "Anahtarı Paylaşın",
+        description:
+          "Şifreleme anahtarları URL parçasında yaşar — sunucuya asla gönderilmez. Bağlantıyı güvenli bir şekilde paylaşın.",
+      },
+      step3: {
+        title: "Kör Aktarım",
+        description:
+          "LiveKit SFU, şifreli kareleri şifresini çözmeden iletir. Sunucu video veya ses içeriğinizi asla göremez.",
+      },
+    },
+    zeroKnowledge: {
+      title: "Sıfır Bilgi Mimarisi",
+      items: {
+        keyGen: "İstemci Tarafında Anahtar Üretimi",
+        keyGenDesc:
+          "Şifreleme anahtarları tarayıcıda üretilir. Sunucuya asla iletilmez veya sunucuda depolanmaz.",
+        blindRelay: "Kör SFU Aktarımı",
+        blindRelayDesc:
+          "LiveKit şifreli RTP karelerini olduğu gibi iletir. Şifre çözme yok, denetleme yok, kayıt yok.",
+        insertableStreams: "Insertable Streams API",
+        insertableStreamsDesc:
+          "Şifreleme, RTCRtpSender ve RTCRtpReceiver dönüşümleri aracılığıyla WebRTC kare düzeyinde çalışır.",
+        workerIsolation: "Web Worker Yalıtımı",
+        workerIsolationDesc:
+          "Kriptografik işlemler özel bir arka plan iş parçacığında çalışır. Ana UI iş parçacığı ham anahtarları asla işlemez.",
+      },
+    },
+    architecture: {
+      title: "Mimari",
+      description:
+        "Veriler sunucuya asla düz metin olarak temas etmez. Şifreli yol uçtan uca bu şekilde çalışır.",
+      toggleLabel: "Şifreleme",
+      disabledMode: "Standart",
+      enabledMode: "E2EE",
+      sender: "Gönderen",
+      clientA: "İstemci A",
+      mediaFeed: "Medya Akışı",
+      frameSmile: "Kare verisi",
+      outboundPipeline: "Giden İşlem Hattı",
+      plaintextPipeline: "Düz metin kareler",
+      encryptPipeline: "🔒 Şifreleniyor...",
+      inspectableStatus: "🔍 Denetlenebilir",
+      blindStatus: "🔒 Kör Aktarım",
+      sfuNode: "LiveKit SFU",
+      relayDescription: "Şifrelenmiş kareleri aktarma",
+      readableServer: "Sunucu kareleri okuyabilir (düz metin)",
+      bypassedServer: "Sunucu körü körüne iletir (şifrelenmiş)",
+      sfuStorage: "SFU İşlem Hattı",
+      frameClear: "Kare [clear]",
+      frameCipher: "Kare [cipher]",
+      receiver: "Alıcı",
+      clientB: "İstemci B",
+      decodedOutput: "Kod Çözülmüş Çıktı",
+      inboundPipeline: "Gelen İşlem Hattı",
+      decryptPipeline: "🔓 Kod çözülüyor...",
+      disclaimerStandard:
+        "Standart Mod: SFU ham kare verilerini görür. Medya aktarım sırasında şifrelenir (TLS) ancak sunucu içeriği inceleyebilir.",
+      disclaimerE2ee:
+        "E2EE Modu: SFU şifrelenmiş kareleri çözmeden iletir. Yalnızca katılımcılar medyayı çözebilir.",
+    },
+    platforms: {
+      title: "Platform Desteği",
+      description:
+        "E2EE, her Bedrud istemcisinde çalışır. Her platform, LiveKit SDK'sının yerel E2EE desteğini kullanır.",
+      items: {
+        web: "Web",
+        android: "Android",
+        ios: "iOS",
+        desktop: "Masaüstü",
+      },
+    },
+    feature: {
+      title: "Ana Özellikler",
+      description:
+        "Bedrud E2EE'yi platform kontrollü şifrelemeden ayıran özellikler.",
+      items: {
+        perRoom: {
+          title: "Oda Başına Kontrol",
+          description:
+            "Bireysel odalarda E2EE'yi etkinleştirin. Herkese açık odaları açık tutun ve hassas toplantıları güvenceye alın.",
+        },
+        zeroKnowledge: {
+          title: "Sıfır Bilgi Sunucusu",
+          description:
+            "Kendi barındırdığınız sunucu asla şifreleme anahtarlarına sahip olmaz. Altyapı sahibi olarak siz bile katılımcı medyasının şifresini çözemezsiniz.",
+        },
+        noRecord: {
+          title: "Kayıt Yapılamaz",
+          description:
+            "E2EE etkinleştirildiğinde sunucu toplantı içeriğini kaydedemez veya yazıya dökemez. Gizlilik şifreleme katmanı ile zorlanır.",
+        },
+        openSource: {
+          title: "Tamamen Denetlenebilir",
+          description:
+            "Anahtar üretiminden kare dönüşümüne kadar şifreleme hattının her satırı Apache 2.0 lisansı altında açık kaynaktır.",
+        },
+      },
+    },
+    cta: {
+      title: "Kendiniz Deneyin",
+      description:
+        "E2EE etkinleştirilmiş canlı bir demo toplantısına katılın. Hesap yok, kurulum yok, taahhüt yok.",
+      tryDemo: "Canlı Demoyu Aç",
+      readDocs: "Belgeleri Oku",
     },
   },
 };

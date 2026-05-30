@@ -708,6 +708,7 @@ export default {
       "architecture/agents": "Bot Agents",
       "architecture/webrtc-connectivity": "WebRTC Connectivity",
       "architecture/turn-server": "TURN Server",
+      "architecture/e2ee": "End-to-End Encryption",
       "backend/overview": "Backend Documentation",
       "backend/structure": "Code Structure",
       "backend/database": "Database & Models",
@@ -953,6 +954,132 @@ export default {
       noPerSeat: "No per-seat pricing",
       costPerSeat: "Cost per seat:",
       costFree: "$0.00",
+    },
+  },
+  e2eePage: {
+    meta: {
+      title: "End-to-End Encryption - Bedrud",
+      description:
+        "Bedrud supports optional per-room end-to-end encryption. Zero-knowledge architecture — your server relays encrypted media but never holds the keys.",
+    },
+    badge: "Privacy First",
+    title: "End-to-End Encryption",
+    subtitle:
+      "Optional E2EE for your meetings. The server relays encrypted media — only participants can decrypt. Your keys, your data, your control.",
+    howItWorks: {
+      title: "How It Works",
+      description:
+        "Three simple principles that keep your meetings private from server to screen.",
+      step1: {
+        title: "Toggle E2EE On",
+        description:
+          "Enable E2EE per room in the settings. A toggle — not a config file edit.",
+      },
+      step2: {
+        title: "Share the Key",
+        description:
+          "Encryption keys live in the URL fragment — never sent to the server. Share the link securely with participants.",
+      },
+      step3: {
+        title: "Blind Relay",
+        description:
+          "The LiveKit SFU forwards encrypted frames without decryption. The server never sees your video or audio content.",
+      },
+    },
+    zeroKnowledge: {
+      title: "Zero-Knowledge Architecture",
+      items: {
+        keyGen: "Client-Side Key Generation",
+        keyGenDesc:
+          "Encryption keys are generated in the browser. Never transmitted to or stored on the server.",
+        blindRelay: "Blind SFU Relay",
+        blindRelayDesc:
+          "LiveKit forwards encrypted RTP frames as-is. No decryption, no inspection, no recording of content.",
+        insertableStreams: "Insertable Streams API",
+        insertableStreamsDesc:
+          "Encryption operates at the WebRTC frame level via RTCRtpSender and RTCRtpReceiver transforms.",
+        workerIsolation: "Web Worker Isolation",
+        workerIsolationDesc:
+          "Cryptographic operations run in a dedicated background thread. The main UI thread never handles raw keys.",
+      },
+    },
+    architecture: {
+      title: "Architecture",
+      description:
+        "Data never touches the server in cleartext. Here is how the encrypted path works end to end.",
+      toggleLabel: "Encryption",
+      disabledMode: "Standard",
+      enabledMode: "E2EE",
+      sender: "Sender",
+      clientA: "Client A",
+      mediaFeed: "Media Feed",
+      frameSmile: "Frame payload",
+      outboundPipeline: "Outbound Pipeline",
+      plaintextPipeline: "Plaintext frames",
+      encryptPipeline: "🔒 Encrypting...",
+      inspectableStatus: "🔍 Inspectable",
+      blindStatus: "🔒 Blind Relay",
+      sfuNode: "LiveKit SFU",
+      relayDescription: "Relaying encrypted frames",
+      readableServer: "Server can read frames (plaintext)",
+      bypassedServer: "Server forwards blindly (encrypted)",
+      sfuStorage: "SFU Pipeline",
+      frameClear: "Frame [clear]",
+      frameCipher: "Frame [cipher]",
+      receiver: "Receiver",
+      clientB: "Client B",
+      decodedOutput: "Decoded Output",
+      inboundPipeline: "Inbound Pipeline",
+      decryptPipeline: "🔓 Decrypting...",
+      disclaimerStandard:
+        "Standard Mode: The SFU sees raw frame data. Media is encrypted in transit (TLS) but the server can inspect content.",
+      disclaimerE2ee:
+        "E2EE Mode: The SFU forwards encrypted frames without decryption. Only participants can decode the media.",
+    },
+    platforms: {
+      title: "Platform Support",
+      description:
+        "E2EE works across every Bedrud client. Each platform uses its LiveKit SDK's native E2EE support.",
+      items: {
+        web: "Web",
+        android: "Android",
+        ios: "iOS",
+        desktop: "Desktop",
+      },
+    },
+    feature: {
+      title: "Key Features",
+      description:
+        "What makes Bedrud E2EE different from platform-controlled encryption.",
+      items: {
+        perRoom: {
+          title: "Per-Room Control",
+          description:
+            "Enable E2EE on individual rooms. Keep public rooms open and secure sensitive meetings.",
+        },
+        zeroKnowledge: {
+          title: "Zero-Knowledge Server",
+          description:
+            "Your self-hosted server never holds encryption keys. Even you — the infrastructure owner — cannot decrypt participant media.",
+        },
+        noRecord: {
+          title: "Recording Not Possible",
+          description:
+            "When E2EE is enabled, the server cannot record or transcribe meeting content. Privacy is enforced by the encryption layer.",
+        },
+        openSource: {
+          title: "Fully Auditable",
+          description:
+            "Every line of the encryption pipeline — from key generation to frame transform — is open source under Apache 2.0.",
+        },
+      },
+    },
+    cta: {
+      title: "Try It Yourself",
+      description:
+        "Join a live demo meeting with E2EE enabled. No account, no install, no commitment.",
+      tryDemo: "Open Live Demo",
+      readDocs: "Read the Docs",
     },
   },
 };

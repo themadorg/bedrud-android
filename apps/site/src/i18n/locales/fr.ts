@@ -488,6 +488,7 @@ export default {
       "architecture/agents": "Agents bots",
       "architecture/webrtc-connectivity": "Connectivité WebRTC",
       "architecture/turn-server": "Serveur TURN",
+      "architecture/e2ee": "Chiffrement de bout en bout",
       "backend/overview": "Documentation du backend",
       "backend/structure": "Structure du code",
       "backend/database": "Base de données & modèles",
@@ -921,6 +922,132 @@ export default {
       noPerSeat: "Pas de tarification par siège",
       costPerSeat: "Coût par siège :",
       costFree: "0,00 $",
+    },
+  },
+  e2eePage: {
+    meta: {
+      title: "Chiffrement de bout en bout - Bedrud",
+      description:
+        "Bedrud prend en charge le chiffrement de bout en bout facultatif par salon. Architecture à connaissance nulle — votre serveur relaie les médias chiffrés mais ne détient jamais les clés.",
+    },
+    badge: "Vie Privée D'abord",
+    title: "Chiffrement de bout en bout",
+    subtitle:
+      "E2EE facultatif pour vos réunions. Le serveur relaie les médias chiffrés — seuls les participants peuvent les décrypter. Vos clés, vos données, votre contrôle.",
+    howItWorks: {
+      title: "Comment ça fonctionne",
+      description:
+        "Trois principes simples qui garantissent la confidentialité de vos réunions, du serveur à l'écran.",
+      step1: {
+        title: "Activer l'E2EE",
+        description:
+          "Activez l'E2EE par salon dans les paramètres. Un simple interrupteur — pas besoin de modifier un fichier de configuration.",
+      },
+      step2: {
+        title: "Partager la clé",
+        description:
+          "Les clés de chiffrement résident dans le fragment d'URL — elles ne sont jamais envoyées au serveur. Partagez le lien en toute sécurité.",
+      },
+      step3: {
+        title: "Relais aveugle",
+        description:
+          "Le SFU LiveKit transfère les flux chiffrés sans les décrypter. Le serveur ne voit jamais vos flux vidéo ou audio.",
+      },
+    },
+    zeroKnowledge: {
+      title: "Architecture à connaissance nulle",
+      items: {
+        keyGen: "Génération de clé côté client",
+        keyGenDesc:
+          "Les clés de chiffrement sont générées dans le navigateur. Jamais transmises ni stockées sur le serveur.",
+        blindRelay: "Relais SFU aveugle",
+        blindRelayDesc:
+          "LiveKit relaie les trames RTP chiffrées telles quelles. Pas de décryptage, pas d'inspection, pas d'enregistrement.",
+        insertableStreams: "API Insertable Streams",
+        insertableStreamsDesc:
+          "Le chiffrement opère au niveau des trames WebRTC via les transformations RTCRtpSender et RTCRtpReceiver.",
+        workerIsolation: "Isolation Web Worker",
+        workerIsolationDesc:
+          "Les opérations cryptographiques s'exécutent dans un thread d'arrière-plan dédié. Le thread UI principal ne manipule jamais les clés brutes.",
+      },
+    },
+    architecture: {
+      title: "Architecture",
+      description:
+        "Les données ne touchent jamais le serveur en clair. Voici le chemin chiffré de bout en bout.",
+      toggleLabel: "Chiffrement",
+      disabledMode: "Standard",
+      enabledMode: "E2EE",
+      sender: "Expéditeur",
+      clientA: "Client A",
+      mediaFeed: "Flux média",
+      frameSmile: "Charge utile du frame",
+      outboundPipeline: "Pipeline sortante",
+      plaintextPipeline: "Frames en clair",
+      encryptPipeline: "🔒 Chiffrement...",
+      inspectableStatus: "🔍 Consultable",
+      blindStatus: "🔒 Relais aveugle",
+      sfuNode: "LiveKit SFU",
+      relayDescription: "Relais de frames chiffrés",
+      readableServer: "Le serveur peut lire les frames (clair)",
+      bypassedServer: "Le serveur transmet aveuglément (chiffré)",
+      sfuStorage: "Pipeline SFU",
+      frameClear: "Frame [clear]",
+      frameCipher: "Frame [cipher]",
+      receiver: "Destinataire",
+      clientB: "Client B",
+      decodedOutput: "Sortie décodée",
+      inboundPipeline: "Pipeline entrante",
+      decryptPipeline: "🔓 Déchiffrement...",
+      disclaimerStandard:
+        "Mode Standard: Le SFU voit les données brutes des frames. Les médias sont chiffrés en transit (TLS) mais le serveur peut inspecter le contenu.",
+      disclaimerE2ee:
+        "Mode E2EE: Le SFU transmet les frames chiffrés sans déchiffrement. Seuls les participants peuvent décoder les médias.",
+    },
+    platforms: {
+      title: "Plateformes supportées",
+      description:
+        "E2EE fonctionne sur tous les clients Bedrud grâce au support natif de l'E2EE de leur SDK LiveKit.",
+      items: {
+        web: "Web",
+        android: "Android",
+        ios: "iOS",
+        desktop: "Bureau",
+      },
+    },
+    feature: {
+      title: "Fonctionnalités clés",
+      description:
+        "Ce qui différencie l'E2EE de Bedrud du chiffrement contrôlé par les plateformes propriétaires.",
+      items: {
+        perRoom: {
+          title: "Contrôle par salon",
+          description:
+            "Activez l'E2EE sur des salons individuels. Gardez vos salons publics ouverts tout en sécurisant vos réunions sensibles.",
+        },
+        zeroKnowledge: {
+          title: "Serveur à connaissance nulle",
+          description:
+            "Votre serveur auto-hébergé ne détient jamais les clés de chiffrement. Même vous, propriétaire de l'infrastructure, ne pouvez décrypter les flux.",
+        },
+        noRecord: {
+          title: "Enregistrement impossible",
+          description:
+            "Lorsque l'E2EE est activé, le serveur ne peut ni enregistrer ni transcrire le contenu des réunions. La vie privée est garantie par le chiffrement.",
+        },
+        openSource: {
+          title: "Entièrement auditable",
+          description:
+            "Chaque ligne du pipeline de chiffrement — de la génération de clés à la transformation des trames — est open source sous licence Apache 2.0.",
+        },
+      },
+    },
+    cta: {
+      title: "Essayez par vous-même",
+      description:
+        "Rejoignez une réunion de démonstration avec E2EE activé. Sans compte, sans installation, sans engagement.",
+      tryDemo: "Ouvrir la démo",
+      readDocs: "Lire la documentation",
     },
   },
 };

@@ -485,6 +485,7 @@ export default {
       "architecture/agents": "Agentes bot",
       "architecture/webrtc-connectivity": "Conectividad WebRTC",
       "architecture/turn-server": "Servidor TURN",
+      "architecture/e2ee": "Cifrado de extremo a extremo",
       "backend/overview": "Documentación del backend",
       "backend/structure": "Estructura del código",
       "backend/database": "Base de datos y modelos",
@@ -918,6 +919,132 @@ export default {
       noPerSeat: "Sin precios por asiento",
       costPerSeat: "Costo por asiento:",
       costFree: "$0.00",
+    },
+  },
+  e2eePage: {
+    meta: {
+      title: "Cifrado de extremo a extremo - Bedrud",
+      description:
+        "Bedrud admite cifrado opcional de extremo a extremo por sala. Arquitectura de conocimiento cero: su servidor retransmite medios cifrados pero nunca tiene las claves.",
+    },
+    badge: "Privacidad Primero",
+    title: "Cifrado de extremo a extremo",
+    subtitle:
+      "E2EE opcional para sus reuniones. El servidor retransmite medios cifrados: solo los participantes pueden descifrar. Sus claves, sus datos, su control.",
+    howItWorks: {
+      title: "Cómo funciona",
+      description:
+        "Tres principios simples que mantienen sus reuniones privadas desde el servidor hasta la pantalla.",
+      step1: {
+        title: "Activar E2EE",
+        description:
+          "Habilite E2EE por sala en la configuración. Un simple interruptor, no una edición de archivo de configuración.",
+      },
+      step2: {
+        title: "Compartir la clave",
+        description:
+          "Las claves de cifrado residen en el fragmento de URL: nunca se envían al servidor. Comparta el enlace de forma segura.",
+      },
+      step3: {
+        title: "Retransmisión ciega",
+        description:
+          "El SFU LiveKit retransmite los paquetes cifrados sin descifrarlos. El servidor nunca ve sus contenidos de video o audio.",
+      },
+    },
+    zeroKnowledge: {
+      title: "Arquitectura de conocimiento cero",
+      items: {
+        keyGen: "Generación de claves del lado del cliente",
+        keyGenDesc:
+          "Las claves de cifrado se generan en el navegador. Nunca se transmiten ni se almacenan en el servidor.",
+        blindRelay: "Retransmisión ciega del SFU",
+        blindRelayDesc:
+          "LiveKit retransmite tramas RTP cifradas tal como están. Sin descifrado, sin inspección, sin grabación de contenido.",
+        insertableStreams: "API de Insertable Streams",
+        insertableStreamsDesc:
+          "El cifrado opera a nivel de tramas WebRTC a través de las transformaciones de RTCRtpSender y RTCRtpReceiver.",
+        workerIsolation: "Aislamiento de Web Worker",
+        workerIsolationDesc:
+          "Las operaciones criptográficas se ejecutan en un hilo de fondo dedicado. El hilo de UI principal nunca maneja claves en bruto.",
+      },
+    },
+    architecture: {
+      title: "Arquitectura",
+      description:
+        "Los datos nunca tocan el servidor en texto claro. Así funciona la ruta cifrada de extremo a extremo.",
+      toggleLabel: "Cifrado",
+      disabledMode: "Estándar",
+      enabledMode: "E2EE",
+      sender: "Remitente",
+      clientA: "Cliente A",
+      mediaFeed: "Fuente de medios",
+      frameSmile: "Carga útil del frame",
+      outboundPipeline: "Pipeline de salida",
+      plaintextPipeline: "Frames en texto plano",
+      encryptPipeline: "🔒 Cifrando...",
+      inspectableStatus: "🔍 Inspeccionable",
+      blindStatus: "🔒 Relevo ciego",
+      sfuNode: "LiveKit SFU",
+      relayDescription: "Relevando frames cifrados",
+      readableServer: "El servidor puede leer frames (texto plano)",
+      bypassedServer: "El servidor reenvía a ciegas (cifrado)",
+      sfuStorage: "Pipeline SFU",
+      frameClear: "Frame [clear]",
+      frameCipher: "Frame [cipher]",
+      receiver: "Receptor",
+      clientB: "Cliente B",
+      decodedOutput: "Salida decodificada",
+      inboundPipeline: "Pipeline de entrada",
+      decryptPipeline: "🔓 Descifrando...",
+      disclaimerStandard:
+        "Modo Estándar: El SFU ve los datos de frame sin procesar. Los medios se cifran en tránsito (TLS) pero el servidor puede inspeccionar el contenido.",
+      disclaimerE2ee:
+        "Modo E2EE: El SFU reenvía frames cifrados sin descifrado. Solo los participantes pueden decodificar los medios.",
+    },
+    platforms: {
+      title: "Soporte de plataformas",
+      description:
+        "E2EE funciona en todos los clientes de Bedrud usando el soporte nativo de E2EE de su SDK de LiveKit.",
+      items: {
+        web: "Web",
+        android: "Android",
+        ios: "iOS",
+        desktop: "Escritorio",
+      },
+    },
+    feature: {
+      title: "Características clave",
+      description:
+        "Lo que diferencia al E2EE de Bedrud del cifrado controlado por plataformas propietarias.",
+      items: {
+        perRoom: {
+          title: "Control por sala",
+          description:
+            "Habilite E2EE en salas individuales. Mantenga abiertas las salas públicas y proteja las reuniones confidenciales.",
+        },
+        zeroKnowledge: {
+          title: "Servidor de conocimiento cero",
+          description:
+            "Su servidor auto-hospedado nunca tiene las claves de cifrado. Incluso usted, el dueño de la infraestructura, no puede descifrar los medios.",
+        },
+        noRecord: {
+          title: "Grabación no posible",
+          description:
+            "Cuando E2EE está habilitado, el servidor no puede grabar ni transcribir el contenido de las reuniones. La privacidad se impone por cifrado.",
+        },
+        openSource: {
+          title: "Totalmente auditable",
+          description:
+            "Cada línea del flujo de cifrado, desde la generación de claves hasta la transformación de tramas, es de código abierto bajo Apache 2.0.",
+        },
+      },
+    },
+    cta: {
+      title: "Pruébelo usted mismo",
+      description:
+        "Únase a una reunión de demostración en vivo con E2EE habilitado. Sin cuenta, sin instalación, sin compromiso.",
+      tryDemo: "Abrir demo en vivo",
+      readDocs: "Leer la documentación",
     },
   },
 };

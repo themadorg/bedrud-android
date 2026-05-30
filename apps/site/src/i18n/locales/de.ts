@@ -516,6 +516,7 @@ export default {
       "architecture/agents": "Bot-Agenten",
       "architecture/webrtc-connectivity": "WebRTC-Konnektivität",
       "architecture/turn-server": "TURN-Server",
+      "architecture/e2ee": "Ende-zu-Ende-Verschlüsselung",
       "backend/overview": "Backend-Dokumentation",
       "backend/structure": "Code-Struktur",
       "backend/database": "Datenbank & Modelle",
@@ -953,6 +954,132 @@ export default {
       noPerSeat: "Keine Preise pro Sitzplatz",
       costPerSeat: "Kosten pro Sitzplatz:",
       costFree: "0,00 €",
+    },
+  },
+  e2eePage: {
+    meta: {
+      title: "Ende-zu-Ende-Verschlüsselung - Bedrud",
+      description:
+        "Bedrud unterstützt optionale Ende-zu-Ende-Verschlüsselung pro Raum. Zero-Knowledge-Architektur — Ihr Server leitet verschlüsselte Medien weiter, besitzt aber niemals die Schlüssel.",
+    },
+    badge: "Datenschutz Zuerst",
+    title: "Ende-zu-Ende-Verschlüsselung",
+    subtitle:
+      "Optionale E2EE für Ihre Meetings. Der Server leitet verschlüsselte Medien weiter — nur Teilnehmer können sie entschlüsseln. Ihre Schlüssel, Ihre Daten, Ihre Kontrolle.",
+    howItWorks: {
+      title: "Wie es funktioniert",
+      description:
+        "Drei einfache Prinzipien, die Ihre Meetings vom Server bis zum Bildschirm privat halten.",
+      step1: {
+        title: "E2EE aktivieren",
+        description:
+          "Aktivieren Sie E2EE pro Raum in den Einstellungen. Ein einfacher Schalter — keine Bearbeitung von Konfigurationsdateien.",
+      },
+      step2: {
+        title: "Schlüssel teilen",
+        description:
+          "Verschlüsselungsschlüssel befinden sich im URL-Fragment — sie werden niemals an den Server gesendet. Teilen Sie den Link sicher mit den Teilnehmern.",
+      },
+      step3: {
+        title: "Blinde Weiterleitung",
+        description:
+          "Der LiveKit SFU leitet verschlüsselte Frames ohne Entschlüsselung weiter. Der Server sieht niemals Ihre Video- oder Audioinhalte.",
+      },
+    },
+    zeroKnowledge: {
+      title: "Zero-Knowledge-Architektur",
+      items: {
+        keyGen: "Clientseitige Schlüsselgenerierung",
+        keyGenDesc:
+          "Verschlüsselungsschlüssel werden im Browser generiert. Sie werden niemals an den Server übertragen oder dort gespeichert.",
+        blindRelay: "Blinde SFU-Weiterleitung",
+        blindRelayDesc:
+          "LiveKit leitet verschlüsselte RTP-Frames unverändert weiter. Keine Entschlüsselung, keine Inspektion, keine Aufzeichnung von Inhalten.",
+        insertableStreams: "Insertable Streams API",
+        insertableStreamsDesc:
+          "Die Verschlüsselung erfolgt auf WebRTC-Frame-Ebene über RTCRtpSender- und RTCRtpReceiver-Transformationen.",
+        workerIsolation: "Web-Worker-Isolation",
+        workerIsolationDesc:
+          "Kryptografische Operationen laufen in einem dedizierten Hintergrund-Thread. Der Haupt-UI-Thread verarbeitet niemals rohe Schlüssel.",
+      },
+    },
+    architecture: {
+      title: "Architektur",
+      description:
+        "Daten berühren den Server niemals im Klartext. So funktioniert der verschlüsselte Pfad von Ende zu Ende.",
+      toggleLabel: "Verschlüsselung",
+      disabledMode: "Standard",
+      enabledMode: "E2EE",
+      sender: "Absender",
+      clientA: "Client A",
+      mediaFeed: "Medienfeed",
+      frameSmile: "Frame-Nutzlast",
+      outboundPipeline: "Ausgehende Pipeline",
+      plaintextPipeline: "Klartext-Frames",
+      encryptPipeline: "🔒 Verschlüsseln...",
+      inspectableStatus: "🔍 Einsehbar",
+      blindStatus: "🔒 Blindes Weiterleiten",
+      sfuNode: "LiveKit SFU",
+      relayDescription: "Weiterleitung verschlüsselter Frames",
+      readableServer: "Server kann Frames lesen (Klartext)",
+      bypassedServer: "Server leitet blind weiter (verschlüsselt)",
+      sfuStorage: "SFU-Pipeline",
+      frameClear: "Frame [clear]",
+      frameCipher: "Frame [cipher]",
+      receiver: "Empfänger",
+      clientB: "Client B",
+      decodedOutput: "Decodierte Ausgabe",
+      inboundPipeline: "Eingehende Pipeline",
+      decryptPipeline: "🔓 Entschlüsseln...",
+      disclaimerStandard:
+        "Standard-Modus: Die SFU sieht rohe Framedaten. Medien werden während der Übertragung verschlüsselt (TLS), aber der Server kann den Inhalt einsehen.",
+      disclaimerE2ee:
+        "E2EE-Modus: Die SFU leitet verschlüsselte Frames ohne Entschlüsselung weiter. Nur Teilnehmer können die Medien decodieren.",
+    },
+    platforms: {
+      title: "Plattform-Unterstützung",
+      description:
+        "E2EE funktioniert auf jedem Bedrud-Client. Jede Plattform nutzt die native E2EE-Unterstützung ihres LiveKit-SDKs.",
+      items: {
+        web: "Web",
+        android: "Android",
+        ios: "iOS",
+        desktop: "Desktop",
+      },
+    },
+    feature: {
+      title: "Hauptmerkmale",
+      description:
+        "Was Bedrud E2EE von plattformgesteuerter Verschlüsselung unterscheidet.",
+      items: {
+        perRoom: {
+          title: "Steuerung pro Raum",
+          description:
+            "Aktivieren Sie E2EE für einzelne Räume. Halten Sie öffentliche Räume offen und sichern Sie sensible Meetings.",
+        },
+        zeroKnowledge: {
+          title: "Zero-Knowledge-Server",
+          description:
+            "Ihr selbstgehosteter Server besitzt niemals Verschlüsselungsschlüssel. Selbst Sie — der Besitzer der Infrastruktur — können die Medien der Teilnehmer nicht entschlüsseln.",
+        },
+        noRecord: {
+          title: "Aufzeichnung nicht möglich",
+          description:
+            "Wenn E2EE aktiviert ist, kann der Server Meeting-Inhalte nicht aufzeichnen oder transkribieren. Der Datenschutz wird durch die Verschlüsselungsebene erzwungen.",
+        },
+        openSource: {
+          title: "Vollständig auditierbar",
+          description:
+            "Jede Zeile der Verschlüsselungspipeline — von der Schlüsselgenerierung bis zur Frame-Transformation — ist unter Apache 2.0 Open Source.",
+        },
+      },
+    },
+    cta: {
+      title: "Probieren Sie es selbst aus",
+      description:
+        "Treten Sie einem Live-Demo-Meeting mit aktiviertem E2EE bei. Kein Account, keine Installation, keine Verpflichtung.",
+      tryDemo: "Live-Demo öffnen",
+      readDocs: "Dokumentation lesen",
     },
   },
 };

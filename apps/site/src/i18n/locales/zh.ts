@@ -512,6 +512,7 @@ export default {
       "architecture/agents": "机器人代理",
       "architecture/webrtc-connectivity": "WebRTC 连接",
       "architecture/turn-server": "TURN 服务器",
+      "architecture/e2ee": "端到端加密",
       "backend/overview": "后端文档",
       "backend/structure": "代码结构",
       "backend/database": "数据库与模型",
@@ -936,6 +937,130 @@ export default {
       noPerSeat: "无按座位收费",
       costPerSeat: "每座位成本：",
       costFree: "$0.00",
+    },
+  },
+  e2eePage: {
+    meta: {
+      title: "端到端加密 - Bedrud",
+      description:
+        "Bedrud 支持按会议室启用的端到端加密。零知识架构——您的服务器仅转发加密媒体，但绝不持有密钥。",
+    },
+    badge: "隐私至上",
+    title: "端到端加密",
+    subtitle:
+      "为您的会议提供可选的端到端加密。服务器中继加密媒体——仅参会者可解密。您的密钥，您的数据，您的控制权。",
+    howItWorks: {
+      title: "工作原理",
+      description: "三大简单原则，确保您的会议从服务器到屏幕全链路保持私密。",
+      step1: {
+        title: "开启 E2EE",
+        description:
+          "在设置中按房间启用端到端加密。只需一键切换——无需修改配置文件。",
+      },
+      step2: {
+        title: "共享密钥",
+        description:
+          "加密密钥仅保留在 URL 的哈希片段（#key=...）中——绝不发送给服务器。安全地将链接分享给参会者。",
+      },
+      step3: {
+        title: "盲中继",
+        description:
+          "LiveKit SFU 在不解密的情况下转发加密数据帧。服务器绝无法查看您的视频或音频内容。",
+      },
+    },
+    zeroKnowledge: {
+      title: "零知识架构",
+      items: {
+        keyGen: "客户端密钥生成",
+        keyGenDesc:
+          "加密密钥在浏览器中生成。绝不传输到服务器，也绝不存储在服务器上。",
+        blindRelay: "盲 SFU 中继",
+        blindRelayDesc:
+          "LiveKit 按原样转发加密的 RTP 数据帧。不对内容进行解密、审查或录制。",
+        insertableStreams: "可插入流 API",
+        insertableStreamsDesc:
+          "加密在 WebRTC 数据帧级别运行，通过 RTCRtpSender 和 RTCRtpReceiver 变换实现。",
+        workerIsolation: "Web Worker 隔离",
+        workerIsolationDesc:
+          "密码学操作在专用的后台线程中运行。主 UI 线程绝不处理原始密钥。",
+      },
+    },
+    architecture: {
+      title: "架构",
+      description:
+        "数据绝不以明文形式接触服务器。以下是加密路径端到端的工作原理。",
+      toggleLabel: "加密",
+      disabledMode: "标准",
+      enabledMode: "E2EE",
+      sender: "发送方",
+      clientA: "客户端 A",
+      mediaFeed: "媒体流",
+      frameSmile: "帧数据",
+      outboundPipeline: "出站管道",
+      plaintextPipeline: "明文帧",
+      encryptPipeline: "🔒 加密中...",
+      inspectableStatus: "🔍 可检查",
+      blindStatus: "🔒 盲中继",
+      sfuNode: "LiveKit SFU",
+      relayDescription: "中继加密帧",
+      readableServer: "服务器可读取帧（明文）",
+      bypassedServer: "服务器盲目转发（加密）",
+      sfuStorage: "SFU 管道",
+      frameClear: "帧 [clear]",
+      frameCipher: "帧 [cipher]",
+      receiver: "接收方",
+      clientB: "客户端 B",
+      decodedOutput: "解码输出",
+      inboundPipeline: "入站管道",
+      decryptPipeline: "🔓 解密中...",
+      disclaimerStandard:
+        "标准模式：SFU 可以看到原始帧数据。媒体在传输过程中加密（TLS），但服务器可以检查内容。",
+      disclaimerE2ee:
+        "E2EE 模式：SFU 转发加密帧而不解密。只有参与者才能解码媒体。",
+    },
+    platforms: {
+      title: "平台支持",
+      description:
+        "E2EE 支持所有 Bedrud 客户端。每个平台均采用其 LiveKit SDK 的原生端到端加密支持。",
+      items: {
+        web: "Web 端",
+        android: "Android 端",
+        ios: "iOS 端",
+        desktop: "桌面端",
+      },
+    },
+    feature: {
+      title: "核心特性",
+      description: "是什么让 Bedrud E2EE 与平台掌控的集中式加密截然不同。",
+      items: {
+        perRoom: {
+          title: "按房间控制",
+          description:
+            "在单个房间中启用 E2EE。既能保持公共房间开放，又能保障敏感会议的安全。",
+        },
+        zeroKnowledge: {
+          title: "零知识服务器",
+          description:
+            "您的自托管服务器绝不持有加密密钥。即使是您（基础设施所有者）也无法解密参会者的音视频内容。",
+        },
+        noRecord: {
+          title: "无法录制",
+          description:
+            "启用 E2EE 后，服务器无法录制或转录会议内容。隐私安全由加密层硬性强制执行。",
+        },
+        openSource: {
+          title: "完全可审计",
+          description:
+            "加密管线的每一行代码——从密钥生成到数据帧变换——均在 Apache 2.0 许可下开源。",
+        },
+      },
+    },
+    cta: {
+      title: "亲身体验",
+      description:
+        "加入一个已启用 E2EE 的实时演示会议。免注册、免安装、零门槛。",
+      tryDemo: "打开实时演示",
+      readDocs: "阅读文档",
     },
   },
 };

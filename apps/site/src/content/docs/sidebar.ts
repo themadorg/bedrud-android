@@ -113,6 +113,13 @@ export const sections: SidebarSection[] = [
         description: "TURN relay configuration",
         order: 14,
       },
+      {
+        slug: "architecture/e2ee",
+        title: "End-to-End Encryption",
+        description:
+          "E2EE architecture, implementation, and planned client-side encryption",
+        order: 15,
+      },
     ],
   },
   {

@@ -484,6 +484,7 @@ export default {
       "architecture/agents": "Botエージェント",
       "architecture/webrtc-connectivity": "WebRTC接続性",
       "architecture/turn-server": "TURNサーバー",
+      "architecture/e2ee": "エンドツーエンド暗号化",
       "backend/overview": "バックエンドドキュメント",
       "backend/structure": "コード構造",
       "backend/database": "データベースとモデル",
@@ -915,6 +916,132 @@ export default {
       noPerSeat: "シート課金なし",
       costPerSeat: "シートあたりのコスト：",
       costFree: "$0.00",
+    },
+  },
+  e2eePage: {
+    meta: {
+      title: "エンドツーエンド暗号化 - Bedrud",
+      description:
+        "Bedrud は、ルームごとにオプションのエンドツーエンド暗号化をサポートしています。ゼロナレッジ・アーキテクチャ — サーバーは暗号化されたメディアを中継しますが、鍵を決して保持しません。",
+    },
+    badge: "プライバシー第一",
+    title: "エンドツーエンド暗号化",
+    subtitle:
+      "ミーティング用のオプションのE2EE。サーバーは暗号化されたメディアを中継します — 参加者のみが復号化できます。あなたの鍵、あなたのデータ、あなたのコントロール。",
+    howItWorks: {
+      title: "仕組み",
+      description:
+        "サーバーから画面までミーティングのプライバシーを保護する3つのシンプルな原則。",
+      step1: {
+        title: "E2EEをオンにする",
+        description:
+          "設定からルームごとにE2EEを有効にします。設定ファイルの編集ではなく、UIのトグルスイッチで簡単に行えます。",
+      },
+      step2: {
+        title: "鍵の共有",
+        description:
+          "暗号化キーはURLフラグメントに格納され、サーバーに送信されることはありません。リンクを安全に参加者と共有してください。",
+      },
+      step3: {
+        title: "ブラインドアクティブ中継",
+        description:
+          "LiveKit SFUは、暗号化されたフレームを復号化せずに転送します。サーバーがビデオやオーディオの内容を見ることはありません。",
+      },
+    },
+    zeroKnowledge: {
+      title: "ゼロナレッジ・アーキテクチャ",
+      items: {
+        keyGen: "クライアント側での鍵生成",
+        keyGenDesc:
+          "暗号化キーはブラウザ内で生成されます。サーバーに送信されたり、サーバーに保存されたりすることは一切ありません。",
+        blindRelay: "ブラインドSFU中継",
+        blindRelayDesc:
+          "LiveKitは暗号化されたRTPフレームをそのまま転送します。復号化や検査、録画などは行われません。",
+        insertableStreams: "Insertable Streams API",
+        insertableStreamsDesc:
+          "暗号化は、RTCRtpSenderおよびRTCRtpReceiverの変換を介して、WebRTCフレームレベルで動作します。",
+        workerIsolation: "Web Workerによる分離",
+        workerIsolationDesc:
+          "暗号化処理は専用のバックグラウンドスレッドで実行されます。メインのUIスレッドが暗号化キーを直接処理することはありません。",
+      },
+    },
+    architecture: {
+      title: "アーキテクチャ",
+      description:
+        "データがクリアテキストでサーバーに触れることはありません。エンドツーエンドの暗号化パスの仕組みは次のとおりです。",
+      toggleLabel: "暗号化",
+      disabledMode: "標準",
+      enabledMode: "E2EE",
+      sender: "送信者",
+      clientA: "クライアント A",
+      mediaFeed: "メディアフィード",
+      frameSmile: "フレームペイロード",
+      outboundPipeline: "送信パイプライン",
+      plaintextPipeline: "平文フレーム",
+      encryptPipeline: "🔒 暗号化中...",
+      inspectableStatus: "🔍 検査可能",
+      blindStatus: "🔒 ブラインドリレー",
+      sfuNode: "LiveKit SFU",
+      relayDescription: "暗号化フレームの中継",
+      readableServer: "サーバーがフレームを読み取り可能（平文）",
+      bypassedServer: "サーバーが盲目的に転送（暗号化）",
+      sfuStorage: "SFU パイプライン",
+      frameClear: "フレーム [clear]",
+      frameCipher: "フレーム [cipher]",
+      receiver: "受信者",
+      clientB: "クライアント B",
+      decodedOutput: "デコード出力",
+      inboundPipeline: "受信パイプライン",
+      decryptPipeline: "🔓 復号化中...",
+      disclaimerStandard:
+        "標準モード：SFU は生のフレームデータを参照できます。メディアは転送中に暗号化されますが（TLS）、サーバーはコンテンツを検査できます。",
+      disclaimerE2ee:
+        "E2EE モード：SFU は暗号化されたフレームを復号せずに転送します。参加者のみがメディアをデコードできます。",
+    },
+    platforms: {
+      title: "対応プラットフォーム",
+      description:
+        "E2EEはすべてのBedrudクライアントで動作します。各プラットフォームは、LiveKit SDKが提供するネイティブのE2EEサポートを使用します。",
+      items: {
+        web: "Web",
+        android: "Android",
+        ios: "iOS",
+        desktop: "デスクトップ",
+      },
+    },
+    feature: {
+      title: "主な特徴",
+      description:
+        "プラットフォームが管理する一般的な暗号化と、Bedrud E2EEとの違い。",
+      items: {
+        perRoom: {
+          title: "ルームごとのコントロール",
+          description:
+            "個々のルームでE2EEを有効にします。パブリックルームはオープンに保ちながら、機密性の高いミーティングを保護できます。",
+        },
+        zeroKnowledge: {
+          title: "ゼロナレッジサーバー",
+          description:
+            "セルフホストされたサーバーが暗号化キーを保持することはありません。インフラの所有者であっても参加者の通信を復号化することは不可能です。",
+        },
+        noRecord: {
+          title: "録画不可",
+          description:
+            "E2EEが有効な場合、サーバーはミーティング内容を録画したり文字起こししたりできません。プライバシーは暗号化レイヤーで強制されます。",
+        },
+        openSource: {
+          title: "完全な監査可能性",
+          description:
+            "鍵生成からフレーム変換まで、暗号化パイプラインのすべてのコードがApache 2.0ライセンスでオープンソースとして公開されています。",
+        },
+      },
+    },
+    cta: {
+      title: "体験してみる",
+      description:
+        "E2EEが有効なライブデモミーティングに参加できます。アカウント登録やアプリのインストールは不要です。",
+      tryDemo: "ライブデモを開く",
+      readDocs: "ドキュメントを読む",
     },
   },
 };

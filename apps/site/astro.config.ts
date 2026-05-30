@@ -48,6 +48,7 @@ export default defineConfig({
     "/contact": "/en/contact",
     "/contributors": "/en/contributors",
     "/changelog": "/en/changelog",
+    "/e2ee": "/en/e2ee",
     "/demo": "/en/demo",
     "/api-docs": "/en/docs/api/api-reference",
     "/en/api-docs": "/en/docs/api/api-reference",
