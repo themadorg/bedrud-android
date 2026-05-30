@@ -13,7 +13,7 @@ interface FacetOption {
 
 interface DataTableFacetedFilterProps {
   label: string
-  options: FacetOption[]
+  options: readonly FacetOption[]
   values: string[]
   onChange: (values: string[]) => void
 }

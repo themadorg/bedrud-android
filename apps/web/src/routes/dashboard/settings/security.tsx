@@ -3,11 +3,12 @@ import { AlertCircle, Check, Loader2, Lock, LogIn } from 'lucide-react'
 import React, { useState } from 'react'
 import { api } from '#/lib/api'
 import { useUserStore } from '#/lib/user.store'
+import { Alert } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Alert } from '@/components/ui/alert'
+import { cn } from '@/lib/utils'
 
 export const Route = createFileRoute('/dashboard/settings/security')({
   component: SecurityPage,

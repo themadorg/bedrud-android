@@ -61,10 +61,6 @@
   "error.session.description": "Your session has ended. Please sign in again.",
   "error.server.title": "Something went wrong",
   "error.server.description": "An unexpected error occurred. Please try again.",
-  "error.kicked.title": "You were removed",
-  "error.kicked.description": "A moderator removed you from this room.",
-  "error.session.title": "Session expired",
-  "error.session.description": "Your session has ended. Please sign in again.",
 
   "passkey.signIn": "Sign in with Passkey",
   "passkey.signUp": "Sign up with Passkey"

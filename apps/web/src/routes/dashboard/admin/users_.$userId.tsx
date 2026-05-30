@@ -22,12 +22,14 @@ import type { CSSProperties } from 'react'
 import { useEffect, useState } from 'react'
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis } from 'recharts'
 import { toast } from 'sonner'
+import { ProviderBadge } from '#/components/admin/ProviderBadge'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '#/components/ui/select'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '#/components/ui/tabs'
 import { api } from '#/lib/api'
 import { getErrorMessage } from '#/lib/errors'
 import { useUserStore } from '#/lib/user.store'
 import { useAdminContext } from '#/routes/dashboard/admin.tsx'
+import { detectRole, ROLE_ACCESS_MAP, ROLE_OPTS as ROLE_OPTIONS } from '#/types/admin'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -42,8 +44,6 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
-import { ROLE_ACCESS_MAP, ROLE_OPTS as ROLE_OPTIONS, detectRole } from '#/types/admin'
-import { ProviderBadge } from '#/components/admin/ProviderBadge'
 
 function getRoleBadgeStyle(access: string): CSSProperties {
   switch (access) {
@@ -334,7 +334,9 @@ function UserDetailPage() {
                           <Button
                             type="button"
                             size="sm"
-                            onClick={() => changeRole.mutate(ROLE_ACCESS_MAP[pendingRole])}
+                            onClick={() =>
+                              changeRole.mutate(ROLE_ACCESS_MAP[pendingRole as keyof typeof ROLE_ACCESS_MAP])
+                            }
                             disabled={changeRole.isPending}
                             className="h-7 px-2 text-[11px]"
                           >

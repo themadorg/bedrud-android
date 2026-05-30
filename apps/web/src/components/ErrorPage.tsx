@@ -107,7 +107,8 @@ export function ErrorPage({
   const friendly = parsed?.code ? lookup[parsed.code] : undefined
 
   const displayTitle = title ?? friendly?.title ?? intl.formatMessage({ id: config.defaultTitleId })
-  const displayDescription = description ?? friendly?.description ?? intl.formatMessage({ id: config.defaultDescriptionId })
+  const displayDescription =
+    description ?? friendly?.description ?? intl.formatMessage({ id: config.defaultDescriptionId })
 
   return (
     <div className={cn('flex min-h-screen flex-col bg-background', className)}>

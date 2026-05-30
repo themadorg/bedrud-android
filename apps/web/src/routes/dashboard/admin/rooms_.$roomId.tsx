@@ -106,7 +106,7 @@ function RoomDetailPage() {
   // Track which participant identities have appeared so we can assign stable colors
   const identitiesRef = useRef<string[]>([])
 
-  const { data, isLoading, isError, error, refetch } = useQuery({
+  const { data, isLoading, isError, error, refetch, dataUpdatedAt } = useQuery({
     queryKey: ['admin', 'room', roomId, 'participants'],
     queryFn: () =>
       api.get<{ participants: LiveParticipant[]; room: RoomInfo }>(`/api/admin/rooms/${roomId}/participants`),

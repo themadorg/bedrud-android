@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { createFileRoute, Link } from '@tanstack/react-router'
+import { RefreshCw } from 'lucide-react'
 import { useState } from 'react'
 
 import { DataTableFacetedFilter } from '#/components/admin/DataTableFacetedFilter'

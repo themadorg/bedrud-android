@@ -1,11 +1,11 @@
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { Eye, EyeOff, Loader2, MailCheck } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
+import { FormattedMessage } from 'react-intl'
 import { ApiError, api } from '#/lib/api'
 import { useAuthStore } from '#/lib/auth.store'
 import { getPublicSettings, type PublicSettings } from '#/lib/use-public-settings'
 import { useUserStore } from '#/lib/user.store'
-import { FormattedMessage } from 'react-intl'
 import { OAuthButtons } from '@/components/auth/OAuthButtons'
 import { PasskeyButton } from '@/components/auth/PasskeyButton'
 import { Button } from '@/components/ui/button'
@@ -190,8 +190,12 @@ function LoginPage() {
     <div className="space-y-7">
       {/* Header */}
       <div className="space-y-1">
-        <h1 className="text-2xl font-bold tracking-tight"><FormattedMessage id="auth.login.title" defaultMessage="Welcome back" /></h1>
-        <p className="text-sm text-muted-foreground"><FormattedMessage id="auth.login.subtitle" defaultMessage="Sign in to your account to continue." /></p>
+        <h1 className="text-2xl font-bold tracking-tight">
+          <FormattedMessage id="auth.login.title" defaultMessage="Welcome back" />
+        </h1>
+        <p className="text-sm text-muted-foreground">
+          <FormattedMessage id="auth.login.subtitle" defaultMessage="Sign in to your account to continue." />
+        </p>
       </div>
 
       {/* Global error */}
@@ -208,7 +212,9 @@ function LoginPage() {
       {/* Email/password form */}
       <form onSubmit={handleSubmit} className="space-y-4" noValidate>
         <div className="space-y-1.5">
-          <Label htmlFor="email"><FormattedMessage id="auth.login.email" defaultMessage="Email" /></Label>
+          <Label htmlFor="email">
+            <FormattedMessage id="auth.login.email" defaultMessage="Email" />
+          </Label>
           <Input
             id="email"
             name="email"
@@ -223,7 +229,9 @@ function LoginPage() {
 
         <div className="space-y-1.5">
           <div className="flex items-center justify-between">
-            <Label htmlFor="password"><FormattedMessage id="auth.login.password" defaultMessage="Password" /></Label>
+            <Label htmlFor="password">
+              <FormattedMessage id="auth.login.password" defaultMessage="Password" />
+            </Label>
             <Link
               to="/auth/forgot-password"
               className="text-xs text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
@@ -259,7 +267,8 @@ function LoginPage() {
         <Button type="submit" className="w-full" disabled={isLoading}>
           {isLoading ? (
             <>
-              <Loader2 className="me-2 h-4 w-4 animate-spin" /> <FormattedMessage id="auth.login.signingIn" defaultMessage="Signing in…" />
+              <Loader2 className="me-2 h-4 w-4 animate-spin" />{' '}
+              <FormattedMessage id="auth.login.signingIn" defaultMessage="Signing in…" />
             </>
           ) : (
             <FormattedMessage id="auth.login.signIn" defaultMessage="Sign in" />

@@ -1,5 +1,6 @@
 import { AlertCircle } from 'lucide-react'
-import { lazy, type ReactNode, Suspense } from 'react'
+import { type ReactNode, Suspense } from 'react'
+import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 
 import type { ClusterGroup } from './chatGrouping'

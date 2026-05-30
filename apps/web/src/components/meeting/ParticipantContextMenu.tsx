@@ -83,7 +83,7 @@ export interface ParticipantMenuContentProps {
   isPinned?: boolean
   onTogglePin?: () => void
   Item: ComponentType<{
-    onClick?: () => void
+    onClick?: (e: React.MouseEvent<HTMLElement>) => void
     disabled?: boolean
     className?: string
     style?: React.CSSProperties

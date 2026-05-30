@@ -1,4 +1,5 @@
 import { Copy, DoorOpen, Eye, Pencil, Power, Trash2 } from 'lucide-react'
+import type { AdminRoom } from '#/types/admin'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -7,7 +8,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import type { AdminRoom } from '#/types/admin'
 
 // Re-export for consumers that import the type from this module (back-compat)
 export type { AdminRoom }

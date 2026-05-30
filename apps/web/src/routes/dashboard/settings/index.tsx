@@ -1,5 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { Loader2, Shield } from 'lucide-react'
+import { Check, Loader2, Shield } from 'lucide-react'
 import React, { useState } from 'react'
 import { api } from '#/lib/api'
 import { useUserStore } from '#/lib/user.store'
@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { cn } from '@/lib/utils'
 
 export const Route = createFileRoute('/dashboard/settings/')({
   component: ProfilePage,
