@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { createFileRoute, Link } from '@tanstack/react-router'
+import { RefreshCw } from 'lucide-react'
 import { useState } from 'react'
 import { toast } from 'sonner'
 import { AlertConfirmDialog } from '#/components/admin/AlertConfirmDialog'
@@ -13,7 +14,7 @@ import { Button } from '#/components/ui/button'
 import { api } from '#/lib/api'
 import { getErrorMessage } from '#/lib/errors'
 import { useAdminContext } from '#/routes/dashboard/admin.tsx'
-import { getRoleLabel, ROLE_OPTS, type AdminUser } from '#/types/admin'
+import { type AdminUser, getRoleLabel, ROLE_OPTS } from '#/types/admin'
 
 export const Route = createFileRoute('/dashboard/admin/users')({ component: AdminUsersPage })
 
@@ -37,7 +38,7 @@ const CREATED_OPTS = [
 
 function AdminUsersPage() {
   const queryClient = useQueryClient()
-  const { isReadOnly, currentUserId } = useAdminContext()
+  const { currentUserId } = useAdminContext()
   const [confirmBulkAction, setConfirmBulkAction] = useState<'ban' | 'promote' | 'delete' | null>(null)
 
   const { data, isLoading, isError, error, refetch } = useQuery({
@@ -49,29 +50,6 @@ function AdminUsersPage() {
   const table = useTableState({
     items: (data?.users ?? []) as AdminUser[],
     defaultSort: { key: 'createdAt', order: 'desc' },
-  })
-
-  const toggleStatus = useMutation({
-    mutationFn: ({ id, active }: { id: string; active: boolean }) =>
-      api.put(`/api/admin/users/${id}/status`, { active }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin', 'users'] }),
-    onError: (err) => toast.error(getErrorMessage(err, 'Failed to update user status')),
-  })
-
-  const changeRole = useMutation({
-    mutationFn: ({ id, accesses }: { id: string; accesses: string[] }) =>
-      api.put(`/api/admin/users/${id}/accesses`, { accesses }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin', 'users'] }),
-    onError: (err) => toast.error(getErrorMessage(err, 'Failed to update user role')),
-  })
-
-  const deleteUser = useMutation({
-    mutationFn: (id: string) => api.delete(`/api/admin/users/${id}`),
-    onSuccess: () => {
-      toast.success('User deletion queued. This may take a moment.')
-      queryClient.invalidateQueries({ queryKey: ['admin', 'users'] })
-    },
-    onError: (err) => toast.error(getErrorMessage(err, 'Failed to delete user')),
   })
 
   const bulkBan = useMutation({

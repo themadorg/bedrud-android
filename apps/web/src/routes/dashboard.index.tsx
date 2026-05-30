@@ -1,7 +1,7 @@
 // TODO oncoming feature
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
-import { Archive, ArrowRight, Check, Clock, Copy, Globe, Lock, Plus, Search, Settings2, Trash2, X } from 'lucide-react'
+import { Archive, ArrowRight, Clock, Plus, Search, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { api } from '#/lib/api'
@@ -10,14 +10,11 @@ import { useUserStore } from '#/lib/user.store'
 import { CreateRoomDialog } from '@/components/dashboard/CreateRoomDialog'
 import { RoomCard } from '@/components/dashboard/RoomCard'
 import { RoomSettingsDialog } from '@/components/dashboard/RoomSettingsDialog'
-
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { getErrorMessage } from '@/lib/errors'
-import { cn } from '@/lib/utils'
 
 interface Room {
   id: string
@@ -102,147 +99,6 @@ function QuickJoinBar({ onJoin, onCreate }: { onJoin: (name: string) => void; on
       <Button type="button" variant="default" size="sm" onClick={onCreate}>
         <Plus className="h-3.5 w-3.5" />
         <span className="hidden sm:inline">New room</span>
-      </Button>
-    </div>
-  )
-}
-
-// ── Room Row ─────────────────────────────────────────────────────────────────
-
-function RoomRow({
-  room,
-  onJoin,
-  onDelete,
-  onSettings,
-  isDeleting,
-}: {
-  room: Room
-  onJoin: () => void
-  onDelete: () => void
-  onSettings: () => void
-  isDeleting?: boolean
-}) {
-  const [copied, setCopied] = useState(false)
-  const [confirmDelete, setConfirmDelete] = useState(false)
-
-  function copyLink() {
-    void navigator.clipboard.writeText(`${window.location.origin}/m/${room.name}`)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 1500)
-  }
-
-  if (confirmDelete) {
-    return (
-      <div className="flex items-center justify-between gap-3 rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2">
-        <p className="text-sm text-destructive">
-          Delete <span className="font-mono font-medium">{room.name}</span>?
-        </p>
-        <div className="flex items-center gap-1.5">
-          <Button variant="ghost" size="sm" type="button" onClick={() => setConfirmDelete(false)}>
-            Cancel
-          </Button>
-          <Button
-            variant="destructive"
-            size="sm"
-            type="button"
-            disabled={isDeleting}
-            onClick={() => {
-              onDelete()
-              setConfirmDelete(false)
-            }}
-          >
-            {isDeleting ? 'Deleting…' : 'Delete'}
-          </Button>
-        </div>
-      </div>
-    )
-  }
-
-  return (
-    <div className="group flex items-center gap-3 rounded-lg px-3 py-2 transition-colors hover:bg-accent/50">
-      {/* Status dot + name */}
-      <div className="flex min-w-0 flex-1 items-center gap-3">
-        <span
-          className={cn('h-2 w-2 shrink-0 rounded-full', room.isActive ? 'bg-emerald-500' : 'bg-muted-foreground/20')}
-          title={room.isActive ? 'Live' : 'Inactive'}
-        />
-        <button
-          type="button"
-          onClick={onJoin}
-          className="min-w-0 truncate font-mono text-sm font-medium hover:underline"
-        >
-          {room.name}
-        </button>
-      </div>
-
-      {/* Badges */}
-      <div className="hidden items-center gap-1.5 sm:flex">
-        <Badge
-          variant="outline"
-          className={cn(
-            'gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-medium',
-            room.isPublic
-              ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400'
-              : 'bg-amber-500/10 text-amber-600 dark:text-amber-400',
-          )}
-        >
-          {room.isPublic ? <Globe className="h-3 w-3" /> : <Lock className="h-3 w-3" />}
-          {room.isPublic ? 'Public' : 'Private'}
-        </Badge>
-        {room.isActive && (
-          <Badge
-            variant="outline"
-            className="gap-1 rounded-md bg-emerald-500/10 px-1.5 py-0.5 text-[10px] font-medium text-emerald-600 dark:text-emerald-400"
-          >
-            Live
-          </Badge>
-        )}
-      </div>
-
-      {/* Actions */}
-      <div className="flex items-center gap-0.5 opacity-100 sm:opacity-0 sm:transition-opacity sm:group-hover:opacity-100">
-        <Button
-          variant="ghost"
-          size="icon"
-          type="button"
-          onClick={copyLink}
-          className="h-7 w-7"
-          title={copied ? 'Copied!' : 'Copy link'}
-        >
-          {copied ? <Check className="h-3.5 w-3.5 text-emerald-500" /> : <Copy className="h-3.5 w-3.5" />}
-        </Button>
-        <Button
-          variant="ghost"
-          size="icon"
-          type="button"
-          onClick={onSettings}
-          className="h-7 w-7"
-          aria-label="Room settings"
-        >
-          <Settings2 className="h-3.5 w-3.5" />
-        </Button>
-        <Button
-          variant="ghost"
-          size="icon"
-          type="button"
-          onClick={() => setConfirmDelete(true)}
-          className="h-7 w-7 hover:bg-destructive/10 hover:text-destructive"
-          title="Delete"
-        >
-          <Trash2 className="h-3.5 w-3.5" />
-        </Button>
-      </div>
-
-      {/* Join button */}
-      <Button
-        variant={room.isActive ? 'default' : 'outline'}
-        size="sm"
-        type="button"
-        onClick={onJoin}
-        className="h-7 gap-1 px-2.5 text-xs"
-      >
-        {room.isActive ? 'Join' : 'Open'}
-        <ArrowRight className="h-3 w-3" />
       </Button>
     </div>
   )

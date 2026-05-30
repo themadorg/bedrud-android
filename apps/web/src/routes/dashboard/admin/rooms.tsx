@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
-import { Plus } from 'lucide-react'
+import { Plus, RefreshCw } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { DataTableBulkBar } from '#/components/admin/DataTableBulkBar'
@@ -13,8 +13,8 @@ import { Button } from '#/components/ui/button'
 import { api } from '#/lib/api'
 import { getErrorMessage } from '#/lib/errors'
 import { useAdminContext } from '#/routes/dashboard/admin.tsx'
-import { CreateRoomDialog, type RoomSettings } from '@/components/dashboard/CreateRoomDialog'
 import type { AdminRoom } from '#/types/admin'
+import { CreateRoomDialog, type RoomSettings } from '@/components/dashboard/CreateRoomDialog'
 
 interface RoomsSearch {
   create?: boolean
@@ -54,8 +54,7 @@ const CREATED_OPTS = [
 function AdminRoomsPage() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
-  const { isReadOnly } = useAdminContext()
-  const [pendingRoomIds, setPendingRoomIds] = useState<Set<string>>(new Set())
+  useAdminContext()
   const [confirmBulkAction, setConfirmBulkAction] = useState<'suspend' | 'close' | null>(null)
   const [createOpen, setCreateOpen] = useState(false)
 
@@ -83,45 +82,6 @@ function AdminRoomsPage() {
     defaultSort: { key: 'createdAt', order: 'desc' },
   })
 
-  const suspendRoom = useMutation({
-    mutationFn: (id: string) => api.post(`/api/admin/rooms/${id}/suspend`, {}),
-    onSuccess: (_data, roomId) => {
-      setPendingRoomIds((prev) => new Set(prev).add(roomId))
-      toast.success('Room suspension queued')
-      queryClient.invalidateQueries({ queryKey: ['admin', 'rooms'] })
-    },
-    onError: (err) => toast.error(getErrorMessage(err, 'Failed to queue suspension')),
-  })
-
-  const unsuspendRoom = useMutation({
-    mutationFn: (id: string) => api.post(`/api/admin/rooms/${id}/reactivate`, {}),
-    onSuccess: () => {
-      toast.success('Room reactivated')
-      queryClient.invalidateQueries({ queryKey: ['admin', 'rooms'] })
-    },
-    onError: (err) => toast.error(getErrorMessage(err, 'Failed to reactivate room')),
-  })
-
-  const closeRoom = useMutation({
-    mutationFn: (id: string) => api.delete(`/api/admin/rooms/${id}`),
-    onSuccess: (_data, roomId) => {
-      setPendingRoomIds((prev) => new Set(prev).add(roomId))
-      toast.success('Room close queued')
-      queryClient.invalidateQueries({ queryKey: ['admin', 'rooms'] })
-    },
-    onError: (err) => toast.error(getErrorMessage(err, 'Failed to close room')),
-  })
-
-  const deleteRoom = useMutation({
-    mutationFn: (id: string) => api.delete(`/api/admin/rooms/${id}`),
-    onSuccess: (_data, roomId) => {
-      setPendingRoomIds((prev) => new Set(prev).add(roomId))
-      toast.success('Room deletion queued')
-      queryClient.invalidateQueries({ queryKey: ['admin', 'rooms'] })
-    },
-    onError: (err) => toast.error(getErrorMessage(err, 'Failed to delete room')),
-  })
-
   async function handleCreate(data: {
     name?: string
     isPublic: boolean
@@ -136,13 +96,6 @@ function AdminRoomsPage() {
       toast.error(getErrorMessage(err, 'Failed to create room'))
     }
   }
-
-  const updateLimit = useMutation({
-    mutationFn: ({ id, max }: { id: string; max: number }) =>
-      api.put(`/api/admin/rooms/${id}`, { maxParticipants: max }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin', 'rooms'] }),
-    onError: (err) => toast.error(getErrorMessage(err, 'Failed to update room limit')),
-  })
 
   const bulkSuspend = useMutation({
     mutationFn: (ids: string[]) => api.post('/api/admin/rooms/bulk/suspend', { ids }),
@@ -287,16 +240,17 @@ function AdminRoomsPage() {
           ) : (
             <div className="divide-y">
               {table.paginated.map((room) => (
-                <div
+                <button
                   key={room.id}
-                  className="flex items-center justify-between px-4 py-3 text-sm cursor-pointer hover:bg-muted"
+                  type="button"
+                  className="flex w-full items-center justify-between px-4 py-3 text-sm cursor-pointer hover:bg-muted"
                   onClick={() => navigate({ to: '/dashboard/admin/rooms/$roomId', params: { roomId: room.id } })}
                 >
-                  <div className="font-mono">{room.name}</div>
-                  <div className="text-xs text-muted-foreground">
+                  <span className="font-mono">{room.name}</span>
+                  <span className="text-xs text-muted-foreground">
                     {room.isActive ? 'Active' : 'Inactive'} · {room.maxParticipants} max
-                  </div>
-                </div>
+                  </span>
+                </button>
               ))}
             </div>
           )}
