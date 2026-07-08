@@ -1310,3 +1310,43 @@ func TestGetAdminStats_Success(t *testing.T) {
 	}
 }
 
+func TestResolveLiveKitHost(t *testing.T) {
+	t.Parallel()
+
+	serverHost := "wss://example.com/livekit"
+
+	tests := []struct {
+		name   string
+		host   string
+		origin string
+		want   string
+	}{
+		{name: "server wss default", host: serverHost, want: serverHost},
+		{name: "localhost still uses server", host: serverHost, origin: "http://localhost:7070", want: serverHost},
+		{name: "https upgrades ws", host: "ws://example.com/livekit", origin: "https://example.com", want: "wss://example.com/livekit"},
+		{name: "http public unchanged", host: "ws://example.com/livekit", origin: "http://example.com", want: "ws://example.com/livekit"},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			app := fiber.New()
+			var got string
+			app.Get("/", func(c *fiber.Ctx) error {
+				if tc.origin != "" {
+					c.Request().Header.Set("Origin", tc.origin)
+				}
+				got = resolveLiveKitHost(c, tc.host)
+				return c.SendStatus(fiber.StatusOK)
+			})
+			resp, err := app.Test(httptest.NewRequest(http.MethodGet, "/", http.NoBody), -1)
+			if err != nil {
+				t.Fatal(err)
+			}
+			_ = resp.Body.Close()
+			if got != tc.want {
+				t.Fatalf("got %q want %q", got, tc.want)
+			}
+		})
+	}
+}
+

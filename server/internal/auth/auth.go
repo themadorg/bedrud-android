@@ -4,6 +4,7 @@ import (
 	"bedrud/config"
 	"bedrud/internal/models"
 	"bedrud/internal/repository"
+	"bedrud/internal/storage"
 	"crypto/rand"
 	"crypto/sha256"
 	"crypto/x509"
@@ -336,6 +337,33 @@ func (s *AuthService) UpdateProfile(userID, name string) (*models.User, error) {
 		return nil, errors.New("user not found")
 	}
 	user.Name = name
+	if err := s.userRepo.UpdateUser(user); err != nil {
+		return nil, err
+	}
+	return user, nil
+}
+
+func (s *AuthService) UpdateAvatarURL(userID, avatarURL string) (*models.User, error) {
+	user, err := s.userRepo.GetUserByID(userID)
+	if err != nil || user == nil {
+		return nil, errors.New("user not found")
+	}
+	user.AvatarURL = avatarURL
+	if err := s.userRepo.UpdateUser(user); err != nil {
+		return nil, err
+	}
+	return user, nil
+}
+
+func (s *AuthService) ClearAvatar(userID string) (*models.User, error) {
+	user, err := s.userRepo.GetUserByID(userID)
+	if err != nil || user == nil {
+		return nil, errors.New("user not found")
+	}
+	if strings.HasPrefix(user.AvatarURL, "/uploads/avatars/") {
+		_ = storage.DeleteUserAvatarFiles(userID)
+	}
+	user.AvatarURL = ""
 	if err := s.userRepo.UpdateUser(user); err != nil {
 		return nil, err
 	}

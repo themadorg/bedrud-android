@@ -53,6 +53,7 @@ func setupParticipantTestApp(t *testing.T) (*fiber.App, *repository.RoomReposito
 	app.Post("/room/:roomId/spotlight/:identity", handler.SpotlightParticipant)
 	app.Post("/room/:roomId/screenshare/:identity/stop", handler.StopScreenShare)
 	app.Get("/room/:roomId/participant/:identity/info", handler.GetParticipantInfo)
+	app.Get("/room/:roomId/participant/:identity/profile", handler.GetParticipantProfile)
 	app.Post("/room/:roomId/stage/:identity/bring", handler.BringToStage)
 	app.Post("/room/:roomId/stage/:identity/remove", handler.RemoveFromStage)
 
@@ -396,6 +397,24 @@ func TestGetParticipantInfo_SelfAccessAlwaysAllowed(t *testing.T) {
 	resp, _ := app.Test(req, -1)
 	if resp.StatusCode != 200 {
 		t.Fatalf("expected 200 for self-info access, got %d", resp.StatusCode)
+	}
+}
+
+func TestGetParticipantProfile_MeetingParticipantCanViewOther(t *testing.T) {
+	app, roomRepo, baseClaims := setupParticipantTestApp(t)
+
+	room, err := roomRepo.CreateRoom("creator-user", "profile-room", true, "standard", 0, &models.RoomSettings{})
+	if err != nil {
+		t.Fatalf("failed to create room: %v", err)
+	}
+
+	*baseClaims = auth.Claims{UserID: "other-user", Email: "other@ex.com", Accesses: []string{"user"}}
+	_ = roomRepo.AddParticipant(room.ID, "other-user")
+
+	req := httptest.NewRequest("GET", "/room/"+room.ID+"/participant/creator-user/profile", nil)
+	resp, _ := app.Test(req, -1)
+	if resp.StatusCode != 200 {
+		t.Fatalf("expected 200 for in-meeting profile fetch, got %d", resp.StatusCode)
 	}
 }
 

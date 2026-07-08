@@ -29,6 +29,7 @@ import (
 
 // ChatAttachment is the metadata returned after a successful upload.
 type ChatAttachment struct {
+	Kind   string `json:"kind"`
 	URL    string `json:"url"`
 	Mime   string `json:"mime"`
 	Size   int64  `json:"size"`
@@ -188,6 +189,7 @@ func (s *diskStore) Store(data []byte) (*ChatAttachment, error) {
 
 	w, h := imageDimensions(data)
 	return &ChatAttachment{
+		Kind:   "image",
 		URL:    "/uploads/chat/" + filename,
 		Mime:   mime,
 		Size:   int64(len(data)),
@@ -209,6 +211,7 @@ func (s *inlineStore) Store(data []byte) (*ChatAttachment, error) {
 	dataURI := "data:" + mime + ";base64," + encoded
 	w, h := imageDimensions(data)
 	return &ChatAttachment{
+		Kind:   "image",
 		URL:    dataURI,
 		Mime:   mime,
 		Size:   int64(len(data)),
@@ -273,6 +276,7 @@ func (s *s3Store) Store(data []byte) (*ChatAttachment, error) {
 
 	w, h := imageDimensions(data)
 	return &ChatAttachment{
+		Kind:   "image",
 		URL:    url,
 		Mime:   mime,
 		Size:   int64(len(data)),

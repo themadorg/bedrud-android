@@ -2,6 +2,7 @@ package cli
 
 import (
 	"bedrud/config"
+	"bedrud/internal/clioutput"
 	"bedrud/internal/database"
 	"fmt"
 
@@ -33,8 +34,9 @@ func newDBMigrateCmd() *cobra.Command {
 			if err := database.RunMigrations(); err != nil {
 				return fmt.Errorf("migrate: %w", err)
 			}
-			fmt.Println("✓ Database migrations applied")
-			return nil
+			return clioutput.Success("✓ Database migrations applied", map[string]string{
+				"databaseType": cfg.Database.Type,
+			})
 		},
 	}
 }
@@ -61,13 +63,26 @@ func newDBStatusCmd() *cobra.Command {
 			if err := sqlDB.Ping(); err != nil {
 				return fmt.Errorf("ping: %w", err)
 			}
-			fmt.Printf("✓ Database OK (%s)\n", cfg.Database.Type)
-			if cfg.Database.Type == "sqlite" {
-				fmt.Printf("  Path: %s\n", cfg.Database.Path)
-			} else {
-				fmt.Printf("  Host: %s:%s/%s\n", cfg.Database.Host, cfg.Database.Port, cfg.Database.DBName)
+			data := map[string]string{
+				"type":   cfg.Database.Type,
+				"status": "ok",
 			}
-			return nil
+			if cfg.Database.Type == "sqlite" {
+				data["path"] = cfg.Database.Path
+				if !clioutput.JSON() {
+					fmt.Printf("✓ Database OK (%s)\n", cfg.Database.Type)
+					fmt.Printf("  Path: %s\n", cfg.Database.Path)
+				}
+			} else {
+				data["host"] = cfg.Database.Host
+				data["port"] = cfg.Database.Port
+				data["dbname"] = cfg.Database.DBName
+				if !clioutput.JSON() {
+					fmt.Printf("✓ Database OK (%s)\n", cfg.Database.Type)
+					fmt.Printf("  Host: %s:%s/%s\n", cfg.Database.Host, cfg.Database.Port, cfg.Database.DBName)
+				}
+			}
+			return clioutput.Success("✓ Database OK", data)
 		},
 	}
 }
