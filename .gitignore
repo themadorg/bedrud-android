@@ -50,3 +50,8 @@ server/tmp/
 # certificates
 crt.pem
 key.pem
+
+target/
+
+# Local agent tooling
+.grok/
