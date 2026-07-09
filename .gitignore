@@ -1,5 +1,5 @@
-# Data
-data
+# Data (repo-root only — do not match nested paths like emoji-picker/data/)
+/data
 *.db
 *.db-shm
 *.db-wal
