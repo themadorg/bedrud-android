@@ -1,9 +1,10 @@
 package repository
 
 import (
+	"testing"
+
 	"bedrud/internal/models"
 	"bedrud/internal/testutil"
-	"testing"
 )
 
 const testUserIDPasskey = "user-1"

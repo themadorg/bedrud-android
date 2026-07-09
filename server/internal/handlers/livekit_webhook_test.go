@@ -34,13 +34,14 @@ func TestLiveKitWebhook_InvalidSignature(t *testing.T) {
 	app := fiber.New()
 	app.Post("/webhook", h.Handle)
 
-	req := httptest.NewRequest(http.MethodPost, "/webhook", nil)
+	req := httptest.NewRequest(http.MethodPost, "/webhook", http.NoBody)
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := app.Test(req, -1)
 	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+		t.Fatal(err)
 	}
+	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusUnauthorized {
 		t.Fatalf("expected 401, got %d", resp.StatusCode)
 	}
@@ -52,13 +53,14 @@ func TestLiveKitWebhook_NotConfigured(t *testing.T) {
 	app := fiber.New()
 	app.Post("/webhook", h.Handle)
 
-	req := httptest.NewRequest(http.MethodPost, "/webhook", nil)
+	req := httptest.NewRequest(http.MethodPost, "/webhook", http.NoBody)
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := app.Test(req, -1)
 	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+		t.Fatal(err)
 	}
+	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusInternalServerError {
 		t.Fatalf("expected 500, got %d", resp.StatusCode)
 	}
@@ -94,8 +96,9 @@ func TestLiveKitWebhook_ParticipantDisconnected(t *testing.T) {
 
 	resp, err := app.Test(req, -1)
 	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+		t.Fatal(err)
 	}
+	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("expected 200, got %d", resp.StatusCode)
 	}
@@ -138,8 +141,9 @@ func TestLiveKitWebhook_RoomFinished(t *testing.T) {
 
 	resp, err := app.Test(req, -1)
 	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+		t.Fatal(err)
 	}
+	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("expected 200, got %d", resp.StatusCode)
 	}
@@ -179,8 +183,9 @@ func TestLiveKitWebhook_UnknownRoom(t *testing.T) {
 
 	resp, err := app.Test(req, -1)
 	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+		t.Fatal(err)
 	}
+	defer resp.Body.Close()
 	// Should still return 200 (no error) — unknown room is a soft fail
 	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("expected 200, got %d", resp.StatusCode)
@@ -205,8 +210,9 @@ func TestLiveKitWebhook_MissingParticipantInEvent(t *testing.T) {
 
 	resp, err := app.Test(req, -1)
 	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+		t.Fatal(err)
 	}
+	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("expected 200, got %d", resp.StatusCode)
 	}
@@ -229,8 +235,9 @@ func TestLiveKitWebhook_MissingRoomInEvent(t *testing.T) {
 
 	resp, err := app.Test(req, -1)
 	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+		t.Fatal(err)
 	}
+	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("expected 200, got %d", resp.StatusCode)
 	}
@@ -252,8 +259,9 @@ func TestLiveKitWebhook_UnhandledEvent(t *testing.T) {
 
 	resp, err := app.Test(req)
 	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+		t.Fatal(err)
 	}
+	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("expected 200, got %d", resp.StatusCode)
 	}
@@ -318,8 +326,9 @@ func TestLiveKitWebhook_EgressStarted(t *testing.T) {
 	req := newWebhookRequest(t, whTestAPIKey, whTestAPISecret, event)
 	resp, err := app.Test(req, -1)
 	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+		t.Fatal(err)
 	}
+	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("expected 200, got %d", resp.StatusCode)
 	}
@@ -350,8 +359,9 @@ func TestLiveKitWebhook_EgressEnded(t *testing.T) {
 	req := newWebhookRequest(t, whTestAPIKey, whTestAPISecret, event)
 	resp, err := app.Test(req, -1)
 	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+		t.Fatal(err)
 	}
+	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("expected 200, got %d", resp.StatusCode)
 	}
@@ -385,8 +395,9 @@ func TestLiveKitWebhook_EgressFailed(t *testing.T) {
 
 	resp, err := app.Test(req, -1)
 	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+		t.Fatal(err)
 	}
+	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("expected 200, got %d", resp.StatusCode)
 	}
@@ -420,8 +431,9 @@ func TestLiveKitWebhook_EgressEnded_Duplicate(t *testing.T) {
 	req := newWebhookRequest(t, whTestAPIKey, whTestAPISecret, event)
 	resp, err := app.Test(req, -1)
 	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+		t.Fatal(err)
 	}
+	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("expected 200, got %d", resp.StatusCode)
 	}

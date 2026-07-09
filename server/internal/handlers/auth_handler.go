@@ -1,13 +1,6 @@
 package handlers
 
 import (
-	"bedrud/config"
-	"bedrud/internal/auth"
-	"bedrud/internal/database"
-	"bedrud/internal/models"
-	"bedrud/internal/queue"
-	"bedrud/internal/repository"
-	"bedrud/internal/storage"
 	"context"
 	"crypto/rand"
 	"crypto/sha256"
@@ -22,6 +15,14 @@ import (
 	"strings"
 	"time"
 	"unicode"
+
+	"bedrud/config"
+	"bedrud/internal/auth"
+	"bedrud/internal/database"
+	"bedrud/internal/models"
+	"bedrud/internal/queue"
+	"bedrud/internal/repository"
+	"bedrud/internal/storage"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
@@ -602,7 +603,7 @@ func (h *AuthHandler) UpdateProfile(c *fiber.Ctx) error {
 	var newAccessToken, newRefreshToken string
 	if input.Email != "" && auth.CanonicalizeEmail(input.Email) != auth.CanonicalizeEmail(claims.Email) {
 		// Block email change for OAuth-only users — changing email disconnects OAuth identity
-		if claims.Provider != "local" && claims.Provider != "passkey" {
+		if claims.Provider != models.ProviderLocal && claims.Provider != models.ProviderPasskey {
 			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Cannot change email for OAuth accounts"})
 		}
 		if _, err := mail.ParseAddress(input.Email); err != nil {
@@ -819,7 +820,7 @@ func (h *AuthHandler) ForgotPassword(c *fiber.Ctx) error {
 
 	// Look up user by email
 	user, err := h.authService.GetUserByEmail(input.Email)
-	if err == nil && user != nil && (user.Provider == "local" || user.Provider == "passkey") {
+	if err == nil && user != nil && (user.Provider == models.ProviderLocal || user.Provider == models.ProviderPasskey) {
 		cooldownKey := "forgot:" + user.ID
 		if h.emailCooldown.Allow(cooldownKey) {
 			enqueuePasswordResetEmail(h, c, user)
@@ -907,7 +908,7 @@ func (h *AuthHandler) ResetPassword(c *fiber.Ctx) error {
 	}
 
 	// Only allow password reset for local/passkey accounts, not OAuth
-	if user.Provider != "local" && user.Provider != "passkey" {
+	if user.Provider != models.ProviderLocal && user.Provider != models.ProviderPasskey {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": "Password reset is not available for OAuth accounts",
 		})
@@ -948,7 +949,7 @@ func enqueuePasswordResetEmail(h *AuthHandler, c *fiber.Ctx, user *models.User) 
 		return
 	}
 
-	frontendURL := strings.TrimRight(h.config.Auth.FrontendURL, "/")
+	frontendURL := frontendBaseURL(h.config)
 	if frontendURL == "" && h.config.Server.Domain != "" {
 		frontendURL = fmt.Sprintf("https://%s", strings.TrimRight(h.config.Server.Domain, "/"))
 	}
@@ -993,7 +994,7 @@ func enqueueVerificationEmail(h *AuthHandler, c *fiber.Ctx, user *models.User) {
 		return
 	}
 
-	frontendURL := strings.TrimRight(h.config.Auth.FrontendURL, "/")
+	frontendURL := frontendBaseURL(h.config)
 	if frontendURL == "" && h.config.Server.Domain != "" {
 		frontendURL = fmt.Sprintf("https://%s", strings.TrimRight(h.config.Server.Domain, "/"))
 	}
@@ -1020,7 +1021,7 @@ func enqueueVerificationEmail(h *AuthHandler, c *fiber.Ctx, user *models.User) {
 
 // verifyFrontendURL returns the base frontend URL without a trailing slash,
 // defaulting to empty (for relative redirects) when not configured.
-func verifyFrontendURL(cfg *config.Config) string {
+func frontendBaseURL(cfg *config.Config) string {
 	return strings.TrimRight(cfg.Auth.FrontendURL, "/")
 }
 

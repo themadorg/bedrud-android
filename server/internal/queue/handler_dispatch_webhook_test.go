@@ -34,20 +34,6 @@ func testWebhookJob(t *testing.T, url, secret, event string, body map[string]any
 	}
 }
 
-func waitForServer(t *testing.T, url string) {
-	t.Helper()
-	deadline := time.Now().Add(5 * time.Second)
-	for time.Now().Before(deadline) {
-		resp, err := http.Get(url)
-		if err == nil {
-			resp.Body.Close()
-			return
-		}
-		time.Sleep(10 * time.Millisecond)
-	}
-	t.Fatalf("test server did not start")
-}
-
 func TestDispatchWebhook_HMACMatch(t *testing.T) {
 	received := make(chan struct {
 		sig   string
@@ -95,7 +81,9 @@ func TestDispatchWebhook_HMACMatch(t *testing.T) {
 
 		// Verify envelope
 		var envelope map[string]any
-		json.Unmarshal(msg.body, &envelope)
+		if err := json.Unmarshal(msg.body, &envelope); err != nil {
+			t.Fatal(err)
+		}
 		if envelope["event"] != "room.created" {
 			t.Errorf("expected event room.created in body, got %v", envelope["event"])
 		}
@@ -157,7 +145,9 @@ func TestDispatchWebhook_NilBody(t *testing.T) {
 		var envelope map[string]any
 		body, _ := io.ReadAll(r.Body)
 		r.Body.Close()
-		json.Unmarshal(body, &envelope)
+		if err := json.Unmarshal(body, &envelope); err != nil {
+			t.Fatal(err)
+		}
 
 		data, ok := envelope["data"]
 		if !ok {
@@ -298,7 +288,9 @@ func TestDispatchWebhook_ConcurrentDelivery(t *testing.T) {
 		go func() {
 			defer wg.Done()
 			job := testWebhookJob(t, srv.URL, "sec", "room.created", nil)
-			handler(context.Background(), db, job)
+			if err := handler(context.Background(), db, job); err != nil {
+				t.Error(err)
+			}
 		}()
 	}
 	wg.Wait()

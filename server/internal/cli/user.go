@@ -1,8 +1,9 @@
 package cli
 
 import (
-	"bedrud/internal/usercli"
 	"fmt"
+
+	"bedrud/internal/usercli"
 
 	"github.com/spf13/cobra"
 )

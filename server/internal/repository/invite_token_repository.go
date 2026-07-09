@@ -1,9 +1,10 @@
 package repository
 
 import (
-	"bedrud/internal/models"
 	"errors"
 	"time"
+
+	"bedrud/internal/models"
 
 	"gorm.io/gorm"
 )

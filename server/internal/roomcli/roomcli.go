@@ -1,6 +1,10 @@
 package roomcli
 
 import (
+	"context"
+	"fmt"
+	"time"
+
 	"bedrud/config"
 	"bedrud/internal/clioutput"
 	"bedrud/internal/database"
@@ -9,9 +13,6 @@ import (
 	"bedrud/internal/repository"
 	"bedrud/internal/services"
 	"bedrud/internal/storage"
-	"context"
-	"fmt"
-	"time"
 
 	lkauth "github.com/livekit/protocol/auth"
 	"github.com/livekit/protocol/livekit"
@@ -59,7 +60,8 @@ func ListRooms(configPath string, page, pageSize int, activeOnly bool) error {
 
 		clioutput.Printf("%-36s  %-30s  %-36s  %-7s  %-7s  %-9s  %s\n",
 			"ID", "NAME", "CREATED_BY", "MODE", "ACTIVE", "MAX_PART", "EXPIRES_AT")
-		for _, r := range rooms {
+		for i := range rooms {
+			r := &rooms[i]
 			active := "no"
 			if r.IsActive {
 				active = "yes"
@@ -88,7 +90,7 @@ func ShowRoom(configPath, roomID string) error {
 		}
 		if clioutput.JSON() {
 			return clioutput.Success("", map[string]any{
-				"room":                 roomDetail(room),
+				"room":                   roomDetail(room),
 				"activeParticipantCount": len(participants),
 			})
 		}
@@ -233,12 +235,12 @@ func roomDetail(r *models.Room) map[string]any {
 		"createdAt":       r.CreatedAt.Format(time.RFC3339),
 		"expiresAt":       r.ExpiresAt.Format(time.RFC3339),
 		"settings": map[string]any{
-			"allowChat":        r.Settings.AllowChat,
-			"allowVideo":       r.Settings.AllowVideo,
-			"allowAudio":       r.Settings.AllowAudio,
-			"requireApproval":  r.Settings.RequireApproval,
-			"e2ee":             r.Settings.E2EE,
-			"isPersistent":     r.Settings.IsPersistent,
+			"allowChat":       r.Settings.AllowChat,
+			"allowVideo":      r.Settings.AllowVideo,
+			"allowAudio":      r.Settings.AllowAudio,
+			"requireApproval": r.Settings.RequireApproval,
+			"e2ee":            r.Settings.E2EE,
+			"isPersistent":    r.Settings.IsPersistent,
 		},
 	}
 }
@@ -283,7 +285,7 @@ func buildCleanupService(cfg *config.Config, roomRepo *repository.RoomRepository
 		cfg.Chat.Uploads.S3.Endpoint != "" &&
 		cfg.Chat.Uploads.S3.Bucket != "" &&
 		cfg.Chat.Uploads.S3.AccessKey != "" {
-		s3Deleter = storage.NewS3Deleter(cfg.Chat.Uploads.S3)
+		s3Deleter = storage.NewS3Deleter(&cfg.Chat.Uploads.S3)
 	}
 	tracker := storage.NewChatUploadTracker(database.GetDB(), uploadDir, s3Deleter)
 	return services.NewRoomCleanupService(roomRepo, nil, client, nil, cfg.LiveKit.APIKey, cfg.LiveKit.APISecret, tracker)

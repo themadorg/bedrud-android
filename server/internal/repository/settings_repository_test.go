@@ -1,10 +1,11 @@
 package repository
 
 import (
+	"testing"
+
 	"bedrud/config"
 	"bedrud/internal/models"
 	"bedrud/internal/testutil"
-	"testing"
 )
 
 func TestSettingsRepository_GetSettings_CreatesDefault(t *testing.T) {

@@ -89,7 +89,7 @@ func BuildMessage(from, fromName, to, subject, bodyHTML, bodyPlain string) strin
 	msg += fmt.Sprintf("To: %s\r\n", to)
 	msg += fmt.Sprintf("Subject: %s\r\n", subject)
 	msg += "MIME-Version: 1.0\r\n"
-	msg += fmt.Sprintf("Content-Type: multipart/alternative; boundary=\"%s\"\r\n", boundary)
+	msg += fmt.Sprintf("Content-Type: multipart/alternative; boundary=%q\r\n", boundary)
 	msg += "\r\n"
 	msg += fmt.Sprintf("--%s\r\n", boundary)
 	msg += "Content-Type: text/plain; charset=\"utf-8\"\r\n"

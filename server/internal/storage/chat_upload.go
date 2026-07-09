@@ -1,8 +1,6 @@
 package storage
 
 import (
-	"bedrud/config"
-	"bedrud/internal/models"
 	"bytes"
 	"crypto/hmac"
 	"crypto/sha256"
@@ -18,13 +16,23 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
+
+	"bedrud/config"
+	"bedrud/internal/models"
 
 	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
-	"sync"
+)
+
+const (
+	defaultChatUploadDir = "./data/uploads/chat"
+	uploadBackendInline  = "inline"
+	uploadBackendDisk    = "disk"
+	uploadBackendS3      = "s3"
 )
 
 // ChatAttachment is the metadata returned after a successful upload.
@@ -141,20 +149,20 @@ func NewChatUploadStore(cfg *config.ChatUploadConfig) ChatUploadStore {
 
 	diskDir := cfg.DiskDir
 	if diskDir == "" {
-		diskDir = "./data/uploads/chat"
+		diskDir = defaultChatUploadDir
 	}
 
 	switch strings.ToLower(cfg.Backend) {
-	case "s3":
+	case uploadBackendS3:
 		return &s3Store{
 			cfg:            cfg.S3,
 			inlineMaxBytes: inlineMax,
 			diskFallback:   &diskStore{dir: diskDir},
 		}
-	case "inline":
+	case uploadBackendInline:
 		// Always inline regardless of size.
 		return &inlineStore{}
-	default: // "disk" or empty
+	default: // disk or empty
 		return &hybridStore{
 			inlineMaxBytes: inlineMax,
 			disk:           &diskStore{dir: diskDir},
@@ -366,7 +374,7 @@ func s3DeleteObject(endpoint, bucket, region, accessKey, secretKey, key string) 
 	amzdate := now.Format("20060102T150405Z")
 	emptyPayloadHash := fmt.Sprintf("%x", sha256.Sum256([]byte("")))
 
-	req, err := http.NewRequest(http.MethodDelete, url, nil)
+	req, err := http.NewRequest(http.MethodDelete, url, http.NoBody)
 	if err != nil {
 		return err
 	}
@@ -424,14 +432,6 @@ func s3DeriveSigningKey(secretKey, datestamp, region string) []byte {
 	return s3HMACSHA256(kService, "aws4_request")
 }
 
-func (s *s3Store) hmacSHA256(key []byte, data string) []byte {
-	return s3HMACSHA256(key, data)
-}
-
-func (s *s3Store) deriveSigningKey(datestamp, region string) []byte {
-	return s3DeriveSigningKey(s.cfg.SecretKey, datestamp, region)
-}
-
 // deleteObject removes an object from the S3 bucket using AWS Signature V4.
 // Errors are returned to the caller (ChatUploadTracker logs a warning and continues).
 func (s *s3Store) deleteObject(key string) error {
@@ -449,8 +449,11 @@ type ObjectDeleter interface {
 // NewS3Deleter creates an ObjectDeleter backed by the S3 configuration.
 // The returned deleter supports deleting objects via the same SigV4 signing
 // used by the s3Store upload path.
-func NewS3Deleter(cfg config.ChatUploadS3Config) ObjectDeleter {
-	return &s3Store{cfg: cfg}
+func NewS3Deleter(cfg *config.ChatUploadS3Config) ObjectDeleter {
+	if cfg == nil {
+		return &s3Store{}
+	}
+	return &s3Store{cfg: *cfg}
 }
 
 type ChatUploadTracker struct {
@@ -465,7 +468,7 @@ type ChatUploadTracker struct {
 
 func NewChatUploadTracker(db *gorm.DB, chatDir string, deleter ObjectDeleter) *ChatUploadTracker {
 	if chatDir == "" {
-		chatDir = "./data/uploads/chat"
+		chatDir = defaultChatUploadDir
 	}
 	return &ChatUploadTracker{db: db, chatDir: chatDir, deleter: deleter}
 }
@@ -528,7 +531,8 @@ func (t *ChatUploadTracker) DeleteByRoom(roomID string) error {
 	if result.RowsAffected == 0 {
 		return nil
 	}
-	for _, u := range deleted {
+	for i := range deleted {
+		u := &deleted[i]
 		// Only delete the file if no other room references it (cross-room safety)
 		var remaining int64
 		t.db.Model(&models.ChatUpload{}).Where("file_hash = ? AND id != ?", u.FileHash, u.ID).Count(&remaining)
@@ -536,7 +540,7 @@ func (t *ChatUploadTracker) DeleteByRoom(roomID string) error {
 			continue
 		}
 		switch u.StorageBackend {
-		case "s3":
+		case uploadBackendS3:
 			if t.deleter != nil {
 				key := u.FileHash + u.Extension
 				if err := t.deleter.DeleteObject(key); err != nil {
@@ -545,8 +549,8 @@ func (t *ChatUploadTracker) DeleteByRoom(roomID string) error {
 			} else {
 				log.Warn().Str("key", u.FileHash+u.Extension).Str("roomID", roomID).Msg("no S3 deleter configured, orphaned S3 object")
 			}
-		case "inline":
-		default: // "disk" or unknown
+		case uploadBackendInline:
+		default: // disk or unknown
 			path := filepath.Join(t.chatDir, u.FileHash+u.Extension)
 			if err := os.Remove(path); err != nil && !os.IsNotExist(err) {
 				log.Warn().Err(err).Str("path", path).Msg("orphan chat upload file on disk")

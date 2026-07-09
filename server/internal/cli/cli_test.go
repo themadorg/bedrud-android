@@ -184,7 +184,7 @@ func executeRoot(args []string) error {
 	return err
 }
 
-func captureOutput(t *testing.T) (*bytes.Buffer, *bytes.Buffer) {
+func captureOutput(t *testing.T) (stdout, stderr *bytes.Buffer) {
 	t.Helper()
 	var out, errOut bytes.Buffer
 	clioutput.SetWriters(&out, &errOut)

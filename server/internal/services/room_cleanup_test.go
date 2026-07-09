@@ -1,15 +1,16 @@
 package services
 
 import (
+	"context"
+	"sync"
+	"testing"
+
 	"bedrud/config"
 	"bedrud/internal/lkutil"
 	"bedrud/internal/models"
 	"bedrud/internal/repository"
 	"bedrud/internal/storage"
 	"bedrud/internal/testutil"
-	"context"
-	"sync"
-	"testing"
 )
 
 type mockDeleter struct {

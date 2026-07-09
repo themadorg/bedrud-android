@@ -2,12 +2,13 @@
 package services
 
 import (
+	"context"
+	"fmt"
+
 	"bedrud/internal/lkutil"
 	"bedrud/internal/models"
 	"bedrud/internal/repository"
 	"bedrud/internal/storage"
-	"context"
-	"fmt"
 
 	lkauth "github.com/livekit/protocol/auth"
 	"github.com/livekit/protocol/livekit"
@@ -234,13 +235,14 @@ func (s *RoomCleanupService) ArchiveRoom(ctx context.Context, room *models.Room)
 
 func (s *RoomCleanupService) DeleteUserRooms(ctx context.Context, rooms []models.Room, deletedUserID string) error {
 	var firstErr error
-	for _, r := range rooms {
+	for i := range rooms {
+		r := &rooms[i]
 		opts := CascadeDeleteOptions{
 			SystemEvent:     "room_deleted",
 			SystemMessage:   "This room has been closed because the owner's account was removed",
 			DeletedIdentity: deletedUserID,
 		}
-		if err := s.CascadeDeleteRoom(ctx, &r, opts); err != nil {
+		if err := s.CascadeDeleteRoom(ctx, r, opts); err != nil {
 			log.Error().Err(err).Str("roomID", r.ID).Msg("failed to cascade-delete room during user deletion")
 			if firstErr == nil {
 				firstErr = err

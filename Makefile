@@ -575,13 +575,13 @@ scalar-open:
 test-back:
 	cd server && go test -v -count=1 ./...
 
-# Format Go code
+# Format Go code (goimports: correct stdlib-first groups; gofumpt broken on go1.26.4-X)
 fmt:
-	@if ! command -v gofumpt >/dev/null 2>&1; then \
-		echo "➜ Installing gofumpt..."; \
-		go install mvdan.cc/gofumpt@latest; \
+	@if ! command -v goimports >/dev/null 2>&1; then \
+		echo "➜ Installing goimports..."; \
+		go install golang.org/x/tools/cmd/goimports@latest; \
 	fi
-	cd server && gofumpt -l -w .
+	cd server && goimports -w .
 
 # Run linters
 lint:

@@ -1,10 +1,11 @@
 package middleware
 
 import (
+	"strings"
+
 	"bedrud/config"
 	"bedrud/internal/auth"
 	"bedrud/internal/repository"
-	"strings"
 
 	"bedrud/internal/models"
 

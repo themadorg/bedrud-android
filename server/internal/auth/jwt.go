@@ -1,13 +1,14 @@
 package auth
 
 import (
-	"bedrud/config"
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
 	"fmt"
 	"sync"
 	"time"
+
+	"bedrud/config"
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
@@ -237,7 +238,7 @@ func parseClaims(tokenString string, cfg *config.Config) (*Claims, error) {
 
 // ValidateVerificationToken validates a verification JWT and returns the userID and email.
 // It checks that the token's purpose is "email_verify" and that it hasn't expired.
-func ValidateVerificationToken(tokenString string, cfg *config.Config) (string, string, error) {
+func ValidateVerificationToken(tokenString string, cfg *config.Config) (userID, email string, err error) {
 	claims, err := parseClaims(tokenString, cfg)
 	if err != nil {
 		return "", "", fmt.Errorf("invalid or expired verification token")
@@ -262,9 +263,9 @@ func GenerateResetToken(userID, email string, passwordChangedAt *time.Time, cfg 
 		pca = &u
 	}
 	claims := &Claims{
-		UserID:           userID,
-		Email:            email,
-		Purpose:          "password_reset",
+		UserID:            userID,
+		Email:             email,
+		Purpose:           "password_reset",
 		PasswordChangedAt: pca,
 		RegisteredClaims: jwt.RegisteredClaims{
 			Issuer:    "bedrud",
@@ -281,7 +282,7 @@ func GenerateResetToken(userID, email string, passwordChangedAt *time.Time, cfg 
 // ValidateResetToken validates a password reset JWT and returns the userID, email,
 // and the passwordChangedAt timestamp embedded in the token (nil if never changed).
 // Checks that the token's purpose is "password_reset" and that it hasn't expired.
-func ValidateResetToken(tokenString string, cfg *config.Config) (string, string, *int64, error) {
+func ValidateResetToken(tokenString string, cfg *config.Config) (userID, email string, passwordChangedAt *int64, err error) {
 	claims, err := parseClaims(tokenString, cfg)
 	if err != nil {
 		return "", "", nil, fmt.Errorf("invalid or expired reset token")

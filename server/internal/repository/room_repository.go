@@ -1,15 +1,18 @@
 package repository
 
 import (
-	"bedrud/internal/models"
 	"errors"
 	"fmt"
 	"strings"
 	"time"
 
+	"bedrud/internal/models"
+
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
+
+const sortFieldName = "name"
 
 type RoomRepository struct {
 	db *gorm.DB
@@ -539,7 +542,7 @@ func startOfDay(t time.Time) time.Time {
 
 // GetAllRoomsFiltered returns a filtered, sorted, paginated list of rooms and the total count.
 // The returned rooms do not include computed fields; use EnrichAdminRoomDetails() for that.
-func (r *RoomRepository) GetAllRoomsFiltered(p RoomFilterParams) ([]models.Room, int64, error) {
+func (r *RoomRepository) GetAllRoomsFiltered(p *RoomFilterParams) ([]models.Room, int64, error) {
 	if p.Limit <= 0 || p.Limit > 100 {
 		p.Limit = 50
 	}
@@ -570,11 +573,12 @@ func (r *RoomRepository) GetAllRoomsFiltered(p RoomFilterParams) ([]models.Room,
 		hasSuspended := contains(p.Status, "suspended")
 		hasArchived := contains(p.Status, "archived")
 
-		if hasActive && !hasSuspended && !hasArchived {
+		switch {
+		case hasActive && !hasSuspended && !hasArchived:
 			query = query.Where("is_active = ? AND deleted_at IS NULL", true)
-		} else if hasSuspended && !hasActive && !hasArchived {
+		case hasSuspended && !hasActive && !hasArchived:
 			query = query.Where("is_active = ? AND deleted_at IS NULL", false)
-		} else if hasArchived && !hasActive && !hasSuspended {
+		case hasArchived && !hasActive && !hasSuspended:
 			query = query.Where("deleted_at IS NOT NULL")
 		}
 	}
@@ -666,7 +670,7 @@ func (r *RoomRepository) GetAllRoomsFiltered(p RoomFilterParams) ([]models.Room,
 	// Sort
 	orderClause := "created_at DESC"
 	switch p.Sort {
-	case "name":
+	case sortFieldName:
 		orderClause = "name " + p.Order
 	case "maxParticipants":
 		orderClause = "max_participants " + p.Order
@@ -701,8 +705,8 @@ func (r *RoomRepository) EnrichAdminRoomDetails(rooms []models.Room) ([]AdminRoo
 	}
 
 	ids := make([]string, len(rooms))
-	for i, room := range rooms {
-		ids[i] = room.ID
+	for i := range rooms {
+		ids[i] = rooms[i].ID
 	}
 
 	// Batch fetch participant counts per room
@@ -753,7 +757,8 @@ func (r *RoomRepository) EnrichAdminRoomDetails(rooms []models.Room) ([]AdminRoo
 	// Collect unique createdBy IDs
 	userIDs := make([]string, 0, len(rooms))
 	seen := make(map[string]bool)
-	for _, room := range rooms {
+	for i := range rooms {
+		room := &rooms[i]
 		if !seen[room.CreatedBy] {
 			seen[room.CreatedBy] = true
 			userIDs = append(userIDs, room.CreatedBy)
@@ -773,7 +778,8 @@ func (r *RoomRepository) EnrichAdminRoomDetails(rooms []models.Room) ([]AdminRoo
 
 	// Build enriched result
 	result := make([]AdminRoomDetail, len(rooms))
-	for i, room := range rooms {
+	for i := range rooms {
+		room := &rooms[i]
 		detail := AdminRoomDetail{
 			ID:                room.ID,
 			Name:              room.Name,
@@ -885,10 +891,11 @@ func (r *RoomRepository) GetLatestRoomsCreatedByUser(userID string) ([]models.Ro
 	}
 	seen := make(map[string]bool)
 	rooms := make([]models.Room, 0, len(allRooms))
-	for _, room := range allRooms {
+	for i := range allRooms {
+		room := &allRooms[i]
 		if !seen[room.Name] {
 			seen[room.Name] = true
-			rooms = append(rooms, room)
+			rooms = append(rooms, allRooms[i])
 		}
 	}
 	return rooms, nil
@@ -1210,7 +1217,7 @@ func fillMissingDays(results []models.DayCount, days int, cutoff time.Time) []mo
 		found[key] = r.Count
 	}
 	var filled []models.DayCount
-	for i := 0; i < days; i++ {
+	for i := range days {
 		day := cutoff.Add(time.Duration(i) * 24 * time.Hour)
 		key := day.Format("2006-01-02")
 		c := found[key]
@@ -1234,7 +1241,7 @@ type RoomEventsFilterParams struct {
 }
 
 // GetRoomEventsFiltered returns paginated room events with optional filters.
-func (r *RoomRepository) GetRoomEventsFiltered(p RoomEventsFilterParams) ([]models.RoomEvent, int64, error) {
+func (r *RoomRepository) GetRoomEventsFiltered(p *RoomEventsFilterParams) ([]models.RoomEvent, int64, error) {
 	if p.Limit <= 0 || p.Limit > 100 {
 		p.Limit = 50
 	}
@@ -1333,9 +1340,7 @@ func (r *RoomRepository) GetRoomEventsFiltered(p RoomEventsFilterParams) ([]mode
 
 	var events []models.RoomEvent
 	for rows.Next() {
-		var (
-			typ, roomID, roomName, userID, userName, ts string
-		)
+		var typ, roomID, roomName, userID, userName, ts string
 		if err := rows.Scan(&typ, &roomID, &roomName, &userID, &userName, &ts); err != nil {
 			return nil, 0, err
 		}
@@ -1386,9 +1391,7 @@ func (r *RoomRepository) GetRecentRoomEvents(limit int) ([]models.RoomEvent, err
 	defer rows.Close()
 
 	for rows.Next() {
-		var (
-			typ, roomID, roomName, userID, userName, ts string
-		)
+		var typ, roomID, roomName, userID, userName, ts string
 		if err := rows.Scan(&typ, &roomID, &roomName, &userID, &userName, &ts); err != nil {
 			return nil, err
 		}

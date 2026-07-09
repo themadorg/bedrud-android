@@ -1,15 +1,16 @@
 package cli
 
 import (
+	"crypto/rand"
+	"encoding/base64"
+	"fmt"
+	"time"
+
 	"bedrud/config"
 	"bedrud/internal/clioutput"
 	"bedrud/internal/database"
 	"bedrud/internal/models"
 	"bedrud/internal/repository"
-	"crypto/rand"
-	"encoding/base64"
-	"fmt"
-	"time"
 
 	"github.com/google/uuid"
 	"github.com/spf13/cobra"
@@ -44,8 +45,8 @@ func newInviteListCmd() *cobra.Command {
 				}
 				if clioutput.JSON() {
 					items := make([]map[string]any, 0, len(tokens))
-					for _, t := range tokens {
-						items = append(items, inviteTokenJSON(&t))
+					for i := range tokens {
+						items = append(items, inviteTokenJSON(&tokens[i]))
 					}
 					return clioutput.Success("", map[string]any{
 						"tokens":   items,
@@ -55,7 +56,8 @@ func newInviteListCmd() *cobra.Command {
 					})
 				}
 				clioutput.Printf("%-36s  %-64s  %-32s  %-25s  %-25s\n", "ID", "TOKEN", "EMAIL", "EXPIRES_AT", "USED_AT")
-				for _, t := range tokens {
+				for i := range tokens {
+					t := &tokens[i]
 					used := "-"
 					if t.UsedAt != nil {
 						used = t.UsedAt.Format(time.RFC3339)

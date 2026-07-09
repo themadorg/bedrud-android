@@ -1,9 +1,10 @@
 package testutil
 
 import (
+	"testing"
+
 	"bedrud/internal/database"
 	"bedrud/internal/models"
-	"testing"
 
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"

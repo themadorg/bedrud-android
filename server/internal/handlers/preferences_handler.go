@@ -1,10 +1,11 @@
 package handlers
 
 import (
-	"bedrud/internal/auth"
-	"bedrud/internal/repository"
 	"bytes"
 	"encoding/json"
+
+	"bedrud/internal/auth"
+	"bedrud/internal/repository"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/rs/zerolog/log"

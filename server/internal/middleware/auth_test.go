@@ -1,17 +1,18 @@
 package middleware
 
 import (
-	"bedrud/config"
-	"bedrud/internal/auth"
-	"bedrud/internal/models"
-	"bedrud/internal/repository"
-	"bedrud/internal/testutil"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"sync"
 	"testing"
 	"time"
+
+	"bedrud/config"
+	"bedrud/internal/auth"
+	"bedrud/internal/models"
+	"bedrud/internal/repository"
+	"bedrud/internal/testutil"
 
 	"github.com/gofiber/fiber/v2"
 )

@@ -1,12 +1,14 @@
 package cli
 
 import (
-	"bedrud/config"
-	"bedrud/internal/clioutput"
 	"fmt"
 	"os"
 	"sort"
 	"strings"
+
+	"bedrud/config"
+	"bedrud/internal/clioutput"
+	"bedrud/internal/database"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -144,7 +146,7 @@ func newConfigValidateCmd() *cobra.Command {
 			if cfg.Database.Type == "" {
 				problems = append(problems, "database.type is required (sqlite or postgres)")
 			}
-			if cfg.Database.Type == "sqlite" && cfg.Database.Path == "" {
+			if cfg.Database.Type == database.DBTypeSQLite && cfg.Database.Path == "" {
 				problems = append(problems, "database.path is required for sqlite")
 			}
 			if cfg.Server.Port == "" {

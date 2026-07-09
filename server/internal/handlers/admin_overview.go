@@ -11,6 +11,7 @@ import (
 	"bedrud/internal/models"
 	"bedrud/internal/repository"
 	"bedrud/internal/utils"
+
 	"github.com/gofiber/fiber/v2"
 	lkauth "github.com/livekit/protocol/auth"
 	"github.com/livekit/protocol/livekit"
@@ -18,8 +19,10 @@ import (
 	"gorm.io/gorm"
 )
 
-const overviewDays = 7
-const versionDefault = "dev"
+const (
+	overviewDays   = 7
+	versionDefault = "dev"
+)
 
 type AdminOverviewHandler struct {
 	roomRepo     *repository.RoomRepository
@@ -101,21 +104,21 @@ func (h *AdminOverviewHandler) GetOverview(c *fiber.Ctx) error {
 
 	// --- Parallel DB queries ---
 	type overviewData struct {
-		totalRooms       int64
-		activeRooms      int64
-		publicRooms      int64
-		privateRooms     int64
-		persistentRooms  int64
-		staleRooms       int64
-		totalUsers       int64
-		usersWeek        int64
-		onlineNow        int64 // DB fallback (only used if LiveKit unavailable)
-		queuePending     int64
-		events           []models.RoomEvent
-		recentUsers      []models.User
-		activityDays     []models.DayCount
-		participantDays  []models.DayCount
-		activeRoomDays   []models.DayCount
+		totalRooms      int64
+		activeRooms     int64
+		publicRooms     int64
+		privateRooms    int64
+		persistentRooms int64
+		staleRooms      int64
+		totalUsers      int64
+		usersWeek       int64
+		onlineNow       int64 // DB fallback (only used if LiveKit unavailable)
+		queuePending    int64
+		events          []models.RoomEvent
+		recentUsers     []models.User
+		activityDays    []models.DayCount
+		participantDays []models.DayCount
+		activeRoomDays  []models.DayCount
 	}
 
 	var data overviewData
@@ -331,24 +334,24 @@ func (h *AdminOverviewHandler) buildHealth(lkErr error) models.OverviewHealth {
 	// Actual DB ping check
 	if h.db != nil {
 		if sqlDB, err := h.db.DB(); err != nil {
-			health.DBStatus = "error"
-			health.Status = "degraded"
+			health.DBStatus = healthStatusError
+			health.Status = healthStatusDegraded
 			health.AlertsCount++
 		} else if err := sqlDB.Ping(); err != nil {
-			health.DBStatus = "error"
-			health.Status = "degraded"
+			health.DBStatus = healthStatusError
+			health.Status = healthStatusDegraded
 			health.AlertsCount++
 		}
 	} else {
-		health.DBStatus = "error"
-		health.Status = "degraded"
+		health.DBStatus = healthStatusError
+		health.Status = healthStatusDegraded
 		health.AlertsCount++
 	}
 
 	// Actual LiveKit health check
 	if lkErr != nil {
 		health.Realtime = "disconnected"
-		health.Status = "degraded"
+		health.Status = healthStatusDegraded
 		health.AlertsCount++
 	}
 
@@ -362,9 +365,9 @@ func (h *AdminOverviewHandler) buildHealth(lkErr error) models.OverviewHealth {
 	if settings.ServerEnableTLS && settings.ServerCertFile != "" && settings.ServerKeyFile != "" {
 		info, err := utils.ValidateTLSCertPair(settings.ServerCertFile, settings.ServerKeyFile)
 		if err != nil {
-			health.TLS = &models.TLSStatus{Enabled: true, Status: "error"}
+			health.TLS = &models.TLSStatus{Enabled: true, Status: healthStatusError}
 			health.AlertsCount++
-			health.Status = "degraded"
+			health.Status = healthStatusDegraded
 		} else {
 			status := "valid"
 			if info.DaysRemaining < 30 {
@@ -374,7 +377,7 @@ func (h *AdminOverviewHandler) buildHealth(lkErr error) models.OverviewHealth {
 			if info.DaysRemaining <= 0 {
 				status = "expired"
 				health.AlertsCount++
-				health.Status = "degraded"
+				health.Status = healthStatusDegraded
 			}
 			health.TLS = &models.TLSStatus{
 				Enabled:       true,
@@ -417,7 +420,7 @@ func (h *AdminOverviewHandler) buildKPIs(totalUsers, usersWeek, onlineNow, publi
 			ActiveNow: int(activeRooms),
 		},
 		ActiveSessions: models.KpiEntry{
-			Value: int(publishersNow),
+			Value:     int(publishersNow),
 			ActiveNow: int(onlineNow),
 		},
 		PendingActions: models.KpiEntry{
@@ -443,7 +446,7 @@ func (h *AdminOverviewHandler) buildActivityTrend(roomDays, participantDays, act
 	now := time.Now()
 	cutoff := now.Add(-overviewDays * 24 * time.Hour)
 	var trend []models.DayActivity
-	for i := 0; i < overviewDays; i++ {
+	for i := range overviewDays {
 		day := cutoff.Add(time.Duration(i) * 24 * time.Hour)
 		key := day.Format("2006-01-02")
 		trend = append(trend, models.DayActivity{
@@ -496,7 +499,8 @@ func (h *AdminOverviewHandler) buildNeedsAttention(staleRooms int64) []models.At
 
 func (h *AdminOverviewHandler) buildRecentSignups(users []models.User) []models.RecentUser {
 	signups := make([]models.RecentUser, 0, len(users))
-	for _, u := range users {
+	for i := range users {
+		u := &users[i]
 		// Exclude guest users from recent signups
 		if u.Provider == models.ProviderGuest {
 			continue

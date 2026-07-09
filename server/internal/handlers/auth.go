@@ -1,16 +1,17 @@
 package handlers
 
 import (
-	"bedrud/internal/auth"
-	"bedrud/internal/database"
-	"bedrud/internal/models"
-	"bedrud/internal/repository"
 	"context"
 	"fmt"
 	"net/http"
 	"net/url"
 	"strings"
 	"time"
+
+	"bedrud/internal/auth"
+	"bedrud/internal/database"
+	"bedrud/internal/models"
+	"bedrud/internal/repository"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"

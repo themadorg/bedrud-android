@@ -1,16 +1,17 @@
 package cli
 
 import (
+	"encoding/json"
+	"fmt"
+	"reflect"
+	"strconv"
+
 	"bedrud/config"
 	"bedrud/internal/auth"
 	"bedrud/internal/clioutput"
 	"bedrud/internal/database"
 	"bedrud/internal/models"
 	"bedrud/internal/repository"
-	"encoding/json"
-	"fmt"
-	"reflect"
-	"strconv"
 
 	"github.com/spf13/cobra"
 )
@@ -139,7 +140,7 @@ func withSettingsRepo(fn func(*repository.SettingsRepository) error) error {
 func setStructField(s *models.SystemSettings, jsonName, raw string) error {
 	v := reflect.ValueOf(s).Elem()
 	t := v.Type()
-	for i := 0; i < t.NumField(); i++ {
+	for i := range t.NumField() {
 		f := t.Field(i)
 		tag := f.Tag.Get("json")
 		name := tag

@@ -1,8 +1,9 @@
 package cli
 
 import (
-	"bedrud/internal/roomcli"
 	"fmt"
+
+	"bedrud/internal/roomcli"
 
 	"github.com/spf13/cobra"
 )

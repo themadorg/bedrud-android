@@ -38,7 +38,7 @@ func RunMigrations() error {
 	// repository layer.
 	if db.Migrator().HasIndex(&models.Room{}, "idx_rooms_name") {
 		isUnique := false
-		if db.Dialector.Name() == "sqlite" {
+		if db.Dialector.Name() == DBTypeSQLite {
 			rows, err := db.Raw("PRAGMA index_list('rooms')").Rows()
 			if err == nil {
 				for rows.Next() {
@@ -52,7 +52,7 @@ func RunMigrations() error {
 				}
 				rows.Close()
 			}
-		} else if db.Dialector.Name() == "postgres" {
+		} else if db.Dialector.Name() == DBTypePostgres {
 			var unique int
 			if err := db.Raw(`SELECT GREATEST((indexdef ~ ' UNIQUE ')::int, (indexdef ~ 'UNIQUE INDEX' )::int) FROM pg_indexes WHERE tablename = 'rooms' AND indexname = 'idx_rooms_name'`).Scan(&unique).Error; err == nil && unique == 1 {
 				isUnique = true
@@ -75,13 +75,13 @@ func RunMigrations() error {
 	// Inactive (idle) and archived (soft-deleted) rooms allow name reuse.
 	// DB-level enforcement alongside app-level check in repository.
 	idxName := "idx_rooms_active_name"
-	if db.Dialector.Name() == "sqlite" {
+	if db.Dialector.Name() == DBTypeSQLite {
 		if !db.Migrator().HasIndex(&models.Room{}, idxName) {
 			if err := db.Exec("CREATE UNIQUE INDEX IF NOT EXISTS idx_rooms_active_name ON rooms(name) WHERE is_active = 1").Error; err != nil {
 				log.Warn().Err(err).Msg("Failed to create partial unique index for active room names")
 			}
 		}
-	} else if db.Dialector.Name() == "postgres" {
+	} else if db.Dialector.Name() == DBTypePostgres {
 		if !db.Migrator().HasIndex(&models.Room{}, idxName) {
 			if err := db.Exec("CREATE UNIQUE INDEX IF NOT EXISTS idx_rooms_active_name ON rooms(name) WHERE is_active = true").Error; err != nil {
 				log.Warn().Err(err).Msg("Failed to create partial unique index for active room names")
@@ -125,7 +125,7 @@ func RunMigrations() error {
 
 	// Add foreign key constraints manually (idempotent, Postgres only)
 	// SQLite does not support ALTER TABLE ADD CONSTRAINT for composite FKs.
-	if db.Dialector.Name() == "postgres" {
+	if db.Dialector.Name() == DBTypePostgres {
 		if !db.Migrator().HasConstraint(&models.RoomPermissions{}, "fk_room_permissions_participant") {
 			if err := db.Exec(`
 				ALTER TABLE room_permissions

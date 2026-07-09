@@ -1,9 +1,10 @@
 package cli
 
 import (
+	"fmt"
+
 	"bedrud/internal/clioutput"
 	"bedrud/internal/livekit"
-	"fmt"
 
 	"github.com/spf13/cobra"
 )

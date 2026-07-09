@@ -1,12 +1,13 @@
 package cli
 
 import (
-	"bedrud/config"
-	"bedrud/internal/clioutput"
-	"bedrud/internal/utils"
 	"fmt"
 	"net"
 	"time"
+
+	"bedrud/config"
+	"bedrud/internal/clioutput"
+	"bedrud/internal/utils"
 
 	"github.com/spf13/cobra"
 )
@@ -93,9 +94,9 @@ func runCertRenew(configPath, algoStr string) error {
 	return clioutput.Success(
 		"Self-signed TLS certificate renewed successfully",
 		map[string]any{
-			"certFile": certFile,
-			"keyFile":  keyFile,
-			"sans":     hosts,
+			"certFile":  certFile,
+			"keyFile":   keyFile,
+			"sans":      hosts,
 			"validDays": utils.SelfSignedCertDays,
 			"algorithm": algoStr,
 		},
@@ -123,16 +124,16 @@ func runCertInfo(configPath string) error {
 		return fmt.Errorf("TLS certificate: %w", err)
 	}
 	data := map[string]any{
-		"enabled":        true,
-		"subject":        info.Subject,
-		"issuer":         info.Issuer,
-		"notBefore":      info.NotBefore.Format(time.RFC3339),
-		"notAfter":       info.NotAfter.Format(time.RFC3339),
-		"daysRemaining":  info.DaysRemaining,
-		"status":         info.Status,
-		"sans":           info.SANs,
-		"certFile":       certFile,
-		"keyFile":        keyFile,
+		"enabled":       true,
+		"subject":       info.Subject,
+		"issuer":        info.Issuer,
+		"notBefore":     info.NotBefore.Format(time.RFC3339),
+		"notAfter":      info.NotAfter.Format(time.RFC3339),
+		"daysRemaining": info.DaysRemaining,
+		"status":        info.Status,
+		"sans":          info.SANs,
+		"certFile":      certFile,
+		"keyFile":       keyFile,
 	}
 	if !clioutput.JSON() {
 		fmt.Printf("Subject:        %s\n", info.Subject)

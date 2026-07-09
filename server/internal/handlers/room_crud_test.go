@@ -60,7 +60,10 @@ func TestCreateRoom_Success(t *testing.T) {
 	})
 	req := httptest.NewRequest(http.MethodPost, "/room/create", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
-	resp, _ := app.Test(req, -1)
+	resp, err := app.Test(req, -1)
+	if err != nil {
+		t.Fatal(err)
+	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
 		respBody, _ := io.ReadAll(resp.Body)
@@ -68,7 +71,9 @@ func TestCreateRoom_Success(t *testing.T) {
 	}
 
 	var result map[string]interface{}
-	json.NewDecoder(resp.Body).Decode(&result)
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		t.Fatal(err)
+	}
 	if result["id"] == nil || result["id"] == "" {
 		t.Fatal("expected 'id' in response")
 	}
@@ -85,14 +90,19 @@ func TestCreateRoom_AutoGenerateName(t *testing.T) {
 	})
 	req := httptest.NewRequest(http.MethodPost, "/room/create", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
-	resp, _ := app.Test(req, -1)
+	resp, err := app.Test(req, -1)
+	if err != nil {
+		t.Fatal(err)
+	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("expected 200 with auto-generated name, got %d", resp.StatusCode)
 	}
 
 	var result map[string]interface{}
-	json.NewDecoder(resp.Body).Decode(&result)
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		t.Fatal(err)
+	}
 	if name, ok := result["name"].(string); !ok || name == "" {
 		t.Fatal("expected auto-generated name")
 	}
@@ -103,7 +113,10 @@ func TestCreateRoom_InvalidBody(t *testing.T) {
 
 	req := httptest.NewRequest(http.MethodPost, "/room/create", bytes.NewReader([]byte("{invalid")))
 	req.Header.Set("Content-Type", "application/json")
-	resp, _ := app.Test(req, -1)
+	resp, err := app.Test(req, -1)
+	if err != nil {
+		t.Fatal(err)
+	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusBadRequest {
 		t.Fatalf("expected 400, got %d", resp.StatusCode)
@@ -116,9 +129,12 @@ func TestCreateRoom_InvalidName(t *testing.T) {
 	body, _ := json.Marshal(map[string]interface{}{"name": "room with $ymbols!"})
 	req := httptest.NewRequest(http.MethodPost, "/room/create", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
-	resp, _ := app.Test(req, -1)
+	resp, err := app.Test(req, -1)
+	if err != nil {
+		t.Fatal(err)
+	}
 	defer resp.Body.Close()
-	if resp.StatusCode == 500 {
+	if resp.StatusCode == http.StatusInternalServerError {
 		respBody, _ := io.ReadAll(resp.Body)
 		t.Fatalf("expected non-500, got 500: %s", string(respBody))
 	}
@@ -133,7 +149,10 @@ func TestCreateRoom_InvalidMode(t *testing.T) {
 	})
 	req := httptest.NewRequest(http.MethodPost, "/room/create", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
-	resp, _ := app.Test(req, -1)
+	resp, err := app.Test(req, -1)
+	if err != nil {
+		t.Fatal(err)
+	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusBadRequest {
 		t.Fatalf("expected 400 for invalid mode, got %d", resp.StatusCode)
@@ -146,15 +165,20 @@ func TestCreateRoom_MaxParticipantsOverLimit(t *testing.T) {
 	// Set a low max participants limit
 	settings, _ := settingsRepo.GetEffectiveSettings()
 	settings.MaxParticipantsLimit = 10
-	settingsRepo.SaveSettings(settings)
+	if err := settingsRepo.SaveSettings(settings); err != nil {
+		t.Fatal(err)
+	}
 
 	body, _ := json.Marshal(map[string]interface{}{
-		"name":           "over-limit-room",
+		"name":            "over-limit-room",
 		"maxParticipants": 20,
 	})
 	req := httptest.NewRequest(http.MethodPost, "/room/create", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
-	resp, _ := app.Test(req, -1)
+	resp, err := app.Test(req, -1)
+	if err != nil {
+		t.Fatal(err)
+	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusBadRequest {
 		t.Fatalf("expected 400 for over-limit maxParticipants, got %d", resp.StatusCode)
@@ -167,7 +191,9 @@ func TestCreateRoom_MaxRoomsPerUserReached(t *testing.T) {
 	// Set low per-user limit
 	settings, _ := settingsRepo.GetEffectiveSettings()
 	settings.MaxRoomsPerUser = 1
-	settingsRepo.SaveSettings(settings)
+	if err := settingsRepo.SaveSettings(settings); err != nil {
+		t.Fatal(err)
+	}
 
 	// Create first room
 	_, err := roomRepo.CreateRoom("creator-user", "first-room", true, "standard", 0, &models.RoomSettings{})
@@ -181,7 +207,10 @@ func TestCreateRoom_MaxRoomsPerUserReached(t *testing.T) {
 	})
 	req := httptest.NewRequest(http.MethodPost, "/room/create", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
-	resp, _ := app.Test(req, -1)
+	resp, err := app.Test(req, -1)
+	if err != nil {
+		t.Fatal(err)
+	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusForbidden {
 		t.Fatalf("expected 403 (room limit), got %d", resp.StatusCode)
@@ -197,7 +226,7 @@ func TestCreateRoom_ConcurrentDuplicateRace(t *testing.T) {
 	var wg sync.WaitGroup
 	results := make(chan int, 5)
 
-	for i := 0; i < 5; i++ {
+	for range 5 {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
@@ -206,7 +235,11 @@ func TestCreateRoom_ConcurrentDuplicateRace(t *testing.T) {
 			})
 			req := httptest.NewRequest(http.MethodPost, "/room/create", bytes.NewReader(body))
 			req.Header.Set("Content-Type", "application/json")
-			resp, _ := app.Test(req, -1)
+			resp, err := app.Test(req, -1)
+			if err != nil {
+				t.Error(err)
+			}
+			defer resp.Body.Close()
 			results <- resp.StatusCode
 		}()
 	}
@@ -245,7 +278,10 @@ func TestJoinRoom_RoomNotFound(t *testing.T) {
 	body, _ := json.Marshal(map[string]interface{}{"roomName": "nonexistent"})
 	req := httptest.NewRequest(http.MethodPost, "/rooms/join", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
-	resp, _ := app.Test(req, -1)
+	resp, err := app.Test(req, -1)
+	if err != nil {
+		t.Fatal(err)
+	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusNotFound {
 		t.Fatalf("expected 404, got %d", resp.StatusCode)
@@ -262,14 +298,22 @@ func TestJoinRoom_RoomInactive(t *testing.T) {
 	app, roomRepo := setupJoinTestApp(t, claims)
 
 	// Room created by a different user — joiner is NOT the creator
-	room, _ := roomRepo.CreateRoom("owner", "inactive-room", true, "standard", 0, &models.RoomSettings{})
+	room, err := roomRepo.CreateRoom("owner", "inactive-room", true, "standard", 0, &models.RoomSettings{})
+	if err != nil {
+		t.Fatal(err)
+	}
 	room.IsActive = false
-	roomRepo.UpdateRoom(room)
+	if err := roomRepo.UpdateRoom(room); err != nil {
+		t.Fatal(err)
+	}
 
 	body, _ := json.Marshal(map[string]interface{}{"roomName": "inactive-room"})
 	req := httptest.NewRequest(http.MethodPost, "/rooms/join", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
-	resp, _ := app.Test(req, -1)
+	resp, err := app.Test(req, -1)
+	if err != nil {
+		t.Fatal(err)
+	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusGone {
 		t.Fatalf("expected 410 Gone for inactive room, got %d", resp.StatusCode)
@@ -286,14 +330,22 @@ func TestJoinRoom_RoomInactive_OwnedByJoiner(t *testing.T) {
 	app, roomRepo := setupJoinTestApp(t, claims)
 
 	// Room created by joiner — owns it, so should get archived_owned response
-	room, _ := roomRepo.CreateRoom("joiner", "my-inactive-room", true, "standard", 0, &models.RoomSettings{})
+	room, err := roomRepo.CreateRoom("joiner", "my-inactive-room", true, "standard", 0, &models.RoomSettings{})
+	if err != nil {
+		t.Fatal(err)
+	}
 	room.IsActive = false
-	roomRepo.UpdateRoom(room)
+	if err := roomRepo.UpdateRoom(room); err != nil {
+		t.Fatal(err)
+	}
 
 	body, _ := json.Marshal(map[string]interface{}{"roomName": "my-inactive-room"})
 	req := httptest.NewRequest(http.MethodPost, "/rooms/join", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
-	resp, _ := app.Test(req, -1)
+	resp, err := app.Test(req, -1)
+	if err != nil {
+		t.Fatal(err)
+	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
@@ -320,12 +372,17 @@ func TestJoinRoom_PrivateRoomBlocked(t *testing.T) {
 	}
 	app, roomRepo := setupJoinTestApp(t, joinerClaims)
 
-	roomRepo.CreateRoom("owner", "private-room", false, "standard", 0, &models.RoomSettings{})
+	if _, err := roomRepo.CreateRoom("owner", "private-room", false, "standard", 0, &models.RoomSettings{}); err != nil {
+		t.Fatal(err)
+	}
 
 	body, _ := json.Marshal(map[string]interface{}{"roomName": "private-room"})
 	req := httptest.NewRequest(http.MethodPost, "/rooms/join", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
-	resp, _ := app.Test(req, -1)
+	resp, err := app.Test(req, -1)
+	if err != nil {
+		t.Fatal(err)
+	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusForbidden {
 		t.Fatalf("expected 403 for private room, got %d", resp.StatusCode)
@@ -341,13 +398,21 @@ func TestJoinRoom_PrivateRoomApprovedParticipant(t *testing.T) {
 	}
 	app, roomRepo := setupJoinTestApp(t, joinerClaims)
 
-	room, _ := roomRepo.CreateRoom("owner", "private-room-approved", false, "standard", 0, &models.RoomSettings{})
-	roomRepo.AddParticipant(room.ID, "joiner")
+	room, err := roomRepo.CreateRoom("owner", "private-room-approved", false, "standard", 0, &models.RoomSettings{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := roomRepo.AddParticipant(room.ID, "joiner"); err != nil {
+		t.Fatal(err)
+	}
 
 	body, _ := json.Marshal(map[string]interface{}{"roomName": "private-room-approved"})
 	req := httptest.NewRequest(http.MethodPost, "/rooms/join", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
-	resp, _ := app.Test(req, -1)
+	resp, err := app.Test(req, -1)
+	if err != nil {
+		t.Fatal(err)
+	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("expected 200 for approved participant, got %d", resp.StatusCode)
@@ -363,16 +428,26 @@ func TestJoinRoom_RoomFull(t *testing.T) {
 	}
 	app, roomRepo := setupJoinTestApp(t, joinerClaims)
 
-	room, _ := roomRepo.CreateRoom("owner", "full-room", true, "standard", 0, &models.RoomSettings{})
+	room, err := roomRepo.CreateRoom("owner", "full-room", true, "standard", 0, &models.RoomSettings{})
+	if err != nil {
+		t.Fatal(err)
+	}
 	// Fill the room by setting max participants and adding participants
 	room.MaxParticipants = 1
-	roomRepo.UpdateRoom(room)
-	roomRepo.AddParticipant(room.ID, "existing-user")
+	if err := roomRepo.UpdateRoom(room); err != nil {
+		t.Fatal(err)
+	}
+	if err := roomRepo.AddParticipant(room.ID, "existing-user"); err != nil {
+		t.Fatal(err)
+	}
 
 	body, _ := json.Marshal(map[string]interface{}{"roomName": "full-room"})
 	req := httptest.NewRequest(http.MethodPost, "/rooms/join", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
-	resp, _ := app.Test(req, -1)
+	resp, err := app.Test(req, -1)
+	if err != nil {
+		t.Fatal(err)
+	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusForbidden {
 		t.Fatalf("expected 403 for full room, got %d", resp.StatusCode)
@@ -388,19 +463,27 @@ func TestJoinRoom_Success(t *testing.T) {
 	}
 	app, roomRepo := setupJoinTestApp(t, claims)
 
-	room, _ := roomRepo.CreateRoom("joiner", "join-success-room", true, "standard", 0, &models.RoomSettings{})
+	room, err := roomRepo.CreateRoom("joiner", "join-success-room", true, "standard", 0, &models.RoomSettings{})
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	body, _ := json.Marshal(map[string]interface{}{"roomName": "join-success-room"})
 	req := httptest.NewRequest(http.MethodPost, "/rooms/join", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
-	resp, _ := app.Test(req, -1)
+	resp, err := app.Test(req, -1)
+	if err != nil {
+		t.Fatal(err)
+	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("expected 200, got %d", resp.StatusCode)
 	}
 
 	var result map[string]interface{}
-	json.NewDecoder(resp.Body).Decode(&result)
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+		t.Fatal(err)
+	}
 	if result["token"] == nil || result["token"] == "" {
 		t.Fatal("expected LiveKit join token in response")
 	}
@@ -420,8 +503,13 @@ func TestGuestJoinRoom_Success(t *testing.T) {
 	}
 	app, roomRepo := setupJoinTestApp(t, claims)
 
-	room, _ := roomRepo.CreateRoom("owner", "guest-room", true, "standard", 0, &models.RoomSettings{})
-	roomRepo.AddParticipant(room.ID, "guest")
+	room, err := roomRepo.CreateRoom("owner", "guest-room", true, "standard", 0, &models.RoomSettings{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := roomRepo.AddParticipant(room.ID, "guest"); err != nil {
+		t.Fatal(err)
+	}
 
 	body, _ := json.Marshal(map[string]interface{}{
 		"roomName":  "guest-room",
@@ -429,7 +517,10 @@ func TestGuestJoinRoom_Success(t *testing.T) {
 	})
 	req := httptest.NewRequest(http.MethodPost, "/rooms/guest-join", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
-	resp, _ := app.Test(req, -1)
+	resp, err := app.Test(req, -1)
+	if err != nil {
+		t.Fatal(err)
+	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
 		respBody, _ := io.ReadAll(resp.Body)
@@ -471,7 +562,10 @@ func setupUpdateSettingsTestApp(t *testing.T) (*fiber.App, *repository.RoomRepos
 func TestUpdateSettings_Success(t *testing.T) {
 	app, roomRepo := setupUpdateSettingsTestApp(t)
 
-	room, _ := roomRepo.CreateRoom("creator-user", "settings-update-test", true, "standard", 0, &models.RoomSettings{})
+	room, err := roomRepo.CreateRoom("creator-user", "settings-update-test", true, "standard", 0, &models.RoomSettings{})
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	body, _ := json.Marshal(map[string]interface{}{
 		"name":        "Updated Name",
@@ -480,7 +574,10 @@ func TestUpdateSettings_Success(t *testing.T) {
 	})
 	req := httptest.NewRequest(http.MethodPut, "/room/"+room.ID+"/settings", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
-	resp, _ := app.Test(req, -1)
+	resp, err := app.Test(req, -1)
+	if err != nil {
+		t.Fatal(err)
+	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
 		respBody, _ := io.ReadAll(resp.Body)
@@ -516,12 +613,18 @@ func TestUpdateSettings_NonCreatorForbidden(t *testing.T) {
 	db.Create(&models.User{ID: "creator-user", Email: "creator@ex.com", Name: "Creator", Provider: "local", IsActive: true, Accesses: models.StringArray{"user"}})
 	db.Create(&models.User{ID: "other-user", Email: "other@ex.com", Name: "Other", Provider: "local", IsActive: true, Accesses: models.StringArray{"user"}})
 
-	room, _ := roomRepo.CreateRoom("creator-user", "non-creator-settings", true, "standard", 0, &models.RoomSettings{})
+	room, err := roomRepo.CreateRoom("creator-user", "non-creator-settings", true, "standard", 0, &models.RoomSettings{})
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	body, _ := json.Marshal(map[string]interface{}{"name": "Hacked Name"})
 	req := httptest.NewRequest(http.MethodPut, "/room/"+room.ID+"/settings", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
-	resp, _ := app.Test(req, -1)
+	resp, err := app.Test(req, -1)
+	if err != nil {
+		t.Fatal(err)
+	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusForbidden {
 		t.Fatalf("expected 403 for non-creator, got %d", resp.StatusCode)
@@ -534,7 +637,10 @@ func TestUpdateSettings_RoomNotFound(t *testing.T) {
 	body, _ := json.Marshal(map[string]interface{}{"name": "Nope"})
 	req := httptest.NewRequest(http.MethodPut, "/room/nonexistent/settings", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
-	resp, _ := app.Test(req, -1)
+	resp, err := app.Test(req, -1)
+	if err != nil {
+		t.Fatal(err)
+	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusNotFound {
 		t.Fatalf("expected 404, got %d", resp.StatusCode)

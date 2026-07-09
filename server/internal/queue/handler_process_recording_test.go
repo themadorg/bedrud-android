@@ -69,6 +69,7 @@ func testRecordingJob(t *testing.T, fileURL string, durationMs int64) *models.Jo
 }
 
 func recordingTestSkipped(t *testing.T) {
+	t.Helper()
 	t.Skip("TODO oncoming feature")
 }
 
@@ -77,7 +78,9 @@ func TestProcessRecording_Success(t *testing.T) {
 	testData := []byte("fake-recording-data-12345")
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		w.Write(testData)
+		if _, err := w.Write(testData); err != nil {
+			t.Fatal(err)
+		}
 	}))
 	defer srv.Close()
 
@@ -182,7 +185,9 @@ func TestProcessRecording_StoreFailure(t *testing.T) {
 	testData := []byte("fake-recording-data")
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		w.Write(testData)
+		if _, err := w.Write(testData); err != nil {
+			t.Fatal(err)
+		}
 	}))
 	defer srv.Close()
 
@@ -216,7 +221,9 @@ func TestProcessRecording_TempFileCleanup(t *testing.T) {
 	testData := []byte("recording-data")
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		w.Write(testData)
+		if _, err := w.Write(testData); err != nil {
+			t.Fatal(err)
+		}
 	}))
 	defer srv.Close()
 
@@ -276,7 +283,7 @@ func TestProcessRecording_MalformedURL(t *testing.T) {
 }
 
 // updateEgressIDInPayload replaces the egress ID in the JSON payload with the given ID.
-func updateEgressIDInPayload(t *testing.T, payload string, egressID string) string {
+func updateEgressIDInPayload(t *testing.T, payload, egressID string) string {
 	t.Helper()
 	var data map[string]any
 	if err := json.Unmarshal([]byte(payload), &data); err != nil {
@@ -397,7 +404,9 @@ func TestProcessRecording_WebhookDispatch(t *testing.T) {
 	testData := []byte("recording-webhook-test")
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		w.Write(testData)
+		if _, err := w.Write(testData); err != nil {
+			t.Fatal(err)
+		}
 	}))
 	defer srv.Close()
 
@@ -452,7 +461,9 @@ func TestProcessRecording_WebhookDispatch(t *testing.T) {
 
 	// Verify payload shape
 	var wp WebhookPayload
-	json.Unmarshal([]byte(jobs[0].Payload), &wp)
+	if err := json.Unmarshal([]byte(jobs[0].Payload), &wp); err != nil {
+		t.Fatal(err)
+	}
 	if wp.Event != models.EventRecordingCompleted {
 		t.Fatalf("expected event recording.completed, got %q", wp.Event)
 	}
@@ -469,7 +480,9 @@ func TestProcessRecording_NoWebhookSubscribers_SkipsEnqueue(t *testing.T) {
 	testData := []byte("recording-no-webhook")
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		w.Write(testData)
+		if _, err := w.Write(testData); err != nil {
+			t.Fatal(err)
+		}
 	}))
 	defer srv.Close()
 

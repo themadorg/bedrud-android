@@ -1,12 +1,13 @@
 package cli
 
 import (
-	"bedrud/internal/clioutput"
-	"bedrud/internal/livekit"
-	"bedrud/internal/server"
 	"flag"
 	"fmt"
 	"os"
+
+	"bedrud/internal/clioutput"
+	"bedrud/internal/livekit"
+	"bedrud/internal/server"
 )
 
 // dispatchLegacy handles pre-cobra invocation forms that systemd units, docs,

@@ -1,14 +1,15 @@
 package scheduler
 
 import (
-	"bedrud/config"
-	"bedrud/internal/models"
-	"bedrud/internal/repository"
-	"bedrud/internal/testutil"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 	"time"
+
+	"bedrud/config"
+	"bedrud/internal/models"
+	"bedrud/internal/repository"
+	"bedrud/internal/testutil"
 
 	"github.com/livekit/protocol/livekit"
 	"google.golang.org/protobuf/proto"
@@ -22,7 +23,9 @@ func mockLkNoRooms() *httptest.Server {
 			resp := &livekit.ListRoomsResponse{}
 			data, _ := proto.Marshal(resp)
 			w.Header().Set("Content-Type", "application/protobuf")
-			w.Write(data)
+			if _, err := w.Write(data); err != nil {
+				return
+			}
 			return
 		}
 		w.WriteHeader(http.StatusNotFound)
@@ -41,7 +44,9 @@ func mockLkRoom(roomName string, numParticipants uint32) *httptest.Server {
 			}
 			data, _ := proto.Marshal(resp)
 			w.Header().Set("Content-Type", "application/protobuf")
-			w.Write(data)
+			if _, err := w.Write(data); err != nil {
+				return
+			}
 			return
 		}
 		w.WriteHeader(http.StatusNotFound)

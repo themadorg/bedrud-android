@@ -1,10 +1,6 @@
 package auth
 
 import (
-	"bedrud/config"
-	"bedrud/internal/models"
-	"bedrud/internal/repository"
-	"bedrud/internal/storage"
 	"crypto/rand"
 	"crypto/sha256"
 	"crypto/x509"
@@ -14,6 +10,11 @@ import (
 	"net/mail"
 	"strings"
 	"time"
+
+	"bedrud/config"
+	"bedrud/internal/models"
+	"bedrud/internal/repository"
+	"bedrud/internal/storage"
 
 	"golang.org/x/net/idna"
 
@@ -138,7 +139,7 @@ func (s *AuthService) Register(email, password, name string) (*models.User, erro
 	user := &models.User{
 		ID:        uuid.New().String(),
 		Email:     email,
-		Password:  string(hashedPassword),
+		Password:  hashedPassword,
 		Name:      name,
 		Provider:  "local",
 		Accesses:  models.StringArray{"user"}, // Use our custom type
@@ -432,7 +433,7 @@ func (s *AuthService) ChangePassword(userID, currentPassword, newPassword, acces
 	}
 	// Use UpdatePassword to atomically update the hash and clear refresh_token,
 	// invalidating all active sessions. Matches admin SetUserPassword behavior.
-	if err := s.userRepo.UpdatePassword(userID, string(hashed)); err != nil {
+	if err := s.userRepo.UpdatePassword(userID, hashed); err != nil {
 		return err
 	}
 	RevokeAccessToken(accessToken, config.Get())
@@ -454,7 +455,7 @@ func (s *AuthService) ResetPassword(userID, newPassword string, accessTokens ...
 	}
 
 	// Atomically update password and clear refresh_token (invalidates all sessions)
-	if err := s.userRepo.UpdatePassword(userID, string(hashed)); err != nil {
+	if err := s.userRepo.UpdatePassword(userID, hashed); err != nil {
 		return err
 	}
 
@@ -472,7 +473,7 @@ func (s *AuthService) ResetPassword(userID, newPassword string, accessTokens ...
 // @Summary Logout user
 // @Description Invalidate refresh token and logout user
 // @Tags auth
-func (s *AuthService) Logout(userID string, refreshToken string, accessToken string) error {
+func (s *AuthService) Logout(userID, refreshToken, accessToken string) error {
 	if err := s.BlockRefreshToken(userID, refreshToken); err != nil {
 		return err
 	}
@@ -807,10 +808,7 @@ func buildProviders(
 	googleID, googleSecret, googleRedirect,
 	githubID, githubSecret, githubRedirect,
 	twitterID, twitterSecret, twitterRedirect string,
-) ([]goth.Provider, []string) {
-	var providers []goth.Provider
-	var names []string
-
+) (providers []goth.Provider, names []string) {
 	if googleID != "" && googleSecret != "" && !looksLikePlaceholder(googleID) && !looksLikePlaceholder(googleSecret) {
 		p := google.New(googleID, googleSecret, googleRedirect, "email", "profile", "openid")
 		p.SetHostedDomain("")

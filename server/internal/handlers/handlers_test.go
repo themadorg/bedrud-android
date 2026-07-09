@@ -1,14 +1,6 @@
 package handlers
 
 import (
-	"bedrud/config"
-	"bedrud/internal/auth"
-	"bedrud/internal/lkutil"
-	"bedrud/internal/models"
-	"bedrud/internal/repository"
-	"bedrud/internal/services"
-	"bedrud/internal/storage"
-	"bedrud/internal/testutil"
 	"bytes"
 	"encoding/json"
 	"fmt"
@@ -18,6 +10,15 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"bedrud/config"
+	"bedrud/internal/auth"
+	"bedrud/internal/lkutil"
+	"bedrud/internal/models"
+	"bedrud/internal/repository"
+	"bedrud/internal/services"
+	"bedrud/internal/storage"
+	"bedrud/internal/testutil"
 
 	"github.com/gofiber/fiber/v2"
 )
@@ -84,7 +85,9 @@ func TestUsersHandler_ListUsers_Empty(t *testing.T) {
 
 	body, _ := io.ReadAll(resp.Body)
 	var result UserListResponse
-	_ = json.Unmarshal(body, &result)
+	if err := json.Unmarshal(body, &result); err != nil {
+		t.Fatal(err)
+	}
 	// Users list should be empty (or nil since no users exist)
 	if len(result.Users) > 0 {
 		t.Fatalf("expected empty users, got %d", len(result.Users))
@@ -107,7 +110,9 @@ func TestUsersHandler_ListUsers_WithUsers(t *testing.T) {
 
 	body, _ := io.ReadAll(resp.Body)
 	var result UserListResponse
-	_ = json.Unmarshal(body, &result)
+	if err := json.Unmarshal(body, &result); err != nil {
+		t.Fatal(err)
+	}
 	if len(result.Users) != 2 {
 		t.Fatalf("expected 2 users, got %d", len(result.Users))
 	}
@@ -211,7 +216,9 @@ func TestErrorResponse_Structure(t *testing.T) {
 	e := ErrorResponse{Error: "test error"}
 	b, _ := json.Marshal(e)
 	var decoded map[string]string
-	_ = json.Unmarshal(b, &decoded)
+	if err := json.Unmarshal(b, &decoded); err != nil {
+		t.Fatal(err)
+	}
 	if decoded["error"] != "test error" {
 		t.Fatal("unexpected JSON representation")
 	}
@@ -246,8 +253,9 @@ func TestUserResponse_JSONTags(t *testing.T) {
 	}
 	b, _ := json.Marshal(u)
 	var m map[string]interface{}
-	_ = json.Unmarshal(b, &m)
-
+	if err := json.Unmarshal(b, &m); err != nil {
+		t.Fatal(err)
+	}
 	// Check JSON keys
 	if _, ok := m["id"]; !ok {
 		t.Fatal("expected 'id' key in JSON")
@@ -379,7 +387,9 @@ func TestUsersHandler_GetUserDetail_Found(t *testing.T) {
 
 	body, _ := io.ReadAll(resp.Body)
 	var result map[string]interface{}
-	_ = json.Unmarshal(body, &result)
+	if err := json.Unmarshal(body, &result); err != nil {
+		t.Fatal(err)
+	}
 	if result["user"] == nil {
 		t.Fatal("expected 'user' field in response")
 	}
@@ -389,7 +399,6 @@ func TestUsersHandler_GetUserDetail_Found(t *testing.T) {
 }
 
 func TestUsersHandler_GetUserDetail_NotFound(t *testing.T) {
-
 	db := testutil.SetupTestDB(t)
 	uRepo := repository.NewUserRepository(db)
 	rRepo := repository.NewRoomRepository(db)
@@ -608,7 +617,9 @@ func TestUsersHandler_ListUserSessions_Found(t *testing.T) {
 
 	body, _ := io.ReadAll(resp.Body)
 	var result map[string]interface{}
-	_ = json.Unmarshal(body, &result)
+	if err := json.Unmarshal(body, &result); err != nil {
+		t.Fatal(err)
+	}
 	if result["sessions"] == nil {
 		t.Fatal("expected 'sessions' field")
 	}
@@ -681,7 +692,9 @@ func TestUsersHandler_ListUserSessions_Empty(t *testing.T) {
 
 	body, _ := io.ReadAll(resp.Body)
 	var result map[string]interface{}
-	_ = json.Unmarshal(body, &result)
+	if err := json.Unmarshal(body, &result); err != nil {
+		t.Fatal(err)
+	}
 	sessions := result["sessions"].([]interface{})
 	if len(sessions) != 0 {
 		t.Fatalf("expected 0 sessions, got %d", len(sessions))
@@ -821,14 +834,16 @@ func TestListUsers_Pagination(t *testing.T) {
 	app, userRepo := setupUsersTestApp(t)
 
 	// Seed 5 users
-	for i := 0; i < 5; i++ {
-		userRepo.CreateUser(&models.User{
+	for i := range 5 {
+		if err := userRepo.CreateUser(&models.User{
 			ID:       fmt.Sprintf("pag-user-%d", i),
 			Email:    fmt.Sprintf("pag%d@ex.com", i),
 			Name:     fmt.Sprintf("User %d", i),
 			Provider: "local",
 			IsActive: true,
-		})
+		}); err != nil {
+			t.Fatal(err)
+		}
 	}
 
 	t.Run("page=0 defaults to 1", func(t *testing.T) {
@@ -839,7 +854,9 @@ func TestListUsers_Pagination(t *testing.T) {
 			t.Fatalf("expected 200, got %d", resp.StatusCode)
 		}
 		var body map[string]any
-		json.NewDecoder(resp.Body).Decode(&body)
+		if err := json.NewDecoder(resp.Body).Decode(&body); err != nil {
+			t.Fatal(err)
+		}
 		page, _ := body["page"].(float64)
 		if page != 1 {
 			t.Fatalf("expected page 1, got %f", page)
@@ -851,7 +868,9 @@ func TestListUsers_Pagination(t *testing.T) {
 		resp, _ := app.Test(req, -1)
 		defer resp.Body.Close()
 		var body map[string]any
-		json.NewDecoder(resp.Body).Decode(&body)
+		if err := json.NewDecoder(resp.Body).Decode(&body); err != nil {
+			t.Fatal(err)
+		}
 		users, _ := body["users"].([]any)
 		if len(users) != 5 {
 			t.Fatalf("expected 5 users with limit=0, got %d", len(users))
@@ -863,7 +882,9 @@ func TestListUsers_Pagination(t *testing.T) {
 		resp, _ := app.Test(req, -1)
 		defer resp.Body.Close()
 		var body map[string]any
-		json.NewDecoder(resp.Body).Decode(&body)
+		if err := json.NewDecoder(resp.Body).Decode(&body); err != nil {
+			t.Fatal(err)
+		}
 		users, _ := body["users"].([]any)
 		if len(users) != 5 {
 			t.Fatalf("expected 5 users with limit=-1, got %d", len(users))
@@ -875,7 +896,9 @@ func TestListUsers_Pagination(t *testing.T) {
 		resp, _ := app.Test(req, -1)
 		defer resp.Body.Close()
 		var body map[string]any
-		json.NewDecoder(resp.Body).Decode(&body)
+		if err := json.NewDecoder(resp.Body).Decode(&body); err != nil {
+			t.Fatal(err)
+		}
 		l, _ := body["limit"].(float64)
 		if l != 50 {
 			t.Fatalf("expected limit clamped to 50, got %f", l)
@@ -887,13 +910,12 @@ func TestListUsers_Pagination(t *testing.T) {
 		resp, _ := app.Test(req, -1)
 		defer resp.Body.Close()
 		var body map[string]any
-		json.NewDecoder(resp.Body).Decode(&body)
+		if err := json.NewDecoder(resp.Body).Decode(&body); err != nil {
+			t.Fatal(err)
+		}
 		users, _ := body["users"].([]any)
 		if len(users) != 0 {
 			t.Fatalf("expected empty users for page beyond total, got %d", len(users))
 		}
 	})
 }
-
-
-

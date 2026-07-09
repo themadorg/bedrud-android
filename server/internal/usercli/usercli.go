@@ -1,6 +1,14 @@
 package usercli
 
 import (
+	"context"
+	"crypto/rand"
+	"encoding/base64"
+	"fmt"
+	"sort"
+	"strings"
+	"time"
+
 	"bedrud/config"
 	"bedrud/internal/auth"
 	"bedrud/internal/clioutput"
@@ -10,13 +18,6 @@ import (
 	"bedrud/internal/repository"
 	"bedrud/internal/services"
 	"bedrud/internal/storage"
-	"context"
-	"crypto/rand"
-	"encoding/base64"
-	"fmt"
-	"sort"
-	"strings"
-	"time"
 
 	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
@@ -75,10 +76,10 @@ func DemoteUser(configPath, email, role string) error {
 		return clioutput.Success(
 			fmt.Sprintf("✓ Removed %q from %q. Current accesses: %v", role, email, filtered),
 			map[string]any{
-				"email":         email,
-				"removedRole":   role,
-				"accesses":      filtered,
-				"changed":       true,
+				"email":       email,
+				"removedRole": role,
+				"accesses":    filtered,
+				"changed":     true,
 			},
 		)
 	})
@@ -139,7 +140,7 @@ func CreateUser(configPath, email, password, name string, admin bool) error {
 	user := &models.User{
 		ID:        uuid.New().String(),
 		Email:     email,
-		Password:  string(hashedPassword),
+		Password:  hashedPassword,
 		Name:      name,
 		Provider:  "local",
 		Accesses:  accesses,
@@ -197,7 +198,7 @@ func DeleteUser(configPath, email string) error {
 			cfg.Chat.Uploads.S3.Endpoint != "" &&
 			cfg.Chat.Uploads.S3.Bucket != "" &&
 			cfg.Chat.Uploads.S3.AccessKey != "" {
-			s3Deleter = storage.NewS3Deleter(cfg.Chat.Uploads.S3)
+			s3Deleter = storage.NewS3Deleter(&cfg.Chat.Uploads.S3)
 		}
 		uploadTracker := storage.NewChatUploadTracker(database.GetDB(), uploadDir, s3Deleter)
 		cleanupSvc := services.NewRoomCleanupService(roomRepo, nil, client, nil, cfg.LiveKit.APIKey, cfg.LiveKit.APISecret, uploadTracker)
@@ -224,8 +225,8 @@ func DeleteUser(configPath, email string) error {
 	return clioutput.Success(
 		fmt.Sprintf("✓ Deleted user: %s (%d room(s) cleaned up)", user.Email, len(rooms)),
 		map[string]any{
-			"email":      user.Email,
-			"userId":     user.ID,
+			"email":        user.Email,
+			"userId":       user.ID,
 			"roomsCleaned": len(rooms),
 		},
 	)
@@ -270,7 +271,8 @@ func ListUsers(configPath string, page, pageSize int) error {
 	}
 
 	clioutput.Printf("%-36s  %-32s  %-20s  %-10s  %-9s  %s\n", "ID", "EMAIL", "NAME", "PROVIDER", "ACTIVE", "ACCESSES")
-	for _, u := range users {
+	for i := range users {
+		u := &users[i]
 		accesses := strings.Join([]string(u.Accesses), ",")
 		active := "no"
 		if u.IsActive {
@@ -319,7 +321,7 @@ func SetUserPassword(configPath, email, newPassword string) error {
 		if err != nil {
 			return fmt.Errorf("hash password: %w", err)
 		}
-		if err := repo.UpdatePassword(user.ID, string(hashed)); err != nil {
+		if err := repo.UpdatePassword(user.ID, hashed); err != nil {
 			return fmt.Errorf("update password: %w", err)
 		}
 		if err := repo.ClearRefreshToken(user.ID); err != nil {

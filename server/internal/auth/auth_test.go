@@ -1,13 +1,14 @@
 package auth
 
 import (
+	"errors"
+	"testing"
+	"time"
+
 	"bedrud/config"
 	"bedrud/internal/models"
 	"bedrud/internal/repository"
 	"bedrud/internal/testutil"
-	"errors"
-	"testing"
-	"time"
 )
 
 // testAuthConfig returns a config suitable for auth service tests
@@ -442,7 +443,9 @@ func TestAuthService_ChangeEmail_EmailAlreadyInUse(t *testing.T) {
 	svc, _ := setupAuthService(t)
 
 	user1, _ := svc.Register("first@example.com", "pass123", "First")
-	svc.Register("second@example.com", "pass456", "Second")
+	if _, err := svc.Register("second@example.com", "pass456", "Second"); err != nil {
+		t.Fatal(err)
+	}
 
 	// user1 tries to take second@example.com
 	err := svc.ChangeEmail(user1.ID, "second@example.com")

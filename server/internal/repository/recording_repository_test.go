@@ -1,12 +1,13 @@
 package repository
 
 import (
-	"bedrud/internal/models"
-	"bedrud/internal/testutil"
 	"errors"
 	"sync"
 	"testing"
 	"time"
+
+	"bedrud/internal/models"
+	"bedrud/internal/testutil"
 
 	"github.com/google/uuid"
 )
@@ -25,6 +26,7 @@ func newTestRecording(roomID string) *models.Recording {
 }
 
 func recordingTestSkipped(t *testing.T) {
+	t.Helper()
 	t.Skip("TODO oncoming feature")
 }
 

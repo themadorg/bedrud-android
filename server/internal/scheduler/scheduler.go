@@ -1,15 +1,9 @@
 package scheduler
 
 import (
-	"bedrud/config"
-	"bedrud/internal/auth"
-	"bedrud/internal/models"
-	"bedrud/internal/queue"
-	"bedrud/internal/repository"
-	"bedrud/internal/storage"
-	"bedrud/internal/utils"
 	"context"
 	"crypto/tls"
+	"crypto/x509"
 	"encoding/pem"
 	"net"
 	"net/http"
@@ -18,7 +12,14 @@ import (
 	"sync"
 	"time"
 
-	"crypto/x509"
+	"bedrud/config"
+	"bedrud/internal/auth"
+	"bedrud/internal/models"
+	"bedrud/internal/queue"
+	"bedrud/internal/repository"
+	"bedrud/internal/storage"
+	"bedrud/internal/utils"
+
 	"github.com/go-co-op/gocron"
 	lkauth "github.com/livekit/protocol/auth"
 	"github.com/livekit/protocol/livekit"
@@ -29,10 +30,12 @@ import (
 
 var scheduler *gocron.Scheduler
 
-var certFile string
-var keyFile string
-var certHosts []string
-var certMu sync.Mutex
+var (
+	certFile  string
+	keyFile   string
+	certHosts []string
+	certMu    sync.Mutex
+)
 
 func Initialize(db *gorm.DB, roomRepo *repository.RoomRepository, userRepo *repository.UserRepository, recordingRepo *repository.RecordingRepository, lkCfg *config.LiveKitConfig, serverCfg *config.ServerConfig, recStore storage.RecordingStore, recCfg *config.RecordingConfig) {
 	scheduler = gocron.NewScheduler(time.Local)
@@ -186,7 +189,8 @@ func Initialize(db *gorm.DB, roomRepo *repository.RoomRepository, userRepo *repo
 			}
 
 			deleted := 0
-			for _, rec := range recordings {
+			for i := range recordings {
+				rec := &recordings[i]
 				if rec.FileURL != "" {
 					key := storage.ExtractStorageKey(rec.FileURL)
 					if delErr := recStore.Delete(context.Background(), key); delErr != nil {
@@ -205,7 +209,8 @@ func Initialize(db *gorm.DB, roomRepo *repository.RoomRepository, userRepo *repo
 			// Purge empty archived rooms
 			emptyRooms, err := roomRepo.FindArchivedRoomsNoRecordings()
 			if err == nil {
-				for _, room := range emptyRooms {
+				for i := range emptyRooms {
+					room := &emptyRooms[i]
 					if err := roomRepo.HardDeleteRoom(room.ID); err != nil {
 						log.Warn().Err(err).Str("roomID", room.ID).
 							Msg("Recording retention: failed to purge empty archived room")

@@ -130,7 +130,7 @@ func NewProcessRecordingHandler(
 		// Retry download with square backoff (3 attempts, 1s/4s/9s)
 		var written int64
 		var downloadOK bool
-		for attempt := 0; attempt < 3; attempt++ {
+		for attempt := range 3 {
 			if attempt > 0 {
 				backoff := time.Duration((attempt+1)*(attempt+1)) * time.Second
 				log.Info().Str("egressID", payload.EgressID).Int("attempt", attempt+1).Dur("backoff", backoff).
@@ -143,7 +143,7 @@ func NewProcessRecordingHandler(
 				}
 			}
 
-			req, reqErr := http.NewRequestWithContext(dlCtx, http.MethodGet, downloadURL, nil)
+			req, reqErr := http.NewRequestWithContext(dlCtx, http.MethodGet, downloadURL, http.NoBody)
 			if reqErr != nil {
 				continue
 			}
@@ -154,8 +154,14 @@ func NewProcessRecordingHandler(
 			}
 
 			if resp.StatusCode == http.StatusOK {
-				tmpFile.Seek(0, 0)
-				tmpFile.Truncate(0)
+				if _, seekErr := tmpFile.Seek(0, 0); seekErr != nil {
+					resp.Body.Close()
+					continue
+				}
+				if truncErr := tmpFile.Truncate(0); truncErr != nil {
+					resp.Body.Close()
+					continue
+				}
 				written, reqErr = io.Copy(tmpFile, resp.Body)
 				resp.Body.Close()
 				if reqErr == nil {
@@ -211,7 +217,8 @@ func NewProcessRecordingHandler(
 			if listErr != nil {
 				log.Warn().Err(listErr).Msg("recording: failed to list active webhooks")
 			} else if len(active) > 0 {
-				for _, wh := range active {
+				for i := range active {
+					wh := &active[i]
 					whPayload := WebhookPayload{
 						URL:    wh.URL,
 						Event:  models.EventRecordingCompleted,

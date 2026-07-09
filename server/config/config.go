@@ -74,7 +74,7 @@ type DatabaseConfig struct {
 }
 
 type LiveKitConfig struct {
-	Host          string `yaml:"host"`
+	Host string `yaml:"host"`
 	// HostLocal is the browser signaling URL when the app is opened on localhost
 	// (e.g. ws://localhost:7070/livekit via the Vite /livekit proxy in remote debug).
 	HostLocal     string `yaml:"hostLocal"`
@@ -289,6 +289,12 @@ var (
 )
 
 // Load reads the configuration file and returns a Config struct
+
+// envIsTruthy reports whether an environment variable value is a truthy flag ("true" or "1").
+func envIsTruthy(v string) bool {
+	return v == "true" || v == "1"
+}
+
 func Load(configPath string) (*Config, error) {
 	var loadErr error
 	once.Do(func() {
@@ -413,7 +419,7 @@ func Load(configPath string) (*Config, error) {
 				config.Auth.PasskeyChallengeTTL = n
 			}
 		}
-		if v := os.Getenv("AUTH_REQUIRE_EMAIL_VERIFICATION"); v == "true" || v == "1" {
+		if v := os.Getenv("AUTH_REQUIRE_EMAIL_VERIFICATION"); envIsTruthy(v) {
 			config.Auth.RequireEmailVerification = true
 		}
 		if v := os.Getenv("AUTH_VERIFICATION_COOLDOWN_MINS"); v != "" {
@@ -555,10 +561,10 @@ func Load(configPath string) (*Config, error) {
 		if v := os.Getenv("EMAIL_FROM_NAME"); v != "" {
 			config.Email.FromName = v
 		}
-		if v := os.Getenv("EMAIL_TLS_SKIP_VERIFY"); v == "true" || v == "1" {
+		if v := os.Getenv("EMAIL_TLS_SKIP_VERIFY"); envIsTruthy(v) {
 			config.Email.TLSSkipVerify = true
 		}
-		if v := os.Getenv("EMAIL_SMTPS_MODE"); v == "true" || v == "1" {
+		if v := os.Getenv("EMAIL_SMTPS_MODE"); envIsTruthy(v) {
 			config.Email.SMTPSMode = true
 		}
 

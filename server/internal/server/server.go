@@ -17,6 +17,19 @@
 package server
 
 import (
+	"context"
+	"crypto/tls"
+	"fmt"
+	"net/http"
+	"net/http/httputil"
+	"net/url"
+	"os"
+	"os/signal"
+	"path/filepath"
+	"strings"
+	"syscall"
+	"time"
+
 	"bedrud/config"
 	"bedrud/internal/auth"
 	"bedrud/internal/database"
@@ -31,18 +44,6 @@ import (
 	"bedrud/internal/services"
 	"bedrud/internal/storage"
 	"bedrud/internal/utils"
-	"context"
-	"crypto/tls"
-	"fmt"
-	"net/http"
-	"net/http/httputil"
-	"net/url"
-	"os"
-	"os/signal"
-	"path/filepath"
-	"strings"
-	"syscall"
-	"time"
 
 	root "bedrud"
 
@@ -57,7 +58,7 @@ import (
 	"golang.org/x/crypto/acme/autocert"
 )
 
-func Run(configPath string, version string) error {
+func Run(configPath, version string) error {
 	cfg, err := config.Load(configPath)
 	if err != nil {
 		return err
@@ -168,7 +169,7 @@ func Run(configPath string, version string) error {
 	userRepo := repository.NewUserRepository(database.GetDB())
 	recordingRepo := repository.NewRecordingRepository(database.GetDB())
 	// TODO oncoming feature: recordingStore, scheduler recording cleanup
-	// recordingStore := storage.NewRecordingStore(&cfg.Recording, cfg.Chat.Uploads.S3)
+	// recordingStore := storage.NewRecordingStore(&cfg.Recording, &cfg.Chat.Uploads.S3)
 	scheduler.Initialize(database.GetDB(), roomRepo, userRepo, recordingRepo, &cfg.LiveKit, &cfg.Server, nil, nil)
 	defer scheduler.Stop()
 	auth.Init(cfg)
@@ -295,11 +296,11 @@ func Run(configPath string, version string) error {
 		cfg.Chat.Uploads.S3.Endpoint != "" &&
 		cfg.Chat.Uploads.S3.Bucket != "" &&
 		cfg.Chat.Uploads.S3.AccessKey != "" {
-		s3Deleter = storage.NewS3Deleter(cfg.Chat.Uploads.S3)
+		s3Deleter = storage.NewS3Deleter(&cfg.Chat.Uploads.S3)
 	}
 	uploadStore := storage.NewChatUploadStore(&cfg.Chat.Uploads)
 	// TODO oncoming feature: recordingStore
-	// recordingStore = storage.NewRecordingStore(&cfg.Recording, cfg.Chat.Uploads.S3)
+	// recordingStore = storage.NewRecordingStore(&cfg.Recording, &cfg.Chat.Uploads.S3)
 	uploadTracker := storage.NewChatUploadTracker(database.GetDB(), uploadDir, s3Deleter)
 	lkClient := lkutil.NewClient(&cfg.LiveKit)
 	// TODO oncoming feature: egress client, recording service, recording handler

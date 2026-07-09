@@ -1,10 +1,11 @@
 package cli
 
 import (
+	"fmt"
+
 	"bedrud/config"
 	"bedrud/internal/clioutput"
 	"bedrud/internal/database"
-	"fmt"
 
 	"github.com/spf13/cobra"
 )

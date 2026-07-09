@@ -1,9 +1,10 @@
 package database
 
 import (
-	"bedrud/config"
 	"fmt"
 	"time"
+
+	"bedrud/config"
 
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"

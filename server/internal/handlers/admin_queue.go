@@ -130,7 +130,7 @@ func (h *AdminQueueHandler) GetQueueStats(c *fiber.Ctx) error {
 
 	// Collect results from all goroutines (must match the count of go queueQuery calls above)
 	const numQueries = 11
-	for i := 0; i < numQueries; i++ {
+	for range numQueries {
 		if err := <-errCh; err != nil {
 			log.Error().Err(err).Msg("Queue stats: count query failed")
 			errCount++
@@ -201,9 +201,9 @@ func (h *AdminQueueHandler) GetQueueStats(c *fiber.Ctx) error {
 		FailedPerMin:    failedPerMin,
 		FailRate:        failRate,
 
-		PendingEmail:   pendingEmail,
-		FailedEmail24h: failedEmail24h,
-		LastSendError:  lastSendError,
+		PendingEmail:    pendingEmail,
+		FailedEmail24h:  failedEmail24h,
+		LastSendError:   lastSendError,
 		LastSendErrorAt: lastSendErrorAt,
 	}
 

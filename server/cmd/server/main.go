@@ -17,6 +17,17 @@
 package main
 
 import (
+	"fmt"
+	"net/http"
+	"net/http/httputil"
+	"net/url"
+	"os"
+	"os/signal"
+	"path/filepath"
+	"strings"
+	"syscall"
+	"time"
+
 	"bedrud/config"
 	"bedrud/internal/auth"
 	"bedrud/internal/database"
@@ -29,16 +40,6 @@ import (
 	"bedrud/internal/services"
 	"bedrud/internal/storage"
 	"bedrud/internal/utils"
-	"fmt"
-	"net/http"
-	"net/http/httputil"
-	"net/url"
-	"os"
-	"os/signal"
-	"path/filepath"
-	"strings"
-	"syscall"
-	"time"
 
 	_ "bedrud/docs"
 
@@ -216,7 +217,7 @@ func run() error {
 	webhookRepo := repository.NewWebhookRepository(database.GetDB())
 	recordingRepo := repository.NewRecordingRepository(database.GetDB())
 	// TODO oncoming feature: recordingStore, scheduler recording cleanup
-	// recordingStore := storage.NewRecordingStore(&cfg.Recording, cfg.Chat.Uploads.S3)
+	// recordingStore := storage.NewRecordingStore(&cfg.Recording, &cfg.Chat.Uploads.S3)
 
 	scheduler.Initialize(database.GetDB(), roomRepo, userRepo, recordingRepo, &cfg.LiveKit, &cfg.Server, nil, nil)
 	defer scheduler.Stop()
@@ -329,7 +330,7 @@ func run() error {
 		cfg.Chat.Uploads.S3.Endpoint != "" &&
 		cfg.Chat.Uploads.S3.Bucket != "" &&
 		cfg.Chat.Uploads.S3.AccessKey != "" {
-		s3Deleter = storage.NewS3Deleter(cfg.Chat.Uploads.S3)
+		s3Deleter = storage.NewS3Deleter(&cfg.Chat.Uploads.S3)
 	}
 	uploadTracker := storage.NewChatUploadTracker(database.GetDB(), uploadDir, s3Deleter)
 	lkClient := lkutil.NewClient(&cfg.LiveKit)

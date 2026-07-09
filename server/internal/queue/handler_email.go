@@ -19,6 +19,8 @@ import (
 	"gorm.io/gorm"
 )
 
+const defaultEmailFromName = "Bedrud"
+
 //go:embed templates/*.html templates/*.txt
 var emailTemplatesFS embed.FS
 
@@ -94,7 +96,7 @@ func NewSendEmailHandler(cfg *config.EmailConfig) Handler {
 		}
 		fromName := h.cfg.FromName
 		if fromName == "" {
-			fromName = "Bedrud"
+			fromName = defaultEmailFromName
 		}
 
 		bodyPlain := renderPlaintextBody(h.plainTmpls, SendEmailPayload{
@@ -156,7 +158,7 @@ type emailBranding struct {
 // loadBranding loads effective email branding from SystemSettings DB overlaid on config.yaml defaults.
 func loadBranding(ctx context.Context, db *gorm.DB, cfg *config.EmailConfig) *emailBranding {
 	b := &emailBranding{
-		InstanceName:  "Bedrud",
+		InstanceName:  defaultEmailFromName,
 		HeaderBg:      "#1a1a2e",
 		ButtonBg:      "#e11d48",
 		SubjectLines:  make(map[string]string),
@@ -320,8 +322,6 @@ func (h *emailHandler) validateConfig() {
 	}
 }
 
-
-
 func renderPlaintextBody(plainTmpls map[string]*template.Template, payload SendEmailPayload) string {
 	pt, ok := plainTmpls[payload.TemplateName]
 	if ok && pt != nil {
@@ -333,8 +333,6 @@ func renderPlaintextBody(plainTmpls map[string]*template.Template, payload SendE
 	bodyHTML, _ := renderEmailBody(nil, payload)
 	return stripHTML(bodyHTML)
 }
-
-
 
 func stripHTML(html string) string {
 	var buf bytes.Buffer

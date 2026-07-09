@@ -1,15 +1,6 @@
 package handlers
 
 import (
-	"bedrud/config"
-	"bedrud/internal/auth"
-	"bedrud/internal/database"
-	"bedrud/internal/lkutil"
-	"bedrud/internal/models"
-	"bedrud/internal/queue"
-	"bedrud/internal/repository"
-	"bedrud/internal/services"
-	"bedrud/internal/storage"
 	"bytes"
 	"context"
 	"crypto/rand"
@@ -19,21 +10,58 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"net/url"
 	"image"
 	_ "image/gif"
 	_ "image/jpeg"
 	_ "image/png"
+	"net/url"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
 	"unicode"
 
+	"bedrud/config"
+	"bedrud/internal/auth"
+	"bedrud/internal/database"
+	"bedrud/internal/lkutil"
+	"bedrud/internal/models"
+	"bedrud/internal/queue"
+	"bedrud/internal/repository"
+	"bedrud/internal/services"
+	"bedrud/internal/storage"
+
 	"github.com/gofiber/fiber/v2"
 	lkauth "github.com/livekit/protocol/auth"
 	"github.com/livekit/protocol/livekit"
 	"github.com/rs/zerolog/log"
+)
+
+const (
+	orderAsc  = "asc"
+	orderDesc = "desc"
+	queryTrue = "true"
+
+	uploadBackendInline = "inline"
+	uploadBackendDisk   = "disk"
+	uploadBackendS3     = "s3"
+
+	extPNG  = ".png"
+	extJPG  = ".jpg"
+	extGIF  = ".gif"
+	extWebP = ".webp"
+
+	schemeHTTP  = "http"
+	schemeHTTPS = "https"
+	schemeWS    = "ws"
+	schemeWSS   = "wss"
+
+	settingFrontendURL       = "frontendUrl"
+	settingLiveKitHost       = "livekitHost"
+	settingGoogleRedirectURL = "googleRedirectUrl"
+
+	healthStatusError    = "error"
+	healthStatusDegraded = "degraded"
 )
 
 // livekitTokenTTL is the validity duration for LiveKit access tokens.
@@ -47,12 +75,34 @@ const livekitTokenTTL = 2 * time.Hour
 
 func boolPtr(b bool) *bool { return &b }
 
+type RoomHandler struct {
+	roomRepo         *repository.RoomRepository
+	userRepo         *repository.UserRepository
+	recordingRepo    *repository.RecordingRepository
+	webhookRepo      *repository.WebhookRepository
+	livekitHost      string
+	apiKey           string
+	apiSecret        string
+	client           livekit.RoomService
+	uploadStore      storage.ChatUploadStore
+	uploadMax        int64
+	uploadTracker    *storage.ChatUploadTracker
+	cleanupSvc       *services.RoomCleanupService
+	settingsRepo     *repository.SettingsRepository
+	deletionInFlight sync.Map
+	uploadBackend    string
+	inlineMaxBytes   int64
+}
+
 func (h *RoomHandler) participantDisplayName(claims *auth.Claims) string {
 	if claims == nil {
 		return ""
 	}
 	fallback := strings.TrimSpace(claims.Name)
 	if claims.UserID == "" {
+		return fallback
+	}
+	if h.userRepo == nil {
 		return fallback
 	}
 	u, err := h.userRepo.GetUserByID(claims.UserID)
@@ -90,7 +140,7 @@ func resolveLiveKitHost(c *fiber.Ctx, host string) string {
 		return host
 	}
 
-	if ou.Scheme == "https" {
+	if ou.Scheme == schemeHTTPS {
 		if strings.HasPrefix(host, "ws://") {
 			return "wss://" + strings.TrimPrefix(host, "ws://")
 		}
@@ -127,25 +177,6 @@ type JoinRoomRequest struct {
 	RoomName string `json:"roomName"`
 }
 
-type RoomHandler struct {
-	roomRepo         *repository.RoomRepository
-	userRepo         *repository.UserRepository
-	recordingRepo    *repository.RecordingRepository
-	webhookRepo      *repository.WebhookRepository
-	livekitHost      string
-	apiKey           string
-	apiSecret        string
-	client           livekit.RoomService
-	uploadStore      storage.ChatUploadStore
-	uploadMax        int64
-	uploadTracker    *storage.ChatUploadTracker
-	cleanupSvc       *services.RoomCleanupService
-	settingsRepo     *repository.SettingsRepository
-	deletionInFlight sync.Map
-	uploadBackend    string
-	inlineMaxBytes   int64
-}
-
 func NewRoomHandler(
 	client livekit.RoomService,
 	lkCfg *config.LiveKitConfig,
@@ -169,9 +200,9 @@ func NewRoomHandler(
 	}
 
 	return &RoomHandler{
-		roomRepo:         roomRepo,
-		userRepo:         userRepo,
-		webhookRepo:      webhookRepo,
+		roomRepo:       roomRepo,
+		userRepo:       userRepo,
+		webhookRepo:    webhookRepo,
 		livekitHost:    lkCfg.Host,
 		apiKey:         lkCfg.APIKey,
 		apiSecret:      lkCfg.APISecret,
@@ -196,19 +227,6 @@ func (h *RoomHandler) maxParticipantsLimit() int {
 		return 1000
 	}
 	return s.MaxParticipantsLimit
-}
-
-// lkSessionStartedAt returns the LiveKit room creation timestamp (epoch ms) for
-// roomName, or 0 if no active session exists yet. The first user to join sees 0
-// because the LiveKit room is created when their client connects via WebSocket;
-// subsequent joiners see the session start time.
-func (h *RoomHandler) lkSessionStartedAt(ctx context.Context, roomName string) int64 {
-	authedCtx := h.withAuth(ctx, &lkauth.VideoGrant{RoomList: true})
-	resp, err := h.client.ListRooms(authedCtx, &livekit.ListRoomsRequest{Names: []string{roomName}})
-	if err != nil || len(resp.Rooms) == 0 {
-		return 0
-	}
-	return resp.Rooms[0].CreationTime * 1000
 }
 
 func (h *RoomHandler) withAuth(ctx context.Context, grants ...*lkauth.VideoGrant) context.Context {
@@ -337,7 +355,7 @@ func (h *RoomHandler) CreateRoom(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{
 		"id": room.ID, "name": room.Name, "createdBy": room.CreatedBy, "isActive": room.IsActive,
 		"isPublic": room.IsPublic, "maxParticipants": room.MaxParticipants, "settings": room.Settings,
-		"livekitHost": h.clientLiveKitHost(c), "mode": room.Mode,
+		settingLiveKitHost: h.clientLiveKitHost(c), "mode": room.Mode,
 	})
 }
 
@@ -447,7 +465,7 @@ func (h *RoomHandler) JoinRoom(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{
 		"id": room.ID, "name": room.Name, "token": token, "createdBy": room.CreatedBy, "adminId": adminId, "isActive": room.IsActive,
 		"isPublic": room.IsPublic, "maxParticipants": room.MaxParticipants, "expiresAt": room.ExpiresAt,
-		"settings": room.Settings, "livekitHost": h.clientLiveKitHost(c), "mode": room.Mode,
+		"settings": room.Settings, settingLiveKitHost: h.clientLiveKitHost(c), "mode": room.Mode,
 		"activeRecordingId": activeRecordingID,
 	})
 }
@@ -571,8 +589,8 @@ func (h *RoomHandler) GuestJoinRoom(c *fiber.Ctx) error {
 
 	return c.JSON(fiber.Map{
 		"id": room.ID, "name": room.Name, "token": token, "adminId": adminId,
-		"isPublic": room.IsPublic,
-		"livekitHost":       h.clientLiveKitHost(c),
+		"isPublic":          room.IsPublic,
+		settingLiveKitHost:  h.clientLiveKitHost(c),
 		"activeRecordingId": activeRecordingID,
 	})
 }
@@ -633,7 +651,7 @@ func (h *RoomHandler) RefreshLiveKitToken(c *fiber.Ctx) error {
 	}
 
 	at := lkauth.NewAccessToken(h.apiKey, h.apiSecret)
-	at.AddGrant(&lkauth.VideoGrant{RoomJoin: true, Room: req.RoomName, CanUpdateOwnMetadata: boolPtr(true)}).SetIdentity(claims.UserID).SetName(h.participantDisplayName(claims)).SetValidFor(livekitTokenTTL) //nolint:staticcheck
+	at.AddGrant(&lkauth.VideoGrant{RoomJoin: true, Room: req.RoomName, CanUpdateOwnMetadata: boolPtr(true)}).SetIdentity(claims.UserID).SetName(h.participantDisplayName(claims)).SetValidFor(livekitTokenTTL) //nolint:staticcheck // AddGrant is deprecated but VideoGrant field is not available in this version of the protocol SDK
 	if meta, err := json.Marshal(map[string]interface{}{"accesses": claims.Accesses}); err == nil {
 		at.SetMetadata(string(meta))
 	}
@@ -735,7 +753,8 @@ func (h *RoomHandler) ListArchivedRooms(c *fiber.Ctx) error {
 	}
 
 	enriched := make([]ArchivedRoomDetail, 0, len(rooms))
-	for _, room := range rooms {
+	for i := range rooms {
+		room := &rooms[i]
 		// TODO oncoming feature: recording count from recordingRepo
 		count, _ := h.recordingRepo.CountByRoom(room.ID)
 		detail := ArchivedRoomDetail{
@@ -1331,7 +1350,7 @@ func (h *RoomHandler) GetRoomPresence(c *fiber.Ctx) error {
 	}
 
 	if !room.IsPublic {
-		if c.Query("countOnly") == "1" || c.Query("countOnly") == "true" {
+		if c.Query("countOnly") == "1" || c.Query("countOnly") == queryTrue {
 			return c.Status(404).JSON(fiber.Map{"error": "Room not found"})
 		}
 		return c.JSON(fiber.Map{"participants": []presenceParticipant{}})
@@ -1340,13 +1359,13 @@ func (h *RoomHandler) GetRoomPresence(c *fiber.Ctx) error {
 	ctx := h.withAuth(c.Context(), &lkauth.VideoGrant{RoomAdmin: true, Room: room.Name})
 	resp, err := h.client.ListParticipants(ctx, &livekit.ListParticipantsRequest{Room: room.Name})
 	if err != nil {
-		if c.Query("countOnly") == "1" || c.Query("countOnly") == "true" {
+		if c.Query("countOnly") == "1" || c.Query("countOnly") == queryTrue {
 			return c.JSON(fiber.Map{"count": 0})
 		}
 		return c.JSON(fiber.Map{"participants": []presenceParticipant{}})
 	}
 
-	if c.Query("countOnly") == "1" || c.Query("countOnly") == "true" {
+	if c.Query("countOnly") == "1" || c.Query("countOnly") == queryTrue {
 		return c.JSON(fiber.Map{"count": len(resp.Participants)})
 	}
 
@@ -1853,7 +1872,7 @@ func (h *RoomHandler) AdminListRooms(c *fiber.Ctx) error {
 
 	// Parse sort/order
 	p.Sort = c.Query("sort", "createdAt")
-	p.Order = c.Query("order", "desc")
+	p.Order = c.Query("order", orderDesc)
 	validSorts := map[string]bool{
 		"name": true, "createdAt": true, "maxParticipants": true,
 		"participantsCount": true, "lastActivityAt": true, "createdBy": true,
@@ -1861,7 +1880,7 @@ func (h *RoomHandler) AdminListRooms(c *fiber.Ctx) error {
 	if !validSorts[p.Sort] {
 		return c.Status(400).JSON(fiber.Map{"error": "Invalid sort field"})
 	}
-	if p.Order != "asc" && p.Order != "desc" {
+	if p.Order != orderAsc && p.Order != orderDesc {
 		return c.Status(400).JSON(fiber.Map{"error": "Invalid order, must be asc or desc"})
 	}
 
@@ -1875,7 +1894,7 @@ func (h *RoomHandler) AdminListRooms(c *fiber.Ctx) error {
 		p.Page = 1
 	}
 
-	rooms, total, err := h.roomRepo.GetAllRoomsFiltered(p)
+	rooms, total, err := h.roomRepo.GetAllRoomsFiltered(&p)
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to fetch rooms"})
 	}
@@ -2653,8 +2672,8 @@ func (h *RoomHandler) ListRoomEvents(c *fiber.Ctx) error {
 	}
 
 	// Order
-	p.Order = c.Query("order", "desc")
-	if p.Order != "asc" && p.Order != "desc" {
+	p.Order = c.Query("order", orderDesc)
+	if p.Order != orderAsc && p.Order != orderDesc {
 		return c.Status(400).JSON(fiber.Map{"error": "Invalid order, must be asc or desc"})
 	}
 
@@ -2668,7 +2687,7 @@ func (h *RoomHandler) ListRoomEvents(c *fiber.Ctx) error {
 		p.Page = 1
 	}
 
-	events, total, err := h.roomRepo.GetRoomEventsFiltered(p)
+	events, total, err := h.roomRepo.GetRoomEventsFiltered(&p)
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to fetch room events"})
 	}
@@ -2685,25 +2704,25 @@ func (h *RoomHandler) ListRoomEvents(c *fiber.Ctx) error {
 // Used to populate ChatUpload.StorageBackend for cleanup routing.
 func detectUploadBackend(url string) string {
 	if strings.HasPrefix(url, "data:") {
-		return "inline"
+		return uploadBackendInline
 	}
 	if strings.HasPrefix(url, "/uploads/chat/") {
-		return "disk"
+		return uploadBackendDisk
 	}
-	return "s3"
+	return uploadBackendS3
 }
 
 // mimeExtension returns the file extension for an allowed image MIME type.
 func mimeExtension(mime string) string {
 	switch mime {
 	case "image/png":
-		return ".png"
+		return extPNG
 	case "image/jpeg":
-		return ".jpg"
+		return extJPG
 	case "image/gif":
-		return ".gif"
+		return extGIF
 	case "image/webp":
-		return ".webp"
+		return extWebP
 	}
 	return ""
 }
@@ -2738,8 +2757,8 @@ func (h *RoomHandler) BulkSuspendRooms(c *fiber.Ctx) error {
 	}
 
 	roomByID := make(map[string]*models.Room, len(rooms))
-	for _, r := range rooms {
-		roomByID[r.ID] = &r
+	for i := range rooms {
+		roomByID[rooms[i].ID] = &rooms[i]
 	}
 
 	results := make(map[string]BulkItemResult, len(req.IDs))
@@ -2803,8 +2822,8 @@ func (h *RoomHandler) BulkCloseRooms(c *fiber.Ctx) error {
 	}
 
 	roomByID := make(map[string]*models.Room, len(rooms))
-	for _, r := range rooms {
-		roomByID[r.ID] = &r
+	for i := range rooms {
+		roomByID[rooms[i].ID] = &rooms[i]
 	}
 
 	results := make(map[string]BulkItemResult, len(req.IDs))
@@ -2844,13 +2863,13 @@ func (h *RoomHandler) BulkCloseRooms(c *fiber.Ctx) error {
 func parseUploadMeta(url, mime string, data []byte) (hash, ext, backend string) {
 	backend = detectUploadBackend(url)
 	switch backend {
-	case "disk":
+	case uploadBackendDisk:
 		filename := strings.TrimPrefix(url, "/uploads/chat/")
 		if dotIdx := strings.LastIndex(filename, "."); dotIdx > 0 {
 			return filename[:dotIdx], filename[dotIdx:], backend
 		}
 		return filename, "", backend
-	case "s3":
+	case uploadBackendS3:
 		if idx := strings.LastIndex(url, "/"); idx >= 0 {
 			filename := url[idx+1:]
 			if dotIdx := strings.LastIndex(filename, "."); dotIdx > 0 {
@@ -2891,7 +2910,8 @@ func (h *RoomHandler) dispatchRoomEvent(ctx context.Context, event, roomID, room
 		"userId":   userID,
 	}
 
-	for _, wh := range webhooks {
+	for i := range webhooks {
+		wh := &webhooks[i]
 		payload := queue.WebhookPayload{
 			URL:    wh.URL,
 			Event:  event,

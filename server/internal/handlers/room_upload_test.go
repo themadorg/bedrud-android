@@ -1,14 +1,6 @@
 package handlers
 
 import (
-	"bedrud/config"
-	"bedrud/internal/auth"
-	"bedrud/internal/lkutil"
-	"bedrud/internal/models"
-	"bedrud/internal/repository"
-	"bedrud/internal/services"
-	"bedrud/internal/storage"
-	"bedrud/internal/testutil"
 	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
@@ -20,6 +12,15 @@ import (
 	"sync"
 	"testing"
 
+	"bedrud/config"
+	"bedrud/internal/auth"
+	"bedrud/internal/lkutil"
+	"bedrud/internal/models"
+	"bedrud/internal/repository"
+	"bedrud/internal/services"
+	"bedrud/internal/storage"
+	"bedrud/internal/testutil"
+
 	"github.com/gofiber/fiber/v2"
 )
 
@@ -29,6 +30,8 @@ type mockObjectDeleter struct {
 	keys  []string
 	failn int // fail after this many calls (0 = never fail)
 }
+
+const hashAbcdef = "abcdef123"
 
 func (m *mockObjectDeleter) DeleteObject(key string) error {
 	m.mu.Lock()
@@ -94,13 +97,13 @@ func uploadTestApp(t *testing.T) (*fiber.App, *repository.RoomRepository, *mockO
 // ─── Category A: detectUploadBackend ────────────────────────────────────
 
 func TestDetectUploadBackend_Disk(t *testing.T) {
-	if got := detectUploadBackend("/uploads/chat/abc.png"); got != "disk" {
+	if got := detectUploadBackend("/uploads/chat/abc.png"); got != uploadBackendDisk {
 		t.Fatalf("expected disk, got %s", got)
 	}
 }
 
 func TestDetectUploadBackend_Inline(t *testing.T) {
-	if got := detectUploadBackend("data:image/png;base64,abc"); got != "inline" {
+	if got := detectUploadBackend("data:image/png;base64,abc"); got != uploadBackendInline {
 		t.Fatalf("expected inline, got %s", got)
 	}
 }
@@ -121,28 +124,28 @@ func TestDetectUploadBackend_Empty(t *testing.T) {
 
 func TestParseUploadMeta_Disk(t *testing.T) {
 	hash, ext, backend := parseUploadMeta("/uploads/chat/abcdef123.png", "image/png", nil)
-	if hash != "abcdef123" || ext != ".png" || backend != "disk" {
+	if hash != hashAbcdef || ext != extPNG || backend != uploadBackendDisk {
 		t.Fatalf("got hash=%q ext=%q backend=%q", hash, ext, backend)
 	}
 }
 
 func TestParseUploadMeta_Disk_NoExt(t *testing.T) {
 	hash, ext, backend := parseUploadMeta("/uploads/chat/abcdef123", "image/png", nil)
-	if hash != "abcdef123" || ext != "" || backend != "disk" {
+	if hash != hashAbcdef || ext != "" || backend != uploadBackendDisk {
 		t.Fatalf("got hash=%q ext=%q backend=%q", hash, ext, backend)
 	}
 }
 
 func TestParseUploadMeta_S3(t *testing.T) {
 	hash, ext, backend := parseUploadMeta("https://cdn.example.com/bucket/abcdef123.jpg", "image/jpeg", nil)
-	if hash != "abcdef123" || ext != ".jpg" || backend != "s3" {
+	if hash != hashAbcdef || ext != extJPG || backend != "s3" {
 		t.Fatalf("got hash=%q ext=%q backend=%q", hash, ext, backend)
 	}
 }
 
 func TestParseUploadMeta_S3_MultipleDots(t *testing.T) {
 	hash, ext, backend := parseUploadMeta("https://cdn.example.com/bucket/img.test.abc.jpg", "image/jpeg", nil)
-	if hash != "img.test.abc" || ext != ".jpg" || backend != "s3" {
+	if hash != "img.test.abc" || ext != extJPG || backend != "s3" {
 		t.Fatalf("got hash=%q ext=%q backend=%q", hash, ext, backend)
 	}
 }
@@ -152,14 +155,14 @@ func TestParseUploadMeta_Inline(t *testing.T) {
 	h := sha256.Sum256(data)
 	expectedHash := hex.EncodeToString(h[:])
 	hash, ext, backend := parseUploadMeta("data:image/png;base64,abc", "image/png", data)
-	if hash != expectedHash || ext != ".png" || backend != "inline" {
+	if hash != expectedHash || ext != extPNG || backend != uploadBackendInline {
 		t.Fatalf("got hash=%q ext=%q backend=%q", hash, ext, backend)
 	}
 }
 
 func TestParseUploadMeta_Inline_EmptyData(t *testing.T) {
 	hash, ext, backend := parseUploadMeta("data:image/png;base64,", "image/png", nil)
-	if hash != "" || ext != ".png" || backend != "inline" {
+	if hash != "" || ext != extPNG || backend != uploadBackendInline {
 		t.Fatalf("got hash=%q ext=%q backend=%q", hash, ext, backend)
 	}
 }
@@ -181,14 +184,14 @@ func TestAdminCloseRoom_CleansS3Uploads(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := tracker.Record(room.ID, "admin-user", "s3obj1", ".png", 100, "s3"); err != nil {
+	if err := tracker.Record(room.ID, "admin-user", "s3obj1", ".png", 100, uploadBackendS3); err != nil {
 		t.Fatal(err)
 	}
 
-	req := httptest.NewRequest(http.MethodPost, "/admin/rooms/"+room.ID+"/close", nil)
+	req := httptest.NewRequest(http.MethodPost, "/admin/rooms/"+room.ID+"/close", http.NoBody)
 	resp, _ := app.Test(req, -1)
 	resp.Body.Close()
-	if resp.StatusCode != 202 {
+	if resp.StatusCode != http.StatusAccepted {
 		t.Fatalf("expected 202, got %d", resp.StatusCode)
 	}
 }
@@ -200,14 +203,14 @@ func TestAdminCloseRoom_CleansOnlyOwnS3Uploads(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	_ = tracker.Record(room.ID, "admin-user", "disk1", ".png", 100, "disk")
-	_ = tracker.Record(room.ID, "admin-user", "s3obj2", ".jpg", 200, "s3")
-	_ = tracker.Record(room.ID, "admin-user", "inline1", ".gif", 50, "inline")
+	_ = tracker.Record(room.ID, "admin-user", "disk1", ".png", 100, uploadBackendDisk)
+	_ = tracker.Record(room.ID, "admin-user", "s3obj2", ".jpg", 200, uploadBackendS3)
+	_ = tracker.Record(room.ID, "admin-user", "inline1", ".gif", 50, uploadBackendInline)
 
-	req := httptest.NewRequest(http.MethodPost, "/admin/rooms/"+room.ID+"/close", nil)
+	req := httptest.NewRequest(http.MethodPost, "/admin/rooms/"+room.ID+"/close", http.NoBody)
 	resp, _ := app.Test(req, -1)
 	resp.Body.Close()
-	if resp.StatusCode != 202 {
+	if resp.StatusCode != http.StatusAccepted {
 		t.Fatalf("expected 202, got %d", resp.StatusCode)
 	}
 }
@@ -220,14 +223,14 @@ func TestAdminSuspendRoom_CleansS3Uploads(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := tracker.Record(room.ID, "admin-user", "s3obj3", ".png", 150, "s3"); err != nil {
+	if err := tracker.Record(room.ID, "admin-user", "s3obj3", ".png", 150, uploadBackendS3); err != nil {
 		t.Fatal(err)
 	}
 
-	req := httptest.NewRequest(http.MethodPost, "/admin/rooms/"+room.ID+"/suspend", nil)
+	req := httptest.NewRequest(http.MethodPost, "/admin/rooms/"+room.ID+"/suspend", http.NoBody)
 	resp, _ := app.Test(req, -1)
 	resp.Body.Close()
-	if resp.StatusCode != 202 {
+	if resp.StatusCode != http.StatusAccepted {
 		t.Fatalf("expected 202, got %d", resp.StatusCode)
 	}
 }
@@ -240,9 +243,9 @@ func TestUploadTrackingViaRecord(t *testing.T) {
 	db := testutil.SetupTestDB(t)
 	tracker := storage.NewChatUploadTracker(db, t.TempDir(), nil)
 
-	_ = tracker.Record("room1", "user1", "disk-h", ".png", 100, "disk")
-	_ = tracker.Record("room1", "user1", "s3-h", ".jpg", 200, "s3")
-	_ = tracker.Record("room1", "user1", "inline-h", ".gif", 50, "inline")
+	_ = tracker.Record("room1", "user1", "disk-h", ".png", 100, uploadBackendDisk)
+	_ = tracker.Record("room1", "user1", "s3-h", ".jpg", 200, uploadBackendS3)
+	_ = tracker.Record("room1", "user1", "inline-h", ".gif", 50, uploadBackendInline)
 
 	var uploads []models.ChatUpload
 	db.Where("room_id = ?", "room1").Find(&uploads)
@@ -254,7 +257,7 @@ func TestUploadTrackingViaRecord(t *testing.T) {
 	for _, u := range uploads {
 		backends[u.StorageBackend] = true
 	}
-	if !backends["disk"] || !backends["s3"] || !backends["inline"] {
+	if !backends[uploadBackendDisk] || !backends[uploadBackendS3] || !backends[uploadBackendInline] {
 		t.Fatalf("expected all three backends, got %v", backends)
 	}
 }
@@ -272,7 +275,7 @@ func TestUploadChatImage_TrackingIntegration(t *testing.T) {
 	url := "/uploads/chat/" + hash + ".png"
 
 	h, ext, backend := parseUploadMeta(url, mime, data)
-	if h != hash || ext != ".png" || backend != "disk" {
+	if h != hash || ext != extPNG || backend != uploadBackendDisk {
 		t.Fatalf("parseUploadMeta disk: got hash=%q ext=%q backend=%q", h, ext, backend)
 	}
 
@@ -280,7 +283,7 @@ func TestUploadChatImage_TrackingIntegration(t *testing.T) {
 
 	var u models.ChatUpload
 	db.Where("file_hash = ?", hash).First(&u)
-	if u.StorageBackend != "disk" {
+	if u.StorageBackend != uploadBackendDisk {
 		t.Fatalf("expected disk, got %q", u.StorageBackend)
 	}
 
@@ -311,7 +314,7 @@ func TestServices_RoomCleanup_WithMockDeleter(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_ = tracker.Record(room.ID, "user-a", "svc-key", ".png", 100, "s3")
+	_ = tracker.Record(room.ID, "user-a", "svc-key", ".png", 100, uploadBackendS3)
 
 	if err = svc.CascadeDeleteRoom(t.Context(), room, services.CascadeDeleteOptions{}); err != nil {
 		t.Fatal(err)
@@ -336,7 +339,9 @@ func TestUploadChatImage_OverLimit_Returns413(t *testing.T) {
 	// Set low upload limit: 100 bytes via settings
 	s, _ := settingsRepo.GetSettings()
 	s.MaxUploadBytesPerUser = 100
-	settingsRepo.SaveSettings(s)
+	if err := settingsRepo.SaveSettings(s); err != nil {
+		t.Fatal(err)
+	}
 
 	chatCfg := &config.ChatConfig{}
 	handler := NewRoomHandler(lkMock, &lkCfg, chatCfg, roomRepo, nil, nil, settingsRepo, nil, uploadTracker, cleanupSvc)
@@ -359,20 +364,22 @@ func TestUploadChatImage_OverLimit_Returns413(t *testing.T) {
 	}
 
 	// Manually set user bytes in tracker
-	_ = uploadTracker.Record(room.ID, "user-a", "existing", ".png", 80, "disk")
+	_ = uploadTracker.Record(room.ID, "user-a", "existing", ".png", 80, uploadBackendDisk)
 
 	// Attempt upload — combined 80 + 200 > 100 → should fail 413
 	body := new(bytes.Buffer)
 	writer := multipart.NewWriter(body)
 	part, _ := writer.CreateFormFile("file", "large.png")
-	part.Write(largeData)
+	if _, err := part.Write(largeData); err != nil {
+		t.Fatal(err)
+	}
 	writer.Close()
 
 	req := httptest.NewRequest(http.MethodPost, "/room/"+room.ID+"/chat/upload", body)
 	req.Header.Set("Content-Type", writer.FormDataContentType())
 	resp, _ := app.Test(req, -1)
 	defer resp.Body.Close()
-	if resp.StatusCode != 507 {
+	if resp.StatusCode != http.StatusInsufficientStorage {
 		respBody, _ := io.ReadAll(resp.Body)
 		t.Fatalf("expected 507 (quota exceeded), got %d: %s", resp.StatusCode, string(respBody))
 	}

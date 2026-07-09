@@ -46,7 +46,7 @@ func TestCreateRoom_DBFailure_CompensatesLK(t *testing.T) {
 	req1.Header.Set("Content-Type", "application/json")
 	resp1, _ := app.Test(req1, -1)
 	defer resp1.Body.Close()
-	if resp1.StatusCode != 200 {
+	if resp1.StatusCode != http.StatusOK {
 		t.Fatalf("first create should succeed, got %d", resp1.StatusCode)
 	}
 
@@ -59,7 +59,7 @@ func TestCreateRoom_DBFailure_CompensatesLK(t *testing.T) {
 	req2.Header.Set("Content-Type", "application/json")
 	resp2, _ := app.Test(req2, -1)
 	defer resp2.Body.Close()
-	if resp2.StatusCode != 409 {
+	if resp2.StatusCode != http.StatusConflict {
 		bodyBytes, _ := io.ReadAll(resp2.Body)
 		t.Fatalf("expected 409 for duplicate, got %d: %s", resp2.StatusCode, string(bodyBytes))
 	}
@@ -100,7 +100,7 @@ func TestCreateRoom_LKFailure_NoCompensatingActionNeeded(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	resp, _ := app.Test(req, -1)
 	defer resp.Body.Close()
-	if resp.StatusCode != 500 {
+	if resp.StatusCode != http.StatusInternalServerError {
 		t.Fatalf("expected 500 for LK failure, got %d", resp.StatusCode)
 	}
 
