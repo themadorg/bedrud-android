@@ -4,38 +4,38 @@ description: إعداد جهاز مكوَّن مسبقًا
 order: 33
 ---
 
-مُصمَّم Bedrud ليعمل كـ "جهاز جاهز" مكتفٍ ذاتيًا لاجتماعات الفيديو. ملف ثنائي تنفيذي واحد يحتوي كل ما يلزم - الواجهة والخلفية وخادم وسائط LiveKit.
+Bedrud is designed to run as a self-contained "appliance" for video meetings. A single executable binary packages everything needed - frontend, backend, and the LiveKit media server.
 
-## الميزات الرئيسية
+## Key Features
 
-| الميزة | الوصف |
+| Feature | Description |
 |---------|-------------|
-| لا تبعيات خارجية | لا حاجة لـ Node.js أو Redis أو خادم وسائط منفصل |
-| خادم وسائط مضمن | ملف LiveKit الثنائي مُضمَّن ويُدار تلقائيًا |
-| واجهة مضمنة | واجهة React مُترجمة ومعروضة مسبقًا SSR داخل الملف الثنائي Go |
-| تخزين SQLite | لا حاجة لخادم قاعدة بيانات |
-| TLS مدمج | شهادات موقعة ذاتيًا أو Let's Encrypt |
-| مثبّت مدمج | يُعدّد خدمات init (systemd/OpenRC/SysV) والأدلة والإعدادات |
+| Zero external dependencies | No Node.js, Redis, or separate media server needed |
+| Embedded media server | LiveKit binary included and managed automatically |
+| Embedded frontend | React UI compiled and SSR pre-rendered into the Go binary |
+| SQLite storage | No database server required |
+| Built-in TLS | Self-signed certificates or Let's Encrypt. TURN/TLS is automatically configured for the embedded LiveKit when server TLS is enabled. |
+| Built-in installer | Configures init services (systemd/OpenRC/SysV), directories, and configs |
 
-## تشغيل الملف الثنائي
+## Running the Binary
 
-### بدء خادم Bedrud
+### Start the Bedrud Server
 
 ```bash
 ./bedrud --run --config config.yaml
 ```
 
-### بدء خادم وسائط LiveKit
+### Start the LiveKit Media Server
 
 ```bash
 ./bedrud --livekit --config livekit.yaml
 ```
 
-الملف الثنائي يحتوي كلًا من خادم API وخادم الوسائط. استخدم الأعلام لاختيار أيهما تريد بدءه.
+The binary contains both the API server and the media server. Use flags to choose which to start.
 
-## التثبيت
+## Installation
 
-### تثبيت سريع (Debian/Ubuntu)
+### Quick Install (Debian/Ubuntu)
 
 ```bash
 # With Let's Encrypt TLS
@@ -50,9 +50,9 @@ sudo ./bedrud install --ip 1.2.3.4
 
 <InstallerSteps />
 
-### بنية الخدمات
+### Service Architecture
 
-بعد التثبيت، تعمل خدمتا init (systemd أو OpenRC أو SysV init):
+After installation, two init services run (systemd, OpenRC, or SysV init):
 
 ```mermaid
 flowchart LR
@@ -64,46 +64,46 @@ flowchart LR
     BS */} DB
 ```
 
-## ملفات الإعدادات
+## Configuration Files
 
-| الملف | الغرض |
+| File | Purpose |
 |------|---------|
-| `/etc/bedrud/config.yaml` | إعدادات الخادم الرئيسية |
-| `/etc/bedrud/livekit.yaml` | إعدادات خادم الوسائط |
-| `/var/lib/bedrud/bedrud.db` | قاعدة بيانات SQLite |
-| `/var/log/bedrud/bedrud.log` | سجلات التطبيق |
+| `/etc/bedrud/config.yaml` | Main server configuration |
+| `/etc/bedrud/livekit.yaml` | Media server configuration |
+| `/var/lib/bedrud/bedrud.db` | SQLite database |
+| `/var/log/bedrud/bedrud.log` | Application logs |
 
-راجع [مرجع الإعدادات](/ar/docs/getting-started/configuration) لجميع الخيارات.
+See the [Configuration Reference](/ar/docs/getting-started/configuration) for all options.
 
-## ما بعد التثبيت
+## Post-Installation
 
-### أنشئ أول مسؤول
+### Create Your First Admin
 
 <CreateAdmin />
 
-### تحقق من حالة الخدمات
+### Check Service Status
 
 ```bash
 systemctl status bedrud livekit
 ```
 
-### عرض السجلات
+### View Logs
 
 ```bash
 tail -f /var/log/bedrud/bedrud.log
 journalctl -u bedrud -f
 ```
 
-## إلغاء التثبيت
+## Uninstallation
 
 ```bash
 sudo ./bedrud uninstall
 ```
 
-يزيل هذا بالكامل:
+This completely removes:
 
-- ملفات خدمة init (systemd/OpenRC/SysV)
-- الملف الثنائي من `/usr/local/bin/`
-- الإعدادات في `/etc/bedrud/`
-- البيانات في `/var/lib/bedrud/`
-- السجلات في `/var/log/bedrud`
+- Init service files (systemd/OpenRC/SysV)
+- Binary from `/usr/local/bin/`
+- Configuration in `/etc/bedrud/`
+- Data in `/var/lib/bedrud/`
+- Logs in `/var/log/bedrud`

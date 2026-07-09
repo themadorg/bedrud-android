@@ -4,25 +4,25 @@ description: Application iOS native
 order: 10
 ---
 
-L'application iOS Bedrud est construite avec SwiftUI, offrant une expérience native de réunion vidéo avec multi-instance support et secure credential storage.
+The Bedrud iOS app is built with SwiftUI, providing a native video meeting experience with multi-instance support and secure credential storage.
 
 ## Technology Stack
 
-| Technologie | Version | Objectif |
+| Technology | Version | Purpose |
 |-----------|---------|---------|
-| Swift | 5.9+ | Langage |
+| Swift | 5.9+ | Language |
 | SwiftUI | Latest | UI framework |
 | LiveKit Swift SDK | 2.0+ | WebRTC media |
 | KeychainAccess | 4.2.2+ | Secure credential storage |
 
-**Deployment target :** iOS 18.0
+**Deployment target:** iOS 18.0
 
 ## Project Configuration
 
-Le projet utilise **XCodeGen** pour la project generation à partir de `project.yml` :
+The project uses **XCodeGen** for project generation from `project.yml`:
 
-- Bundle ID : `com.bedrud.ios`
-- Généré avec : `xcodegen generate`
+- Bundle ID: `com.bedrud.ios`
+- Generated with: `xcodegen generate`
 
 ## Directory Structure
 
@@ -44,7 +44,7 @@ apps/ios/Bedrud/
 │   │   ├── LoginView.swift        # Login screen
 │   │   └── RegisterView.swift     # Registration screen
 │   ├── Dashboard/
-│   │   └── DashboardView.swift    # Room list et management
+│   │   └── DashboardView.swift    # Room list and management
 │   ├── Meeting/
 │   │   └── MeetingView.swift      # Video call interface
 │   ├── Profile/
@@ -68,7 +68,7 @@ apps/ios/Bedrud/
 
 ## Multi-Instance Architecture
 
-L'application iOS reflète l'architecture Android pour le multi-instance support.
+The iOS app mirrors the Android architecture for multi-instance support.
 
 ```mermaid
 flowchart TB
@@ -92,7 +92,7 @@ flowchart TB
 
 ### Key Pattern
 
-Les dépendances sont `@Published` properties sur `InstanceManager`, qui est un `ObservableObject`. Les vues le reçoivent via `@EnvironmentObject` :
+Dependencies are `@Published` properties on `InstanceManager`, which is an `ObservableObject`. Views receive it via `@EnvironmentObject`:
 
 ```swift
 struct DashboardView: View {
@@ -116,11 +116,11 @@ flowchart LR
     DashboardView -. "toolbar sheet" .-> InstanceSwitcherView["InstanceSwitcherView"]
 ```
 
-L'instance switcher apparaît comme un `.sheet` déclenché depuis le Dashboard toolbar.
+The instance switcher appears as a `.sheet` triggered from the Dashboard toolbar.
 
 ## App Entry Point
 
-`BedrudApp.swift` initialise les core services et les injecte dans le SwiftUI environment :
+`BedrudApp.swift` initializes the core services and injects them into the SwiftUI environment:
 
 ```swift
 @main
@@ -144,34 +144,34 @@ struct BedrudApp: App {
 
 ### Secure Storage
 
-Utilise **KeychainAccess** pour stocker les JWT tokens et les sensitive credentials, plutôt que UserDefaults.
+Uses **KeychainAccess** for storing JWT tokens and sensitive credentials, rather than UserDefaults.
 
 ### Deep Linking
 
-Gère les URLs pour direct room joining et room codes.
+Handles URLs for direct room joining and room codes.
 
 ### Settings
 
-Les user preferences sont persistantes via `SettingsStore` en utilisant UserDefaults.
+User preferences are persisted via `SettingsStore` using UserDefaults.
 
 ## Building
 
 ```bash
-# Ouvrir dans Xcode
+# Open in Xcode
 make dev-ios
 
 # Build archive (Release)
 make build-ios
 
-# Export IPA (requiert ExportOptions.plist)
+# Export IPA (requires ExportOptions.plist)
 make export-ios
 
-# Build pour le simulator (Debug)
+# Build for simulator (Debug)
 make build-ios-sim
 ```
 
 ### Requirements
 
-- Xcode (dernière version stable)
+- Xcode (latest stable)
 - iOS 18.0 deployment target
-- Pour les device builds : Apple Developer account et provisioning profile
+- For device builds: Apple Developer account and provisioning profile

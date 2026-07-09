@@ -1,66 +1,75 @@
 ---
-title: Arquitectura del Servidor
-description: Diseño del servidor backend y componentes
+title: Arquitectura del servidor
+description: Diseño y componentes del servidor backend
 order: 7
 ---
 
-El servidor Bedrud es una aplicación Go que proporciona la REST API, sirve el frontend web incrustado y gestiona el servidor multimedia LiveKit.
+The Bedrud server is a Go application that provides the REST API, serves the embedded web frontend, and manages the LiveKit media server.
 
-## Stack Tecnológico
+## Technology Stack
 
 | Technology | Purpose |
 |-----------|---------|
-| Go 1.24 | Lenguaje principal |
-| Fiber v2 | Framework web (tipo Express) |
-| GORM | ORM para SQLite y PostgreSQL |
-| LiveKit Protocol SDK | Gestión de salas y tokens WebRTC |
-| Zerolog | Registro estructurado JSON |
-| Goth | OAuth2 multi-proveedor |
-| go-passkeys | Soporte FIDO2/WebAuthn |
-| golang-jwt | Creación y validación de tokens JWT |
-| gocron | Programación de trabajos en segundo plano |
-| Swagger (swaggo) | Generación de documentación de API |
+| Go 1.24 | Core language |
+| Fiber v2 | Web framework (Express-like) |
+| GORM | ORM for SQLite and PostgreSQL |
+| LiveKit Protocol SDK | WebRTC room and token management |
+| Zerolog | Structured JSON logging |
+| Goth | Multi-provider OAuth2 |
+| go-passkeys | FIDO2/WebAuthn support |
+| golang-jwt | JWT token creation and validation |
+| gocron | Background job scheduling |
+| Swagger (swaggo) | API documentation generation |
 
-## Estructura de Directorios
+## Directory Structure
 
 ```
 server/
 ├── cmd/
-│   ├── server/main.go        # Punto de entrada de desarrollo
-│   └── bedrud/main.go        # Punto de entrada de producción (con flags install/livekit)
+│   ├── server/main.go        # Development entry point
+│   └── bedrud/main.go        # Production entry point (with install/livekit flags)
 ├── internal/
-│   ├── auth/                  # Servicios de autenticación
-│   │   ├── auth.go            # Servicio principal de autenticación (registro, login, OAuth)
-│   │   ├── jwt.go             # Creación y validación de tokens JWT
-│   │   └── session_store.go   # Almacén de sesiones Gorilla para estado OAuth
-│   ├── database/              # Inicialización y migraciones de base de datos
-│   ├── handlers/              # Manejadores de solicitudes HTTP (capa de controlador)
-│   │   ├── auth_handler.go    # Endpoints de autenticación
-│   │   ├── room.go            # Endpoints de salas
-│   │   └── users.go           # Endpoints de gestión de usuarios
-│   ├── middleware/             # Middleware de Fiber
-│   │   └── auth.go            # Validación JWT, verificación de permisos
-│   ├── models/                # Modelos GORM (esquemas de base de datos)
-│   │   ├── user.go            # Modelo de usuario
-│   │   ├── room.go            # Modelo de sala
-│   │   └── passkey.go         # Modelo de passkey
-│   ├── repository/            # Capa de acceso a datos (SQL vía GORM)
+│   ├── auth/                  # Authentication services
+│   │   ├── auth.go            # Core auth service (register, login, OAuth)
+│   │   ├── jwt.go             # JWT token creation and validation
+│   │   └── session_store.go   # Gorilla session store for OAuth state
+│   ├── database/              # Database initialization and migrations
+│   ├── handlers/              # HTTP request handlers (controller layer)
+│   │   ├── auth_handler.go    # Auth endpoints
+│   │   ├── recording_handler.go # Recording start/stop/list/get
+│   │   ├── room.go            # Room endpoints
+│   │   └── users.go           # User management endpoints
+│   ├── middleware/             # Fiber middleware
+│   │   ├── auth.go            # JWT validation, permission checks
+│   │   └── recordings_enabled.go # Recordings sys-setting gate
+│   ├── models/                # GORM models (database schemas)
+│   │   ├── user.go            # User model
+│   │   ├── webhook.go         # Webhook model
+│   │   ├── recording.go       # Recording model
+│   │   ├── room.go            # Room model
+│   │   └── passkey.go         # Passkey model
+│   ├── repository/            # Data access layer (SQL via GORM)
 │   │   ├── user_repository.go
+│   │   ├── webhook_repository.go
+│   │   ├── recording_repository.go
 │   │   ├── room_repository.go
 │   │   └── passkey_repository.go
-│   ├── livekit/               # Gestión del servidor LiveKit incrustado
-│   ├── scheduler/             # Programación de trabajos en segundo plano
-│   └── utils/                 # TLS y otras utilidades
-├── frontend/                  # Frontend web incrustado (poblado en tiempo de compilación)
-├── config.yaml                # Configuración de desarrollo
-├── livekit.yaml               # Configuración de LiveKit de desarrollo
+│   ├── services/               # Business logic layer
+│   │   ├── recording_service.go # Recording gate chain + LK egress
+│   │   └── room_cleanup.go     # Room deletion/suspend cascade
+│   ├── livekit/               # Embedded LiveKit server management
+│   ├── scheduler/             # Background job scheduling
+│   └── utils/                 # TLS and other utilities
+├── frontend/                  # Embedded web frontend (populated at build time)
+├── config.yaml                # Development configuration
+├── livekit.yaml               # Development LiveKit configuration
 ├── go.mod
 └── go.sum
 ```
 
-## Arquitectura en Capas
+## Layered Architecture
 
-El servidor sigue una arquitectura de tres capas:
+The server follows a layered architecture:
 
 ```mermaid
 flowchart TB
@@ -72,61 +81,76 @@ flowchart TB
     Database["Database<br/>SQLite (dev) or PostgreSQL (production)"]
 ```
 
-## Patrones Clave
+## Key Patterns
 
-### Frontend Incrustado
+### Embedded Frontend
 
-El frontend web se compila en archivos estáticos y se incrusta en el binario Go usando `//go:embed`:
+The web frontend is compiled to static files and embedded into the Go binary using `//go:embed`:
 
 ```go
 //go:embed frontend/*
 var frontendFS embed.FS
 ```
 
-En tiempo de compilación, `bun run build:embed` pre-renderiza la aplicación React SSR y copia `dist/client/` en `server/frontend/`. El compilador de Go luego lo empaqueta en el binario. El servidor Fiber sirve estos archivos para cualquier ruta que no sea de API.
+At build time, `bun run build:embed` SSR pre-renders the React app and copies `dist/client/` into `server/frontend/`. The Go compiler then bundles it into the binary. The Fiber server serves these files for any non-API route.
 
-### Autenticación JWT
+### JWT Authentication
 
-El middleware extrae el JWT del encabezado `Authorization: Bearer <token>`, lo valida y adjunta el contexto del usuario a la solicitud. Las rutas protegidas usan el middleware `RequireAccess` para verificar los roles de usuario.
+The middleware extracts the JWT from the `Authorization: Bearer <token>` header, validates it, and attaches the user context to the request. Protected routes use `RequireAccess` middleware to check user roles.
 
-### Generación de Tokens LiveKit
+### LiveKit Token Generation
 
-Cuando un usuario se une a una sala, el servidor:
+When a user joins a room, the server:
 
-1. Valida los permisos de la sala
-2. Crea un token de acceso LiveKit firmado con el secreto de API
-3. Devuelve el token al cliente
-4. El cliente se conecta directamente a LiveKit usando el token
+1. Validates room permissions
+2. Creates a LiveKit access token signed with the API secret
+3. Returns the token to the client
+4. The client connects directly to LiveKit using the token
 
-### Documentación Swagger
+### Recordings & LiveKit Egress
 
-La documentación de la API se genera automáticamente desde anotaciones de código usando swaggo. En desarrollo, está disponible en `/api/swagger/`.
+🚧 **Planned feature.** Recording HTTP routes and queue handlers are present in the codebase but **not registered** on the production route table (`// TODO oncoming feature` in `internal/server/server.go`). YAML keys under `recording:` are reserved for the upcoming release.
 
-## Base de Datos
+When enabled, the design uses three-layer authorization (system setting → room setting → moderator check), LiveKit Room Composite Egress, and a `process_recording` job. Until then, do not rely on recording API endpoints.
 
-### SQLite (Predeterminado)
+### Webhooks
 
-Para desarrollo y pequeños despliegues, Bedrud usa SQLite. El archivo de base de datos se almacena en la ruta configurada `database.path` (predeterminado: `data.db`).
+Webhook system allows superadmins to register HTTP callbacks for real-time events. Active events: `room.created`, `room.ended`, `participant.joined`, and `ping` (test). `recording.completed` is reserved for a planned feature. Delivery headers: `X-Bedrud-Signature`, `X-Bedrud-Event`, `X-Bedrud-Timestamp`.
+
+- **Storage:** `Webhook` model in database, CRUD via `WebhookRepository`
+- **Dispatch:** Background job (`dispatch_webhook`) sends HMAC-SHA256 signed POST requests with 10s timeout
+- **Secrets:** Per-webhook HMAC secret, rotatable via admin panel
+- See the [Webhooks API](/es/docs/api/api-reference) for endpoint details.
+
+### Swagger Documentation
+
+API documentation is auto-generated from code annotations using swaggo. In development, it's available at `/api/swagger/`.
+
+## Database
+
+### SQLite (Default)
+
+For development and small deployments, Bedrud uses SQLite. The database file is stored at the configured `database.path` (default: `data.db`).
 
 ### PostgreSQL
 
-Para producción con requisitos de concurrencia más altos, configure una cadena de conexión de PostgreSQL. GORM maneja ambos dialectos de forma transparente.
+For production with higher concurrency requirements, configure a PostgreSQL connection string. GORM handles both dialects transparently.
 
-### Migraciones
+### Migrations
 
-GORM auto-migra el esquema al inicio basándose en las estructuras de los modelos. Los modelos se definen en `internal/models/`.
+GORM auto-migrates the schema on startup based on the model structs. The models are defined in `internal/models/`.
 
-## Trabajos en Segundo Plano
+## Background Jobs
 
-El programador `gocron` ejecuta tareas periódicas tales como:
-- Limpieza de tokens de actualización caducados
-- Eliminación de participantes de salas obsoletos
+The `gocron` scheduler runs periodic tasks such as:
+- Cleaning up expired refresh tokens
+- Removing stale room participants
 
 ---
 
-## Véase también
+## See also
 
-- [Estructura del Código Backend](/es/docs/backend/structure) - mapa de directorios y estándares de codificación
-- [Manejadores de API](/es/docs/backend/api-handlers) - enrutamiento y ciclo de vida de solicitudes
-- [Base de Datos y Modelos](/es/docs/backend/database) - modelos GORM y patrón de repositorio
-- [Flujo de Autenticación](/es/docs/backend/authentication) - internos de JWT, OAuth y passkeys
+- [Backend Code Structure](/es/docs/backend/structure) - directory map and coding standards
+- [API Handlers](/es/docs/backend/api-handlers) - routing and request lifecycle
+- [Database and Models](/es/docs/backend/database) - GORM models and repository pattern
+- [Authentication Flow](/es/docs/backend/authentication) - JWT, OAuth, and passkey internals

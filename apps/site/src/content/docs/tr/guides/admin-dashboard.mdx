@@ -1,280 +1,291 @@
 ---
 title: Yönetici Paneli
-description: Web arayüzünden kullanıcıları, odaları, ayarları ve davet jetonlarını yönetin
+description: Web arayüzünden kullanıcılar, odalar, ayarlar ve davet token'larını yönetin
 order: 35
 ---
 
-Yönetici paneli, Bedrud örneğinizi yönetmek için bir web arayüzü sağlar. Superadmin'ler sistem istatistiklerini görüntüleyebilir, kullanıcıları ve odaları yönetebilir, örnek genelindeki ayarları yapılandırabilir ve davet jetonları oluşturabilir.
+The admin dashboard provides a web interface for managing your Bedrud instance. Superadmins can view system statistics, manage users and rooms, configure instance-wide settings, and generate invite tokens.
 
-## Ön Koşullar
+## Prerequisites
 
-- **Superadmin erişimi:** Kullanıcınızın `accesses` dizisinde `superadmin` bulunmalıdır.
-- **İlk admin kurulumu:** Bedrud'u kurduktan sonra, CLI üzerinden bir kullanıcı oluşturun ve yükseltin:
+- **Superadmin access:** You must have `superadmin` in your user's `accesses` array.
+- **First admin setup:** After installing Bedrud, create a user and promote them via the CLI:
 
 ```bash
 bedrud user create --email "admin@example.com" --password "securepassword" --name "Admin"
 bedrud user promote --email "admin@example.com"
 ```
 
-İlk superadmin'i oluşturmak için bir web arayüzü veya API yoktur. Bu, güvenlik amacıyla bilinçli olarak tasarlanmıştır.
+There is no web UI or API to create the first superadmin. This is intentional for security.
 
-## Yönetici Paneline Erişim
+## Accessing the Admin Panel
 
-Superadmin erişiminiz olduğunda, yönetici paneli Bedrud web uygulamanızda `/dashboard/admin` adresinde kullanılabilir.
+Once you have superadmin access, the admin panel is available at `/dashboard/admin` in your Bedrud web application.
 
-**Gezinme:**
-- **Kenar çubuğu**, Genel Bakış, Kullanıcılar, Odalar ve Ayarlar bağlantılarını içeren bir "Yönetici" bölümü gösterir. Bu bölüm yalnızca superadmin'lere görünür.
-- **Sağ üst kullanıcı menüsü**, kalkan simgeli bir "Yönetici paneli" bağlantısı içerir.
-- `/dashboard/admin/*` URL'lerini ziyaret etmeye çalışan admin olmayan kullanıcılar otomatik olarak `/dashboard` sayfasına yönlendirilir.
+**Navigation:**
+- The **sidebar** shows an "Admin" section with links to Overview, Users, Rooms, and Settings. This section is only visible to superadmins.
+- The **top-right user dropdown** includes an "Admin panel" link with a shield icon.
+- Non-admin users who attempt to visit `/dashboard/admin/*` URLs are automatically redirected to `/dashboard`.
 
 ---
 
-## Genel Bakış Sayfası
+## Overview Page
 
-`/dashboard/admin` adresindeki genel bakış sayfası, temel sistem metriklerini içeren bir pano sunar.
+The overview page at `/dashboard/admin` provides a dashboard with key system metrics.
 
-### Sistem İstatistikleri
+### System Stats
 
-Kartlar şunları gösterir:
-- **Çevrimiçi Kullanıcılar:** Tüm odalardaki toplam farklı aktif katılımcı sayısı
-- **Toplam Oda:** Örnek üzerindeki toplam oda sayısı
-- **Toplam Kullanıcı:** Toplam kayıtlı kullanıcı sayısı
+Cards display:
+- **Online Users:** Total distinct active participants across all rooms
+- **Total Rooms:** Total rooms on the instance
+- **Total Users:** Total registered users
 
-### TLS Sertifika Durumu
+### TLS Certificate Status
 
-Renk kodlu bir gösterge, sunucunuzun TLS sertifikasının durumunu gösterir:
+A color-coded indicator shows the state of your server's TLS certificate:
 
-| Durum | Renk | Anlamı |
+| Status | Color | Meaning |
 |---|---|---|
-| Geçerli | Yeşil | Sertifika geçerli |
-| Yakında Sona Erecek | Sarı | 30 gün içinde sona eriyor |
-| Süresi Dolmuş | Kırmızı | Sertifikanın süresi dolmuş |
-| Yapılandırılmamış | Gri | TLS devre dışı |
+| Valid | Green | Certificate is valid |
+| Expiring Soon | Amber | Expires within 30 days |
+| Expired | Red | Certificate has expired |
+| Not Configured | Gray | TLS is disabled |
 
-Sertifika durumu her 5 dakikada bir yenilenir.
+The certificate status refreshes every 5 minutes.
 
-### Grafikler
+### Charts
 
-- **Oda Oluşturma:** Son 8 haftada oluşturulan odaların çubuk grafiği
-- **Son Kayıtlar:** En son kullanıcı kayıtlarının listesi
-
----
-
-## Kullanıcı Yönetimi
-
-### Kullanıcı Listesi
-
-`/dashboard/admin/users` adresindeki kullanıcı listesi, tüm kayıtlı kullanıcıları aranabilir, sıralanabilir bir tabloda gösterir.
-
-**Sütunlar:**
-- **Ad:** Kullanıcının görünen adı
-- **E-posta:** Kullanıcının e-posta adresi
-- **Sağlayıcı:** Kimlik doğrulama yöntemi (local, google, github, guest, passkey)
-- **Rol:** Erişim seviyesi rozeti. `superadmin` erişimi olan kullanıcılar için "Superadmin" gösterir.
-- **Oluşturma:** Kayıt tarihi
-- **Durum:** Aktif/Yasaklı geçiş düğmesi
-
-**Eylemler:**
-- **Ara:** Kullanıcıları ada veya e-postaya göre filtrelemek için arama çubuğuna yazın (istemci tarafında).
-- **Sırala:** Sıralamak için herhangi bir sütun başlığına tıklayın. Artan/azalan değiştirmek için tekrar tıklayın.
-- **Sayfalandırma:** Büyük kullanıcı listelerinde gezinmek için gezinme kontrolleri.
-
-### Kullanıcı Eylemleri
-
-Her kullanıcı satırı hızlı eylem düğmeleri içerir:
-
-- **Yükselt/Düşür:** `["user"]` ve `["user", "superadmin"]` erişim seviyeleri arasında geçiş yap. Erişim seviyesi sütununda görünür.
-- **Aktif/Yasaklı:** Kullanıcının hesap durumunu değiştir. Yasaklı kullanıcılar giriş yapamaz veya jeton yenileyemez.
-- **Detayı Görüntüle:** Detay görünümünü açmak için kullanıcı satırına tıklayın.
-
-### Kullanıcı Detayı
-
-`/dashboard/admin/users/:userId` adresindeki detay sayfası tam bir kullanıcı profili gösterir.
-
-**Görüntülenen bilgiler:**
-- Kullanıcı adı, e-posta, sağlayıcı ve kayıt tarihi
-- Erişim seviyesi rozeti (superadmin/user)
-- Oda oluşturma etkinlik grafiği (8 haftalık geçmiş)
-- Kullanıcı tarafından oluşturulan odaların listesi
-
-**Eylemler:**
-- **Yükselt/Düşür:** Detay başlığında özel düğme
-- **Kullanıcıyı Sil:** Kullanıcıyı ve tüm verilerini kalıcı olarak kaldırır. E-posta onayı gerektirir. Silme düğmesi kendi hesabınız için gizlenir (kendinizi silemezsiniz).
-
-> **Silme kalıcı ve asenkron bir işlemdir.** Bir kullanıcıyı silmek, tüm odalarını, passkey'lerini ve tercihlerini de kaldırır. İstek hemen döner, temizlik arka planda çalışır.
+- **Room Creation:** Bar chart of rooms created over the last 8 weeks
+- **Recent Signups:** List of the most recent user registrations
 
 ---
 
-## Oda Yönetimi
+## User Management
 
-### Oda Listesi
+### User List
 
-`/dashboard/admin/rooms` adresindeki oda listesi, örnek üzerindeki tüm odaları gösterir.
+The user list at `/dashboard/admin/users` shows all registered users in a searchable, sortable table.
 
-**Sütunlar:**
-- **Oda Adı:** Oda tanımlayıcısı
-- **Görünürlük:** Genel, özel veya listelenmemiş
-- **Maks. Katılımcı:** Satır içi düzenlenebilir — değiştirmek için değere tıklayın
-- **Durum:** Aktif veya aktif değil
-- **Oluşturma:** Oda oluşturma tarihi
+**Columns:**
+- **Name:** User's display name
+- **Email:** User's email address
+- **Provider:** Authentication method (local, google, github, guest, passkey)
+- **Role:** Access level badge. Shows "Superadmin" for users with `superadmin` access.
+- **Created:** Registration date
+- **Status:** Active/Banned toggle
 
-**Eylemler:**
-- **Ara:** Odaları ada göre filtrele (istemci tarafında)
-- **Sırala:** Sıralamak için sütun başlıklarına tıklayın
-- **Askıya Al:** Odayı silmeden aktif bir çağrıyı sonlandır
-- **Sil:** Bir odayı kademeli silme ile kalıcı olarak kapat
+**Actions:**
+- **Search:** Type in the search bar to filter users by name or email (client-side).
+- **Sort:** Click any column header to sort. Click again to toggle ascending/descending.
+- **Pagination:** Navigation controls for browsing large user lists.
 
-### Oda Detayı
+### User Actions
 
-`/dashboard/admin/rooms/:roomId` adresindeki detay sayfası, bir odaya derinlemesine görünürlük sağlar.
+Each user row includes quick-action buttons:
 
-**Oda Ayarları:**
-- Oda adı, görünürlük modu, maksimum katılımcı
-- **Kalıcı mod geçişi:** Boştaki odaların otomatik temizlenmesini engellemek için etkinleştirin. Bu yalnızca superadmin'ler tarafından kullanılabilir — oda oluşturanlar değiştiremez.
+- **Promote/Demote:** Toggle between `["user"]` and `["user", "superadmin"]` access levels. Visible in the access level column.
+- **Active/Banned:** Toggle the user's account status. Banned users cannot log in or refresh tokens.
+- **View Detail:** Click the user row to open the detail view.
 
-**Canlı Katılımcılar:**
-- Her 3 saniyede bir yoklanan gerçek zamanlı katılımcı listesi
-- Katılımcı başına: ad, katılım zamanı, iz bilgileri (ses/video/ekran paylaşımı)
-- **Bit hızı grafiği:** Ses ve video izleri için canlı bit hızı grafiği
-- **At:** Herhangi bir katılımcıyı odadan çıkar
-- **Sessize Al:** Herhangi bir katılımcının ses izlerini kapat
+### User Detail
+
+The detail page at `/dashboard/admin/users/:userId` shows a full user profile.
+
+**Information displayed:**
+- User name, email, provider, and registration date
+- Access level badge (superadmin/user)
+- Room creation activity chart (8-week history)
+- List of rooms created by the user
+
+**Actions:**
+- **Promote/Demote:** Dedicated button in the detail header
+- **Delete User:** Permanently removes the user and all their data. Requires email confirmation. The delete button is hidden for your own account (you cannot delete yourself).
+
+> **Delete is permanent and asynchronous.** Deleting a user also removes all their rooms, passkeys, and preferences. The request returns immediately while the cleanup runs in the background.
 
 ---
 
-## Sistem Ayarları
+## Room Management
 
-`/dashboard/admin/settings` adresindeki ayarlar sayfası 9 sekme halinde düzenlenmiştir. Herhangi bir sekmeyi değiştirdikten sonra "Değişiklikleri kaydet"e tıklayın (Genel sekmesi, kayıt modu değişikliklerinde otomatik kaydeder).
+### Room List
 
-### Genel Sekmesi
+The room list at `/dashboard/admin/rooms` shows all rooms on the instance.
 
-- **Kayıt Modu:**
-  - **Açık:** Herkes hesap oluşturabilir
-  - **Yalnızca davet:** Yeni kullanıcılar geçerli bir davet jetonu sağlamalıdır
-  - **Kapalı:** Yeni kayıt yok — mevcut kullanıcılar hâlâ giriş yapabilir
-  - Mod değiştirdiğinizde değişiklikler otomatik olarak kaydedilir
+**Columns:**
+- **Room Name:** Room identifier
+- **Visibility:** Public, private, or unlisted
+- **Max Participants:** Editable inline — click the value to change it
+- **Status:** Active or inactive
+- **Created:** Room creation date
 
-**Davet Jetonu Yönetimi (Genel sekmesi içinde):**
+**Actions:**
+- **Search:** Filter rooms by name (client-side)
+- **Sort:** Click column headers to sort
+- **Suspend:** End an active call without deleting the room
+- **Delete:** Permanently close a room with cascade deletion
 
-Jetonlar, Yalnızca davet modundayken kimlerin kaydolabileceğini kontrol eder.
+### Room Detail
 
-- **Jeton Oluştur:** Jetonu belirli bir adrese kilitlemek için isteğe bağlı bir e-posta girin ve bir sona erme süresi seçin (24 saat, 72 saat, 7 gün veya 30 gün).
-- **Jeton Listesi:** Tüm jetonları durumlarıyla birlikte gösterir. Kullanılmamış jetonlar yeşil bir "Aktif" rozetine sahiptir, kullanılmış jetonlar gri renkte "Kullanıldı" gösterir.
-- **Jetonu Kopyala:** 32 karakterlik jeton değerini panonuza kopyalamak için kopyala düğmesine tıklayın.
-- **İptal Et:** Kullanılmasını engellemek için bir jetonu silin.
+The detail page at `/dashboard/admin/rooms/:roomId` provides deep visibility into a room.
 
-### Kimlik Doğrulama Sekmesi
+**Room Settings:**
+- Room name, visibility mode, max participants
+- **Persistent mode toggle:** Enable to prevent automatic cleanup of idle rooms. This is available to superadmins only — room creators cannot change it.
 
-- **Passkey'ler:** FIDO2/WebAuthn parolasız kimlik doğrulamayı aç/kapat
-- **OAuth Sağlayıcıları:** Google, GitHub ve Twitter OAuth'u yapılandırın:
+**Live Participants:**
+- Real-time participant list that polls every 3 seconds
+- Per participant: name, join time, track information (audio/video/screen share)
+- **Bitrate chart:** Live bitrate graph for audio and video tracks
+- **Kick:** Remove any participant from the room
+- **Mute:** Mute any participant's audio tracks
+
+---
+
+## System Settings
+
+The settings page at `/dashboard/admin/settings` is organized into 7 tabs. Click "Save changes" after modifying any tab (the General tab auto-saves on registration mode changes).
+
+### General Tab
+
+- **Registration Mode:**
+  - **Open:** Anyone can register an account
+  - **Invite-only:** New users must provide a valid invite token
+  - **Closed:** No new registrations — existing users can still log in
+  - Changes save automatically when you switch modes
+
+**Invite Token Management (within General tab):**
+
+Tokens control who can register when in Invite-only mode.
+
+- **Generate Token:** Enter an optional email to lock the token to a specific address, and select an expiry period (24 hours, 72 hours, 7 days, or 30 days).
+- **Token List:** Shows all tokens with their status. Unused tokens have a green "Active" badge, used tokens show "Used" in gray.
+- **Copy Token:** Click the copy button to copy the 32-character token value to your clipboard.
+- **Revoke:** Delete a token to prevent it from being used.
+- **Recordings Toggle:** UI may expose an “allow room recordings” setting for a **planned** feature. Recording HTTP routes are not registered in production yet.
+
+### Webhooks Tab
+
+The Webhooks tab lets superadmins register HTTP callbacks for real-time room and recording events.
+
+- **Add Webhook:** Enter a URL, select event types, and optionally set a custom HMAC secret.
+- **Event Types:** `room.created`, `room.ended`, `participant.joined`, `ping` (test). `recording.completed` is reserved for a planned feature. Delivery uses `X-Bedrud-Signature` / `X-Bedrud-Event` headers — see the [Webhooks Guide](/tr/docs/guides/webhooks).
+- **Test:** Send a test ping to verify connectivity.
+- **Rotate:** Generate a new HMAC signing secret (old one immediately invalidated).
+- **Status Column:** Shows last HTTP status code and timestamp of last delivery.
+
+### Authentication Tab
+
+- **Passkeys:** Toggle FIDO2/WebAuthn passwordless authentication
+- **OAuth Providers:** Configure Google, GitHub, and Twitter OAuth:
   - Client ID
   - Client Secret
   - Redirect URL
 
-Her sağlayıcının kendi yapılandırma kartı vardır. Üç alanı da doldurarak bir sağlayıcıyı etkinleştirin.
+Each provider has its own configuration card. Enable a provider by filling in all three fields.
 
-### LiveKit Sekmesi
+### LiveKit Tab
 
-- **Harici LiveKit:** Gömülü LiveKit yerine harici bir LiveKit sunucusu kullanmak için aç/kapat
-- **Host:** LiveKit sunucu adresi ve portu (ör. `127.0.0.1:7880`)
-- **API Key:** LiveKit sunucu API anahtarı
-- **API Secret:** LiveKit sunucu API gizli anahtarı
+- **External LiveKit:** Toggle to use an external LiveKit server instead of the embedded one
+- **Host:** LiveKit server host and port (e.g., `127.0.0.1:7880`)
+- **API Key:** LiveKit server API key
+- **API Secret:** LiveKit server API secret
 
-### Sunucu Sekmesi
+### Server Tab
 
-- **Port:** HTTP sunucu portu (varsayılan: `80`)
-- **Host:** Sunucu ana bilgisayar adı
-- **Domain:** Sunucu alan adı
-- **E-posta:** Yönetici e-postası (ACME sertifika kaydı için kullanılır)
-- **TLS:** Sertifika dosyalarıyla HTTPS'i etkinleştir
-- **ACME:** Otomatik Let's Encrypt sertifika yönetimini etkinleştir
-- **Ters Proxy:** Sunucunun bir proxy arkasında olduğunu belirt (istemci IP tespitini etkiler)
-- **Sertifika Yolları:** Sertifika dosyası ve anahtar dosyası yolları (manuel TLS kurulumu için)
-- **Sertifika Durumu:** Mevcut TLS sertifika sağlığını gösteren satır içi gösterge
+- **Port:** HTTP server port (default: `80`)
+- **Host:** Server hostname
+- **Domain:** Server domain
+- **Email:** Administrative email (used for ACME certificate registration)
+- **TLS:** Enable HTTPS with certificate files
+- **ACME:** Enable automatic Let's Encrypt certificate management
+- **Reverse Proxy:** Indicate the server is behind a proxy (affects client IP detection)
+- **Certificate Paths:** Cert file and key file paths (for manual TLS setup)
+- **Certificate Status:** Inline indicator showing current TLS certificate health
 
-### CORS Sekmesi
+### CORS Tab
 
-- **İzin Verilen Kökenler:** Virgülle ayrılmış CORS kökenleri listesi
-- **İzin Verilen Başlıklar:** Virgülle ayrılmış izin verilen istek başlıkları listesi
-- **İzin Verilen Yöntemler:** Virgülle ayrılmış izin verilen HTTP yöntemleri listesi
-- **Kimlik Bilgilerine İzin Ver:** Çapraz köken isteklerinde kimlik bilgilerini dahil etmek için aç/kapat
-- **Maks. Yaş:** CORS ön kontrol yanıtları için önbellek süresi (saniye)
+- **Allowed Origins:** Comma-separated list of CORS origins
+- **Allowed Headers:** Comma-separated list of allowed request headers
+- **Allowed Methods:** Comma-separated list of allowed HTTP methods
+- **Allow Credentials:** Toggle to include credentials in cross-origin requests
+- **Max Age:** Cache duration for CORS preflight responses (seconds)
 
-### Oda Limitleri Sekmesi
+### Room Limits Tab
 
-Tek bir kullanıcının oluşturabileceği aktif oda sayısını kontrol eder:
+Controls how many rooms a single user can create:
 
-- **Kullanıcı Başına Maks. Oda:** Superadmin olmayan bir kullanıcının oluşturabileceği maksimum aktif oda sayısı (varsayılan: 100, 0 = sınırsız). Superadmin'ler bu sınırı atlar.
+- **Max Rooms Per User:** Maximum number of active rooms a non-superadmin user can create (default: 100, 0 = unlimited). Superadmins bypass this limit.
 
-### Yükleme Kotaları Sekmesi
+### Upload Quotas Tab
 
-Sohbet resim yüklemeleri için depolama limitlerini kontrol eder:
+Controls storage limits for chat image uploads:
 
-- **Kullanıcı Başına Maks. Yükleme Baytı:** Tüm odalardaki kullanıcı başına depolama kotası (varsayılan: 524288000 = 500 MB, 0 = sınırsız). Superadmin'ler bu sınırı atlar.
-- **Küresel Disk Eşiği:** Tüm kullanıcılar arasında toplam depolama sınırı. Aşıldığında, bir yönetici alan boşaltana kadar tüm yüklemeler reddedilir (varsayılan: 0 = sınırsız). Bu sınır, superadmin'ler dahil herkes için geçerlidir.
+- **Max Upload Bytes Per User:** Per-user storage quota across all rooms (default: 524288000 = 500 MB, 0 = unlimited). Superadmins bypass this limit.
+- **Global Disk Threshold:** Total storage ceiling across all users. When exceeded, all uploads are rejected until an admin frees space (default: 0 = unlimited). This limit applies to everyone, including superadmins.
 
-### Sohbet Yüklemeleri Sekmesi
+### Chat Uploads Tab
 
-Sohbet resim yüklemelerinin nasıl saklanacağını yapılandırın:
+Configure how chat image uploads are stored:
 
-- **Arka Uç:** `disk` (yerel dosya sistemi), `s3` (S3 uyumlu depolama) veya `inline` (base64 gömülü)
-- **Maks. Yükleme Baytı:** Yükleme başına maksimum dosya boyutu
-- **Satır İçi Maks.:** Satır içi/base64 yüklemeler için maksimum boyut
-- **Disk Dizini:** `disk` arka ucu yüklemeleri için yerel dizin
+- **Backend:** `disk` (local filesystem), `s3` (S3-compatible storage), or `inline` (base64 embedded)
+- **Max Upload Bytes:** Maximum file size per upload
+- **Inline Max:** Maximum size for inline/base64 uploads
+- **Disk Directory:** Local directory for `disk` backend uploads
 
-**S3 Yapılandırması (arka uç `s3` olduğunda):**
+**S3 Configuration (when backend is `s3`):**
 - Endpoint, Bucket, Region
 - Access Key, Secret Key
 - Public URL
 
-### Günlükleme Sekmesi
+### Logging Tab
 
-- **Günlük Seviyesi:** `trace`, `debug`, `info`, `warn` veya `error`. Hata ayıklama için kullanışlıdır — detaylı günlükleri görmek için `debug` moduna geçin, ardından üretim için `info` moduna dönün.
+- **Log Level:** `trace`, `debug`, `info`, `warn`, or `error`. Useful for debugging — switch to `debug` to see detailed logs, then back to `info` for production.
 
 ---
 
-## Sorun Giderme
+## Troubleshooting
 
-### "Yönetici paneli görünmüyor"
+### "Admin panel not visible"
 
-**Belirti:** Yönetici bölümü kenar çubuğunda görünmüyor ve kullanıcı menüsünde "Yönetici paneli" bağlantısı eksik.
+**Symptom:** The Admin section does not appear in the sidebar, and the "Admin panel" link is missing from the user dropdown.
 
-**Neden:** Oturum açmış kullanıcının `accesses` dizisinde `superadmin` yok.
+**Cause:** The logged-in user does not have `superadmin` in their `accesses` array.
 
-**Çözüm:** Kullanıcıyı yükseltmek için CLI kullanın:
+**Solution:** Use the CLI to promote the user:
 ```bash
 bedrud user promote --email "your-email@example.com"
 ```
-Ardından güncellenmiş erişimleri içeren yeni bir JWT almak için çıkış yapıp tekrar giriş yapın.
+Then log out and log back in to get a new JWT with the updated accesses.
 
-### "Ayarlar kaydedilmiyor"
+### "Settings won't save"
 
-**Belirti:** Ayarları kaydetmek başarılı dönüyor ancak gizli değerler değişmemiş görünüyor.
+**Symptom:** Saving settings returns successfully, but secret values appear unchanged.
 
-**Neden:** Sunucu, güncelleme isteğinde `"••••••••"` veya boş string gönderdiğinizde mevcut gizli değerleri korur. Bu bilinçli bir tasarımdır — yalnızca gizli olmayan alanları değiştirirken gizli anahtarların yanlışlıkla üzerine yazılmasını engeller.
+**Cause:** The server preserves existing secret values when you send `"••••••••"` or an empty string in the update request. This is by design — it prevents accidentally overwriting secrets when you're only changing non-secret fields.
 
-**Çözüm:** Güncelleme isteğinde maskelenmiş yer tutucu yerine gerçek gizli değeri gönderin.
+**Solution:** Send the actual secret value (not the masked placeholder) in the update request.
 
-### "Kendi hesabımı silemiyorum"
+### "Cannot delete my own account"
 
-**Belirti:** Silme düğmesi kendi kullanıcı detay sayfanızda gizli veya API 400 hatası döndürüyor.
+**Symptom:** The delete button is hidden on your own user detail page, or the API returns a 400 error.
 
-**Neden:** Kendini silme güvenlik için engellenmiştir. Şu anda oturum açtığınız hesabı silemezsiniz.
+**Cause:** Self-deletion is blocked for safety. You cannot delete the account you're currently logged in as.
 
-**Çözüm:** Hesabı başka bir superadmin'in silmesini sağlayın veya farklı bir kullanıcı olarak CLI kullanın.
+**Solution:** Have another superadmin delete the account, or use the CLI as a different user.
 
-### "Admin URL'sini ziyaret ettiğimde dashboard'a yönlendiriliyorum"
+### "Redirected to dashboard when visiting admin URL"
 
-**Belirti:** `/dashboard/admin` adresini doğrudan ziyaret etmek `/dashboard` sayfasına yönlendiriyor.
+**Symptom:** Visiting `/dashboard/admin` directly redirects to `/dashboard`.
 
-**Neden:** Admin koruma rotası, JWT'nizin `accesses` dizisini kontrol eder. `superadmin` eksikse, koruma yönlendirir.
+**Cause:** The admin guard route checks your JWT's `accesses` array. If `superadmin` is missing, the guard redirects.
 
-**Çözüm:** Hesabınızın superadmin erişimine sahip olduğunu doğrulayın. Erişiminiz yakın zamanda değiştiyse, JWT'nizi yenilemek için çıkış yapıp tekrar giriş yapın.
+**Solution:** Verify your account has superadmin access. If your access was recently changed, log out and log back in to refresh your JWT.
 
 ---
 
-## Ayrıca Bakınız
+## See Also
 
-- [Yönetici API'si](/tr/docs/api/api-reference#tag/admin) — tüm admin uç noktaları için tam API referansı
-- [Kimlik Doğrulama](/tr/docs/backend/authentication) — erişim seviyeleri ve rol sistemi
-- [Yapılandırma](/tr/docs/getting-started/configuration) — config.yaml ayar referansı
-- [Hızlı Başlangıç](/tr/docs/getting-started/quickstart) — ilk admin kurulumu adım adım kılavuzu
+- [Admin API](/tr/docs/api/api-reference#tag/admin) — full API reference for all admin endpoints
+- [Authentication](/tr/docs/backend/authentication) — access levels and role system
+- [Configuration](/tr/docs/getting-started/configuration) — config.yaml settings reference
+- [Quick Start](/tr/docs/getting-started/quickstart) — first admin setup walkthrough

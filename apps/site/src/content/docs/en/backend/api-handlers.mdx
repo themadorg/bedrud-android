@@ -4,110 +4,86 @@ description: REST API endpoint implementations
 order: 19
 ---
 
-Bedrud uses the **Fiber** web framework (Express-like API for Go).
+Bedrud uses the **Fiber** web framework. Production routes are registered in `server/internal/server/server.go` (used by `bedrud run`). Interactive OpenAPI: [API Reference](/en/docs/api/api-reference).
 
-## Routing Logic
+## Route Groups
 
-The routes are defined in `internal/server/server.go`. We group routes to apply middleware or prefixes easily.
+| Prefix | Auth | Purpose |
+|--------|------|---------|
+| `/api/auth/*` | Mixed | Register, login, OAuth, passkeys, profile, preferences, verify, password reset |
+| `/api/room/*` | Mostly protected | Create/join/list/moderate rooms, chat upload |
+| `/api/admin/*` | Superadmin | Users, rooms, settings, invite tokens, webhooks, queue, overview |
+| `/api/livekit/webhook` | LiveKit JWT | Inbound media disconnect events |
+| `/api/cert` | Public | Cert metadata for clients (when applicable) |
+| `/livekit/*` | Proxied | Embedded LiveKit signaling (unless `livekit.external`) |
+| `/uploads/chat/*` | Protected | Chat image files |
+| `/uploads/avatars/*` | Public | Avatar files |
+| `/*` | SPA | Embedded frontend |
 
-### Main Groups:
+Admin group middleware: `Protected` → `RequireEmailVerified` → `RequireAccess(superadmin)`.
 
-- **`/api/auth`**: Public and protected routes for authentication.
-- **`/api/room`**: Protected routes for room management.
-- **`/api/admin`**: Routes restricted to users with the `superadmin` role.
-- **`/livekit`**: A special proxy group that sends requests to the embedded LiveKit audio/video server.
+## Auth Highlights
 
-## Specialized Handler Logic
+- Local register/login/refresh, OAuth (`/auth/:provider/login|callback`)
+- Passkey register/login/signup begin/finish
+- Profile + avatar: `GET/PUT /auth/me`, avatar upload/delete
+- Preferences: `GET/PUT /auth/preferences`
+- Email verify + resend; forgot/reset password
+- Public settings: `GET /auth/settings`
 
-### Room Management (`internal/handlers/room.go`)
-The `RoomHandler` translates between Bedrud's room metadata and LiveKit's media engine.
+## Room Highlights
 
-#### 1. Room Creation
-When a room is created via `POST /api/room/create`:
+- `POST /room/create`, `/room/join`, `/room/guest-join`, `/room/refresh-token`
+- `GET /room/list`, `/room/archived`
+- Moderation: kick, mute, ban, video off, promote/demote, chat block, deafen, ask, spotlight, screenshare stop, stage bring/remove
+- `PUT /room/:roomId/settings`, `DELETE /room/:roomId` (async job → **202**)
+- `POST /room/:roomId/chat/upload`
+- Presence: `GET /room/:roomId/presence`
 
-- **Normalization:** Room names are trimmed and lowercased.
-- **Auto-Generation:** If no name is provided, Bedrud generates a random URL-safe name (e.g., `fancy-blue-whale`).
-- **Synchronized Creation:** The backend first calls the internal LiveKit API to create the media session, then saves the metadata in the local database.
+## Admin Highlights
 
-#### 2. Joining and Tokens
-When a user joins via `POST /api/room/join`:
+- Users: list, detail, status, accesses, force-logout, set password, verify, sessions, **delete** (async), bulk ban/promote/delete
+- Rooms: list, events, token, close, suspend, reactivate, update, participants, bulk suspend/close
+- Settings: get/put, send-test-email, validate connectivity
+- Invite tokens CRUD; webhooks CRUD + rotate-secret + test
+- Overview, online-count, LiveKit stats, cert-info, queue stats
 
-- **Access Control:** The backend checks if the room exists and if the user is authorized.
-- **Token Generation:** A signed JWT (Join Token) is generated with:
-  - `Identity`: The User ID from Bedrud.
-  - `Name`: The User's Display Name.
-  - `Grants`: Specific permissions like `CanJoin`, `CanPublish`, `CanSubscribe`.
-- **Client Handshake:** The frontend receives both the local room metadata and the LiveKit token to start the WebRTC connection.
+Recording admin/user routes are **not registered** in production (planned feature).
 
-## Admin & User Management (`internal/handlers/users.go`)
-Routes under `/api/admin` are strictly guarded by the `RequireAccess("superadmin")` middleware.
+## Async Operations (Job Queue)
 
-### 1. User Control
-The `UsersHandler` allows administrators to:
+Destructive work and some side effects return **202 Accepted** and enqueue jobs:
 
-- **List All Users:** Fetch a complete directory of registered users including their auth provider and last login metadata.
-- **Update Status:** Instantly activate or deactivate account access. Deactivating a user immediately blocks them from logging in or refreshing their tokens.
+| Endpoint | Job type (approx.) |
+|----------|--------------------|
+| `DELETE /api/room/:roomId` | `room_delete` |
+| `DELETE /api/admin/rooms/:roomId` | `room_delete` |
+| `POST /api/admin/rooms/:roomId/suspend` | `room_suspend` |
+| `POST /api/admin/rooms/bulk/suspend` | bulk suspend |
+| `POST /api/admin/rooms/bulk/close` | bulk close |
+| `DELETE /api/admin/users/:id` | `user_delete` |
+| `POST /api/admin/users/bulk/delete` | bulk `user_delete` |
 
-### 2. Room Overview
-Admin routes allow for listing all active and historical rooms across the entire platform, regardless of who created them. This is intended for platform moderation.
+Other job types: `dispatch_webhook`, email sends, chat upload processing. Worker polls ~500ms (configurable); retries with exponential backoff `2^attempts * 5s` (cap 1h).
 
-### 3. Async Operations (Job Queue)
+## Room Creation & Join (summary)
 
-Destructive operations (room deletion, user deletion, room suspension) and chat uploads to S3 are handled asynchronously via the internal job queue at `internal/queue/`.
+**Create** (`POST /api/room/create`): normalize/generate name → LiveKit room → DB metadata → optional `room.created` webhook.
 
-**Endpoints returning 202 Accepted:**
-
-| Endpoint | Action |
-|---|---|
-| `DELETE /api/room/:roomId` | Queue room deletion |
-| `DELETE /api/admin/rooms/:roomId` | Queue room deletion (admin) |
-| `POST /api/admin/rooms/:roomId/suspend` | Queue room suspension |
-| `POST /api/admin/rooms/bulk/suspend` | Queue bulk suspensions |
-| `POST /api/admin/rooms/bulk/close` | Queue bulk deletions |
-| `DELETE /api/admin/users/:id` | Queue user deletion |
-| `POST /api/admin/users/bulk/delete` | Queue bulk user deletions |
-
-The worker polls the `jobs` table every 500ms (configurable), claims the next pending job, and dispatches to the registered handler. Failed jobs retry with exponential backoff (10s, 20s, 40s) before moving to `failed` status. Dead jobs older than 7 days (done) or 30 days (failed) are cleaned up daily.
+**Join** (`POST /api/room/join`): authorize → LiveKit JWT (identity, name, grants) → client connects via WebRTC.
 
 ## Request Lifecycle
 
-1.  **Request arrives**: Fiber receives the HTTP request.
-2.  **Middleware**:
+1. Fiber receives request
+2. Middleware: recover, CORS, rate limit, optional JWT + email-verified
+3. Handler parses body, calls repo/service, returns JSON
 
-    - `recover`: Prevents the server from crashing if there is an error.
-    - `cors`: Handles Cross-Origin Resource Sharing.
-    - `Protected`: (Optional) Checks for a valid JWT in the `Authorization` header.
-3.  **Handler**: The function in `internal/handlers` is called.
+## Static Frontend
 
-    - It parses the JSON body (if any) using `c.BodyParser`.
-    - It calls the necessary Service or Repository.
-    - It returns a JSON response using `c.JSON`.
+Built React assets are embedded and served from the binary. Non-`/api` routes fall through to the SPA shell.
 
-## Example: Create Room Handler
+## See also
 
-```go
-func (h *RoomHandler) CreateRoom(c *fiber.Ctx) error {
-    var input struct {
-        Name string `json:"name"`
-    }
-    // 1. Parse Input
-    if err := c.BodyParser(&input); err != nil {
-        return c.Status(400).JSON(fiber.Map{"error": "Invalid input"})
-    }
-
-    // 2. Business Logic (via Repository)
-    room := &models.Room{Name: input.Name}
-    if err := h.roomRepo.Create(room); err != nil {
-        return c.Status(500).JSON(fiber.Map{"error": "Failed to create room"})
-    }
-
-    // 3. Response
-    return c.Status(201).JSON(room)
-}
-```
-
-## Static Files (Frontend)
-
-The web frontend is **embedded** in the Go binary at build time. Fiber serves the React files from the `frontend/` directory using `filesystem.New`.
-
-Any route that doesn't start with `/api` is redirected to the React app's `index.html`. This enables client-side routing without 404s on page refresh.
+- [Authentication](/en/docs/backend/authentication)
+- [Webhooks Guide](/en/docs/guides/webhooks)
+- [Configuration](/en/docs/getting-started/configuration)

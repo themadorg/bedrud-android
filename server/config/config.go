@@ -82,10 +82,13 @@ type LiveKitConfig struct {
 	APIKey        string `yaml:"apiKey"`
 	APISecret     string `yaml:"apiSecret"`
 	ConfigPath    string `yaml:"configPath"`
-	SkipTLSVerify bool   `yaml:"skipTLSVerify"`
+	// SkipTLSVerify skips TLS verification for the LiveKit API client (self-signed certs).
+	// Env: LIVEKIT_SKIP_TLS_VERIFY
+	SkipTLSVerify bool `yaml:"skipTLSVerify" env:"LIVEKIT_SKIP_TLS_VERIFY"`
 	// External skips the embedded LiveKit server and /livekit proxy.
 	// Set to true when using a separate LiveKit deployment (e.g. lk.bedrud.org).
-	External bool `yaml:"external"`
+	// Env: LIVEKIT_EXTERNAL
+	External bool `yaml:"external" env:"LIVEKIT_EXTERNAL"`
 	// NodeIP is the explicit IP address for embedded LiveKit's RTC node_ip.
 	// When set, LiveKit uses this IP directly (use_external_ip=false) instead of
 	// STUN-based detection. Required for air-gapped, Docker, or firewalled environments.
@@ -366,6 +369,11 @@ func Load(configPath string) (*Config, error) {
 				config.Server.MaxRoomsPerUser = i
 			}
 		}
+		if envMaxParticipantsLimit := os.Getenv("SERVER_MAX_PARTICIPANTS_LIMIT"); envMaxParticipantsLimit != "" {
+			if i, err := strconv.Atoi(envMaxParticipantsLimit); err == nil {
+				config.Server.MaxParticipantsLimit = i
+			}
+		}
 		if dbHost := os.Getenv("DB_HOST"); dbHost != "" {
 			config.Database.Host = dbHost
 		}
@@ -408,6 +416,16 @@ func Load(configPath string) (*Config, error) {
 		if livekitNodeIP := os.Getenv("LIVEKIT_NODE_IP"); livekitNodeIP != "" {
 			config.LiveKit.NodeIP = livekitNodeIP
 		}
+		if v := os.Getenv("LIVEKIT_EXTERNAL"); v != "" {
+			if b, err := strconv.ParseBool(v); err == nil {
+				config.LiveKit.External = b
+			}
+		}
+		if v := os.Getenv("LIVEKIT_SKIP_TLS_VERIFY"); v != "" {
+			if b, err := strconv.ParseBool(v); err == nil {
+				config.LiveKit.SkipTLSVerify = b
+			}
+		}
 		if jwtSecret := os.Getenv("JWT_SECRET"); jwtSecret != "" {
 			config.Auth.JWTSecret = jwtSecret
 		}
@@ -430,6 +448,16 @@ func Load(configPath string) (*Config, error) {
 		if v := os.Getenv("AUTH_RESET_TOKEN_TTL_HOURS"); v != "" {
 			if n, err := strconv.Atoi(v); err == nil {
 				config.Auth.ResetTokenTTLHours = n
+			}
+		}
+		if v := os.Getenv("AUTH_VERIFICATION_TOKEN_TTL_HOURS"); v != "" {
+			if n, err := strconv.Atoi(v); err == nil {
+				config.Auth.VerificationTokenTTLHours = n
+			}
+		}
+		if v := os.Getenv("AUTH_UNVERIFIED_ACCOUNT_TTL_HOURS"); v != "" {
+			if n, err := strconv.Atoi(v); err == nil {
+				config.Auth.UnverifiedAccountTTLHours = n
 			}
 		}
 

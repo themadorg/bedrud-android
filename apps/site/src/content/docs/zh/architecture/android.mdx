@@ -4,24 +4,24 @@ description: 原生 Android 应用
 order: 9
 ---
 
-Bedrud Android 应用使用 Jetpack Compose 和 Kotlin 构建，提供原生视频会议体验，支持画中画、深度链接和多实例。
+The Bedrud Android app is built with Jetpack Compose and Kotlin, providing a native video meeting experience with picture-in-picture, deep linking, and multi-instance support.
 
-## 技术栈
+## Technology Stack
 
-| 技术 | 版本 | 用途 |
+| Technology | Version | Purpose |
 |-----------|---------|---------|
-| Kotlin | 2.1.0 | 语言 |
-| Jetpack Compose | Material 3 | UI 工具包 |
-| Koin | 4.0.0 | 依赖注入 |
-| Retrofit + OkHttp | Latest | HTTP 客户端 |
-| LiveKit Android SDK | 2.23.3 | WebRTC 媒体 |
-| Credentials API | Latest | Passkey 支持 |
-| Encrypted SharedPreferences | Latest | 安全存储 |
-| Coil | Latest | 图片加载 |
+| Kotlin | 2.1.0 | Language |
+| Jetpack Compose | Material 3 | UI toolkit |
+| Koin | 4.0.0 | Dependency injection |
+| Retrofit + OkHttp | Latest | HTTP client |
+| LiveKit Android SDK | 2.23.3 | WebRTC media |
+| Credentials API | Latest | Passkey support |
+| Encrypted SharedPreferences | Latest | Secure storage |
+| Coil | Latest | Image loading |
 
-**目标：** 最低 SDK 28，目标 SDK 35，JDK 17
+**Target:** Min SDK 28, Target SDK 35, JDK 17
 
-## 目录结构
+## Directory Structure
 
 ```
 apps/android/app/src/main/java/com/bedrud/app/
@@ -74,9 +74,9 @@ apps/android/app/src/main/java/com/bedrud/app/
     └── theme/                      # Material 3 theme definition
 ```
 
-## 多实例架构
+## Multi-Instance Architecture
 
-Android 应用支持同时连接到多个 Bedrud 服务器。
+The Android app supports connecting to multiple Bedrud servers simultaneously.
 
 ```mermaid
 flowchart TB
@@ -98,18 +98,18 @@ flowchart TB
     AI */} DEPS
 ```
 
-### 关键模式
+### Key Pattern
 
-所有每个实例的依赖项以 `StateFlow<T?>` 的形式暴露在 `InstanceManager` 上。Composable 函数通过 collect 收集它们：
+All per-instance dependencies are exposed as `StateFlow<T?>` on `InstanceManager`. Composables collect them:
 
 ```kotlin
 val authManager = instanceManager.authManager.collectAsState().value ?: return
 val roomApi = instanceManager.roomApi.collectAsState().value ?: return
 ```
 
-`?: return` 模式确保 composable 在实例完全初始化之前不会渲染。
+The `?: return` pattern ensures the composable doesn't render until the instance is fully initialized.
 
-### 导航流程
+### Navigation Flow
 
 ```mermaid
 flowchart LR
@@ -118,34 +118,34 @@ flowchart LR
     E["Has instances, logged in"] */} F[DashboardScreen]
 ```
 
-实例切换器作为从仪表板工具栏触发的 `ModalBottomSheet` 出现。
+The instance switcher appears as a `ModalBottomSheet` triggered from the Dashboard toolbar.
 
-## 功能
+## Features
 
-### 深度链接
+### Deep Linking
 
-应用处理匹配以下 URL：
+The app handles URLs matching:
 
-- `https://bedrud.com/m/*` - 直接加入房间
-- `https://bedrud.com/c/*` - 通过房间代码加入
+- `https://bedrud.com/m/*` - Direct room join
+- `https://bedrud.com/c/*` - Room join by code
 
-通过 `AndroidManifest.xml` 中的 intent filter 配置。
+Configured via intent filters in `AndroidManifest.xml`.
 
-### 通话管理
+### Call Management
 
-- **CallService** - 通话期间保持连接活跃的前台服务
-- **CallConnectionService** - 与 Android 电话框架集成以提供正确的通话界面
-- 所需权限：`MANAGE_OWN_CALLS`、`FOREGROUND_SERVICE_PHONE_CALL`、`FOREGROUND_SERVICE_CAMERA`、`FOREGROUND_SERVICE_MICROPHONE`
+- **CallService** - Foreground service that keeps the connection alive during calls
+- **CallConnectionService** - Integrates with Android's telephony framework for proper call UI
+- Required permissions: `MANAGE_OWN_CALLS`, `FOREGROUND_SERVICE_PHONE_CALL`, `FOREGROUND_SERVICE_CAMERA`, `FOREGROUND_SERVICE_MICROPHONE`
 
-### 画中画
+### Picture-in-Picture
 
-会议界面支持画中画模式，允许用户在使用其他应用时查看视频画面。
+The meeting screen supports PiP mode, allowing users to see the video feed while using other apps.
 
-### Passkey
+### Passkeys
 
-使用 Android 的 Credentials API 进行 FIDO2/WebAuthn Passkey 注册和登录。
+Uses Android's Credentials API for FIDO2/WebAuthn passkey registration and login.
 
-## 构建
+## Building
 
 ```bash
 # Debug APK
@@ -161,6 +161,6 @@ make release-android
 make dev-android
 ```
 
-### 发布签名
+### Release Signing
 
-发布构建需要在 android 项目根目录中有一个 `keystore.properties` 文件，包含签名配置。
+Release builds require a `keystore.properties` file in the android project root with your signing configuration.

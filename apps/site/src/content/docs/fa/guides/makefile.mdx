@@ -4,190 +4,189 @@ description: دستورات اتوماسیون ساخت
 order: 31
 ---
 
-Makefile ریشه `Makefile` ابزار مرکزی ارکستراسیون ساخت برای monorepo Bedrud است. دستوراتی برای توسعه، ساخت و استقرار در تمام پلتفرم‌ها فراهم می‌کند.
+The root `Makefile` is the central build orchestration tool for the Bedrud monorepo. It provides commands for development, building, and deployment across all platforms.
 
-## استفاده
+## Usage
 
 ```bash
 make <target>
-make help       # نمایش همه اهداف موجود
+make help       # Show all available targets
 ```
 
-## اهداف توسعه
+## Development Targets
 
-| هدف | توضیحات |
+| Target | Description |
 |--------|-------------|
-| `make init` | نصب تمام وابستگی‌ها (LiveKit + پیکربندی + bun + Go) |
-| `make dev` | اجرای LiveKit + سرور (بارگذاری مجدد خودکار) + وب به طور همزمان |
-| `make dev-web` | اجرای فقط سرور توسعه فرانت‌اند |
-| `make dev-server` | اجرای سرور بک‌اند + LiveKit |
-| `make dev-server-hot` | اجرای بک‌اند با Air (بارگذاری مجدد خودکار) |
-| `make dev-api` | اجرای فقط بک‌اند، بدون LiveKit |
-| `make dev-livekit` | اجرای سرور LiveKit محلی |
-| `make dev-site` | اجرای سرور توسعه سایت Astro |
-| `make dev-ios` | باز کردن پروژه iOS در Xcode |
-| `make dev-android` | باز کردن پروژه Android در Android Studio |
-| `make livekit-download` | دانلود سرور LiveKit برای سیستم‌عامل/معماری فعلی |
+| `make init` | Install all dependencies (LiveKit + config + bun + Go) |
+| `make dev` | Run LiveKit + server (hot reload) + web concurrently |
+| `make dev-web` | Run frontend dev server only |
+| `make dev-server` | Run backend server + LiveKit |
+| `make dev-server-hot` | Run backend with Air hot reload |
+| `make dev-api` | Run backend only, no LiveKit |
+| `make dev-livekit` | Run local LiveKit server |
+| `make dev-site` | Run Astro site dev server |
+| `make dev-ios` | Open iOS project in Xcode |
+| `make dev-android` | Open Android project in Android Studio |
+| `make livekit-download` | Download LiveKit server for current OS/arch |
 
 ### `make init`
 
-راه‌اندازی کامل محیط توسعه جدید:
+Full setup for a new development environment:
 
-1. دانلود باینری سرور LiveKit به `~/.local/bin/` (اگر در PATH نیست)
-2. ایجاد `server/config.yaml` از قالب `config.local.yaml` (اگر وجود ندارد)
-3. ایجاد placeholder جایگذاری LiveKit در `server/internal/livekit/bin/livekit-server`
-4. نصب `air` برای بارگذاری مجدد خودکار Go (اگر نصب نیست)
-5. نصب وابستگی‌ها: `apps/web` (bun)، `apps/site` (bun)، `server` (go mod)
+1. Downloads LiveKit server binary to `~/.local/bin/` (if not in PATH)
+2. Creates `server/config.yaml` from `config.local.yaml` template (if missing)
+3. Creates LiveKit embed placeholder at `server/internal/livekit/bin/livekit-server`
+4. Installs `air` for Go hot reload (if not present)
+5. Installs dependencies: `apps/web` (bun), `apps/site` (bun), `server` (go mod)
 
 ### `make dev`
 
-هر سه سرویس توسعه را به طور همزمان شروع می‌کند. برای توقف همه `Ctrl+C` را فشار دهید:
+Starts all three development services concurrently. Press `Ctrl+C` to stop all:
 
-- **LiveKit** در `localhost:7880`
-- **سرور** در `localhost:8090`
-- **وب** در `localhost:3000`
+- **LiveKit** at `localhost:7880`
+- **Server** at `localhost:8090`
+- **Web** at `localhost:3000`
 
-## اهداف ساخت
+## Build Targets
 
-| هدف | توضیحات |
+| Target | Description |
 |--------|-------------|
-| `make build` | ساخت فرانت‌اند + بک‌اند (جاسازی‌شده) |
-| `make build-front` | ساخت فقط فرانت‌اند |
-| `make build-back` | ساخت فقط بک‌اند |
-| `make build-dist` | ساخت آرشیو تولید linux/amd64 |
-| `make build-back-win` | ساخت بک‌اند برای ویندوز |
-| `make build-dist-win` | ساخت توزیع تولید برای ویندوز |
-| `make prep-livekit-win` | اطمینان از در دسترس بودن باینری ویندوز LiveKit برای جاسازی |
-| `make build-site` | ساخت سایت Astro (SSG) |
-
+| `make build` | Build frontend + backend (embedded) |
+| `make build-front` | Build frontend only |
+| `make build-back` | Build backend only |
+| `make build-dist` | Build production linux/amd64 tarball |
+| `make build-back-win` | Build backend for Windows |
+| `make build-dist-win` | Build production Windows distribution |
+| `make prep-livekit-win` | Ensure LiveKit Windows binary is available for embedding |
+| `make build-site` | Build Astro site (SSG) |
 
 ### `make build`
 
-ساخت تولید کامل:
+Full production build:
 
-۱. اجرای `bun run build` در `apps/web` — ساخت برنامه React
-۲. کپی `apps/web/dist/client/*` → `server/frontend/`
-۳. ساخت باینری Go با فرانت‌اند جاسازی‌شده
+1. Runs `bun run build` in `apps/web` — builds the React app
+2. Copies `apps/web/dist/client/*` → `server/frontend/`
+3. Builds the Go binary with the embedded frontend
 
-خروجی: `server/dist/bedrud`
+Output: `server/dist/bedrud`
 
 ### `make build-dist`
 
-یک توزیع فشرده و آماده تولید ایجاد می‌کند:
+Creates a compressed, production-ready distribution:
 
-۱. اجرای `make build`
-۲. کامپایل متقابل برای `linux/amd64` با نمادهای اشکال‌زدایی حذف شده
-۳. ایجاد `dist/bedrud_linux_amd64.tar.xz`
+1. Runs `make build`
+2. Cross-compiles for `linux/amd64` with stripped debug symbols
+3. Creates `dist/bedrud_linux_amd64.tar.xz`
 
-## اهداف دسکتاپ
+## Desktop Targets
 
-| هدف | توضیحات |
+| Target | Description |
 |--------|-------------|
-| `make dev-desktop` | ساخت و اجرای برنامه دسکتاپ (debug) |
-| `make build-desktop` | ساخت باینری release بهینه‌شده |
+| `make dev-desktop` | Build and run desktop app (debug) |
+| `make build-desktop` | Build optimized release binary |
 
-## باینری محلی واحد
+## Local Single Binary
 
-| هدف | توضیحات |
+| Target | Description |
 |--------|-------------|
-| `make local-build` | ساخت فرانت‌اند + بک‌اند در یک باینری |
-| `make local-run` | ساخت + اجرای محلی (SQLite، LiveKit جاسازی‌شده) |
+| `make local-build` | Build frontend + backend into one binary |
+| `make local-run` | Build + run locally (SQLite, embedded LiveKit) |
 
 ### `make local-run`
 
-ساخت و شروع باینری واحد با پیکربندی محلی:
+Builds and starts the single binary with local config:
 
 ```bash
 CONFIG_PATH=server/config.local.yaml server/dist/bedrud run
 ```
 
-پس از آماده شدن `http://localhost:8090` را باز کنید.
+Open `http://localhost:8090` when ready.
 
-## مستندات API
+## API Docs
 
-| هدف | توضیحات |
+| Target | Description |
 |--------|-------------|
-| `make swagger-gen` | بازتولید مستندات Swagger از حاشیه‌نویسی‌ها |
-| `make swagger-open` | باز کردن Swagger UI در مرورگر |
-| `make scalar-open` | باز کردن Scalar UI در مرورگر |
+| `make swagger-gen` | Regenerate Swagger docs from annotations |
+| `make swagger-open` | Open Swagger UI in browser |
+| `make scalar-open` | Open Scalar UI in browser |
 
-به CLI `swag` نیاز دارد (`go install github.com/swaggo/swag/cmd/swag@latest`). سرور باید در حال اجرا باشد برای `swagger-open` و `scalar-open`.
+Requires `swag` CLI (`go install github.com/swaggo/swag/cmd/swag@latest`). Server must be running for `swagger-open` and `scalar-open`.
 
-## اهداف Android
+## Android Targets
 
-| هدف | توضیحات |
+| Target | Description |
 |--------|-------------|
-| `make build-android-debug` | ساخت APK debug |
-| `make build-android` | ساخت APK release (نیاز به keystore) |
-| `make install-android` | نصب APK release روی دستگاه متصل |
-| `make release-android` | ساخت + نصب APK release |
+| `make build-android-debug` | Build debug APK |
+| `make build-android` | Build release APK (requires keystore) |
+| `make install-android` | Install release APK on connected device |
+| `make release-android` | Build + install release APK |
 
-### مسیرهای خروجی APK
+### APK Output Paths
 
 - Debug: `apps/android/app/build/outputs/apk/debug/app-debug.apk`
 - Release: `apps/android/app/build/outputs/apk/release/app-release.apk`
 
-## اهداف iOS
+## iOS Targets
 
-| هدف | توضیحات |
+| Target | Description |
 |--------|-------------|
-| `make build-ios` | ساخت بایگانی iOS (Release) |
-| `make export-ios` | صدور IPA از بایگانی |
-| `make build-ios-sim` | ساخت برای شبیه‌ساز iOS (Debug) |
+| `make build-ios` | Build iOS archive (Release) |
+| `make export-ios` | Export IPA from archive |
+| `make build-ios-sim` | Build for iOS Simulator (Debug) |
 
-### مسیرهای خروجی
+### Output Paths
 
-- بایگانی: `apps/ios/build/Bedrud.xcarchive`
+- Archive: `apps/ios/build/Bedrud.xcarchive`
 - IPA: `apps/ios/build/export/Bedrud.ipa`
 
-## هدف استقرار
+## Deploy Target
 
-| هدف | توضیحات |
+| Target | Description |
 |--------|-------------|
-| `make deploy ARGS=...` | اجرای ابزار CLI استقرار |
+| `make deploy ARGS=...` | Run the deployment CLI tool |
 
-### مثال
+### Example
 
 ```bash
 make deploy ARGS="--auto-config --ip 1.2.3.4 --user root --domain meet.example.com"
 ```
 
-CLI Python در `tools/cli/bedrud.py` را با آرگومان‌های ارائه‌شده اجرا می‌کند.
+This runs the Python CLI at `tools/cli/bedrud.py` with the provided arguments.
 
-## تست
+## Test
 
-| هدف | توضیحات |
+| Target | Description |
 |--------|-------------|
-| `make test-back` | اجرای تست‌های بک‌اند (`go test -v -count=1 ./...`) |
+| `make test-back` | Run backend tests (`go test -v -count=1 ./...`) |
 
-## اهداف پاکسازی
+## Clean Targets
 
-| هدف | توضیحات |
+| Target | Description |
 |--------|-------------|
-| `make clean` | حذف مصنوعات ساخت و باینری‌های کامپایل‌شده |
-| `make full-clean` | حذف مصنوعات + تمام وابستگی‌های نصب‌شده |
+| `make clean` | Remove build artifacts and compiled binaries |
+| `make full-clean` | Remove artifacts + all installed dependencies |
 
 ### `make clean`
 
-حذف می‌کند:
+Removes:
 
-- `dist/` — tarball‌های توزیع
-- `server/dist/` — باینری سرور کامپایل‌شده
-- `apps/web/dist/` — خروجی ساخت React
-- محتویات `server/frontend/` — دارایی‌های فرانت‌اند جاسازی‌شده
-- `apps/android/app/build/` — خروجی‌های ساخت Android
-- `apps/ios/build/` — خروجی‌های ساخت iOS
-- `apps/site/dist/` — خروجی ساخت سایت Astro
-- `target/` — خروجی ساخت Rust/Cargo
+- `dist/` — distribution tarballs
+- `server/dist/` — compiled server binary
+- `apps/web/dist/` — React build output
+- `server/frontend/` contents — embedded frontend assets
+- `apps/android/app/build/` — Android build outputs
+- `apps/ios/build/` — iOS build outputs
+- `apps/site/dist/` — Astro site build output
+- `target/` — Rust/Cargo build output
 
 ### `make full-clean`
 
-همه چیز که `clean` انجام می‌دهد، به علاوه:
+Everything `clean` does, plus:
 
 - `apps/web/node_modules/`
 - `apps/site/node_modules/`
 - `apps/android/.gradle/`
 - `apps/android/build/`
-- کش ماژول Go (`go clean -modcache`)
+- Go module cache (`go clean -modcache`)
 
-پس از آن `make init` را اجرا کنید تا وابستگی‌ها دوباره نصب شوند.
+Run `make init` afterwards to reinstall dependencies.

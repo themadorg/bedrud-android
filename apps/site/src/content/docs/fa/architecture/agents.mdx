@@ -4,19 +4,19 @@ description: ربات‌های Python برای استریم محتوا
 order: 12
 ---
 
-بدرود شامل عوامل ربات مبتنی بر Python است که می‌توانند به اتاق‌های جلسه بپیوندند و محتوای مدیا را استریم کنند. این موارد برای موسیقی پس‌زمینه، استریم‌های رادیو، یا اشتراک محتوای ویدیویی مفید هستند.
+Bedrud includes Python-based bot agents that can join meeting rooms and stream media content. These are useful for background music, radio streams, or sharing video content.
 
-## عوامل موجود
+## Available Agents
 
-| عامل | توضیح | نوع مدیا |
-|-------|-------|-----------|
-| `music_agent` | فایل‌های صوتی را در اتاق پخش می‌کند | صوتی (PCM) |
-| `radio_agent` | ایستگاه‌های رادیو اینترنتی را استریم می‌کند | صوتی (PCM از طریق FFmpeg) |
-| `video_stream_agent` | محتوای ویدیویی را به اشتراک می‌گذارد (HLS، MP4) | ویدیو + صدا |
+| Agent | Description | Media Type |
+|-------|-------------|-----------|
+| `music_agent` | Plays audio files into a room | Audio (PCM) |
+| `radio_agent` | Streams internet radio stations | Audio (PCM via FFmpeg) |
+| `video_stream_agent` | Shares video content (HLS, MP4) | Video + Audio |
 
-## نحوه کار عوامل
+## How Agents Work
 
-همه عوامل الگوی اتصال یکسان را دنبال می‌کنند:
+All agents follow the same connection pattern:
 
 ```mermaid
 flowchart TD
@@ -50,139 +50,139 @@ flowchart LR
     WS */} PT
 ```
 
-## عامل موزیک
+## Music Agent
 
-فایل‌های صوتی (MP3، WAV و غیره) را در یک اتاق جلسه پخش می‌کند.
+Plays audio files (MP3, WAV, etc.) into a meeting room.
 
-### راه‌اندازی
+### Setup
 
 ```bash
 cd agents/music_agent
 pip install -r requirements.txt
 ```
 
-**وابستگی‌ها:** `httpx`، `livekit`، `pydub`
+**Dependencies:** `httpx`, `livekit`, `pydub`
 
-### استفاده
+### Usage
 
 ```bash
 python agent.py "https://meet.example.com/m/room-name"
 ```
 
-### نحوه کارکرد
+### How It Works
 
-۱. فایل‌های صوتی را با استفاده از `pydub` دیکد می‌کند
-۲. به فریم‌های PCM تبدیل می‌کند
-۳. فریم‌های صوتی را به LiveKit به عنوان یک میکروفون‌ترک منتشر می‌کند
+1. Decodes audio files using `pydub`
+2. Converts to PCM frames
+3. Publishes audio frames to LiveKit as a microphone track
 
-> برای دستورالعمل‌های راه‌اندازی و استفاده به [Music Agent README](https://github.com/themadorg/bedrud/tree/main/agents/music_agent) ببینید.
+> See [Music Agent README](https://github.com/themadorg/bedrud/tree/main/agents/music_agent) for setup and usage instructions.
 
 ---
 
-## عامل رادیو
+## Radio Agent
 
-ایستگاه‌های رادیو اینترنتی را در یک اتاق جلسه با استفاده از FFmpeg برای دیکد صوتی استریم می‌کند.
+Streams internet radio stations into a meeting room using FFmpeg for audio decoding.
 
-### راه‌اندازی
+### Setup
 
 ```bash
 cd agents/radio_agent
 pip install -r requirements.txt
 ```
 
-**وابستگی‌ها:** `httpx`، `livekit`
+**Dependencies:** `httpx`, `livekit`
 
-**نیاز سیستم:** FFmpeg باید نصب باشد (`brew install ffmpeg` یا `apt install ffmpeg`)
+**System requirement:** FFmpeg must be installed (`brew install ffmpeg` or `apt install ffmpeg`)
 
-### استفاده
+### Usage
 
 ```bash
 python agent.py "https://meet.example.com/m/room-name"
 ```
 
-### نحوه کارکرد
+### How It Works
 
-۱. به URL استریم رادیو متصل می‌شود
-۲. جریان را از طریق FFmpeg به PCM خام دیکد می‌کند
-۳. فریم‌های صوتی PCM را به LiveKit منتشر می‌کند
+1. Connects to a radio stream URL
+2. Pipes the stream through FFmpeg to decode to raw PCM
+3. Publishes PCM audio frames to LiveKit
 
-> برای دستورالعمل‌های راه‌اندازی و استفاده به [Radio Agent README](https://github.com/themadorg/bedrud/tree/main/agents/radio_agent) ببینید.
+> See [Radio Agent README](https://github.com/themadorg/bedrud/tree/main/agents/radio_agent) for setup and usage instructions.
 
 ---
 
-## عامل استریم ویدیو
+## Video Stream Agent
 
-ویدیو و صدا را از یک URL (HLS/m3u8، MP4) در یک اتاق جلسه به اشتراک می‌گذارد.
+Shares video and audio from a URL (HLS/m3u8, MP4) into a meeting room.
 
-### راه‌اندازی
+### Setup
 
 ```bash
 cd agents/video_stream_agent
 pip install -r requirements.txt
 ```
 
-**وابستگی‌ها:** `httpx`، `livekit`
+**Dependencies:** `httpx`, `livekit`
 
-**نیاز سیستم:** FFmpeg باید نصب باشد
+**System requirement:** FFmpeg must be installed
 
-### استفاده
+### Usage
 
 ```bash
 python agent.py "https://meet.example.com/m/room-name"
 ```
 
-### نحوه کارکرد
+### How It Works
 
-۱. دو فرآیند FFmpeg را موازی اجرا می‌کند:
-    - **ویدیو:** دیکد به فریم‌های خام YUV420p (۱۲۸۰x۷۲۰ @ ۳۰fps)
-    - **صدا:** دیکد به نمونه‌های PCM
-۲. ویدیو را به عنوان یک screen-share ترک منتشر می‌کند
-۳. صدا را به عنوان یک میکروفون‌ترک منتشر می‌کند
+1. Runs two FFmpeg processes in parallel:
+    - **Video:** Decodes to YUV420p raw frames (1280x720 @ 30fps)
+    - **Audio:** Decodes to PCM samples
+2. Publishes video as a screen share track
+3. Publishes audio as a microphone track
 
-> برای دستورالعمل‌های راه‌اندازی و استفاده به [Video Stream Agent README](https://github.com/themadorg/bedrud/tree/main/agents/video_stream_agent) ببینید.
+> See [Video Stream Agent README](https://github.com/themadorg/bedrud/tree/main/agents/video_stream_agent) for setup and usage instructions.
 
-### مشخصات ویدیو
+### Video Specifications
 
-| تنظیم | مقدار |
+| Setting | Value |
 |---------|-------|
-| عرض | ۱۲۸۰ |
-| ارتفاع | ۷۲۰ |
-| FPS | ۳۰ |
-| فرمت پیکسل | YUV420p |
+| Width | 1280 |
+| Height | 720 |
+| FPS | 30 |
+| Pixel Format | YUV420p |
 
 ---
 
-## نوشتن عامل سفارشی
+## Writing a Custom Agent
 
-برای ایجاد یک عامل جدید، این الگو را دنبال کنید:
+To create a new agent, follow this pattern:
 
 ```python
 import httpx
 from livekit import rtc
 
-# ۱. URL جلسه را تحلیل کنید تا نام اتاق استخراج شود
+# 1. Parse the meeting URL to extract room name
 room_name = parse_url(meeting_url)
 
-# ۲. ورود مهمان
+# 2. Guest login
 client = httpx.Client(base_url=server_url)
 resp = client.post("/api/auth/guest-login", json={"name": "Bot Name"})
 token = resp.json()["token"]
 
-# ۳. پیوستن به اتاق
+# 3. Join room
 client.headers["Authorization"] = f"Bearer {token}"
 resp = client.post("/api/room/join", json={"roomName": room_name})
 lk_token = resp.json()["token"]
 
-# ۴. اتصال به LiveKit
+# 4. Connect to LiveKit
 room = rtc.Room()
 await room.connect(livekit_url, lk_token)
 
-# ۵. انتشار ترک‌ها
+# 5. Publish tracks
 source = rtc.AudioSource(sample_rate=48000, num_channels=1)
 track = rtc.LocalAudioTrack.create_audio_track("audio", source)
 await room.local_participant.publish_track(track)
 
-# ۶. استریم فریم‌ها
+# 6. Stream frames
 while has_data:
     frame = get_next_frame()
     await source.capture_frame(frame)
@@ -190,8 +190,8 @@ while has_data:
 
 ---
 
-## همچنین ببینید
+## See also
 
-- [Music Agent README](https://github.com/themadorg/bedrud/tree/main/agents/music_agent) - راه‌اندازی و استفاده
-- [Radio Agent README](https://github.com/themadorg/bedrud/tree/main/agents/radio_agent) - راه‌اندازی و استفاده
-- [Video Stream Agent README](https://github.com/themadorg/bedrud/tree/main/agents/video_stream_agent) - راه‌اندازی و استفاده
+- [Music Agent README](https://github.com/themadorg/bedrud/tree/main/agents/music_agent) - setup and usage
+- [Radio Agent README](https://github.com/themadorg/bedrud/tree/main/agents/radio_agent) - setup and usage
+- [Video Stream Agent README](https://github.com/themadorg/bedrud/tree/main/agents/video_stream_agent) - setup and usage

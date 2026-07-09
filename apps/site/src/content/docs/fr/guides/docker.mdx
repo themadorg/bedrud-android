@@ -4,27 +4,27 @@ description: Exécuter Bedrud avec Docker
 order: 29
 ---
 
-Bedrud fournit un Dockerfile multi-étapes pour la construction et l'exécution dans des conteneurs.
+Bedrud provides a multi-stage Dockerfile for building and running in containers.
 
-## Variantes d'image
+## Image Variants
 
-Trois variantes d'image sont publiées sur GitHub Container Registry :
+Three image variants are published to GitHub Container Registry:
 
-| Tag | Base | Taille | Recommandée pour |
-|-----|------|--------|-----------------|
-| `:latest` | Debian Bookworm | ~50 Mo | Par défaut — compatible avec la plupart des systèmes |
-| `:latest-alpine` | Alpine 3.21 | ~30 Mo | Hôtes Alpine, empreinte minimale |
-| `:latest-distroless` | Distroless | ~25 Mo | Surface d'attaque minimale, sans shell |
+| Tag | Base | Size | Best for |
+|-----|------|------|----------|
+| `:latest` | Debian Bookworm | ~50 MB | Default — compatible with most systems |
+| `:latest-alpine` | Alpine 3.21 | ~30 MB | Alpine hosts, minimal footprint |
+| `:latest-distroless` | Distroless | ~25 MB | Smallest attack surface, no shell |
 
-Toutes les images contiennent le même binaire statique — l'image de base n'affecte que les utilitaires d'exécution (ca-certs, données de fuseau horaire).
+All images contain the same static binary — the base image only affects runtime utilities (ca-certs, timezone data).
 
-## Démarrage rapide
+## Quick Start
 
 ```bash
 # Build
 docker build -t bedrud .
 
-# Exécution
+# Run
 docker run -d --name bedrud \
   -p 8090:8090 \
   -p 7880:7880 \
@@ -32,11 +32,11 @@ docker run -d --name bedrud \
   bedrud
 ```
 
-## Aperçu du Dockerfile
+## Dockerfile Overview
 
-Le Dockerfile utilise trois étapes pour minimiser la taille finale de l'image :
+The Dockerfile uses three stages to minimize the final image size:
 
-### Étape 1 : Build du frontend
+### Stage 1: Frontend Build
 
 ```dockerfile
 FROM node:22-alpine AS frontend
@@ -48,9 +48,9 @@ COPY apps/web/ ./
 RUN bun run build:embed
 ```
 
-Installe Bun, pré-rendu SSR l'application React et copie les assets dans `server/frontend/`.
+Installs Bun, SSR pre-renders the React app, and copies assets to `server/frontend/`.
 
-### Étape 2 : Build du serveur
+### Stage 2: Server Build
 
 ```dockerfile
 FROM golang:1.25-alpine AS backend
@@ -61,12 +61,12 @@ RUN go mod download
 COPY server/ ./
 COPY --from=frontend /build/server/frontend ./frontend/
 RUN CGO_ENABLED=1 GOOS=linux go build -ldflags="-s -w" -o /bedrud ./cmd/bedrud/main.go
-# CGO est requis pour SQLite (utilise des liaisons C)
+# CGO is required for SQLite (uses C bindings)
 ```
 
-Compile le binaire Go avec le frontend intégré. CGO est activé pour la prise en charge SQLite.
+Compiles the Go binary with the frontend embedded. CGO is enabled for SQLite support (`sqlite-dev` provides the C headers).
 
-### Étape 3 : Runtime
+### Stage 3: Runtime
 
 ```dockerfile
 FROM alpine:3.21
@@ -77,21 +77,21 @@ ENTRYPOINT ["bedrud"]
 CMD ["run"]
 ```
 
-Image Alpine minimale avec uniquement le binaire, les certificats CA et les données de fuseau horaire.
+Minimal Alpine image with just the binary, CA certificates, and timezone data.
 
 ## Ports
 
-| Port | Service | Protocole |
-|------|---------|-----------|
-| 8090 | API + Interface web | HTTP |
+| Port | Service | Protocol |
+|------|---------|----------|
+| 8090 | API + Web UI | HTTP |
 | 7880 | LiveKit | WebSocket + HTTP |
-| 50000-60000 | Média RTC | UDP |
+| 50000-60000 | RTC media | UDP |
 
-Pour les flux média LiveKit, vous devrez peut-être également exposer la plage de ports UDP RTC (par défaut : 50000-60000).
+For LiveKit media streams, you may also need to expose the RTC UDP port range (default: 50000-60000).
 
 ## Volumes
 
-Montez un volume pour les données persistantes :
+Mount a volume for persistent data:
 
 ```bash
 docker run -d \
@@ -104,7 +104,7 @@ docker run -d \
 
 ## Configuration
 
-Passez un fichier de configuration personnalisé :
+Pass a custom configuration file:
 
 ```bash
 docker run -d \
@@ -116,7 +116,7 @@ docker run -d \
   bedrud run --config /etc/bedrud/config.yaml
 ```
 
-Ou utilisez des variables d'environnement :
+Or use environment variables:
 
 ```bash
 docker run -d \
@@ -129,29 +129,54 @@ docker run -d \
   bedrud
 ```
 
-## Images préconstruites
+### TLS with Embedded LiveKit
 
-Les images Docker sont publiées sur GitHub Container Registry à chaque release :
+When server TLS is enabled, the embedded LiveKit process automatically configures TURN/TLS (port 5349) using the server's certificate. Mount your cert/key and enable TLS:
 
 ```bash
-# Dernière release
-docker pull ghcr.io/themadorg/bedrud:latest
+docker run -d \
+  --name bedrud \
+  -p 443:443 \
+  -p 5349:5349 \
+  -v /path/to/cert.pem:/etc/bedrud/cert.pem \
+  -v /path/to/key.pem:/etc/bedrud/key.pem \
+  -e SERVER_ENABLE_TLS=true \
+  -e SERVER_CERT_FILE=/etc/bedrud/cert.pem \
+  -e SERVER_KEY_FILE=/etc/bedrud/key.pem \
+  bedrud
+```
 
-# Distroless (minimale, sans shell)
+For a custom LiveKit YAML (advanced TURN/RTC config), mount it and set `LIVEKIT_CONFIG_PATH`:
+
+```bash
+docker run -d \
+  --name bedrud \
+  -p 8090:8090 \
+  -v /path/to/livekit.yaml:/etc/bedrud/livekit.yaml \
+  -e LIVEKIT_CONFIG_PATH=/etc/bedrud/livekit.yaml \
+  bedrud
+```
+
+## Pre-built Images
+
+Docker images are published to GitHub Container Registry on every release:
+
+```bash
+# Distroless (smallest, no shell)
 docker pull ghcr.io/themadorg/bedrud:latest-distroless
 
-# Version spécifique
+# Specific version
 docker pull ghcr.io/themadorg/bedrud:v1.0.0
 docker pull ghcr.io/themadorg/bedrud:v1.0.0-alpine
 docker pull ghcr.io/themadorg/bedrud:v1.0.0-distroless
 ```
 
-## Exemple Docker Compose
+## Docker Compose Example
 
 ```yaml
 services:
   bedrud:
-    # Utilisez :latest-alpine ou :latest-distroless pour des images plus petites
+    # Use :latest-alpine or :latest-distroless for smaller images
     image: ghcr.io/themadorg/bedrud:latest
     ports:
       - "8090:8090"
@@ -169,7 +194,7 @@ volumes:
 
 ---
 
-## Voir aussi
+## See also
 
-- [Référence de configuration](/fr/docs/getting-started/configuration) - options complètes de configuration et variables d'environnement
-- [Guide de déploiement](/fr/docs/guides/deployment) - déploiement en production avec Docker
+- [Configuration Reference](/fr/docs/getting-started/configuration) - full config options and environment variables
+- [Deployment Guide](/fr/docs/guides/deployment) - production deployment with Docker

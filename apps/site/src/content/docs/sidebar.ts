@@ -186,42 +186,6 @@ export const sections: SidebarSection[] = [
         description: "Interactive OpenAPI/Swagger API reference",
         order: 23,
       },
-      {
-        slug: "api/admin",
-        title: "Admin API",
-        description: "Administrative API endpoints",
-        order: 24,
-      },
-      {
-        slug: "api/system",
-        title: "System API",
-        description: "System management endpoints",
-        order: 25,
-      },
-      {
-        slug: "api/health",
-        title: "Health API",
-        description: "Service health and monitoring",
-        order: 26,
-      },
-      {
-        slug: "api/auth",
-        title: "Auth API",
-        description: "Authentication and session management",
-        order: 27,
-      },
-      {
-        slug: "api/rooms",
-        title: "Rooms API",
-        description: "Video room management endpoints",
-        order: 28,
-      },
-      {
-        slug: "api/models",
-        title: "Models",
-        description: "API data model definitions",
-        order: 29,
-      },
     ],
   },
   {

@@ -4,27 +4,27 @@ description: تطبيق iOS الأصلي
 order: 10
 ---
 
-تطبيق بدرود لنظام iOS مبني بـ SwiftUI، يوفر تجربة اجتماعات فيديو أصلية مع دعم تعدد المثيلات وتخزين آمن لبيانات الاعتماد.
+The Bedrud iOS app is built with SwiftUI, providing a native video meeting experience with multi-instance support and secure credential storage.
 
-## حزمة التقنيات
+## Technology Stack
 
-| التقنية | الإصدار | الغرض |
+| Technology | Version | Purpose |
 |-----------|---------|---------|
-| Swift | 5.9+ | اللغة |
-| SwiftUI | Latest | إطار عمل واجهة المستخدم |
-| LiveKit Swift SDK | 2.0+ | وسائط WebRTC |
-| KeychainAccess | 4.2.2+ | تخزين آمن لبيانات الاعتماد |
+| Swift | 5.9+ | Language |
+| SwiftUI | Latest | UI framework |
+| LiveKit Swift SDK | 2.0+ | WebRTC media |
+| KeychainAccess | 4.2.2+ | Secure credential storage |
 
-**هدف النشر:** iOS 18.0
+**Deployment target:** iOS 18.0
 
-## تهيئة المشروع
+## Project Configuration
 
-يستخدم المشروع **XCodeGen** لتوليد المشروع من `project.yml`:
+The project uses **XCodeGen** for project generation from `project.yml`:
 
-- معرّف الحزمة: `com.bedrud.ios`
-- التوليد بـ: `xcodegen generate`
+- Bundle ID: `com.bedrud.ios`
+- Generated with: `xcodegen generate`
 
-## هيكل المجلدات
+## Directory Structure
 
 ```text
 apps/ios/Bedrud/
@@ -66,9 +66,9 @@ apps/ios/Bedrud/
     └── Components/                # Reusable SwiftUI components
 ```
 
-## بنية تعدد المثيلات
+## Multi-Instance Architecture
 
-يطبق تطبيق iOS نفس بنية Android لدعم تعدد المثيلات.
+The iOS app mirrors the Android architecture for multi-instance support.
 
 ```mermaid
 flowchart TB
@@ -90,9 +90,9 @@ flowchart TB
     style InstanceManager fill:#f0f0f0,stroke:#333
 ```
 
-### النمط الرئيسي
+### Key Pattern
 
-التبعيات هي خصائص `@Published` على `InstanceManager`، وهو `ObservableObject`. تستقبلها طرق العرض عبر `@EnvironmentObject`:
+Dependencies are `@Published` properties on `InstanceManager`, which is an `ObservableObject`. Views receive it via `@EnvironmentObject`:
 
 ```swift
 struct DashboardView: View {
@@ -106,7 +106,7 @@ struct DashboardView: View {
 }
 ```
 
-### مسار التنقل
+### Navigation Flow
 
 ```mermaid
 flowchart LR
@@ -116,11 +116,11 @@ flowchart LR
     DashboardView -. "toolbar sheet" .-> InstanceSwitcherView["InstanceSwitcherView"]
 ```
 
-يظهر مبدّل المثيلات كـ `.sheet` يُنشَط من شريط أدوات لوحة التحكم.
+The instance switcher appears as a `.sheet` triggered from the Dashboard toolbar.
 
-## نقطة دخول التطبيق
+## App Entry Point
 
-يُهيئ `BedrudApp.swift` الخدمات الأساسية ويحقنها في بيئة SwiftUI:
+`BedrudApp.swift` initializes the core services and injects them into the SwiftUI environment:
 
 ```swift
 @main
@@ -140,21 +140,21 @@ struct BedrudApp: App {
 }
 ```
 
-## الميزات
+## Features
 
-### التخزين الآمن
+### Secure Storage
 
-يستخدم **KeychainAccess** لتخزين رموز JWT وبيانات الاعتماد الحساسة بدلًا من UserDefaults.
+Uses **KeychainAccess** for storing JWT tokens and sensitive credentials, rather than UserDefaults.
 
-### الروابط العميقة
+### Deep Linking
 
-يتولى معالجة الروابط للانضمام المباشر للغرف ورموز الغرف.
+Handles URLs for direct room joining and room codes.
 
-### الإعدادات
+### Settings
 
-تُحفَظ تفضيلات المستخدم عبر `SettingsStore` باستخدام UserDefaults.
+User preferences are persisted via `SettingsStore` using UserDefaults.
 
-## البناء
+## Building
 
 ```bash
 # Open in Xcode
@@ -170,8 +170,8 @@ make export-ios
 make build-ios-sim
 ```
 
-### المتطلبات
+### Requirements
 
-- Xcode (أحدث إصدار مستقر)
-- هدف نشر iOS 18.0
-- لبناء الأجهزة: حساب Apple Developer وملف التزويد
+- Xcode (latest stable)
+- iOS 18.0 deployment target
+- For device builds: Apple Developer account and provisioning profile

@@ -1,37 +1,40 @@
-﻿---
-title: نصب‌کننده CLI
-description: نصب با یک دستور برای Bedrud در همه پلتفرم‌ها
+---
+title: cli-installer
+---﻿---
+title: CLI Installer
+description: One-command install for Bedrud on all platforms
 order: 2
 ---
 
-نصب با یک دستور برای همه پلتفرم‌ها. بدون نیاز به `sudo` — در دایرکتوری خانه شما نصب می‌شود.
+One-command install for all platforms. No `sudo` — installs under your home directory.
 
-برای تنظیم سرور پس از نصب، به [شروع سریع](/fa/docs/getting-started/quickstart) ببینید. برای مدیران بسته، Docker و سایر روش‌ها، به [نصب سرور](/fa/docs/getting-started/installation) مراجعه کنید.
-
----
-
-## چه کاری انجام می‌دهد
-
-۱. سیستم‌عامل، معماری پردازنده، گونه‌های پلتفرم (Rosetta 2/WSL) و سیستم init (systemd/OpenRC/SysV/کانتینر) را تشخیص می‌دهد
-۲. باینری صحیح را از [انتشارات GitHub](https://github.com/themadorg/bedrud/releases) دانلود می‌کند (یا با `--build` از کد منبع می‌سازد)
-۳. در `~/bin` یا `%USERPROFILE%\bin` نصب می‌کند (قابل تنظیم از طریق `--install-dir`)
-۴. دایرکتوری نصب را به `PATH` اضافه می‌کند (فایل‌های shell برای Bash، رجیستری برای Windows)
-۵. **Windows و Linux**: یک گفتگوی تعاملی برای پیکربندی TLS، Postgres و ایجاد اولین کاربر مدیر ارائه می‌دهد
-۶. مراحل بعدی را چاپ می‌کند
+For server setup after installing, see [Quick Start](/fa/docs/getting-started/quickstart). For package managers, Docker, and other methods, see [Server Installation](/fa/docs/getting-started/installation).
 
 ---
 
-## پیش‌نیازها
+## What It Does
 
-| پلتفرم | وابستگی‌ها |
+1. Detects OS, CPU architecture, platform variants (Rosetta 2/WSL), and init system (systemd/OpenRC/SysV/container)
+2. Downloads the correct binary from [GitHub Releases](https://github.com/themadorg/bedrud/releases) (or builds from source with `--build`)
+3. Installs to `~/bin` or `%USERPROFILE%\bin` (customizable via `--install-dir`)
+4. Adds install directory to `PATH` (shell profiles for Bash, Registry for Windows)
+5. **Windows & Linux**: Offers an interactive Q&A to configure TLS, Postgres, and create the initial Admin user
+6. Prints next steps
+
+---
+
+## Requirements
+
+| Platform | Dependencies |
 |----------|-------------|
 | macOS / Linux | `curl` + `tar` |
 | macOS / Linux (`--build`) | `curl` + `git` + `go` + `bun` + `make` |
-| Windows | PowerShell 5.1+ (در Windows 10/11 از پیش نصب شده است) |
+| Windows | PowerShell 5.1+ (ships with Windows 10/11) |
+| Windows (`--build`) | `git` + `go` + `bun` + `make` |
 
 ---
 
-## نصب سریع
+## Quick Install
 
 <Tabs>
   <TabsList>
@@ -44,10 +47,10 @@ order: 2
     curl -fsSL https://bedrud.org/install.sh | bash
     ```
 
-    shell را دوباره بارگذاری کنید، سپس تأیید کنید:
+    Reload shell, then verify:
 
     ```bash
-    source ~/.bashrc  # یا ~/.zshrc
+    source ~/.bashrc  # or ~/.zshrc
     bedrud --version
     ```
   </TabsContent>
@@ -62,89 +65,89 @@ order: 2
 
 ---
 
-## پرچم‌ها و گزینه‌ها
+## Flags & Options
 
-### نصب‌کننده Bash
+### Bash Installer
 
 ```
 Usage: curl -fsSL https://bedrud.org/install.sh | bash -s -- [options]
 ```
 
-| پرچم | پیش‌فرض | توضیحات |
+| Flag | Default | Description |
 |------|---------|-------------|
-| `--install-dir <dir>` | `~/bin` | محل قرارگیری باینری |
-| `--version <ver>` | `latest` | ثابت نگه داشتن در یک نسخه (مثلاً `v1.2.0`) |
-| `--build` | خاموش | ساخت از کد منبع به جای دانلود انتشار |
-| `--branch <name>` | `master` | شاخه Git برای کلون (نیاز به `--build`) |
-| `--no-setup` | خاموش | فقط دانلود باینری، رد کردن نصب تعاملی سرور |
-| `--skip-shell` | خاموش | تغییر فایل‌های RC shell یا PATH انجام نشود |
-| `-h`, `--help` | — | نمایش نحوه استفاده و خروج |
+| `--install-dir <dir>` | `~/bin` | Where to place the binary |
+| `--version <ver>` | `latest` | Pin to a release (e.g. `v1.2.0`) |
+| `--build` | off | Build from source instead of downloading a release |
+| `--branch <name>` | `master` | Git branch to clone (requires `--build`) |
+| `--skip-shell` | off | Don't modify shell RC files or PATH |
+| `--no-setup` | off | Download binary only, skip interactive server setup |
+| `-h`, `--help` | — | Print usage and exit |
 
-**مثال‌ها:**
+**Examples:**
 
 ```bash
-# پیش‌فرض
+# Default
 curl -fsSL https://bedrud.org/install.sh | bash
 
-# ثابت نگه داشتن نسخه
+# Pin version
 curl -fsSL https://bedrud.org/install.sh | bash -s -- --version v1.2.0
 
-# ساخت از کد منبع (شاخه سفارشی)
+# Build from source (custom branch)
 curl -fsSL https://bedrud.org/install.sh | bash -s -- --build --branch my-feature
 
-# ساخت از یک fork
+# Build from a fork
 BEDRUD_REPO=myuser/bedrud curl -fsSL https://bedrud.org/install.sh | bash -s -- --build
 
-# نصب سیستم‌واید
+# System-wide install
 curl -fsSL https://bedrud.org/install.sh | sudo bash -s -- --install-dir /usr/local/bin
 
-# CI / اتوماسیون — رد کردن تنظیمات shell و نصب تعاملی
+# CI / automation — skip shell config + interactive setup
 curl -fsSL https://bedrud.org/install.sh | bash -s -- --skip-shell --no-setup
 ```
 
-### نصب‌کننده PowerShell
+### PowerShell Installer
 
 ```
 Usage: irm https://bedrud.org/install.ps1 | iex
 ```
 
-برای ارسال پارامترها، ابتدا در فایل ذخیره کنید:
+To pass parameters, save to file first:
 
 ```powershell
 irm https://bedrud.org/install.ps1 -OutFile install.ps1
-.\install.ps1 -Version v1.2.0 -InstallDir C:\Tools
+.\install.ps1 -Version v1.2.0 -InstallDir C:\Tools -Build
 ```
 
-| پارامتر | پیش‌فرض | توضیحات |
+| Parameter | Default | Description |
 |-----------|---------|-------------|
-| `-InstallDir <path>` | `$HOME\bin` | محل قرارگیری `bedrud.exe` |
-| `-Version <ver>` | `latest` | نصب یک نسخه انتشار خاص |
-| `-SkipPath` | `$false` | اضافه نکردن دایرکتوری نصب به PATH کاربر |
-| `-Build` | `$false` | ساخت از کد منبع به جای دانلود |
-| `-Branch <name>` | `master` | شاخه Git برای کلون (نیاز به `-Build`) |
-| `-NoSetup` | `$false` | فقط دانلود، رد کردن نصب تعاملی سرور |
+| `-InstallDir <path>` | `$HOME\bin` | Where to place `bedrud.exe` |
+| `-Version <ver>` | `latest` | Install a specific release version |
+| `-SkipPath` | `$false` | Don't add install dir to user PATH |
+| `-Build` | `$false` | Build from source instead of downloading |
+| `-Branch <name>` | `master` | Git branch to clone (requires `-Build`) |
+| `-NoSetup` | `$false` | Download only, skip interactive server setup |
 
-**مثال‌ها:**
+**Examples:**
 
 ```powershell
-# پیش‌فرض
+# Default
 irm https://bedrud.org/install.ps1 | iex
 
-# ساخت از کد منبع
+# Build from source
 .\install.ps1 -Build -Branch main
 
-# CI / اتوماسیون — رد کردن نصب تعاملی
+# CI / automation — skip interactive Q&A
 .\install.ps1 -NoSetup -SkipPath
 ```
 
 ---
 
-## متغیرهای محیطی
+## Environment Variables
 
-| متغیر | پیش‌فرض | پلتفرم‌ها | توضیحات |
+| Variable | Default | Platforms | Description |
 |----------|---------|-----------|-------------|
-| `BEDRUD_INSTALL` | `~/bin` | فقط Bash | جایگزینی دایرکتوری نصب (مشابه `--install-dir`) |
-| `BEDRUD_REPO` | `themadorg/bedrud` | هر دو | جایگزینی مخزن GitHub (برای forks یا mirrorها) |
+| `BEDRUD_INSTALL` | `~/bin` | Bash only | Override install directory (same as `--install-dir`) |
+| `BEDRUD_REPO` | `themadorg/bedrud` | Both | Override GitHub repo (for forks or mirrors) |
 
 ```bash
 BEDRUD_INSTALL=/opt/bedrud curl -fsSL https://bedrud.org/install.sh | bash
@@ -158,103 +161,103 @@ irm https://bedrud.org/install.ps1 | iex
 
 ---
 
-## پشتیبانی از پلتفرم
+## Platform Support
 
-| هدف | سیستم‌عامل | معماری | یادداشت |
+| Target | OS | Architecture | Notes |
 |--------|-----|-------------|-------|
-| `darwin_amd64` | macOS | Intel (x86_64) | استاندارد |
-| `darwin_arm64` | macOS | Apple Silicon (M1/M2/M3/M4) | Rosetta 2 به صورت خودکار تشخیص داده می‌شود |
-| `linux_amd64` | Linux | x86_64 | باینری ایستا — همه توزیع‌ها |
-| `linux_arm64` | Linux | ARM64 | باینری ایستا — همه توزیع‌ها |
-| `freebsd_amd64` | FreeBSD | x86_64 | استاندارد |
-| `windows_amd64` | Windows | x86_64 | استاندارد |
-| `windows_arm64` | Windows | ARM64 | استاندارد |
+| `darwin_amd64` | macOS | Intel (x86_64) | Standard |
+| `darwin_arm64` | macOS | Apple Silicon (M1/M2/M3/M4) | Rosetta 2 auto-detected |
+| `linux_amd64` | Linux | x86_64 | Static binary — all distros |
+| `linux_arm64` | Linux | ARM64 | Static binary — all distros |
+| `freebsd_amd64` | FreeBSD | x86_64 | Standard |
+| `windows_amd64` | Windows | x86_64 | Standard |
+| `windows_arm64` | Windows | ARM64 | Standard |
 
 ---
 
-## تشخیص موارد خاص
+## Edge Case Detection
 
-### Rosetta 2 (macOS Intel روی Apple Silicon)
+### Rosetta 2 (macOS Intel on Apple Silicon)
 
-**تشخیص:** `sysctl -n sysctl.proc_translated` مقدار `۱` برمی‌گرداند.
-**اثر:** `darwin_amd64` را به `darwin_arm64` برای عملکرد بومی ARM تغییر می‌دهد.
+**Detection:** `sysctl -n sysctl.proc_translated` returns `1`.
+**Effect:** Switches `darwin_amd64` → `darwin_arm64` for native ARM performance.
 
-### محیط‌های کانتینری (Docker، Kubernetes و غیره)
+### Container Environments (Docker, Kubernetes, etc.)
 
-**تشخیص:** بررسی `/.dockerenv`، `/run/.containerenv`، `/proc/1/comm` (برای `docker-init`، `tini`، `containerd`، `runc`) و `/proc/1/cgroup` (برای `docker`، `kubepods`، `containerd`).
-**اثر:** نصب فایل سرویس نادیده گرفته می‌شود. نصب‌کننده دستورات شروع دستی را چاپ می‌کند:
+**Detection:** Checks `/.dockerenv`, `/run/.containerenv`, `/proc/1/comm` (for `docker-init`, `tini`, `containerd`, `runc`), and `/proc/1/cgroup` (for `docker`, `kubepods`, `containerd`).
+**Effect:** Service file installation is skipped. The installer prints manual start commands:
 
 ```bash
-# پیش‌زمینه
+# Foreground
 /usr/local/bin/bedrud run --config /etc/bedrud/config.yaml
 
-# پس‌زمینه
+# Background
 nohup /usr/local/bin/bedrud run --config /etc/bedrud/config.yaml \
   > /var/log/bedrud/bedrud.log 2>&1 &
 ```
 
-برای مدیریت صحیح سرویس در Docker، از `--init` یا [tini](https://github.com/krallin/tini) به عنوان PID 1 استفاده کنید.
+For proper service management in Docker, use `--init` or [tini](https://github.com/krallin/tini) as PID 1.
 
 ---
 
-## پشتیبانی از سیستم init
+## Init System Support
 
-نصب‌کننده سیستم init را خودکار تشخیص می‌دهد و فایل‌های سرویس مناسب برای راه‌اندازی سرور ایجاد می‌کند:
+The installer auto-detects your init system and creates appropriate service files for server setup:
 
-| سیستم init | تشخیص | فایل‌های سرویس | مدیریت |
-|------------|-------|----------------|--------|
-| systemd | `/run/systemd/system` موجود باشد | `/etc/systemd/system/*.service` | `systemctl` |
-| OpenRC | `/sbin/openrc` موجود باشد | `/etc/init.d/*` (فرمت OpenRC) | `rc-service`, `rc-update` |
-| SysV init | دستور `service` موجود باشد | `/etc/init.d/*` (فرمت LSB) | `service`, `update-rc.d` |
-| **کانتینر** | `/.dockerenv`, `/proc/1/comm`, `/proc/1/cgroup` | بدون — اجرای دستی | باینری مستقیم یا `nohup` |
+| Init System | Detection | Service Files | Management |
+|-------------|-----------|---------------|------------|
+| systemd | `/run/systemd/system` exists | `/etc/systemd/system/*.service` | `systemctl` |
+| OpenRC | `/sbin/openrc` exists | `/etc/init.d/*` (OpenRC format) | `rc-service`, `rc-update` |
+| SysV init | `service` command available | `/etc/init.d/*` (LSB format) | `service`, `update-rc.d` |
+| **Container** | `/.dockerenv`, `/proc/1/comm`, `/proc/1/cgroup` | None — manual start | Direct binary or `nohup` |
 
-پشتیبانی از: اکثر توزیع‌های Linux (systemd، OpenRC، SysV init)، WSL1 و کانتینرهای Linux. محیط‌های کانتینری به‌صورت خودکار تشخیص داده می‌شوند — نصب فایل سرویس نادیده گرفته شده و دستورالعمل شروع دستی چاپ می‌شود.
-
----
-
-## جریان نصب
-
-۱. **بررسی Windows** — MINGW/MSYS/CYGWIN در Bash تشخیص داده شد؟ هدایت به PowerShell.
-۲. **بررسی WSL** — WSL در PowerShell تشخیص داده شد؟ هدایت به Bash.
-۳. **بررسی وابستگی** — Bash: `curl` + `tar`. PowerShell: (هیچکده پیش‌فرض). ساخت: `git` + `go` + `bun` + `make`.
-۴. **تشخیص پلتفرم** — سیستم‌عامل + معماری از طریق `uname` (Bash) یا `RuntimeInformation` (PowerShell).
-۵. **نصب باینری** — یکی از دو حالت:
-   - **حالت دانلود** (پیش‌فرض): دانلود و استخراج zip/tar.xz.
-   - **حالت ساخت** (`--build`): `git clone`، `bun install`، `go mod download`، `make build`.
-۶. **تأیید** — اجرای `bedrud --version`.
-۷. **بررسی PATH** — قبلاً در PATH است؟ رد شود. در غیر این صورت → تغییر فایل RC (Bash) یا رجیستری (PowerShell).
-۸. **نصب تعاملی** — گفتگو برای دامنه، TLS، Postgres و ایجاد کاربر مدیر.
-۹. **تمام** — چاپ موفقیت + URL دسترسی.
-
-فرمت URL دانلود: `github.com/{repo}/releases/{ver}/bedrud_{TARGET}.tar.xz`
-
-حالت ساخت از `github.com/{repo}` کلون کرده و `make build` را اجرا می‌کند (خروجی: `server/dist/bedrud`).
+Supported on: Most Linux distributions (systemd, OpenRC, SysV init), WSL1, and Linux containers. Container environments are auto-detected — service file installation is skipped with manual start instructions printed.
 
 ---
 
-## تنظیمات PATH و Shell
+## Install Flow
 
-وقتی `--skip-shell` تنظیم نشده باشد، نصب‌کننده دایرکتوری نصب را به PATH شما اضافه می‌کند.
+1. **Windows check** — MINGW/MSYS/CYGWIN detected in Bash? Redirect to PowerShell.
+2. **WSL check** — WSL detected in PowerShell? Redirect to Bash.
+3. **Dependency check** — Bash: `curl` + `tar`. PowerShell: (default none). Build: `git` + `go` + `bun` + `make`.
+4. **Platform detection** — OS + architecture via `uname` (Bash) or `RuntimeInformation` (PowerShell).
+5. **Install binary** — either:
+   - **Download mode** (default): download and extract zip/tar.xz.
+   - **Build mode** (`--build`): `git clone`, `bun install`, `go mod download`, `make build`.
+6. **Verify** — run `bedrud --version`.
+7. **PATH check** — already in PATH? Skip. Otherwise → modify RC file (Bash) or Registry (PowerShell).
+8. **Interactive Setup** — Q&A for Domain, TLS, Postgres, and Admin user creation.
+9. **Done** — print success + access URL.
 
-| Shell | فایل RC |
+Download URL format: `github.com/{repo}/releases/{ver}/bedrud_{TARGET}.tar.xz`
+
+Build mode clones from: `github.com/{repo}` and runs `make build` (outputs `server/dist/bedrud`).
+
+---
+
+## PATH & Shell Configuration
+
+When `--skip-shell` is not set, the installer adds the install directory to your PATH.
+
+| Shell | RC File |
 |-------|---------|
 | fish | `~/.config/fish/config.fish` |
-| zsh | `$ZDOTDIR/.zshrc` (پیش‌فرض `~/.zshrc`) |
-| bash (macOS) | `~/.bash_profile`، سپس `~/.bashrc` |
-| bash (Linux) | `~/.bashrc`، سپس `~/.bash_profile` |
+| zsh | `$ZDOTDIR/.zshrc` (default `~/.zshrc`) |
+| bash (macOS) | `~/.bash_profile`, then `~/.bashrc` |
+| bash (Linux) | `~/.bashrc`, then `~/.bash_profile` |
 
-**آنچه اضافه می‌شود:**
+**What gets added:**
 
 ```bash
 # bedrud
 export PATH="$HOME/bin:$PATH"  # bedrud
 ```
 
-علامت `# bedrud` از ورودی‌های تکراری جلوگیری می‌کند — ایمن برای اجرای مجدد.
+The `# bedrud` comment marker prevents duplicate entries — safe to re-run.
 
-**Windows:** از `[Environment]::SetEnvironmentVariable("PATH", ..., "User")` در سطح رجیستری استفاده می‌کند. فایل RC لازم نیست.
+**Windows:** Uses `[Environment]::SetEnvironmentVariable("PATH", ..., "User")` at the registry level. No RC file needed.
 
-**بارگذاری مجدد shell پس از نصب:**
+**Reload shell after install:**
 
 ```bash
 source ~/.bashrc    # bash
@@ -264,41 +267,41 @@ source ~/.config/fish/config.fish  # fish
 
 ---
 
-## نصب آفلاین / Air-Gapped
+## Offline / Air-Gapped Installs
 
-### دانلود و انتقال
+### Download and Transfer
 
 ```bash
 curl -fsSL -o bedrud.tar.xz \
   https://github.com/themadorg/bedrud/releases/latest/download/bedrud_linux_amd64.tar.xz
 scp bedrud.tar.xz airgapped-server:/tmp/
-# روی هدف:
+# On target:
 tar -xf /tmp/bedrud.tar.xz -C /tmp/bedrud-extracted
 mv /tmp/bedrud-extracted/bedrud ~/bin/
 chmod +x ~/bin/bedrud
 ```
 
-### Mirror خودمیزبانی شده
+### Self-Hosted Mirror
 
 ```bash
 BEDRUD_REPO=mycompany/bedrud-mirror curl -fsSL https://bedrud.org/install.sh | bash
 ```
 
-### باینری مستقیم
+### Direct Binary
 
-از [انتشارات](https://github.com/themadorg/bedrud/releases) دانلود کنید، استخراج کنید، به یک دایرکتوری در `PATH` خود منتقل کنید.
+Download from [Releases](https://github.com/themadorg/bedrud/releases), extract, move to a directory in your `PATH`.
 
 ---
 
-## حذف نصب
+## Uninstall
 
 ```bash
 rm ~/bin/bedrud
-# حذف خط PATH از فایل RC (جستجو برای "# bedrud"):
+# Remove PATH line from shell RC (search for "# bedrud"):
 #   ~/.bashrc, ~/.bash_profile, ~/.zshrc, ~/.config/fish/config.fish
 ```
 
-برای نصب‌های سرور (systemd، OpenRC یا SysV init):
+For server installs (systemd, OpenRC, SysV init):
 
 ```bash
 sudo bedrud uninstall
@@ -308,21 +311,21 @@ Windows:
 
 ```powershell
 Remove-Item "$env:USERPROFILE\bin\bedrud.exe"
-# حذف از PATH از طریق System Properties → Environment Variables
+# Remove from PATH via System Properties → Environment Variables
 ```
 
 ---
 
-## عیب‌یابی
+## Troubleshooting
 
 ### `command not found: bedrud`
 
 ```bash
-source ~/.bashrc    # بارگذاری مجدد shell
-echo $PATH | tr ':' '\n' | grep "$HOME/bin"  # بررسی PATH
+source ~/.bashrc    # reload shell
+echo $PATH | tr ':' '\n' | grep "$HOME/bin"  # check PATH
 ```
 
-اگر وجود ندارد:
+If missing:
 
 ```bash
 echo 'export PATH="$HOME/bin:$PATH"' >> ~/.bashrc
@@ -331,36 +334,35 @@ source ~/.bashrc
 
 ### `Failed to download bedrud`
 
-۱. اتصال اینترنت را بررسی کنید
-۲. تأیید کنید که هدف در [انتشارات](https://github.com/themadorg/bedrud/releases) وجود دارد
-۳. یک نسخه خاص را امتحان کنید: `--version v1.0.0`
-۴. ممکن است پلتفرم شما باینری از پیش ساخته شده نداشته باشد
+1. Check internet connection
+2. Verify target exists at [Releases](https://github.com/themadorg/bedrud/releases)
+3. Try a specific version: `--version v1.0.0`
+4. Your platform may not have a pre-built binary yet
 
-### macOS: اجرای x64 تحت Rosetta (کند)
+### macOS: Running x64 under Rosetta (slow)
 
-اجبار به ARM بومی:
+Force native ARM:
 
 ```bash
 arch -arm64 curl -fsSL https://bedrud.org/install.sh | arch -arm64 bash
 ```
 
-### ویندوز: "running scripts is disabled"
+### Windows: "running scripts is disabled"
 
 ```powershell
 Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 irm https://bedrud.org/install.ps1 | iex
 ```
 
-### ویندوز: شناسایی WSL
+### Windows: WSL detected
 
-اگر در محیط WSL (مثلاً اوبونتو روی ویندوز) هستید، نصب‌کننده PowerShell این را تشخیص داده و از شما می‌خواهد نصب‌کننده Bash را اجرا کنید. این کار تضمین می‌کند که بدرود به درستی برای محیط لینوکس داخل WSL نصب شود.
+If you are running in a WSL terminal (e.g., Ubuntu on Windows), the PowerShell installer will detect this and ask you to run the Bash installer instead. This ensures Bedrud is installed correctly for the Linux environment inside WSL.
 
-### ویندوز: دستگاه‌های ARM64 (Surface Pro و غیره)
+### Windows: ARM64 devices (Surface Pro, etc.)
 
-نصب‌کننده به طور خودکار `windows_arm64` را شناسایی کرده و فایل باینری نیتیو را دانلود می‌کند. اگر نیاز دارید معماری خاصی را اجبار کنید، فایل zip مربوطه را از [نسخه‌ها](https://github.com/themadorg/bedrud/releases) دانلود کنید.
+The installer auto-detects `windows_arm64` and downloads the native binary. If you need to force an architecture, download the specific zip from [Releases](https://github.com/themadorg/bedrud/releases).
 
-### ویندوز: Docker Desktop برای Postgres
+### Windows: Docker Desktop for Postgres
 
-اگر در طول تنظیمات انتخاب کردید که Postgres در داکر اجرا شود، مطمئن شوید که **Docker Desktop** نصب و در حال اجرا است. نصب‌کننده سعی می‌کند کانتینر را به طور خودکار راه‌اندازی کند.
-
+If you choose to run Postgres in Docker during setup, ensure **Docker Desktop** is installed and running. The installer will attempt to start the container automatically.
 

@@ -4,71 +4,71 @@ description: Aplicación nativa iOS
 order: 10
 ---
 
-La aplicación iOS de Bedrud está construida con SwiftUI, proporcionando una experiencia nativa de reunión de video con soporte multiinstancia y almacenamiento seguro de credenciales.
+The Bedrud iOS app is built with SwiftUI, providing a native video meeting experience with multi-instance support and secure credential storage.
 
-## Stack Tecnológico
+## Technology Stack
 
-| Tecnología | Versión | Propósito |
+| Technology | Version | Purpose |
 |-----------|---------|---------|
-| Swift | 5.9+ | Lenguaje |
-| SwiftUI | Último | Framework de UI |
-| LiveKit Swift SDK | 2.0+ | Medios WebRTC |
-| KeychainAccess | 4.2.2+ | Almacenamiento seguro de credenciales |
+| Swift | 5.9+ | Language |
+| SwiftUI | Latest | UI framework |
+| LiveKit Swift SDK | 2.0+ | WebRTC media |
+| KeychainAccess | 4.2.2+ | Secure credential storage |
 
-**Destino de despliegue:** iOS 18.0
+**Deployment target:** iOS 18.0
 
-## Configuración del Proyecto
+## Project Configuration
 
-El proyecto usa **XCodeGen** para la generación del proyecto desde `project.yml`:
+The project uses **XCodeGen** for project generation from `project.yml`:
 
 - Bundle ID: `com.bedrud.ios`
-- Generado con: `xcodegen generate`
+- Generated with: `xcodegen generate`
 
-## Estructura de Directorios
+## Directory Structure
 
 ```text
 apps/ios/Bedrud/
-├── BedrudApp.swift                # Punto de entrada de la aplicación
+├── BedrudApp.swift                # App entry point
 ├── Core/
 │   ├── API/
-│   │   └── APIClient.swift        # Cliente REST basado en URLSession
+│   │   └── APIClient.swift        # URLSession-based REST client
 │   ├── Auth/
-│   │   └── AuthManager.swift      # Gestión de tokens, login/logout
+│   │   └── AuthManager.swift      # Token management, login/logout
 │   ├── Instance/
-│   │   ├── InstanceManager.swift  # Orquestador central multiinstancia
-│   │   └── InstanceStore.swift    # Almacenamiento persistente de instancias (UserDefaults)
+│   │   ├── InstanceManager.swift  # Central multi-instance orchestrator
+│   │   └── InstanceStore.swift    # Persistent instance storage (UserDefaults)
 │   └── LiveKit/
-│       └── RoomManager.swift      # Gestor de conexión de sala LiveKit
+│       └── RoomManager.swift      # LiveKit room connection manager
 ├── Features/
 │   ├── Auth/
-│   │   ├── LoginView.swift        # Pantalla de inicio de sesión
-│   │   └── RegisterView.swift     # Pantalla de registro
+│   │   ├── LoginView.swift        # Login screen
+│   │   └── RegisterView.swift     # Registration screen
 │   ├── Dashboard/
-│   │   └── DashboardView.swift    # Lista y gestión de salas
+│   │   └── DashboardView.swift    # Room list and management
 │   ├── Meeting/
-│   │   └── MeetingView.swift      # Interfaz de videollamada
+│   │   └── MeetingView.swift      # Video call interface
 │   ├── Profile/
-│   │   └── ProfileView.swift      # Perfil de usuario
+│   │   └── ProfileView.swift      # User profile
 │   ├── Instance/
-│   │   ├── AddInstanceView.swift  # Añadir instancia de servidor
-│   │   └── InstanceSwitcherView.swift  # Cambiar entre instancias
+│   │   ├── AddInstanceView.swift  # Add server instance
+│   │   └── InstanceSwitcherView.swift  # Switch between instances
 │   ├── Settings/
-│   │   └── SettingsView.swift     # Configuración de la aplicación
+│   │   └── SettingsView.swift     # App settings
 │   ├── JoinByURL/
-│   │   └── JoinByURLView.swift    # Manejo de enlaces profundos
+│   │   └── JoinByURLView.swift    # Deep link handling
 │   └── Main/
-│       └── MainTabView.swift      # Navegación por pestañas
+│       └── MainTabView.swift      # Tab navigation
 ├── Models/
 │   ├── User.swift
 │   ├── Room.swift
 │   └── Instance.swift
 └── Design/
-    └── Components/                # Componentes SwiftUI reutilizables
+    └── Components/                # Reusable SwiftUI components
 ```
 
-## Arquitectura Multiinstancia
+## Multi-Instance Architecture
 
-La aplicación iOS refleja la arquitectura de Android para el soporte multiinstancia.
+The iOS app mirrors the Android architecture for multi-instance support.
 
 ```mermaid
 flowchart TB
@@ -90,9 +90,9 @@ flowchart TB
     style InstanceManager fill:#f0f0f0,stroke:#333
 ```
 
-### Patrón Clave
+### Key Pattern
 
-Las dependencias son propiedades `@Published` en `InstanceManager`, que es un `ObservableObject`. Las vistas las reciben vía `@EnvironmentObject`:
+Dependencies are `@Published` properties on `InstanceManager`, which is an `ObservableObject`. Views receive it via `@EnvironmentObject`:
 
 ```swift
 struct DashboardView: View {
@@ -100,13 +100,13 @@ struct DashboardView: View {
 
     var body: some View {
         if let authManager = instanceManager.authManager {
-            // Renderizar UI autenticada
+            // Render authenticated UI
         }
     }
 }
 ```
 
-### Flujo de Navegación
+### Navigation Flow
 
 ```mermaid
 flowchart LR
@@ -116,11 +116,11 @@ flowchart LR
     DashboardView -. "toolbar sheet" .-> InstanceSwitcherView["InstanceSwitcherView"]
 ```
 
-El conmutador de instancias aparece como un `.sheet` activado desde la barra de herramientas del Dashboard.
+The instance switcher appears as a `.sheet` triggered from the Dashboard toolbar.
 
-## Punto de Entrada de la Aplicación
+## App Entry Point
 
-`BedrudApp.swift` inicializa los servicios centrales y los inyecta en el entorno SwiftUI:
+`BedrudApp.swift` initializes the core services and injects them into the SwiftUI environment:
 
 ```swift
 @main
@@ -140,38 +140,38 @@ struct BedrudApp: App {
 }
 ```
 
-## Características
+## Features
 
-### Almacenamiento Seguro
+### Secure Storage
 
-Usa **KeychainAccess** para almacenar tokens JWT y credenciales sensibles, en lugar de UserDefaults.
+Uses **KeychainAccess** for storing JWT tokens and sensitive credentials, rather than UserDefaults.
 
-### Enlaces Profundos
+### Deep Linking
 
-Maneja URLs para unión directa a salas y códigos de sala.
+Handles URLs for direct room joining and room codes.
 
-### Configuración
+### Settings
 
-Las preferencias del usuario se persisten vía `SettingsStore` usando UserDefaults.
+User preferences are persisted via `SettingsStore` using UserDefaults.
 
-## Construcción
+## Building
 
 ```bash
-# Abrir en Xcode
+# Open in Xcode
 make dev-ios
 
-# Construir archivo (Release)
+# Build archive (Release)
 make build-ios
 
-# Exportar IPA (requiere ExportOptions.plist)
+# Export IPA (requires ExportOptions.plist)
 make export-ios
 
-# Construir para simulador (Debug)
+# Build for simulator (Debug)
 make build-ios-sim
 ```
 
-### Requisitos
+### Requirements
 
-- Xcode (última versión estable)
-- Destino de despliegue iOS 18.0
-- Para construcciones de dispositivo: cuenta de desarrollador de Apple y perfil de aprovisionamiento
+- Xcode (latest stable)
+- iOS 18.0 deployment target
+- For device builds: Apple Developer account and provisioning profile

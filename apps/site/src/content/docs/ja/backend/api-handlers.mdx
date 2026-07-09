@@ -1,95 +1,89 @@
 ---
-title: APIハンドラ
-description: REST APIエンドポイントの実装
+title: API ハンドラ
+description: REST API エンドポイント実装
 order: 19
 ---
 
-Bedrudは**Fiber**ウェブフレームワークを使用しています（Go向けのExpressライクなAPI）。
+Bedrud uses the **Fiber** web framework. Production routes are registered in `server/internal/server/server.go` (used by `bedrud run`). Interactive OpenAPI: [API Reference](/ja/docs/api/api-reference).
 
-## ルーティングロジック
+## Route Groups
 
-ルートは`internal/server/server.go`で定義されています。ミドルウェアやプレフィックスの適用を容易にするため、ルートをグループ化しています。
+| Prefix | Auth | Purpose |
+|--------|------|---------|
+| `/api/auth/*` | Mixed | Register, login, OAuth, passkeys, profile, preferences, verify, password reset |
+| `/api/room/*` | Mostly protected | Create/join/list/moderate rooms, chat upload |
+| `/api/admin/*` | Superadmin | Users, rooms, settings, invite tokens, webhooks, queue, overview |
+| `/api/livekit/webhook` | LiveKit JWT | Inbound media disconnect events |
+| `/api/cert` | Public | Cert metadata for clients (when applicable) |
+| `/livekit/*` | Proxied | Embedded LiveKit signaling (unless `livekit.external`) |
+| `/uploads/chat/*` | Protected | Chat image files |
+| `/uploads/avatars/*` | Public | Avatar files |
+| `/*` | SPA | Embedded frontend |
 
-### メイングループ:
+Admin group middleware: `Protected` → `RequireEmailVerified` → `RequireAccess(superadmin)`.
 
-- **`/api/auth`**: 認証用の公開ルートと保護ルート。
-- **`/api/room`**: ルーム管理用の保護ルート。
-- **`/api/admin`**: `superadmin`ロールのユーザーに限定されたルート。
-- **`/livekit`**: 組み込みのLiveKit音声・ビデオサーバーにリクエストを転送する特別なプロキシグループ。
+## Auth Highlights
 
-## 特殊なハンドラロジック
+- Local register/login/refresh, OAuth (`/auth/:provider/login|callback`)
+- Passkey register/login/signup begin/finish
+- Profile + avatar: `GET/PUT /auth/me`, avatar upload/delete
+- Preferences: `GET/PUT /auth/preferences`
+- Email verify + resend; forgot/reset password
+- Public settings: `GET /auth/settings`
 
-### ルーム管理 (`internal/handlers/room.go`)
-`RoomHandler`はBedrudのルームメタデータとLiveKitのメディアエンジン間の変換を行います。
+## Room Highlights
 
-#### 1. ルーム作成
-`POST /api/room/create`でルームが作成される際:
+- `POST /room/create`, `/room/join`, `/room/guest-join`, `/room/refresh-token`
+- `GET /room/list`, `/room/archived`
+- Moderation: kick, mute, ban, video off, promote/demote, chat block, deafen, ask, spotlight, screenshare stop, stage bring/remove
+- `PUT /room/:roomId/settings`, `DELETE /room/:roomId` (async job → **202**)
+- `POST /room/:roomId/chat/upload`
+- Presence: `GET /room/:roomId/presence`
 
-- **正規化:** ルーム名はトリムされ、小文字に変換されます。
-- **自動生成:** 名前が指定されていない場合、BedrudはランダムなURLセーフな名前を生成します（例: `fancy-blue-whale`）。
-- **同期作成:** バックエンドはまず内部LiveKit APIを呼び出してメディアセッションを作成し、その後ローカルデータベースにメタデータを保存します。
+## Admin Highlights
 
-#### 2. 参加とトークン
-`POST /api/room/join`でユーザーが参加する際:
+- Users: list, detail, status, accesses, force-logout, set password, verify, sessions, **delete** (async), bulk ban/promote/delete
+- Rooms: list, events, token, close, suspend, reactivate, update, participants, bulk suspend/close
+- Settings: get/put, send-test-email, validate connectivity
+- Invite tokens CRUD; webhooks CRUD + rotate-secret + test
+- Overview, online-count, LiveKit stats, cert-info, queue stats
 
-- **アクセス制御:** バックエンドはルームが存在するか、ユーザーが承認されているかを確認します。
-- **トークン生成:** 署名付きJWT（Join Token）が以下の内容で生成されます:
-  - `Identity`: BedrudのユーザーID。
-  - `Name`: ユーザーの表示名。
-  - `Grants`: `CanJoin`、`CanPublish`、`CanSubscribe`などの特定の権限。
-- **クライアントハンドシェイク:** フロントエンドはローカルのルームメタデータとLiveKitトークンの両方を受け取り、WebRTC接続を開始します。
+Recording admin/user routes are **not registered** in production (planned feature).
 
-## 管理者・ユーザー管理 (`internal/handlers/users.go`)
-`/api/admin`配下のルートは、`RequireAccess("superadmin")`ミドルウェアによって厳格に保護されています。
+## Async Operations (Job Queue)
 
-### 1. ユーザー管理
-`UsersHandler`は管理者に以下の操作を許可します:
+Destructive work and some side effects return **202 Accepted** and enqueue jobs:
 
-- **全ユーザーの取得:** 認証プロバイダーや最終ログインメタデータを含む、登録済みユーザーの完全な一覧を取得します。
-- **ステータス更新:** アカウントアクセスを即座に有効化または無効化します。ユーザーを無効化すると、ログインやトークンの更新が直ちにブロックされます。
+| Endpoint | Job type (approx.) |
+|----------|--------------------|
+| `DELETE /api/room/:roomId` | `room_delete` |
+| `DELETE /api/admin/rooms/:roomId` | `room_delete` |
+| `POST /api/admin/rooms/:roomId/suspend` | `room_suspend` |
+| `POST /api/admin/rooms/bulk/suspend` | bulk suspend |
+| `POST /api/admin/rooms/bulk/close` | bulk close |
+| `DELETE /api/admin/users/:id` | `user_delete` |
+| `POST /api/admin/users/bulk/delete` | bulk `user_delete` |
 
-### 2. ルーム概要
-管理者ルートでは、作成者に関係なく、プラットフォーム全体のアクティブなルームと過去のルームの一覧を取得できます。これはプラットフォームモデレーションを目的としています。
+Other job types: `dispatch_webhook`, email sends, chat upload processing. Worker polls ~500ms (configurable); retries with exponential backoff `2^attempts * 5s` (cap 1h).
 
-## リクエストライフサイクル
+## Room Creation & Join (summary)
 
-1.  **リクエスト受信**: FiberがHTTPリクエストを受け取ります。
-2.  **ミドルウェア**:
+**Create** (`POST /api/room/create`): normalize/generate name → LiveKit room → DB metadata → optional `room.created` webhook.
 
-    - `recover`: エラー発生時にサーバーのクラッシュを防ぎます。
-    - `cors`: Cross-Origin Resource Sharingを処理します。
-    - `Protected`: （オプション）`Authorization`ヘッダーの有効なJWTを確認します。
-3.  **ハンドラ**: `internal/handlers`内の関数が呼び出されます。
+**Join** (`POST /api/room/join`): authorize → LiveKit JWT (identity, name, grants) → client connects via WebRTC.
 
-    - `c.BodyParser`を使用してJSONボディ（もしあれば）を解析します。
-    - 必要なServiceまたはRepositoryを呼び出します。
-    - `c.JSON`を使用してJSONレスポンスを返します。
+## Request Lifecycle
 
-## 例: ルーム作成ハンドラ
+1. Fiber receives request
+2. Middleware: recover, CORS, rate limit, optional JWT + email-verified
+3. Handler parses body, calls repo/service, returns JSON
 
-```go
-func (h *RoomHandler) CreateRoom(c *fiber.Ctx) error {
-    var input struct {
-        Name string `json:"name"`
-    }
-    // 1. Parse Input
-    if err := c.BodyParser(&input); err != nil {
-        return c.Status(400).JSON(fiber.Map{"error": "Invalid input"})
-    }
+## Static Frontend
 
-    // 2. Business Logic (via Repository)
-    room := &models.Room{Name: input.Name}
-    if err := h.roomRepo.Create(room); err != nil {
-        return c.Status(500).JSON(fiber.Map{"error": "Failed to create room"})
-    }
+Built React assets are embedded and served from the binary. Non-`/api` routes fall through to the SPA shell.
 
-    // 3. Response
-    return c.Status(201).JSON(room)
-}
-```
+## See also
 
-## 静的ファイル（フロントエンド）
-
-ウェブフロントエンドはビルド時にGoバイナリに**埋め込まれます**。Fiberは`filesystem.New`を使用して`frontend/`ディレクトリからReactファイルを配信します。
-
-`/api`で始まらないルートはすべて、Reactアプリの`index.html`にリダイレクトされます。これにより、ページリフレッシュ時の404エラーなしでクライアントサイドルーティングが有効になります。
+- [Authentication](/ja/docs/backend/authentication)
+- [Webhooks Guide](/ja/docs/guides/webhooks)
+- [Configuration](/ja/docs/getting-started/configuration)

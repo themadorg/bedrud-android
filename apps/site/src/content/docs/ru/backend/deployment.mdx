@@ -4,31 +4,31 @@ description: Стратегии развёртывания бэкенда
 order: 21
 ---
 
-Встроенный установщик настраивает свежий Linux-сервер для продакшен-использования одной командой.
+The built-in installer configures a fresh Linux server for production use with a single command.
 
 <InstallerSteps />
 
 <SystemdServices />
 
-## Безопасность и TLS
+## Security and TLS
 
-Установщик автоматически обрабатывает безопасность:
+The installer handles security automatically:
 
-- **ACME (Let's Encrypt):** Если вы укажете домен и email, он настроит автоматическое обновление сертификатов.
-- **Самоподписанные сертификаты:** Если домен не указан, генерируется самоподписанный сертификат, чтобы сайт работал по HTTPS.
-- **Обратный прокси:** Бэкенд выступает в роли обратного прокси. Он принимает трафик на порту 443 и перенаправляет запросы `/livekit` на внутренний медиасервер.
+- **ACME (Let's Encrypt):** If you provide a domain and email, it sets up automatic certificate renewal.
+- **Self-Signed Certs:** If no domain is provided, it generates a self-signed certificate so that the site still works over HTTPS. The server auto-renews the certificate daily when it's within 30 days of expiry. Use `bedrud cert renew` for manual renewal.
+- **Reverse Proxy:** The backend acts as a reverse proxy. It receives traffic on port 443 and sends `/livekit` requests to the internal media server.
 
-## Удаление
+## Uninstallation
 
-Если вам нужно удалить Bedrud, выполните:
+If you need to remove Bedrud, you can run:
 ```bash
 sudo bedrud uninstall
 ```
-Это остановит сервисы, удалит файлы init-сервисов (systemd, OpenRC или SysV init) и удалит папки конфигурации и данных.
+This stops the services, deletes the init service files (systemd, OpenRC, or SysV init), and removes the configuration and data folders.
 
 ---
 
-## См. также
+## See also
 
-- [Руководство по развёртыванию](/ru/docs/guides/deployment) - полные инструкции по продакшен-развёртыванию
-- [Режим аплаенса](/ru/docs/guides/appliance) - справка по настройке единого бинарного файла
+- [Deployment Guide](/ru/docs/guides/deployment) - full production deployment instructions
+- [Appliance Mode](/ru/docs/guides/appliance) - single-binary setup reference

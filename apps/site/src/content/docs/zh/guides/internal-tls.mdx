@@ -4,33 +4,34 @@ description: 内部网络的自签名证书
 order: 30
 ---
 
-适用于隔离网络--没有公网域名、没有出站互联网、连通性受限。
+For isolated networks - no public domain, no outbound internet, restricted connectivity.
 
-浏览器需要受信任的 HTTPS 才能通过 WebRTC 访问摄像头/麦克风。自签名证书可以工作但会显示警告。要获得干净的设置，请生成一个私有 CA 并将其分发给客户端。
+Browsers require trusted HTTPS for camera/mic via WebRTC. Self-signed certs work but show warnings. For a clean setup, generate a private CA and distribute it to clients.
 
-## 生成私有 CA 和服务器证书
+## Generate Private CA and Server Certificate
 
-现代浏览器要求证书中包含使用者备用名称 (SAN)。安装程序会自动处理此问题。
+Modern browsers require Subject Alternative Names (SANs) on certificates. The installer handles this automatically.
 
-### 选项 1：使用安装程序（推荐）
+### Option 1: Use the Installer (Recommended)
 
-`bedrud install` 命令会为指定的 IP 和域生成带有正确 SAN 的自签名证书：
+The `bedrud install` command generates self-signed certificates with proper SANs for the given IPs and domains:
 
 ```bash
 sudo bedrud install --tls --ip YOUR_SERVER_IP
 ```
 
-要同时包含域名：
+To also include a domain name:
 
 ```bash
 sudo bedrud install --tls --ip YOUR_SERVER_IP --domain your.domain.com
 ```
 
-### 选项 2：手动生成证书
+### Option 2: Manual Certificate Generation
 
-如果安装程序的内置生成不适合你的工作流程，请向 openssl 命令添加 `-addext` 参数：
+If the installer's built-in generation doesn't fit your workflow, add `-addext` flags to the openssl commands.
 
-```bash
+Bedrud generates **Ed25519** keys by default (PKCS8 format, ~128-bit security, deterministic signatures, 32-byte public keys), configurable to ECDSA P256 or RSA via the `certAlgorithm` config field or `--cert-algorithm` CLI flag. Choose the key type that matches your environment:
+
 #### Ed25519 (matches Bedrud's built-in generation, recommended)
 
 ```bash
@@ -85,9 +86,42 @@ openssl x509 -req -days 365 -in server.csr \
 sudo ./bedrud install --tls --cert server.crt --key server.key --ip YOUR_SERVER_IP
 ```
 
-## 将 CA 添加到客户端信任存储
+## HTTP Listener Port
 
-将 `ca.crt` 分发到所有客户端机器：
+When TLS is enabled, Bedrud also starts an HTTP listener (default port 80) for bots and local access. Ports below 1024 require root on Linux.
+
+### TURN/TLS Auto-Configuration
+
+When server TLS is enabled (via the installer or `server.enableTLS: true`), the embedded LiveKit process automatically generates a temporary config with TURN/TLS settings. The server's TLS certificate is reused for TURN/TLS on port 5349. The TURN `domain` is auto-set from `server.host`, UDP port 3478 is configured for TURN/STUN, and relative `certFile`/`keyFile` paths are resolved to absolute paths before being passed to LiveKit. No additional configuration is needed.
+
+For custom TURN settings (separate domain, different cert, port overrides), provide a LiveKit YAML config file via `livekit.configPath` in `config.yaml` or the `LIVEKIT_CONFIG_PATH` environment variable.
+
+**Non-root setups** — set an unprivileged port in `/etc/bedrud/config.yaml`:
+
+```yaml
+server:
+  httpPort: "8080"
+```
+
+Or via environment variable:
+
+```bash
+export SERVER_HTTP_PORT=8080
+```
+
+Alternatively, grant the binary permission to bind low ports:
+
+```bash
+sudo setcap 'cap_net_bind_service=+ep' $(which bedrud)
+```
+
+<Callout type="warning">
+    `setcap` must be re-run after each binary update (reinstall, upgrade, new build).
+</Callout>
+
+## Add CA to Client Trust Stores
+
+Distribute `ca.crt` to all client machines:
 
 ### Windows
 
@@ -116,20 +150,30 @@ sudo cp ca.crt /etc/pki/ca-trust/source/anchors/bedrud-ca.crt
 sudo update-ca-trust
 ```
 
-重启浏览器，然后打开 `https://YOUR_SERVER_IP`（替换为服务器的实际 IP 地址，例如 `192.168.1.100`）。重启后，证书将被信任，摄像头/麦克风访问将正常工作，不会出现警告。
+## Distributing the Certificate
 
-## 故障排除
+After enabling TLS, clients can fetch the server's PEM certificate directly via the API:
 
-| 问题 | 解决方案 |
+```bash
+curl -o bedrud-cert.pem https://YOUR_SERVER_IP/api/cert
+```
+
+This endpoint returns the server certificate currently in use. Combine with the CA distribution steps above for a complete trusted setup.
+
+Restart browsers, then open `https://YOUR_SERVER_IP` (replace with the server's actual IP address, e.g. `192.168.1.100`). After restarting, the certificate will be trusted and camera/microphone access will work without warnings.
+
+## Troubleshooting
+
+| Problem | Fix |
 |---------|-----|
-| 浏览器仍然警告证书不受信任 | 清除浏览器缓存，安装 CA 后重启浏览器 |
-| 摄像头/麦克风被阻止 | 验证 CA 位于受信任的根证书颁发机构中，而不是中间证书颁发机构 |
-| 证书已过期 | 运行 `sudo bedrud cert renew` 重新生成（每 24 小时在 09:00 自动续期） |
-| CN 不匹配 | 现代浏览器会忽略 CN 字段 — SAN 是权威依据。使用安装程序的内置证书生成（推荐）或向 openssl 命令添加 `-addext 'subjectAltName=...'` |
-| 缺少 SAN | 现代浏览器会忽略 CN 字段。使用安装程序的内置证书生成（推荐）或向 openssl 命令添加 `-addext 'subjectAltName=...'` |
+| Browser still warns certificate untrusted | Clear browser cache, restart browser after CA install |
+| Camera/mic blocked | Verify CA is in Trusted Root CAs, not intermediate |
+| Certificate expired | Run `sudo bedrud cert renew` to regenerate (auto-renewal every 24h at 09:00) |
+| CN mismatch | Modern browsers ignore the CN field — SAN is authoritative. Use the installer's built-in cert generation (recommended) or add `-addext 'subjectAltName=...'` to the openssl command |
+| Missing SANs | Modern browsers ignore the CN field. Use the installer's built-in cert generation (recommended) or add `-addext 'subjectAltName=...'` to the openssl command |
 
 ---
 
-## 另请参阅
-- [安装指南](/zh/docs/getting-started/installation) - 安装方法
-- [配置参考](/zh/docs/getting-started/configuration) - 完整配置选项
+## See also
+- [Installation Guide](/zh/docs/getting-started/installation) - install methods
+- [Configuration Reference](/zh/docs/getting-started/configuration) - full config options

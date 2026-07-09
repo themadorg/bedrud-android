@@ -4,55 +4,55 @@ description: تنظیمات appliance از پیش پیکربندی‌شده
 order: 33
 ---
 
-Bedrud برای اجرا به عنوان یک appliance مستقل برای جلسات ویدیویی طراحی شده است. یک فایل اجرایی باینری همه چیز مورد نیاز را بسته‌بندی می‌کند - فرانت‌اند، بک‌اند و media server LiveKit.
+Bedrud is designed to run as a self-contained "appliance" for video meetings. A single executable binary packages everything needed - frontend, backend, and the LiveKit media server.
 
-## ویژگی‌های کلیدی
+## Key Features
 
-| ویژگی | توضیحات |
+| Feature | Description |
 |---------|-------------|
-| بدون وابستگی خارجی | نیازی به Node.js، Redis یا media server جداگانه نیست |
-| media server جاسازی‌شده | باینری LiveKit شامل و به صورت خودکار مدیریت می‌شود |
-| فرانت‌اند جاسازی‌شده | UI React کامپایل و SSR از پیش رندرشده در باینری Go |
-| ذخیره‌سازی SQLite | نیازی به سرور دیتابیس نیست |
-| TLS داخلی | self-signed certificates یا Let's Encrypt |
-| نصب‌کننده داخلی | پیکربندی init سرویس‌ها (systemd/OpenRC/SysV)، دایرکتوری‌ها و تنظیمات |
+| Zero external dependencies | No Node.js, Redis, or separate media server needed |
+| Embedded media server | LiveKit binary included and managed automatically |
+| Embedded frontend | React UI compiled and SSR pre-rendered into the Go binary |
+| SQLite storage | No database server required |
+| Built-in TLS | Self-signed certificates or Let's Encrypt. TURN/TLS is automatically configured for the embedded LiveKit when server TLS is enabled. |
+| Built-in installer | Configures init services (systemd/OpenRC/SysV), directories, and configs |
 
-## اجرای باینری
+## Running the Binary
 
-### شروع سرور Bedrud
+### Start the Bedrud Server
 
 ```bash
 ./bedrud --run --config config.yaml
 ```
 
-### شروع media server LiveKit
+### Start the LiveKit Media Server
 
 ```bash
 ./bedrud --livekit --config livekit.yaml
 ```
 
-باینری شامل هر دو سرور API و media server است. از فلگ‌ها برای انتخاب کدام‌یک را شروع کنید استفاده کنید.
+The binary contains both the API server and the media server. Use flags to choose which to start.
 
-## نصب
+## Installation
 
-### نصب سریع (Debian/Ubuntu)
+### Quick Install (Debian/Ubuntu)
 
 ```bash
-# با TLS Let's Encrypt
+# With Let's Encrypt TLS
 sudo ./bedrud install --tls --domain meet.example.com --email admin@example.com
 
-# با self-signed certificate
+# With self-signed certificate
 sudo ./bedrud install --tls --ip 1.2.3.4
 
-# HTTP ساده (فقط توسعه)
+# Plain HTTP (dev only)
 sudo ./bedrud install --ip 1.2.3.4
 ```
 
 <InstallerSteps />
 
-### معماری سرویس
+### Service Architecture
 
-پس از نصب، دو init سرویس (systemd، OpenRC یا SysV init) اجرا می‌شوند:
+After installation, two init services run (systemd, OpenRC, or SysV init):
 
 ```mermaid
 flowchart LR
@@ -64,46 +64,46 @@ flowchart LR
     BS */} DB
 ```
 
-## فایل‌های پیکربندی
+## Configuration Files
 
-| فایل | هدف |
+| File | Purpose |
 |------|---------|
-| `/etc/bedrud/config.yaml` | پیکربندی اصلی سرور |
-| `/etc/bedrud/livekit.yaml` | پیکربندی media server |
-| `/var/lib/bedrud/bedrud.db` | دیتابیس SQLite |
-| `/var/log/bedrud/bedrud.log` | لاگ‌های برنامه |
+| `/etc/bedrud/config.yaml` | Main server configuration |
+| `/etc/bedrud/livekit.yaml` | Media server configuration |
+| `/var/lib/bedrud/bedrud.db` | SQLite database |
+| `/var/log/bedrud/bedrud.log` | Application logs |
 
-به [مرجع پیکربندی](/fa/docs/getting-started/configuration) برای همه گزینه‌ها ببینید.
+See the [Configuration Reference](/fa/docs/getting-started/configuration) for all options.
 
-## پس از نصب
+## Post-Installation
 
-### ایجاد اولین مدیر خود
+### Create Your First Admin
 
 <CreateAdmin />
 
-### بررسی وضعیت سرویس
+### Check Service Status
 
 ```bash
 systemctl status bedrud livekit
 ```
 
-### مشاهده لاگ‌ها
+### View Logs
 
 ```bash
 tail -f /var/log/bedrud/bedrud.log
 journalctl -u bedrud -f
 ```
 
-## حذف نصب
+## Uninstallation
 
 ```bash
 sudo ./bedrud uninstall
 ```
 
-این به طور کامل حذف می‌کند:
+This completely removes:
 
-- فایل‌های init سرویس (systemd/OpenRC/SysV)
-- باینری از `/usr/local/bin/`
-- پیکربندی در `/etc/bedrud/`
-- داده‌ها در `/var/lib/bedrud/`
-- لاگ‌ها در `/var/log/bedrud`
+- Init service files (systemd/OpenRC/SysV)
+- Binary from `/usr/local/bin/`
+- Configuration in `/etc/bedrud/`
+- Data in `/var/lib/bedrud/`
+- Logs in `/var/log/bedrud`

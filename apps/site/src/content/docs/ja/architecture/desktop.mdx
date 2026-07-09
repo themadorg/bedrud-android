@@ -4,28 +4,28 @@ description: Rust ベースのデスクトップアプリケーション
 order: 11
 ---
 
-Bedrud デスクトップクライアントは **Rust** と **Slint** UI ツールキットで構築されたネイティブ Windows および Linux アプリケーションです。Web やモバイルクライアントと同じコア会議エクスペリエンスを提供し、ランタイム依存関係なしの単一バイナリにコンパイルされます。
+The Bedrud desktop client is a native Windows and Linux application built with **Rust** and the **Slint** UI toolkit. It provides the same core meeting experience as the web and mobile clients, compiled to a single binary with no runtime dependencies.
 
-## テクノロジースタック
+## Technology Stack
 
-| コンポーネント | テクノロジー |
+| Component | Technology |
 |-----------|-----------|
-| 言語 | Rust（stable） |
-| UI ツールキット | Slint 1.x |
-| HTTP クライアント | reqwest（async、TLS） |
-| メディア | LiveKit Rust SDK |
-| ストレージ | serde_json + OS キーリング（libsecret / Windows Credential Store） |
-| ビルドシステム | Cargo workspace |
+| Language | Rust (stable) |
+| UI toolkit | Slint 1.x |
+| HTTP client | reqwest (async, TLS) |
+| Media | LiveKit Rust SDK |
+| Storage | serde_json + OS keyring (libsecret / Windows Credential Store) |
+| Build system | Cargo workspace |
 
-## プラットフォーム対応
+## Platform Support
 
-| プラットフォーム | レンダラー | バイナリ |
+| Platform | Renderer | Binary |
 |----------|----------|--------|
 | Windows 10/11 | Direct3D 11 | `bedrud-desktop.exe` |
-| Linux x86_64 | OpenGL / Vulkan（EGL/Wayland/X11 経由） | `bedrud-desktop` |
-| macOS | _（未対応 - Web アプリを使用してください）_ | - |
+| Linux x86_64 | OpenGL / Vulkan (via EGL/Wayland/X11) | `bedrud-desktop` |
+| macOS | _(not yet - use the web app)_ | - |
 
-## ソースコードレイアウト
+## Source Layout
 
 ```
 apps/desktop/
@@ -63,7 +63,7 @@ apps/desktop/
     └── settings.slint       # Settings screen
 ```
 
-## アーキテクチャ
+## Architecture
 
 ```mermaid
 flowchart TB
@@ -90,19 +90,19 @@ flowchart TB
     AUTH <*/} STORE
 ```
 
-### 主要な設計判断
+### Key design decisions
 
-- **Slint のコンパイル時 UI** - `.slint` ファイルは `build.rs` 経由でビルド時に Rust にコンパイルされます。ランタイムにレイアウトエンジンはなく、UI は完全にネイティブです。
-- **`bridge.rs` が唯一の UI↔ロジック境界** - すべての Slint コールバックが1箇所でワイヤリングされ、ビジネスロジックが UI レイヤーから分離され、ブリッジの監査が容易になります。
-- **コールバック内の `Weak<AppWindow>`** - Slint UI ハンドルは `!Send` であるため、バックグラウンドタスクはハンドルをスレッド間で共有するのではなく、UI スレッドで保存済みの `Weak` 参照をアップグレードしてプロパティを設定します。
-- **`store/instance.rs` によるマルチインスタンス** - モバイルアプリと同じ仕組み：インスタンスは OS 設定ディレクトリ内の JSON ファイルにシリアライズされ、各インスタンスが独自の `APIClient` と `AuthSession` を持ちます。
+- **Slint's compile-time UI** - `.slint` files are compiled into Rust at build time via `build.rs`. There is no layout engine at runtime; the UI is fully native.
+- **`bridge.rs` as the only UI↔logic boundary** - all Slint callbacks are wired in one place, keeping business logic out of the UI layer and making the bridge easy to audit.
+- **`Weak<AppWindow>` in callbacks** - Slint UI handles are `!Send`, so background tasks upgrade a stored `Weak` reference on the UI thread to set properties, rather than sharing the handle across threads.
+- **Multi-instance via `store/instance.rs`** - identical to the mobile apps: instances are serialised to a JSON file in the OS config directory; each instance has its own `APIClient` and `AuthSession`.
 
-## ローカルビルド
+## Building Locally
 
-### 前提条件
+### Prerequisites
 
-- Rust stable ツールチェーン（`rustup toolchain install stable`）
-- **Linux：** `libfontconfig`、`libxkbcommon`、`libwayland`、`libgles2`、`libdbus`、`libsecret`
+- Rust stable toolchain (`rustup toolchain install stable`)
+- **Linux:** `libfontconfig`, `libxkbcommon`, `libwayland`, `libgles2`, `libdbus`, `libsecret`
 
   ```bash
   sudo apt-get install -y \
@@ -112,9 +112,9 @@ flowchart TB
     libasound2-dev
   ```
 
-- **Windows：** Visual Studio Build Tools（MSVC）with C++ ワークロード
+- **Windows:** Visual Studio Build Tools (MSVC) with the C++ workload
 
-### ビルド
+### Build
 
 ```bash
 # Debug build (fast compile, no optimisations)
@@ -125,7 +125,7 @@ make build-desktop        # → target/release/bedrud-desktop (Linux)
                            # → target/release/bedrud-desktop.exe (Windows)
 ```
 
-または Cargo を直接使用：
+Or with Cargo directly:
 
 ```bash
 cargo build -p bedrud-desktop                          # debug
@@ -135,15 +135,15 @@ cargo run   -p bedrud-desktop                          # run immediately
 
 ## CI
 
-デスクトップアプリは `master` へのプッシュ時とプルリクエストで CI でビルドされます。
+The desktop app is built in CI on every push to `master` and on pull requests:
 
-| ジョブ | ランナー | 内容 |
+| Job | Runner | What it checks |
 |-----|--------|----------------|
-| `Desktop – Build & Test` | `ubuntu-latest` | `cargo build`、`cargo test` |
+| `Desktop – Build & Test` | `ubuntu-latest` | `cargo build`, `cargo test` |
 
-リリースビルドでは2つのアーティファクトが生成されます。
+Release builds produce two artifacts:
 
-| アーティファクト | ランナー | フォーマット |
+| Artifact | Runner | Format |
 |----------|--------|--------|
 | `bedrud-desktop-linux-x86_64.tar.xz` | `ubuntu-latest` | tar.xz |
-| `bedrud-desktop-windows-x86_64.zip` | `windows-latest` | zip
+| `bedrud-desktop-windows-x86_64.zip` | `windows-latest` | zip |

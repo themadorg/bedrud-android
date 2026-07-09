@@ -4,24 +4,24 @@ description: Нативное приложение для Android
 order: 9
 ---
 
-Приложение Bedrud для Android построено на Jetpack Compose и Kotlin, обеспечивая нативный интерфейс видеоконференций с поддержкой «картинка в картинке», глубоких ссылок и нескольких экземпляров.
+The Bedrud Android app is built with Jetpack Compose and Kotlin, providing a native video meeting experience with picture-in-picture, deep linking, and multi-instance support.
 
-## Стек технологий
+## Technology Stack
 
-| Технология | Версия | Назначение |
+| Technology | Version | Purpose |
 |-----------|---------|---------|
-| Kotlin | 2.1.0 | Язык программирования |
-| Jetpack Compose | Material 3 | UI-фреймворк |
-| Koin | 4.0.0 | Внедрение зависимостей |
-| Retrofit + OkHttp | Latest | HTTP-клиент |
-| LiveKit Android SDK | 2.23.3 | WebRTC-медиа |
-| Credentials API | Latest | Поддержка ключей доступа |
-| Encrypted SharedPreferences | Latest | Безопасное хранилище |
-| Coil | Latest | Загрузка изображений |
+| Kotlin | 2.1.0 | Language |
+| Jetpack Compose | Material 3 | UI toolkit |
+| Koin | 4.0.0 | Dependency injection |
+| Retrofit + OkHttp | Latest | HTTP client |
+| LiveKit Android SDK | 2.23.3 | WebRTC media |
+| Credentials API | Latest | Passkey support |
+| Encrypted SharedPreferences | Latest | Secure storage |
+| Coil | Latest | Image loading |
 
-**Целевая платформа:** Min SDK 28, Target SDK 35, JDK 17
+**Target:** Min SDK 28, Target SDK 35, JDK 17
 
-## Структура директорий
+## Directory Structure
 
 ```
 apps/android/app/src/main/java/com/bedrud/app/
@@ -74,9 +74,9 @@ apps/android/app/src/main/java/com/bedrud/app/
     └── theme/                      # Material 3 theme definition
 ```
 
-## Архитектура нескольких экземпляров
+## Multi-Instance Architecture
 
-Приложение для Android поддерживает одновременное подключение к нескольким серверам Bedrud.
+The Android app supports connecting to multiple Bedrud servers simultaneously.
 
 ```mermaid
 flowchart TB
@@ -98,18 +98,18 @@ flowchart TB
     AI */} DEPS
 ```
 
-### Ключевой паттерн
+### Key Pattern
 
-Все зависимости экземпляра предоставляются как `StateFlow<T?>` на `InstanceManager`. Composable-функции собирают их:
+All per-instance dependencies are exposed as `StateFlow<T?>` on `InstanceManager`. Composables collect them:
 
 ```kotlin
 val authManager = instanceManager.authManager.collectAsState().value ?: return
 val roomApi = instanceManager.roomApi.collectAsState().value ?: return
 ```
 
-Паттерн `?: return` гарантирует, что composable не рендерится, пока экземпляр полностью не инициализирован.
+The `?: return` pattern ensures the composable doesn't render until the instance is fully initialized.
 
-### Навигация
+### Navigation Flow
 
 ```mermaid
 flowchart LR
@@ -118,34 +118,34 @@ flowchart LR
     E["Has instances, logged in"] */} F[DashboardScreen]
 ```
 
-Переключатель экземпляров отображается как `ModalBottomSheet`, вызываемый из панели инструментов Dashboard.
+The instance switcher appears as a `ModalBottomSheet` triggered from the Dashboard toolbar.
 
-## Возможности
+## Features
 
-### Глубокие ссылки
+### Deep Linking
 
-Приложение обрабатывает URL-адреса:
+The app handles URLs matching:
 
-- `https://bedrud.com/m/*` - прямое подключение к комнате
-- `https://bedrud.com/c/*` - подключение к комнате по коду
+- `https://bedrud.com/m/*` - Direct room join
+- `https://bedrud.com/c/*` - Room join by code
 
-Настроено через intent-фильтры в `AndroidManifest.xml`.
+Configured via intent filters in `AndroidManifest.xml`.
 
-### Управление звонками
+### Call Management
 
-- **CallService** - foreground-сервис, поддерживающий соединение во время звонков
-- **CallConnectionService** - интеграция с телефонным фреймворком Android для корректного UI звонков
-- Необходимые разрешения: `MANAGE_OWN_CALLS`, `FOREGROUND_SERVICE_PHONE_CALL`, `FOREGROUND_SERVICE_CAMERA`, `FOREGROUND_SERVICE_MICROPHONE`
+- **CallService** - Foreground service that keeps the connection alive during calls
+- **CallConnectionService** - Integrates with Android's telephony framework for proper call UI
+- Required permissions: `MANAGE_OWN_CALLS`, `FOREGROUND_SERVICE_PHONE_CALL`, `FOREGROUND_SERVICE_CAMERA`, `FOREGROUND_SERVICE_MICROPHONE`
 
-### Картинка в картинке
+### Picture-in-Picture
 
-Экран конференции поддерживает режим PiP, позволяя пользователям видеть видеопоток при использовании других приложений.
+The meeting screen supports PiP mode, allowing users to see the video feed while using other apps.
 
-### Ключи доступа
+### Passkeys
 
-Использует Android Credentials API для регистрации и входа с помощью ключей доступа FIDO2/WebAuthn.
+Uses Android's Credentials API for FIDO2/WebAuthn passkey registration and login.
 
-## Сборка
+## Building
 
 ```bash
 # Debug APK
@@ -161,6 +161,6 @@ make release-android
 make dev-android
 ```
 
-### Подпись release-версии
+### Release Signing
 
-Для release-сборок требуется файл `keystore.properties` в корне проекта Android с конфигурацией подписи.
+Release builds require a `keystore.properties` file in the android project root with your signing configuration.

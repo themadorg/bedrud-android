@@ -4,79 +4,79 @@ description: Yerel Android uygulaması
 order: 9
 ---
 
-Bedrud Android uygulaması Jetpack Compose ve Kotlin ile oluşturulmuş olup, resim içinde resim, derin bağlantı ve çoklu örnek desteği ile yerel bir video toplantısı deneyimi sunar.
+The Bedrud Android app is built with Jetpack Compose and Kotlin, providing a native video meeting experience with picture-in-picture, deep linking, and multi-instance support.
 
-## Teknoloji Yığını
+## Technology Stack
 
-| Teknoloji | Sürüm | Amaç |
-|-----------|-------|------|
-| Kotlin | 2.1.0 | Dil |
-| Jetpack Compose | Material 3 | UI araç takımı |
-| Koin | 4.0.0 | Bağımlılık enjeksiyonu |
-| Retrofit + OkHttp | En son | HTTP istemcisi |
-| LiveKit Android SDK | 2.23.3 | WebRTC medya |
-| Credentials API | En son | Passkey desteği |
-| Encrypted SharedPreferences | En son | Güvenli depolama |
-| Coil | En son | Görsel yükleme |
+| Technology | Version | Purpose |
+|-----------|---------|---------|
+| Kotlin | 2.1.0 | Language |
+| Jetpack Compose | Material 3 | UI toolkit |
+| Koin | 4.0.0 | Dependency injection |
+| Retrofit + OkHttp | Latest | HTTP client |
+| LiveKit Android SDK | 2.23.3 | WebRTC media |
+| Credentials API | Latest | Passkey support |
+| Encrypted SharedPreferences | Latest | Secure storage |
+| Coil | Latest | Image loading |
 
-**Hedef:** Min SDK 28, Target SDK 35, JDK 17
+**Target:** Min SDK 28, Target SDK 35, JDK 17
 
-## Dizin Yapısı
+## Directory Structure
 
 ```
 apps/android/app/src/main/java/com/bedrud/app/
-├── BedrudApplication.kt           # Uygulama sınıfı (Koin başlatma)
-├── MainActivity.kt                # Tek etkinlik giriş noktası
+├── BedrudApplication.kt           # Application class (Koin init)
+├── MainActivity.kt                # Single-activity entry point
 ├── core/
-│   ├── api/                       # Retrofit API istemcisi
-│   │   ├── ApiClient.kt           # Auth yakalayıcılı temel HTTP istemcisi
-│   │   ├── AuthApi.kt             # Auth uç nokta tanımları
-│   │   └── RoomApi.kt             # Oda uç nokta tanımları
+│   ├── api/                       # Retrofit API client
+│   │   ├── ApiClient.kt           # Base HTTP client with auth interceptor
+│   │   ├── AuthApi.kt             # Auth endpoint definitions
+│   │   └── RoomApi.kt             # Room endpoint definitions
 │   ├── auth/
-│   │   └── AuthManager.kt         # Token yönetimi, giriş/çıkış
+│   │   └── AuthManager.kt         # Token management, login/logout
 │   ├── call/
-│   │   ├── CallService.kt         # Aramalar için ön plan servisi
+│   │   ├── CallService.kt         # Foreground service for calls
 │   │   └── CallConnectionService.kt  # Android ConnectionService
 │   ├── deeplink/
-│   │   └── DeepLinkHandler.kt     # bedrud.com derin bağlantılarını işleme
+│   │   └── DeepLinkHandler.kt     # Handle bedrud.com deep links
 │   ├── di/
-│   │   └── AppModule.kt           # Koin modülü tanımları
+│   │   └── AppModule.kt           # Koin module definitions
 │   ├── instance/
-│   │   ├── InstanceManager.kt     # Merkezi çoklu örnek düzenleyici
-│   │   ├── InstanceStore.kt       # Kalıcı örnek depolama
-│   │   └── InstanceDeps.kt        # Örnek başına bağımlılık konteyneri
+│   │   ├── InstanceManager.kt     # Central multi-instance orchestrator
+│   │   ├── InstanceStore.kt       # Persistent instance storage
+│   │   └── InstanceDeps.kt        # Per-instance dependency container
 │   ├── livekit/
-│   │   └── RoomManager.kt         # LiveKit oda bağlantı yöneticisi
+│   │   └── RoomManager.kt         # LiveKit room connection manager
 │   └── pip/
-│       └── PipManager.kt          # Resim içinde resim denetleyicisi
+│       └── PipManager.kt          # Picture-in-Picture controller
 ├── models/
-│   ├── User.kt                    # Kullanıcı veri modeli
-│   ├── Room.kt                    # Oda veri modeli
-│   ├── Instance.kt                # Sunucu örneği modeli
-│   └── ApiResponse.kt             # API yanıt sarmalayıcıları
+│   ├── User.kt                    # User data model
+│   ├── Room.kt                    # Room data model
+│   ├── Instance.kt                # Server instance model
+│   └── ApiResponse.kt             # API response wrappers
 └── ui/
     ├── screens/
     │   ├── auth/
-    │   │   ├── LoginScreen.kt     # E-posta/parola + passkey girişi
-    │   │   └── RegisterScreen.kt  # Hesap kaydı
+    │   │   ├── LoginScreen.kt     # Email/password + passkey login
+    │   │   └── RegisterScreen.kt  # Account registration
     │   ├── dashboard/
-    │   │   └── DashboardScreen.kt # Oda listesi ve yönetimi
+    │   │   └── DashboardScreen.kt # Room list and management
     │   ├── meeting/
-    │   │   └── MeetingScreen.kt   # Görüntülü arama arayüzü
+    │   │   └── MeetingScreen.kt   # Video call interface
     │   ├── instance/
-    │   │   ├── AddInstanceScreen.kt    # Sunucu örneği ekleme
-    │   │   └── InstanceSwitcher.kt     # Örnekler arasında geçiş
+    │   │   ├── AddInstanceScreen.kt    # Add server instance
+    │   │   └── InstanceSwitcher.kt     # Switch between instances
     │   ├── profile/
-    │   │   └── ProfileScreen.kt   # Kullanıcı profili
+    │   │   └── ProfileScreen.kt   # User profile
     │   └── settings/
-    │       └── SettingsScreen.kt  # Uygulama ayarları
-    ├── components/                 # Yeniden kullanılabilir Compose bileşenleri
-    └── theme/                      # Material 3 tema tanımı
+    │       └── SettingsScreen.kt  # App settings
+    ├── components/                 # Reusable Compose components
+    └── theme/                      # Material 3 theme definition
 ```
 
-## Çoklu Örnek Mimarisi
+## Multi-Instance Architecture
 
-Android uygulaması aynı anda birden fazla Bedrud sunucusuna bağlanmayı destekler.
+The Android app supports connecting to multiple Bedrud servers simultaneously.
 
 ```mermaid
 flowchart TB
@@ -98,18 +98,18 @@ flowchart TB
     AI */} DEPS
 ```
 
-### Temel Örüntü
+### Key Pattern
 
-Örnek başına tüm bağımlılıklar `InstanceManager` üzerinde `StateFlow<T?>` olarak sunulur. Composable'lar bunları toplar:
+All per-instance dependencies are exposed as `StateFlow<T?>` on `InstanceManager`. Composables collect them:
 
 ```kotlin
 val authManager = instanceManager.authManager.collectAsState().value ?: return
 val roomApi = instanceManager.roomApi.collectAsState().value ?: return
 ```
 
-`?: return` örüntüsü composable'ın örnek tam olarak başlatılana kadar_RENDERLENMEMESİNİ sağlar.
+The `?: return` pattern ensures the composable doesn't render until the instance is fully initialized.
 
-### Gezinti Akışı
+### Navigation Flow
 
 ```mermaid
 flowchart LR
@@ -118,49 +118,49 @@ flowchart LR
     E["Has instances, logged in"] */} F[DashboardScreen]
 ```
 
-Örnek değiştirici Dashboard araç çubuğundan tetiklenen bir `ModalBottomSheet` olarak görünür.
+The instance switcher appears as a `ModalBottomSheet` triggered from the Dashboard toolbar.
 
-## Özellikler
+## Features
 
-### Derin Bağlantı
+### Deep Linking
 
-Uygulama şu URL kalıplarını işler:
+The app handles URLs matching:
 
-- `https://bedrud.com/m/*` - Doğrudan odaya katılma
-- `https://bedrud.com/c/*` - Kod ile odaya katılma
+- `https://bedrud.com/m/*` - Direct room join
+- `https://bedrud.com/c/*` - Room join by code
 
-`AndroidManifest.xml` dosyasındaki intent filtreleri ile yapılandırılır.
+Configured via intent filters in `AndroidManifest.xml`.
 
-### Arama Yönetimi
+### Call Management
 
-- **CallService** - Aramalar sırasında bağlantıyı canlı tutan ön plan servisi
-- **CallConnectionService** - Uygun arama arayüzü için Android'in telefon çerçevesiyle entegre olur
-- Gerekli izinler: `MANAGE_OWN_CALLS`, `FOREGROUND_SERVICE_PHONE_CALL`, `FOREGROUND_SERVICE_CAMERA`, `FOREGROUND_SERVICE_MICROPHONE`
+- **CallService** - Foreground service that keeps the connection alive during calls
+- **CallConnectionService** - Integrates with Android's telephony framework for proper call UI
+- Required permissions: `MANAGE_OWN_CALLS`, `FOREGROUND_SERVICE_PHONE_CALL`, `FOREGROUND_SERVICE_CAMERA`, `FOREGROUND_SERVICE_MICROPHONE`
 
-### Resim İçinde Resim
+### Picture-in-Picture
 
-Toplantı ekranı PiP modunu destekler, kullanıcıların diğer uygulamaları kullanırken video yayını görmesine olanak tanır.
+The meeting screen supports PiP mode, allowing users to see the video feed while using other apps.
 
-### Passkey
+### Passkeys
 
-FIDO2/WebAuthn passkey kaydı ve girişi için Android'in Credentials API'sini kullanır.
+Uses Android's Credentials API for FIDO2/WebAuthn passkey registration and login.
 
-## Derleme
+## Building
 
 ```bash
-# Hata ayıklama APK
+# Debug APK
 make build-android-debug
 
-# Sürüm APK (keystore.properties gerektirir)
+# Release APK (requires keystore.properties)
 make build-android
 
-# Derle + bağlı cihaza yükle
+# Build + install on connected device
 make release-android
 
-# Android Studio'da aç
+# Open in Android Studio
 make dev-android
 ```
 
-### Sürüm İmzalama
+### Release Signing
 
-Sürüm derlemeleri Android proje kökünde imzalama yapılandırmanızı içeren bir `keystore.properties` dosyası gerektirir.
+Release builds require a `keystore.properties` file in the android project root with your signing configuration.

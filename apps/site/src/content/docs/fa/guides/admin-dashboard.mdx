@@ -1,280 +1,291 @@
 ---
-title: داشبورد مدیریت
-description: مدیریت کاربران، اتاق‌ها، تنظیمات و توکن‌های دعوت از رابط وب
+title: داشبورد ادمین
+description: مدیریت کاربران، اتاق‌ها، تنظیمات و توکن‌های دعوت از UI وب
 order: 35
 ---
 
-داشبورد مدیریت یک رابط وب برای مدیریت نمونه Bedrud شما فراهم می‌کند. کاربران `superadmin` می‌توانند آمار سیستم را مشاهده کنند، کاربران و اتاق‌ها را مدیریت کنند، تنظیمات سراسری نمونه را پیکربندی کنند و token (توکن) دعوت ایجاد کنند.
+The admin dashboard provides a web interface for managing your Bedrud instance. Superadmins can view system statistics, manage users and rooms, configure instance-wide settings, and generate invite tokens.
 
-## پیش‌نیازها
+## Prerequisites
 
-- **دسترسی superadmin:** باید `superadmin` در آرایه `accesses` کاربر خود داشته باشید.
-- **راه‌اندازی اولین مدیر:** پس از نصب Bedrud، یک کاربر ایجاد کرده و از طریق CLI ارتقا دهید:
+- **Superadmin access:** You must have `superadmin` in your user's `accesses` array.
+- **First admin setup:** After installing Bedrud, create a user and promote them via the CLI:
 
 ```bash
 bedrud user create --email "admin@example.com" --password "securepassword" --name "Admin"
 bedrud user promote --email "admin@example.com"
 ```
 
-هیچ رابط وب یا API برای ایجاد اولین superadmin وجود ندارد. این موضوع عامدانه و به دلایل امنیتی است.
+There is no web UI or API to create the first superadmin. This is intentional for security.
 
-## دسترسی به پنل مدیریت
+## Accessing the Admin Panel
 
-پس از داشتن دسترسی superadmin، پنل مدیریت در `/dashboard/admin` در برنامه وب Bedrud شما در دسترس است.
+Once you have superadmin access, the admin panel is available at `/dashboard/admin` in your Bedrud web application.
 
-**ناوبری:**
-- **نوار کناری (sidebar)** یک بخش "مدیریت" با لینک‌هایی به نمای کلی، کاربران، اتاق‌ها و تنظیمات نمایش می‌دهد. این بخش فقط برای کاربران `superadmin` قابل مشاهده است.
-- **منوی کشویی (dropdown) کاربر در گوشه بالا سمت راست** شامل لینک "پنل مدیریت" با آیکون سپر است.
-- کاربران غیرمدیر که تلاش می‌کنند به URLهای `/dashboard/admin/*` دسترسی پیدا کنند، به طور خودکار به `/dashboard` هدایت می‌شوند.
+**Navigation:**
+- The **sidebar** shows an "Admin" section with links to Overview, Users, Rooms, and Settings. This section is only visible to superadmins.
+- The **top-right user dropdown** includes an "Admin panel" link with a shield icon.
+- Non-admin users who attempt to visit `/dashboard/admin/*` URLs are automatically redirected to `/dashboard`.
 
 ---
 
-## صفحه نمای کلی
+## Overview Page
 
-صفحه نمای کلی در `/dashboard/admin` یک داشبورد با معیارهای کلیدی سیستم ارائه می‌دهد.
+The overview page at `/dashboard/admin` provides a dashboard with key system metrics.
 
-### آمار سیستم
+### System Stats
 
-کارت‌ها نمایش می‌دهند:
-- **کاربران آنلاین:** تعداد کل شرکت‌کنندگان فعال یکتا در تمام اتاق‌ها
-- **کل اتاق‌ها:** تعداد کل اتاق‌های نمونه
-- **کل کاربران:** تعداد کل کاربران ثبت‌نام شده
+Cards display:
+- **Online Users:** Total distinct active participants across all rooms
+- **Total Rooms:** Total rooms on the instance
+- **Total Users:** Total registered users
 
-### وضعیت گواهی TLS
+### TLS Certificate Status
 
-یک نشانگر رنگی وضعیت گواهی TLS سرور شما را نشان می‌دهد:
+A color-coded indicator shows the state of your server's TLS certificate:
 
-| وضعیت | رنگ | معنی |
+| Status | Color | Meaning |
 |---|---|---|
-| معتبر | سبز | گواهی معتبر است |
-| نزدیک به انقضا | کهربایی | ظرف ۳۰ روز آینده منقضی می‌شود |
-| منقضی شده | قرمز | گواهی منقضی شده است |
-| پیکربندی نشده | خاکستری | TLS غیرفعال است |
+| Valid | Green | Certificate is valid |
+| Expiring Soon | Amber | Expires within 30 days |
+| Expired | Red | Certificate has expired |
+| Not Configured | Gray | TLS is disabled |
 
-وضعیت گواهی هر ۵ دقیقه به‌روزرسانی می‌شود.
+The certificate status refreshes every 5 minutes.
 
-### نمودارها
+### Charts
 
-- **ایجاد اتاق:** نمودار میله‌ای اتاق‌های ایجاد شده در ۸ هفته گذشته
-- **ثبت‌نام‌های اخیر:** لیست جدیدترین ثبت‌نام‌های کاربران
-
----
-
-## مدیریت کاربران
-
-### لیست کاربران
-
-لیست کاربران در `/dashboard/admin/users` تمام کاربران ثبت‌نام شده را در یک جدول قابل جستجو و مرتب‌سازی نمایش می‌دهد.
-
-**ستون‌ها:**
-- **نام:** نام نمایشی کاربر
-- **ایمیل:** آدرس ایمیل کاربر
-- **ارائه‌دهنده:** روش احراز هویت (local، google، github، guest، passkey)
-- **نقش:** نشان سطح دسترسی. برای کاربران با دسترسی `superadmin` عبارت "Superadmin" را نشان می‌دهد.
-- **تاریخ ایجاد:** تاریخ ثبت‌نام
-- **وضعیت:** کلید فعال/مسدود
-
-**عملیات‌ها:**
-- **جستجو:** در نوار جستجو تایپ کنید تا کاربران بر اساس نام یا ایمیل فیلتر شوند (سمت کلاینت).
-- **مرتب‌سازی:** روی هدر هر ستون کلیک کنید تا مرتب شود. دوباره کلیک کنید تا صعودی/نزولی تغییر کند.
-- **صفحه‌بندی:** کنترل‌های ناوبری برای مرور لیست‌های بزرگ کاربران.
-
-### عملیات‌های کاربر
-
-هر ردیف کاربر شامل دکمه‌های عملیات سریع است:
-
-- **ارتقا/تنزل:** تغییر بین سطوح دسترسی `["user"]` و `["user", "superadmin"]`. در ستون سطح دسترسی قابل مشاهده است.
-- **فعال/مسدود:** تغییر وضعیت حساب کاربر. کاربران مسدود شده نمی‌توانند وارد شوند یا توکن خود را تازه‌سازی کنند.
-- **مشاهده جزئیات:** روی ردیف کاربر کلیک کنید تا نمای جزئیات باز شود.
-
-### جزئیات کاربر
-
-صفحه جزئیات در `/dashboard/admin/users/:userId` یک پروفایل کامل کاربر را نمایش می‌دهد.
-
-**اطلاعات نمایش داده شده:**
-- نام کاربر، ایمیل، ارائه‌دهنده و تاریخ ثبت‌نام
-- نشان سطح دسترسی (superadmin/user)
-- نمودار فعالیت ایجاد اتاق (تاریخچه ۸ هفته)
-- لیست اتاق‌های ایجاد شده توسط کاربر
-
-**عملیات‌ها:**
-- **ارتقا/تنزل:** دکمه اختصاصی در هدر جزئیات
-- **حذف کاربر:** کاربر و تمام داده‌های او را به طور دائمی حذف می‌کند. نیازمند تأیید ایمیل است. دکمه حذف برای حساب خودتان مخفی است (نمی‌توانید خودتان را حذف کنید).
-
-> **حذف دائمی و ناهمگام است.** حذف یک کاربر همچنین تمام اتاق‌ها، کلیدهای عبور و تنظیمات او را حذف می‌کند. درخواست بلافاصله برمی‌گردد در حالی که عملیات پاکسازی در پس‌زمینه اجرا می‌شود.
+- **Room Creation:** Bar chart of rooms created over the last 8 weeks
+- **Recent Signups:** List of the most recent user registrations
 
 ---
 
-## مدیریت اتاق‌ها
+## User Management
 
-### لیست اتاق‌ها
+### User List
 
-لیست اتاق‌ها در `/dashboard/admin/rooms` تمام اتاق‌های نمونه را نشان می‌دهد.
+The user list at `/dashboard/admin/users` shows all registered users in a searchable, sortable table.
 
-**ستون‌ها:**
-- **نام اتاق:** شناسه اتاق
-- **نمایانی:** عمومی، خصوصی یا فهرست‌نشده
-- **حداکثر شرکت‌کنندگان:** قابل ویرایش inline (درون‌خطی) — روی مقدار کلیک کنید تا تغییر دهید
-- **وضعیت:** فعال یا غیرفعال
-- **تاریخ ایجاد:** تاریخ ایجاد اتاق
+**Columns:**
+- **Name:** User's display name
+- **Email:** User's email address
+- **Provider:** Authentication method (local, google, github, guest, passkey)
+- **Role:** Access level badge. Shows "Superadmin" for users with `superadmin` access.
+- **Created:** Registration date
+- **Status:** Active/Banned toggle
 
-**عملیات‌ها:**
-- **جستجو:** فیلتر اتاق‌ها بر اساس نام (سمت کلاینت)
-- **مرتب‌سازی:** روی هدر ستون‌ها کلیک کنید تا مرتب شوند
-- **تعلیق:** پایان یک تماس فعال بدون حذف اتاق
-- **حذف:** بستن دائمی یک اتاق با حذف آبشاری
+**Actions:**
+- **Search:** Type in the search bar to filter users by name or email (client-side).
+- **Sort:** Click any column header to sort. Click again to toggle ascending/descending.
+- **Pagination:** Navigation controls for browsing large user lists.
 
-### جزئیات اتاق
+### User Actions
 
-صفحه جزئیات در `/dashboard/admin/rooms/:roomId` دید عمیقی به یک اتاق فراهم می‌کند.
+Each user row includes quick-action buttons:
 
-**تنظیمات اتاق:**
-- نام اتاق، حالت نمایانی، حداکثر شرکت‌کنندگان
-- **تغییر حالت Persistent (ماندگار):** فعال کنید تا از پاکسازی خودکار اتاق‌های بیکار جلوگیری شود. این گزینه فقط برای `superadmin` در دسترس است — سازندگان اتاق نمی‌توانند آن را تغییر دهند.
+- **Promote/Demote:** Toggle between `["user"]` and `["user", "superadmin"]` access levels. Visible in the access level column.
+- **Active/Banned:** Toggle the user's account status. Banned users cannot log in or refresh tokens.
+- **View Detail:** Click the user row to open the detail view.
 
-**شرکت‌کنندگان زنده:**
-- لیست شرکت‌کنندگان که هر ۳ ثانیه به‌روزرسانی می‌شود
-- برای هر شرکت‌کننده: نام، زمان پیوستن، اطلاعات ترک (صدا/تصویر/اشتراک‌گذاری صفحه)
-- **نمودار نرخ بیت:** نمودار زنده نرخ بیت برای ترک‌های صوتی و تصویری
-- **اخراج:** حذف هر شرکت‌کننده از اتاق
-- **قطع صدا:** قطع صدای ترک‌های صوتی هر شرکت‌کننده
+### User Detail
+
+The detail page at `/dashboard/admin/users/:userId` shows a full user profile.
+
+**Information displayed:**
+- User name, email, provider, and registration date
+- Access level badge (superadmin/user)
+- Room creation activity chart (8-week history)
+- List of rooms created by the user
+
+**Actions:**
+- **Promote/Demote:** Dedicated button in the detail header
+- **Delete User:** Permanently removes the user and all their data. Requires email confirmation. The delete button is hidden for your own account (you cannot delete yourself).
+
+> **Delete is permanent and asynchronous.** Deleting a user also removes all their rooms, passkeys, and preferences. The request returns immediately while the cleanup runs in the background.
 
 ---
 
-## تنظیمات سیستم
+## Room Management
 
-صفحه تنظیمات در `/dashboard/admin/settings` در ۹ tab (تب) سازمان‌دهی شده است. پس از تغییر هر تب روی "ذخیره تغییرات" کلیک کنید (زبانه عمومی در تغییرات حالت ثبت‌نام به طور خودکار ذخیره می‌شود).
+### Room List
 
-### تب عمومی
+The room list at `/dashboard/admin/rooms` shows all rooms on the instance.
 
-- **حالت ثبت‌نام:**
-  - **باز:** هر کسی می‌تواند حساب بسازد
-  - **فقط با دعوت:** کاربران جدید باید یک توکن دعوت معتبر ارائه دهند
-  - **بسته:** بدون ثبت‌نام جدید — کاربران موجود همچنان می‌توانند وارد شوند
-  - تغییرات هنگام تغییر حالت به طور خودکار ذخیره می‌شوند
+**Columns:**
+- **Room Name:** Room identifier
+- **Visibility:** Public, private, or unlisted
+- **Max Participants:** Editable inline — click the value to change it
+- **Status:** Active or inactive
+- **Created:** Room creation date
 
-**مدیریت token دعوت (درون تب عمومی):**
+**Actions:**
+- **Search:** Filter rooms by name (client-side)
+- **Sort:** Click column headers to sort
+- **Suspend:** End an active call without deleting the room
+- **Delete:** Permanently close a room with cascade deletion
 
-tokenها کنترل می‌کنند چه کسی می‌تواند در حالت فقط با دعوت ثبت‌نام کند.
+### Room Detail
 
-- **ایجاد توکن:** یک ایمیل اختیاری برای قفل کردن توکن به یک آدرس خاص وارد کنید و دوره انقضا را انتخاب کنید (۲۴ ساعت، ۷۲ ساعت، ۷ روز یا ۳۰ روز).
-- **لیست توکن‌ها:** تمام توکن‌ها را با وضعیتشان نشان می‌دهد. توکن‌های استفاده‌نشده نشان سبز "فعال" دارند و توکن‌های استفاده شده "استفاده شده" را به رنگ خاکستری نشان می‌دهند.
-- **کپی توکن:** روی دکمه کپی کلیک کنید تا مقدار ۳۲ کاراکتری توکن در کلیپ‌بورد شما کپی شود.
-- **ابطال:** یک توکن را حذف کنید تا از استفاده آن جلوگیری شود.
+The detail page at `/dashboard/admin/rooms/:roomId` provides deep visibility into a room.
 
-### تب احراز هویت
+**Room Settings:**
+- Room name, visibility mode, max participants
+- **Persistent mode toggle:** Enable to prevent automatic cleanup of idle rooms. This is available to superadmins only — room creators cannot change it.
 
-- **کلیدهای عبور:** تغییر وضعیت احراز هویت بدون رمز عبور FIDO2/WebAuthn
-- **ارائه‌دهندگان OAuth:** پیکربندی OAuth گوگل، گیت‌هاب و توییتر:
+**Live Participants:**
+- Real-time participant list that polls every 3 seconds
+- Per participant: name, join time, track information (audio/video/screen share)
+- **Bitrate chart:** Live bitrate graph for audio and video tracks
+- **Kick:** Remove any participant from the room
+- **Mute:** Mute any participant's audio tracks
+
+---
+
+## System Settings
+
+The settings page at `/dashboard/admin/settings` is organized into 7 tabs. Click "Save changes" after modifying any tab (the General tab auto-saves on registration mode changes).
+
+### General Tab
+
+- **Registration Mode:**
+  - **Open:** Anyone can register an account
+  - **Invite-only:** New users must provide a valid invite token
+  - **Closed:** No new registrations — existing users can still log in
+  - Changes save automatically when you switch modes
+
+**Invite Token Management (within General tab):**
+
+Tokens control who can register when in Invite-only mode.
+
+- **Generate Token:** Enter an optional email to lock the token to a specific address, and select an expiry period (24 hours, 72 hours, 7 days, or 30 days).
+- **Token List:** Shows all tokens with their status. Unused tokens have a green "Active" badge, used tokens show "Used" in gray.
+- **Copy Token:** Click the copy button to copy the 32-character token value to your clipboard.
+- **Revoke:** Delete a token to prevent it from being used.
+- **Recordings Toggle:** UI may expose an “allow room recordings” setting for a **planned** feature. Recording HTTP routes are not registered in production yet.
+
+### Webhooks Tab
+
+The Webhooks tab lets superadmins register HTTP callbacks for real-time room and recording events.
+
+- **Add Webhook:** Enter a URL, select event types, and optionally set a custom HMAC secret.
+- **Event Types:** `room.created`, `room.ended`, `participant.joined`, `ping` (test). `recording.completed` is reserved for a planned feature. Delivery uses `X-Bedrud-Signature` / `X-Bedrud-Event` headers — see the [Webhooks Guide](/fa/docs/guides/webhooks).
+- **Test:** Send a test ping to verify connectivity.
+- **Rotate:** Generate a new HMAC signing secret (old one immediately invalidated).
+- **Status Column:** Shows last HTTP status code and timestamp of last delivery.
+
+### Authentication Tab
+
+- **Passkeys:** Toggle FIDO2/WebAuthn passwordless authentication
+- **OAuth Providers:** Configure Google, GitHub, and Twitter OAuth:
   - Client ID
   - Client Secret
   - Redirect URL
 
-هر ارائه‌دهنده کارت پیکربندی مخصوص به خود را دارد. با پر کردن هر سه فیلد، یک ارائه‌دهنده را فعال کنید.
+Each provider has its own configuration card. Enable a provider by filling in all three fields.
 
-### تب LiveKit
+### LiveKit Tab
 
-- **LiveKit خارجی:** تغییر وضعیت برای استفاده از یک سرور LiveKit خارجی به جای سرور embedded
-- **میزبان:** میزبان و پورت سرور LiveKit (مثلاً `127.0.0.1:7880`)
-- **کلید API:** کلید API سرور LiveKit
-- **سکرت API (API Secret):** API Secret سرور LiveKit
+- **External LiveKit:** Toggle to use an external LiveKit server instead of the embedded one
+- **Host:** LiveKit server host and port (e.g., `127.0.0.1:7880`)
+- **API Key:** LiveKit server API key
+- **API Secret:** LiveKit server API secret
 
-### تب سرور
+### Server Tab
 
-- **پورت:** پورت سرور HTTP (پیش‌فرض: `80`)
-- **میزبان:** نام میزبان سرور
-- **دامنه:** دامنه سرور
-- **ایمیل:** ایمیل مدیریتی (برای ثبت گواهی ACME استفاده می‌شود)
-- **TLS:** فعال کردن HTTPS با فایل‌های گواهی
-- **ACME:** فعال کردن مدیریت خودکار گواهی Let's Encrypt
-- **پروکسی معکوس:** نشان دادن اینکه سرور پشت یک پروکسی است (بر تشخیص IP کلاینت تأثیر می‌گذارد)
-- **مسیرهای گواهی:** مسیرهای فایل گواهی و کلید (برای راه‌اندازی دستی TLS)
-- **وضعیت گواهی:** نشانگر درون‌خطی که سلامت فعلی گواهی TLS را نشان می‌دهد
+- **Port:** HTTP server port (default: `80`)
+- **Host:** Server hostname
+- **Domain:** Server domain
+- **Email:** Administrative email (used for ACME certificate registration)
+- **TLS:** Enable HTTPS with certificate files
+- **ACME:** Enable automatic Let's Encrypt certificate management
+- **Reverse Proxy:** Indicate the server is behind a proxy (affects client IP detection)
+- **Certificate Paths:** Cert file and key file paths (for manual TLS setup)
+- **Certificate Status:** Inline indicator showing current TLS certificate health
 
-### تب CORS
+### CORS Tab
 
-- **مبدأهای مجاز:** لیست جدا شده با کاما از مبدأهای CORS
-- **هدرهای مجاز:** لیست جدا شده با کاما از هدرهای درخواست مجاز
-- **روش‌های مجاز:** لیست جدا شده با کاما از روش‌های HTTP مجاز
-- **Allow Credentials:** فعال/غیرفعال کردن ارسال credentials (اعتبارنامه‌ها) در درخواست‌های cross-origin
-- **حداکثر عمر:** مدت زمان کش برای پاسخ‌های preflight CORS (ثانیه)
+- **Allowed Origins:** Comma-separated list of CORS origins
+- **Allowed Headers:** Comma-separated list of allowed request headers
+- **Allowed Methods:** Comma-separated list of allowed HTTP methods
+- **Allow Credentials:** Toggle to include credentials in cross-origin requests
+- **Max Age:** Cache duration for CORS preflight responses (seconds)
 
-### تب محدودیت‌های اتاق
+### Room Limits Tab
 
-تعداد اتاق‌های فعالی که یک کاربر می‌تواند ایجاد کند را کنترل می‌کند:
+Controls how many rooms a single user can create:
 
-- **حداکثر اتاق برای هر کاربر:** حداکثر تعداد اتاق‌های فعالی که یک کاربر غیر superadmin می‌تواند ایجاد کند (پیش‌فرض: ۱۰۰، ۰ = نامحدود). superadmin‌ها از این محدودیت معاف هستند.
+- **Max Rooms Per User:** Maximum number of active rooms a non-superadmin user can create (default: 100, 0 = unlimited). Superadmins bypass this limit.
 
-### تب سهمیه آپلود
+### Upload Quotas Tab
 
-محدودیت‌های ذخیره‌سازی برای آپلود تصاویر چت را کنترل می‌کند:
+Controls storage limits for chat image uploads:
 
-- **حداکثر بایت آپلود برای هر کاربر:** سهمیه ذخیره‌سازی هر کاربر در تمام اتاق‌ها (پیش‌فرض: ۵۲۴۲۸۸۰۰۰ = ۵۰۰ مگابایت، ۰ = نامحدود). superadmin‌ها از این محدودیت معاف هستند.
-- **آستانه دیسک جهانی:** سقف ذخیره‌سازی کل برای همه کاربران. وقتی بیش از حد شود، همه آپلودها تا زمانی که مدیر فضا آزاد کند رد می‌شوند (پیش‌فرض: ۰ = نامحدود). این محدودیت برای همه از جمله superadmin‌ها اعمال می‌شود.
+- **Max Upload Bytes Per User:** Per-user storage quota across all rooms (default: 524288000 = 500 MB, 0 = unlimited). Superadmins bypass this limit.
+- **Global Disk Threshold:** Total storage ceiling across all users. When exceeded, all uploads are rejected until an admin frees space (default: 0 = unlimited). This limit applies to everyone, including superadmins.
 
-### تب آپلود چت
+### Chat Uploads Tab
 
-پیکربندی نحوه ذخیره‌سازی آپلود تصاویر چت:
+Configure how chat image uploads are stored:
 
-- **پشتیبان:** `disk` (فایل سیستم محلی)، `s3` (ذخیره‌سازی سازگار با S3)، یا `inline` (base64 embedded)
-- **حداکثر بایت آپلود:** حداکثر اندازه فایل برای هر آپلود
-- **حداکثر درون‌خطی:** حداکثر اندازه برای آپلودهای inline/base64
-- **پوشه دیسک:** پوشه محلی برای آپلودهای پشتیبان `disk`
+- **Backend:** `disk` (local filesystem), `s3` (S3-compatible storage), or `inline` (base64 embedded)
+- **Max Upload Bytes:** Maximum file size per upload
+- **Inline Max:** Maximum size for inline/base64 uploads
+- **Disk Directory:** Local directory for `disk` backend uploads
 
-**پیکربندی S3 (وقتی پشتیبان `s3` است):**
-- نقطه پایانی (Endpoint)، سطل (Bucket)، منطقه (Region)
-- کلید دسترسی (Access Key)، کلید مخفی (Secret Key)
-- URL عمومی (Public URL)
+**S3 Configuration (when backend is `s3`):**
+- Endpoint, Bucket, Region
+- Access Key, Secret Key
+- Public URL
 
-### تب ثبت وقایع
+### Logging Tab
 
-- **سطح ثبت:** `trace`، `debug`، `info`، `warn` یا `error`. برای اشکال‌زدایی مفید است — برای دیدن لاگ‌های جزئی به `debug` تغییر دهید، سپس برای محیط عملیاتی به `info` برگردید.
+- **Log Level:** `trace`, `debug`, `info`, `warn`, or `error`. Useful for debugging — switch to `debug` to see detailed logs, then back to `info` for production.
 
 ---
 
-## عیب‌یابی
+## Troubleshooting
 
-### "پنل مدیریت قابل مشاهده نیست"
+### "Admin panel not visible"
 
-**نشانه:** بخش مدیریت در نوار کناری ظاهر نمی‌شود و لینک "پنل مدیریت" از منوی کشویی کاربر غایب است.
+**Symptom:** The Admin section does not appear in the sidebar, and the "Admin panel" link is missing from the user dropdown.
 
-**علت:** کاربر وارد شده `superadmin` در آرایه `accesses` خود ندارد.
+**Cause:** The logged-in user does not have `superadmin` in their `accesses` array.
 
-**راه‌حل:** از CLI برای ارتقای کاربر استفاده کنید:
+**Solution:** Use the CLI to promote the user:
 ```bash
 bedrud user promote --email "your-email@example.com"
 ```
-سپس خارج شده و دوباره وارد شوید تا یک JWT جدید با دسترسی‌های به‌روزرسانی شده دریافت کنید.
+Then log out and log back in to get a new JWT with the updated accesses.
 
-### "تنظیمات ذخیره نمی‌شوند"
+### "Settings won't save"
 
-**نشانه:** ذخیره تنظیمات با موفقیت برمی‌گردد، اما مقادیر محرمانه بدون تغییر به نظر می‌رسند.
+**Symptom:** Saving settings returns successfully, but secret values appear unchanged.
 
-**علت:** سرور مقادیر محرمانه موجود را وقتی `"••••••••"` یا یک رشته خالی در درخواست به‌روزرسانی ارسال می‌کنید، حفظ می‌کند. این طراحی عمدی است — از بازنویسی تصادفی مقادیر محرمانه وقتی فقط فیلدهای غیرمحرمانه را تغییر می‌دهید جلوگیری می‌کند.
+**Cause:** The server preserves existing secret values when you send `"••••••••"` or an empty string in the update request. This is by design — it prevents accidentally overwriting secrets when you're only changing non-secret fields.
 
-**راه‌حل:** مقدار واقعی محرمانه (نه جایگزین پوشانده شده) را در درخواست به‌روزرسانی ارسال کنید.
+**Solution:** Send the actual secret value (not the masked placeholder) in the update request.
 
-### "نمی‌توانم حساب خودم را حذف کنم"
+### "Cannot delete my own account"
 
-**نشانه:** دکمه حذف در صفحه جزئیات کاربر خودتان مخفی است یا API خطای 400 برمی‌گرداند.
+**Symptom:** The delete button is hidden on your own user detail page, or the API returns a 400 error.
 
-**علت:** حذف خود به دلایل امنیتی مسدود شده است. نمی‌توانید حسابی که در حال حاضر با آن وارد شده‌اید را حذف کنید.
+**Cause:** Self-deletion is blocked for safety. You cannot delete the account you're currently logged in as.
 
-**راه‌حل:** از یک superadmin دیگر بخواهید حساب را حذف کند، یا از CLI به عنوان یک کاربر دیگر استفاده کنید.
+**Solution:** Have another superadmin delete the account, or use the CLI as a different user.
 
-### "هنگام بازدید از URL مدیریت به داشبورد هدایت می‌شوم"
+### "Redirected to dashboard when visiting admin URL"
 
-**نشانه:** بازدید مستقیم از `/dashboard/admin` به `/dashboard` هدایت می‌شود.
+**Symptom:** Visiting `/dashboard/admin` directly redirects to `/dashboard`.
 
-**علت:** مسیر نگهبان مدیریت، آرایه `accesses` در JWT شما را بررسی می‌کند. اگر `superadmin` موجود نباشد، نگهبان هدایت می‌کند.
+**Cause:** The admin guard route checks your JWT's `accesses` array. If `superadmin` is missing, the guard redirects.
 
-**راه‌حل:** تأیید کنید که حساب شما دسترسی superadmin دارد. اگر دسترسی شما اخیراً تغییر کرده، خارج شده و دوباره وارد شوید تا JWT خود را تازه‌سازی کنید.
+**Solution:** Verify your account has superadmin access. If your access was recently changed, log out and log back in to refresh your JWT.
 
 ---
 
-## مشاهده همچنین
+## See Also
 
-- [API مدیریت](/fa/docs/api/api-reference#tag/admin) — مرجع کامل API برای تمام نقاط پایانی مدیریت
-- [احراز هویت](/fa/docs/backend/authentication) — سطوح دسترسی و سیستم نقش‌ها
-- [پیکربندی](/fa/docs/getting-started/configuration) — مرجع تنظیمات config.yaml
-- [شروع سریع](/fa/docs/getting-started/quickstart) — راهنمای راه‌اندازی اولین مدیر
+- [Admin API](/fa/docs/api/api-reference#tag/admin) — full API reference for all admin endpoints
+- [Authentication](/fa/docs/backend/authentication) — access levels and role system
+- [Configuration](/fa/docs/getting-started/configuration) — config.yaml settings reference
+- [Quick Start](/fa/docs/getting-started/quickstart) — first admin setup walkthrough

@@ -4,9 +4,9 @@ description: معماری سیستم سطح بالای پلتفرم بدرود
 order: 6
 ---
 
-بدرود یک monorepo شامل سرور Go، سه اپلیکیشن کلاینت، agentهای Python و پکیج‌های مشترک است. این صفحه نشان می‌دهد اجزا چگونه به هم متصل‌اند.
+Bedrud is a monorepo containing a Go server, three client applications, Python bot agents, and shared packages. This page describes how the components relate to each other.
 
-## نمودار سطح بالا
+## High-Level Diagram
 
 ```mermaid
 flowchart TB
@@ -21,94 +21,97 @@ flowchart TB
         Router["Fiber HTTP Router<br/>/api/auth/* /api/room/* /api/admin/*"]
         DB["GORM / SQLite<br/>(or PostgreSQL)"]
         LKSDK["LiveKit Protocol SDK<br/>(token generation, room management)"]
+        Queue["Job Queue<br/>(async deletion, uploads)"]
         LiveKit["Embedded LiveKit<br/>Media Server (WebRTC)"]
     end
 
     Clients */}|"REST API + WebSocket"| Router
     Router */} DB
     Router */} LKSDK
+    Router -.->|"enqueue jobs"| Queue
     LKSDK */} LiveKit
 ```
 
-## اجزا
+## Components
 
-### سرور (`server/`)
+### Server (`server/`)
 
-backend Go هسته اصلی بدرود است. وظایف آن:
+The Go backend is the core of Bedrud. It handles:
 
-- **REST API** — احراز هویت، مدیریت اتاق، عملیات ادمین
-- **فایل‌های استاتیک** — frontend کامپایل‌شده با `//go:embed` در باینری embed شده
-- **یکپارچگی LiveKit** — تولید token و مدیریت اتاق‌ها با LiveKit Protocol SDK
-- **LiveKit داخلی** — media server به عنوان فرآیند فرزند اجرا می‌شود
+- **REST API** - authentication, room management, admin operations
+- **Static file serving** - the compiled web frontend is embedded via `//go:embed`
+- **LiveKit integration** - generates tokens and manages rooms via the LiveKit Protocol SDK
+- **Embedded LiveKit server** - the media server binary runs as a child process
+- **Async job queue** - background worker processes room deletion, user deletion, suspensions, and chat uploads without blocking API responses
 
-سرور از **Fiber** (فریم‌ورک وب مشابه Express.js) و **GORM** (ORM) استفاده می‌کند. SQLite برای توسعه، PostgreSQL برای production.
+The server uses the **Fiber** web framework (similar to Express.js in Node.js) and **GORM** as the ORM layer. It supports SQLite for development and PostgreSQL for production.
 
-برای جزئیات [معماری سرور](/fa/docs/architecture/server) را ببینید.
+See [Server Architecture](/fa/docs/architecture/server) for details.
 
-### فرانت‌اند وب (`apps/web/`)
+### Web Frontend (`apps/web/`)
 
-اپلیکیشن **React** با TanStack Start، TailwindCSS v4 و shadcn/ui. در production، SSR انجام می‌شود و assetها در باینری Go embed می‌شوند.
+A **React** application built with TanStack Start, TailwindCSS v4, and shadcn/ui. In production, it is pre-rendered on the server and the client assets are embedded into the Go binary.
 
-قابلیت‌های کلیدی:
+Key capabilities:
 
-- Web UI جلسه ویدیویی با LiveKit Client SDK
-- احراز هویت مبتنی بر JWT با تازه‌سازی خودکار توکن
-- داشبورد ادمین برای مدیریت کاربران و اتاق‌ها
-- سیستم طراحی با کتابخانه کامپوننت سازگار
+- Video meeting UI with LiveKit Client SDK
+- JWT-based authentication with automatic token refresh
+- Admin dashboard for user and room management
+- Design system with consistent component library
 
-برای جزئیات به [فرانت‌اند وب](/fa/docs/architecture/web) ببینید.
+See [Web Frontend](/fa/docs/architecture/web) for details.
 
-### اپلیکیشن Android (`apps/android/`)
+### Android App (`apps/android/`)
 
-یک اپلیکیشن بومی Android ساخته شده با **Jetpack Compose** و **Kotlin**. از Koin برای تزریق وابستگی و Retrofit برای HTTP استفاده می‌کند.
+A native Android app built with **Jetpack Compose** and **Kotlin**. Uses Koin for dependency injection and Retrofit for HTTP.
 
-قابلیت‌های کلیدی:
+Key capabilities:
 
-- تجربه کامل جلسه ویدیویی با LiveKit Android SDK
-- حالت تصویر در تصویر
-- مدیریت لینک عمیق (`bedrud.com/m/*` و `bedrud.com/c/*`)
-- مدیریت تماس با ConnectionService اندروید
-- پشتیبانی چند نمونه (اتصال به چندین سرور)
+- Full video meeting experience with LiveKit Android SDK
+- Picture-in-picture mode
+- Deep link handling (`bedrud.com/m/*` and `bedrud.com/c/*`)
+- Call management with Android's ConnectionService
+- Multi-instance support (connect to multiple servers)
 
-برای جزئیات به [اپلیکیشن Android](/fa/docs/architecture/android) ببینید.
+See [Android App](/fa/docs/architecture/android) for details.
 
-### اپلیکیشن iOS (`apps/ios/`)
+### iOS App (`apps/ios/`)
 
-یک اپلیکیشن بومی iOS ساخته شده با **SwiftUI**. از KeychainAccess برای ذخیره امن اعتبارنامه و LiveKit Swift SDK برای مدیا استفاده می‌کند.
+A native iOS app built with **SwiftUI**. Uses KeychainAccess for secure credential storage and LiveKit Swift SDK for media.
 
-قابلیت‌های کلیدی:
+Key capabilities:
 
-- تجربه کامل جلسه ویدیویی
-- پشتیبانی چند نمونه
-- مدیریت لینک عمیق
-- ذخیره امن مبتنی بر Keychain
+- Full video meeting experience
+- Multi-instance support
+- Deep link handling
+- Keychain-based secure storage
 
-برای جزئیات به [اپلیکیشن iOS](/fa/docs/architecture/ios) ببینید.
+See [iOS App](/fa/docs/architecture/ios) for details.
 
-### اپلیکیشن دسکتاپ (`apps/desktop/`)
+### Desktop App (`apps/desktop/`)
 
-یک اپلیکیشن دسکتاپ بومی Windows و Linux ساخته شده با **Rust** و جعبه ابزار UI **Slint**. به یک باینری تکی کامپایل می‌شود بدون وابستگی‌های زمان اجرا.
+A native Windows and Linux desktop application built with **Rust** and the **Slint** UI toolkit. Compiles to a single binary with no runtime dependencies.
 
-قابلیت‌های کلیدی:
+Key capabilities:
 
-- تجربه کامل جلسه ویدیویی از طریق LiveKit Rust SDK
-- رندر بومی Windows (Direct3D 11) و Linux (OpenGL/Vulkan)
-- پشتیبانی چند نمونه (اتصال به چندین سرور بدرود)
-- یکپارچی با keyring سیستم‌عامل برای ذخیره امن اعتبارنامه
+- Full video meeting experience via LiveKit Rust SDK
+- Native Windows (Direct3D 11) and Linux (OpenGL/Vulkan) rendering
+- Multi-instance support (connect to multiple Bedrud servers)
+- OS keyring integration for secure credential storage
 
-برای جزئیات به [اپلیکیشن دسکتاپ](/fa/docs/architecture/desktop) ببینید.
+See [Desktop App](/fa/docs/architecture/desktop) for details.
 
-### عوامل ربات (`agents/`)
+### Bot Agents (`agents/`)
 
-اسکریپت‌های Python که به عنوان ربات به اتاق‌های جلسه می‌پیوندند و محتوای مدیا را استریم می‌کنند:
+Python scripts that join meeting rooms as bots and stream media content:
 
-- **عامل موزیک** - فایل‌های صوتی را پخش می‌کند
-- **عامل رادیو** - ایستگاه‌های رادیو اینترنتی را استریم می‌کند
-- **عامل استریم ویدیو** - محتوای ویدیویی را به اشتراک می‌گذارد (HLS، MP4)
+- **Music Agent** - plays audio files
+- **Radio Agent** - streams internet radio stations
+- **Video Stream Agent** - shares video content (HLS, MP4)
 
-برای جزئیات به [عوامل ربات](/fa/docs/architecture/agents) ببینید.
+See [Bot Agents](/fa/docs/architecture/agents) for details.
 
-## جریان احراز هویت
+## Authentication Flow
 
 ```mermaid
 sequenceDiagram
@@ -126,19 +129,19 @@ sequenceDiagram
     Server*/}>Client: room list
 ```
 
-همه درخواست‌های احراز هویت شده از توکن‌های JWT در هدر `Authorization` استفاده می‌کنند. wrapper `authFetch` فرانت‌اند وب پیوست توکن و تازه‌سازی خودکار را مدیریت می‌کند.
+All authenticated requests use JWT tokens in the `Authorization` header. The web frontend's `authFetch` wrapper handles token attachment and automatic refresh.
 
-روش‌های احراز هویت پشتیبانی شده:
+Supported auth methods:
 
-| روش | Endpoint | توضیح |
-|------|----------|-------|
-| ایمیل/رمز عبور | `POST /api/auth/login` | اعتبارنامه‌های سنتی |
-| ثبت‌نام | `POST /api/auth/register` | ایجاد حساب جدید |
-| مهمان | `POST /api/auth/guest-login` | دسترسی موقت فقط با نام |
-| OAuth | `GET /api/auth/:provider/login` | Google، GitHub، Twitter |
-| کلیدهای عبور | `POST /api/auth/passkey/*` | بیومتریک FIDO2/WebAuthn |
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| Email/Password | `POST /api/auth/login` | Traditional credentials |
+| Registration | `POST /api/auth/register` | New account creation |
+| Guest | `POST /api/auth/guest-login` | Temporary access with just a name |
+| OAuth | `GET /api/auth/:provider/login` | Google, GitHub, Twitter |
+| Passkeys | `POST /api/auth/passkey/*` | FIDO2/WebAuthn biometrics |
 
-## جریان اتصال جلسه
+## Meeting Connection Flow
 
 ```mermaid
 sequenceDiagram
@@ -164,88 +167,88 @@ sequenceDiagram
     Note over C,LK: Audio/video tracks flow through SFU
 ```
 
-۱. کلاینت درخواست پیوستن به اتاق را از طریق REST API می‌دهد
-۲. سرور مجوزها را تأیید می‌کند و یک توکن LiveKit امضا شده تولید می‌کند
-۳. کلاینت مستقیماً به LiveKit از طریق WebSocket با استفاده از توکن متصل می‌شود
-۴. ICE نامزدها را جمع‌آوری می‌کند (host، STUN، TURN) و بهترین مسیر را انتخاب می‌کند
-۵. ترک‌های صوتی/ویدیویی از طریق SFU LiveKit جریان می‌یابند
+1. The client requests to join a room via the REST API
+2. The server validates permissions and generates a signed LiveKit token
+3. The client connects directly to LiveKit via WebSocket using the token
+4. ICE gathers candidates (host, STUN, TURN) and selects the best path
+5. Audio/video tracks flow through LiveKit's SFU
 
-برای پشته اتصال کامل به [اتصال WebRTC](/fa/docs/architecture/webrtc-connectivity) ببینید.
+See [WebRTC Connectivity](/fa/docs/architecture/webrtc-connectivity) for the full connectivity stack.
 
-## مدل داده
+## Data Model
 
-### کاربر
+### User
 
-| فیلد | نوع | توضیح |
-|------|------|-------|
-| ID | uint | کلید اصلی |
-| Email | string | آدرس ایمیل منحصر به فرد |
-| Name | string | نام نمایشی |
-| Password | string | رمز عبور هش شده (خالی برای OAuth/مهمان) |
-| Avatar | string | URL آواتار |
-| Provider | string | provider احراز هویت (`local`، `google`، `github`، `twitter`، `guest`) |
-| Role | string | `user` یا `admin` |
+| Field | Type | Description |
+|-------|------|-------------|
+| ID | uint | Primary key |
+| Email | string | Unique email address |
+| Name | string | Display name |
+| Password | string | Hashed password (empty for OAuth/guest) |
+| Avatar | string | Avatar URL |
+| Provider | string | Auth provider (`local`, `google`, `github`, `twitter`, `guest`) |
+| Role | string | `user` or `admin` |
 
-### اتاق
+### Room
 
-| فیلد | نوع | توضیح |
-|------|------|-------|
-| ID | uint | کلید اصلی |
-| AdminID | uint | کلید خارجی → User.ID (سازنده اتاق) |
-| Name | string | نام اتاق / slug URL |
-| IsPublic | bool | آیا مهمانان می‌توانند بدون دعوت بپیوندند |
-| ChatEnabled | bool | آیا چت در اتاق فعال است |
-| VideoEnabled | bool | آیا ویدیو مجاز است |
-| Participants | []User | کاربرانی که در حال حاضر در اتاق هستند |
+| Field | Type | Description |
+|-------|------|-------------|
+| ID | uint | Primary key |
+| AdminID | uint | Foreign key → User.ID (room creator) |
+| Name | string | Room name / URL slug |
+| IsPublic | bool | Whether guests can join without invite |
+| ChatEnabled | bool | Whether in-room chat is active |
+| VideoEnabled | bool | Whether video is allowed |
+| Participants | []User | Users currently in the room |
 
-### کلید عبور
+### Passkey
 
-| فیلد | نوع | توضیح |
-|------|------|-------|
-| ID | uint | کلید اصلی |
-| UserID | uint | کلید خارجی → User.ID |
-| CredentialID | []byte | شناسه اعتبار WebAuthn |
-| PublicKey | []byte | کلید عمومی WebAuthn |
-| Counter | uint32 | تعداد امضای WebAuthn |
+| Field | Type | Description |
+|-------|------|-------------|
+| ID | uint | Primary key |
+| UserID | uint | Foreign key → User.ID |
+| CredentialID | []byte | WebAuthn credential ID |
+| PublicKey | []byte | WebAuthn public key |
+| Counter | uint32 | WebAuthn sign count |
 
-### توکن تازه‌سازی
+### RefreshToken
 
-| فیلد | نوع | توضیح |
-|------|------|-------|
-| Token | string | رشته توکن تازه‌سازی |
-| UserID | uint | کلید خارجی → User.ID |
-| ExpiresAt | time | مهر زمان انقضای توکن |
+| Field | Type | Description |
+|-------|------|-------------|
+| Token | string | The refresh token string |
+| UserID | uint | Foreign key → User.ID |
+| ExpiresAt | time | Token expiration timestamp |
 
-## معماری استقرار
+## Deployment Architecture
 
-در تولید، بدرود به عنوان دو init سرویس (systemd، OpenRC یا SysV init) اجرا می‌شود:
+In production, Bedrud runs as two init services (systemd, OpenRC, or SysV init):
 
-| سرویس | باینری | هدف |
-|---------|--------|-----|
-| `bedrud.service` | `bedrud --run` | سرور API + فرانت‌اند وب جاسازی‌شده |
-| `livekit.service` | `bedrud --livekit` | media server WebRTC |
+| Service | Binary | Purpose |
+|---------|--------|---------|
+| `bedrud.service` | `bedrud --run` | API server + embedded web frontend |
+| `livekit.service` | `bedrud --livekit` | WebRTC media server |
 
-هر دو توسط یک باینری تکی مدیریت می‌شوند. Traefik یا reverse proxy دیگر خاتمه TLS را مدیریت می‌کند و ترافیک را مسیریابی می‌کند.
+Both are managed by a single binary. Traefik or another reverse proxy handles TLS termination and routes traffic.
 
-برای دستورالعمل‌های تنظیم به [راهنمای استقرار](/fa/docs/guides/deployment) ببینید.
+See [Deployment Guide](/fa/docs/guides/deployment) for setup instructions.
 
-## اصطلاحات کلیدی
+## Key Terms
 
-این اصطلاحات در سرتاسر مستندات معماری ظاهر می‌شوند:
+These terms appear throughout the architecture documentation:
 
-| اصطلاح | نام کامل | معنی |
-|---------|-----------|-------|
-| **SFU** | واحد ارسال انتخابی | یک media server که جریان‌ها را از هر شرکت‌کننده دریافت می‌کند و به دیگران ارسال می‌کند. کلاینت‌ها به سرور متصل می‌شوند، نه به همدیگر. |
-| **SDP** | پروتکل توضیح جلسه | فرمت استفاده شده برای توصیف پارامترهای اتصال WebRTC (کدک‌ها، رزولوشن‌ها، انواع مدیا). |
-| **ICE** | ایجاد اتصال تعاملی | یک چارچوب که تمام مسیرهای شبکه ممکن بین کلاینت و سرور را جمع‌آوری می‌کند، سپس بهترین را انتخاب می‌کند. |
-| **STUN** | ابزارهای عبور جلسه برای NAT | یک پروتکل سبک که به کلاینت کمک می‌کند آدرس IP عمومی خود را کشف کند. برای اکثر اتصالات کار می‌کند. |
-| **TURN** | عبور با استفاده از رله‌ها در اطراف NAT | یک پروتکل که تمام مدیا را از طریق سرور رله می‌کند وقتی اتصال مستقیم غیرممکن است. آخرین راه حل، بالاترین هزینه پهنای باند. |
-| **NAT** | ترجمه آدرس شبکه | یک ویژگی روتر که آدرس‌های خصوصی داخلی را به یک آدرس عمومی نگاشت می‌کند. بسته به نوع می‌تواند اتصال مستقیم WebRTC را مسدود کند. |
-| **srflx** | بازتابی سرور | یک نوع نامزد ICE که نشان‌دهنده IP عمومی کلاینت است، کشف شده از طریق STUN. |
-| **WebRTC** | ارتباط زمان واقعی وب | استاندارد API مرورگر و موبایل برای انتقال صدا، ویدیو و داده در زمان واقعی. |
+| Term | Full Name | Meaning |
+|------|-----------|---------|
+| **SFU** | Selective Forwarding Unit | A media server that receives streams from each participant and forwards them to others. Clients connect to the server, not to each other. |
+| **SDP** | Session Description Protocol | The format used to describe WebRTC connection parameters (codecs, resolutions, media types). |
+| **ICE** | Interactive Connectivity Establishment | A framework that gathers all possible network paths between client and server, then selects the best one. |
+| **STUN** | Session Traversal Utilities for NAT | A lightweight protocol that helps a client discover its public IP address. Works for most connections. |
+| **TURN** | Traversal Using Relays around NAT | A protocol that relays all media through the server when a direct connection is not possible. Last resort, highest bandwidth cost. |
+| **NAT** | Network Address Translation | A router feature that maps private internal addresses to a public address. Can block direct WebRTC connections depending on type. |
+| **srflx** | Server Reflexive | A type of ICE candidate representing the client's public IP, discovered via STUN. |
+| **WebRTC** | Web Real-Time Communication | The browser and mobile API standard for real-time audio, video, and data transfer. |
 
-## همچنین ببینید
+## See Also
 
-- [اتصال WebRTC](/fa/docs/architecture/webrtc-connectivity) - پشته اتصال کامل STUN/ICE/TURN/SFU
-- [راهنمای سرور TURN](/fa/docs/architecture/turn-server) - معماری و پیکربندی رله TURN
-- [یکپارچگی LiveKit](/fa/docs/backend/livekit) - نحوه جاسازی LiveKit در بدرود
+- [WebRTC Connectivity](/fa/docs/architecture/webrtc-connectivity) - full STUN/ICE/TURN/SFU connectivity stack
+- [TURN Server Guide](/fa/docs/architecture/turn-server) - TURN relay architecture and configuration
+- [LiveKit Integration](/fa/docs/backend/livekit) - how Bedrud embeds LiveKit

@@ -4,27 +4,27 @@ description: Docker で Bedrud を実行する
 order: 29
 ---
 
-Bedrud はコンテナでのビルドと実行のためのマルチステージ Dockerfile を提供しています。
+Bedrud provides a multi-stage Dockerfile for building and running in containers.
 
-## イメージバリアント
+## Image Variants
 
-3つのイメージバリアントが GitHub Container Registry に公開されています：
+Three image variants are published to GitHub Container Registry:
 
-| Tag | ベース | サイズ | 推奨用途 |
-|-----|--------|--------|----------|
-| `:latest` | Debian Bookworm | ~50 MB | デフォルト — ほとんどのシステムと互換 |
-| `:latest-alpine` | Alpine 3.21 | ~30 MB | Alpine ホスト、最小フットプリント |
-| `:latest-distroless` | Distroless | ~25 MB | 最小の攻撃面、シェルなし |
+| Tag | Base | Size | Best for |
+|-----|------|------|----------|
+| `:latest` | Debian Bookworm | ~50 MB | Default — compatible with most systems |
+| `:latest-alpine` | Alpine 3.21 | ~30 MB | Alpine hosts, minimal footprint |
+| `:latest-distroless` | Distroless | ~25 MB | Smallest attack surface, no shell |
 
-すべてのイメージには同じ静的バイナリが含まれています。ベースイメージはランタイムユーティリティ（ca-certs、タイムゾーンデータ）にのみ影響します。
+All images contain the same static binary — the base image only affects runtime utilities (ca-certs, timezone data).
 
-## クイックスタート
+## Quick Start
 
 ```bash
-# ビルド
+# Build
 docker build -t bedrud .
 
-# 実行
+# Run
 docker run -d --name bedrud \
   -p 8090:8090 \
   -p 7880:7880 \
@@ -32,11 +32,11 @@ docker run -d --name bedrud \
   bedrud
 ```
 
-## Dockerfile の概要
+## Dockerfile Overview
 
-Dockerfile は3つのステージを使用して最終イメージサイズを最小化しています：
+The Dockerfile uses three stages to minimize the final image size:
 
-### ステージ 1：フロントエンドビルド
+### Stage 1: Frontend Build
 
 ```dockerfile
 FROM node:22-alpine AS frontend
@@ -48,9 +48,9 @@ COPY apps/web/ ./
 RUN bun run build:embed
 ```
 
-Bun をインストールし、React アプリを SSR で事前レンダリングして、アセットを `server/frontend/` にコピーします。
+Installs Bun, SSR pre-renders the React app, and copies assets to `server/frontend/`.
 
-### ステージ 2：サーバービルド
+### Stage 2: Server Build
 
 ```dockerfile
 FROM golang:1.25-alpine AS backend
@@ -64,9 +64,9 @@ RUN CGO_ENABLED=1 GOOS=linux go build -ldflags="-s -w" -o /bedrud ./cmd/bedrud/m
 # CGO is required for SQLite (uses C bindings)
 ```
 
-フロントエンドを組み込んだ Go バイナリをコンパイルします。CGO は SQLite サポートのために有効化されています。
+Compiles the Go binary with the frontend embedded. CGO is enabled for SQLite support (`sqlite-dev` provides the C headers).
 
-### ステージ 3：ランタイム
+### Stage 3: Runtime
 
 ```dockerfile
 FROM alpine:3.21
@@ -77,21 +77,21 @@ ENTRYPOINT ["bedrud"]
 CMD ["run"]
 ```
 
-バイナリ、CA 証明書、タイムゾーンデータのみを含む最小限の Alpine イメージです。
+Minimal Alpine image with just the binary, CA certificates, and timezone data.
 
-## ポート
+## Ports
 
-| ポート | サービス | プロトコル |
+| Port | Service | Protocol |
 |------|---------|----------|
 | 8090 | API + Web UI | HTTP |
 | 7880 | LiveKit | WebSocket + HTTP |
-| 50000-60000 | RTC メディア | UDP |
+| 50000-60000 | RTC media | UDP |
 
-LiveKit メディアストリームのため、RTC UDP ポート範囲（デフォルト：50000-60000）も公開する必要がある場合があります。
+For LiveKit media streams, you may also need to expose the RTC UDP port range (default: 50000-60000).
 
-## ボリューム
+## Volumes
 
-永続データ用のボリュームをマウントします：
+Mount a volume for persistent data:
 
 ```bash
 docker run -d \
@@ -102,9 +102,9 @@ docker run -d \
   bedrud
 ```
 
-## 設定
+## Configuration
 
-カスタム設定ファイルを渡します：
+Pass a custom configuration file:
 
 ```bash
 docker run -d \
@@ -116,7 +116,7 @@ docker run -d \
   bedrud run --config /etc/bedrud/config.yaml
 ```
 
-または環境変数を使用します：
+Or use environment variables:
 
 ```bash
 docker run -d \
@@ -129,29 +129,54 @@ docker run -d \
   bedrud
 ```
 
-## ビルド済みイメージ
+### TLS with Embedded LiveKit
 
-Docker イメージはすべてのリリースで GitHub Container Registry に公開されます：
+When server TLS is enabled, the embedded LiveKit process automatically configures TURN/TLS (port 5349) using the server's certificate. Mount your cert/key and enable TLS:
 
 ```bash
-# 最新リリース
-docker pull ghcr.io/themadorg/bedrud:latest
+docker run -d \
+  --name bedrud \
+  -p 443:443 \
+  -p 5349:5349 \
+  -v /path/to/cert.pem:/etc/bedrud/cert.pem \
+  -v /path/to/key.pem:/etc/bedrud/key.pem \
+  -e SERVER_ENABLE_TLS=true \
+  -e SERVER_CERT_FILE=/etc/bedrud/cert.pem \
+  -e SERVER_KEY_FILE=/etc/bedrud/key.pem \
+  bedrud
+```
 
-# Distroless（最小、シェルなし）
+For a custom LiveKit YAML (advanced TURN/RTC config), mount it and set `LIVEKIT_CONFIG_PATH`:
+
+```bash
+docker run -d \
+  --name bedrud \
+  -p 8090:8090 \
+  -v /path/to/livekit.yaml:/etc/bedrud/livekit.yaml \
+  -e LIVEKIT_CONFIG_PATH=/etc/bedrud/livekit.yaml \
+  bedrud
+```
+
+## Pre-built Images
+
+Docker images are published to GitHub Container Registry on every release:
+
+```bash
+# Distroless (smallest, no shell)
 docker pull ghcr.io/themadorg/bedrud:latest-distroless
 
-# 特定バージョン
+# Specific version
 docker pull ghcr.io/themadorg/bedrud:v1.0.0
 docker pull ghcr.io/themadorg/bedrud:v1.0.0-alpine
 docker pull ghcr.io/themadorg/bedrud:v1.0.0-distroless
 ```
 
-## Docker Compose の例
+## Docker Compose Example
 
 ```yaml
 services:
   bedrud:
-    # より小さいイメージには :latest-alpine または :latest-distroless を使用
+    # Use :latest-alpine or :latest-distroless for smaller images
     image: ghcr.io/themadorg/bedrud:latest
     ports:
       - "8090:8090"
@@ -169,7 +194,7 @@ volumes:
 
 ---
 
-## 関連項目
+## See also
 
-- [設定リファレンス](/ja/docs/getting-started/configuration) - 設定オプションと環境変数の詳細
-- [デプロイガイド](/ja/docs/guides/deployment) - Docker による本番デプロイ
+- [Configuration Reference](/ja/docs/getting-started/configuration) - full config options and environment variables
+- [Deployment Guide](/ja/docs/guides/deployment) - production deployment with Docker

@@ -4,33 +4,34 @@ description: Самоподписанные сертификаты для вну
 order: 30
 ---
 
-Для изолированных сетей - без публичного домена, без исходящего интернета, ограниченное соединение.
+For isolated networks - no public domain, no outbound internet, restricted connectivity.
 
-Браузеры требуют доверенный HTTPS для доступа к камере/микрофону через WebRTC. Самоподписанные сертификаты работают, но показывают предупреждения. Для чистой настройки создайте частный CA и распространите его на клиенты.
+Browsers require trusted HTTPS for camera/mic via WebRTC. Self-signed certs work but show warnings. For a clean setup, generate a private CA and distribute it to clients.
 
-## Создание частного CA и серверного сертификата
+## Generate Private CA and Server Certificate
 
-Современные браузеры требуют Subject Alternative Names (SANs) в сертификатах. Установщик обрабатывает это автоматически.
+Modern browsers require Subject Alternative Names (SANs) on certificates. The installer handles this automatically.
 
-### Вариант 1: Использовать установщик (рекомендуется)
+### Option 1: Use the Installer (Recommended)
 
-Команда `bedrud install` создаёт самоподписанные сертификаты с правильными SANs для указанных IP и доменов:
+The `bedrud install` command generates self-signed certificates with proper SANs for the given IPs and domains:
 
 ```bash
 sudo bedrud install --tls --ip YOUR_SERVER_IP
 ```
 
-Чтобы также включить доменное имя:
+To also include a domain name:
 
 ```bash
 sudo bedrud install --tls --ip YOUR_SERVER_IP --domain your.domain.com
 ```
 
-### Вариант 2: Ручное создание сертификатов
+### Option 2: Manual Certificate Generation
 
-Если встроенная генерация установщика не подходит для вашего рабочего процесса, добавьте флаги `-addext` к командам openssl:
+If the installer's built-in generation doesn't fit your workflow, add `-addext` flags to the openssl commands.
 
-```bash
+Bedrud generates **Ed25519** keys by default (PKCS8 format, ~128-bit security, deterministic signatures, 32-byte public keys), configurable to ECDSA P256 or RSA via the `certAlgorithm` config field or `--cert-algorithm` CLI flag. Choose the key type that matches your environment:
+
 #### Ed25519 (matches Bedrud's built-in generation, recommended)
 
 ```bash
@@ -85,14 +86,47 @@ openssl x509 -req -days 365 -in server.csr \
 sudo ./bedrud install --tls --cert server.crt --key server.key --ip YOUR_SERVER_IP
 ```
 
-## Добавление CA в хранилища доверия клиентов
+## HTTP Listener Port
 
-Распространите `ca.crt` на все клиентские машины:
+When TLS is enabled, Bedrud also starts an HTTP listener (default port 80) for bots and local access. Ports below 1024 require root on Linux.
+
+### TURN/TLS Auto-Configuration
+
+When server TLS is enabled (via the installer or `server.enableTLS: true`), the embedded LiveKit process automatically generates a temporary config with TURN/TLS settings. The server's TLS certificate is reused for TURN/TLS on port 5349. The TURN `domain` is auto-set from `server.host`, UDP port 3478 is configured for TURN/STUN, and relative `certFile`/`keyFile` paths are resolved to absolute paths before being passed to LiveKit. No additional configuration is needed.
+
+For custom TURN settings (separate domain, different cert, port overrides), provide a LiveKit YAML config file via `livekit.configPath` in `config.yaml` or the `LIVEKIT_CONFIG_PATH` environment variable.
+
+**Non-root setups** — set an unprivileged port in `/etc/bedrud/config.yaml`:
+
+```yaml
+server:
+  httpPort: "8080"
+```
+
+Or via environment variable:
+
+```bash
+export SERVER_HTTP_PORT=8080
+```
+
+Alternatively, grant the binary permission to bind low ports:
+
+```bash
+sudo setcap 'cap_net_bind_service=+ep' $(which bedrud)
+```
+
+<Callout type="warning">
+    `setcap` must be re-run after each binary update (reinstall, upgrade, new build).
+</Callout>
+
+## Add CA to Client Trust Stores
+
+Distribute `ca.crt` to all client machines:
 
 ### Windows
 
 ```powershell
-certmgr.msc  # Правый клик на ca.crt → Установить сертификат → Доверенные корневые ЦС
+certmgr.msc  # Right-click ca.crt → Install Certificate → Trusted Root CAs
 ```
 
 ### macOS
@@ -116,20 +150,30 @@ sudo cp ca.crt /etc/pki/ca-trust/source/anchors/bedrud-ca.crt
 sudo update-ca-trust
 ```
 
-Перезапустите браузеры, затем откройте `https://YOUR_SERVER_IP` (замените на фактический IP-адрес сервера, например, `192.168.1.100`). После перезапуска сертификат будет доверенным, а доступ к камере и микрофону будет работать без предупреждений.
+## Distributing the Certificate
 
-## Устранение неполадок
+After enabling TLS, clients can fetch the server's PEM certificate directly via the API:
 
-| Проблема | Решение |
+```bash
+curl -o bedrud-cert.pem https://YOUR_SERVER_IP/api/cert
+```
+
+This endpoint returns the server certificate currently in use. Combine with the CA distribution steps above for a complete trusted setup.
+
+Restart browsers, then open `https://YOUR_SERVER_IP` (replace with the server's actual IP address, e.g. `192.168.1.100`). After restarting, the certificate will be trusted and camera/microphone access will work without warnings.
+
+## Troubleshooting
+
+| Problem | Fix |
 |---------|-----|
-| Браузер всё ещё предупреждает о недоверенном сертификате | Очистите кэш браузера, перезапустите браузер после установки CA |
-| Камера/микрофон заблокированы | Убедитесь, что CA находится в «Доверенных корневых ЦС», а не в промежуточных |
-| Сертификат истёк | Выполните `sudo bedrud cert renew` для перегенерации (автообновление каждые 24 часа в 09:00) |
-| Несовпадение CN | Современные браузеры игнорируют поле CN — SAN является авторитетным. Используйте встроенную генерацию сертификатов установщика (рекомендуется) или добавьте `-addext 'subjectAltName=...'` к команде openssl |
-| Отсутствуют SANs | Современные браузеры игнорируют поле CN. Используйте встроенную генерацию сертификатов установщика (рекомендуется) или добавьте `-addext 'subjectAltName=...'` к команде openssl |
+| Browser still warns certificate untrusted | Clear browser cache, restart browser after CA install |
+| Camera/mic blocked | Verify CA is in Trusted Root CAs, not intermediate |
+| Certificate expired | Run `sudo bedrud cert renew` to regenerate (auto-renewal every 24h at 09:00) |
+| CN mismatch | Modern browsers ignore the CN field — SAN is authoritative. Use the installer's built-in cert generation (recommended) or add `-addext 'subjectAltName=...'` to the openssl command |
+| Missing SANs | Modern browsers ignore the CN field. Use the installer's built-in cert generation (recommended) or add `-addext 'subjectAltName=...'` to the openssl command |
 
 ---
 
-## См. также
-- [Руководство по установке](/ru/docs/getting-started/installation) - способы установки
-- [Справочник конфигурации](/ru/docs/getting-started/configuration) - полные параметры конфигурации
+## See also
+- [Installation Guide](/ru/docs/getting-started/installation) - install methods
+- [Configuration Reference](/ru/docs/getting-started/configuration) - full config options

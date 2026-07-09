@@ -4,33 +4,33 @@ description: Rollenbasierte Zugriffskontrolle mit 5 Stufen — Superadmin, Admin
 order: 36
 ---
 
-Bedrud implementiert ein 5-stufiges Rollensystem zur Zugriffskontrolle. Jede Rolle ist einem Satz von Zugriffszeichenfolgen zugeordnet, die im Benutzerdatensatz gespeichert und sowohl auf der API-Ebene (Backend-Middleware) als auch auf der UI-Ebene (Frontend-Guards und bedingte Darstellung) durchgesetzt werden.
+Bedrud implements a 5-tier role system for access control. Each role maps to a set of access strings stored on the user record and enforced at both the API layer (backend middleware) and the UI layer (frontend guards and conditional rendering).
 
-## Rollenhierarchie
+## Role Hierarchy
 
-| Rolle | Zugriffsarray | Backend-Gewicht | Beschreibung |
-|-------|--------------|-----------------|-------------|
-| Superadmin | `['superadmin', 'user']` | 4 | Vollständiger Systemzugriff, alle Admin-Funktionen |
-| Admin | `['admin', 'user']` | 3 | Vollständiger Admin-Zugriff, wie Superadmin |
-| Moderator | `['moderator', 'user']` | 2 | Schreibgeschützte Admin-Ansicht, keine Änderungen |
-| Benutzer | `['user']` | 1 | Standardmäßig registrierter Benutzer |
-| Gast | `['guest']` | 0 | Nicht registrierter Teilnehmer, nur Beitritt |
+| Role | Access Array | Backend Weight | Description |
+|------|-------------|----------------|-------------|
+| Superadmin | `['superadmin', 'user']` | 4 | Full system access, all admin capabilities |
+| Admin | `['admin', 'user']` | 3 | Full admin access, same as superadmin |
+| Moderator | `['moderator', 'user']` | 2 | Read-only admin view, no mutations |
+| User | `['user']` | 1 | Standard registered user |
+| Guest | `['guest']` | 0 | Unregistered participant, join-only |
 
-## Backend-Durchsetzung
+## Backend Enforcement
 
-Zugriffsebenen werden über die `RequireAccess`-Middleware auf jeder Admin-Route durchgesetzt. Die Middleware prüft das Zugriffsarray des Benutzers gegen die mindestens erforderliche Stufe:
+Access levels are enforced via the `RequireAccess` middleware on every admin route. The middleware checks the user's accesses array against the minimum required level:
 
-- Routen, die `superadmin`-Zugriff erfordern, lehnen Admin, Moderator, Benutzer und Gast ab
-- Routen, die `admin`-Zugriff erfordern, erlauben Superadmin und Admin
-- Routen, die `moderator`-Zugriff erfordern, erlauben Superadmin, Admin und Moderator
+- Routes requiring `superadmin` access reject admin, moderator, user, and guest
+- Routes requiring `admin` access allow superadmin and admin
+- Routes requiring `moderator` access allow superadmin, admin, and moderator
 
-Das Backend speichert Zugriffe als kommagetrennte Zeichenfolge in der Datenbank (Spalte `accesses` in der Tabelle `users`). Der GORM-Typ `StringArray` übernimmt die Serialisierung und Deserialisierung.
+The backend stores accesses as a comma-separated string in the database (`accesses` column on the `users` table). The `StringArray` GORM type handles serialization and deserialization.
 
-## Frontend-Integration
+## Frontend Integration
 
-### Benutzertyp
+### User Type
 
-Das `User`-Interface in `user.store.ts` enthält zwei boolesche Felder, die aus dem Zugriffsarray abgeleitet werden:
+The `User` interface in `user.store.ts` includes two boolean fields derived from the accesses array:
 
 ```ts
 interface User {
@@ -41,49 +41,49 @@ interface User {
 }
 ```
 
-### Admin-Guard
+### Admin Guard
 
-Das Admin-Layout (`/dashboard/admin`) lässt Superadmin, Admin und Moderator durch. Moderatoren erhalten eine Kontextvariable `isReadOnly=true`:
+The admin layout (`/dashboard/admin`) lets through superadmin, admin, and moderator. Moderators receive an `isReadOnly=true` context variable:
 
 ```tsx
 // routes/dashboard/admin.tsx
 const canAccess = user?.isSuperAdmin || accesses.includes('admin') || accesses.includes('moderator')
 ```
 
-Der `useAdminContext()`-Hook stellt das `isReadOnly`-Flag allen untergeordneten Routen zur Verfügung:
+The `useAdminContext()` hook provides the `isReadOnly` flag to all child routes:
 
 ```tsx
 const { isReadOnly } = useAdminContext()
 ```
 
-### Was Moderatoren sehen vs. tun können
+### What Moderators Can See vs Do
 
-| Seite | Ansicht | Ändern |
-|-------|---------|--------|
-| Übersichtsstatistiken | ✅ Vollständige Statistiken | N/A |
-| Benutzerliste | ✅ Vollständige Liste | ❌ Keine Bulk-Aktionen |
-| Benutzerdetails | ✅ Vollständiges Profil | ❌ Kein Status/Rolle/Löschen/Abmelden |
-| Räume-Liste | ✅ Vollständige Liste | ❌ Kein Sperren/Löschen/Bearbeiten der Obergrenze |
-| Raumdetails | ✅ Vollständige Informationen | ❌ Kein Sperren/Löschen/Kicken/Stummschalten |
-| Einstellungen | ❌ Weitergeleitet | ❌ |
+| Page | View | Mutate |
+|------|------|--------|
+| Overview stats | ✅ Full stats | N/A |
+| Users list | ✅ Full list | ❌ No bulk actions |
+| User detail | ✅ Full profile | ❌ No status/role/delete/logout |
+| Rooms list | ✅ Full list | ❌ No suspend/delete/edit cap |
+| Room detail | ✅ Full info | ❌ No suspend/delete/kick/mute |
+| Settings | ❌ Redirected | ❌ |
 
-### Rollenauswahl
+### Role Selector
 
-Die Admin-Oberfläche bietet ein `<Select>`-Dropdown sowohl in der Benutzerlistentabelle als auch auf der Benutzerdetailseite, das den vorherigen binären Superadmin-Umschalter ersetzt. Verfügbare Optionen:
+The admin UI provides a `<Select>` dropdown on both the users list table and the user detail page, replacing the previous binary superadmin toggle. Available options:
 
-| Option | Speichert als |
-|--------|--------------|
+| Option | Saves as |
+|--------|----------|
 | Superadmin | `['superadmin', 'user']` |
 | Admin | `['admin', 'user']` |
 | Moderator | `['moderator', 'user']` |
-| Benutzer | `['user']` |
-| Gast | `['guest']` |
+| User | `['user']` |
+| Guest | `['guest']` |
 
-Das Dropdown sendet eine `PUT /api/admin/users/:id/accesses`-Anfrage mit dem vollständigen Zugriffsarray.
+The dropdown sends a `PUT /api/admin/users/:id/accesses` request with the full access array.
 
-## CLI-Verwaltung
+## CLI Management
 
-Die Befehle `bedrud user promote` und `bedrud user demote` akzeptieren ein `--role`-Flag:
+The `bedrud user promote` and `bedrud user demote` commands accept a `--role` flag:
 
 ```bash
 # Promote to superadmin (default)
@@ -99,16 +99,16 @@ bedrud user promote --email user@example.com --role moderator
 bedrud user demote --email user@example.com --role admin
 ```
 
-Gültige `--role`-Werte: `superadmin`, `admin`, `moderator`, `user`, `guest`.
+Valid `--role` values: `superadmin`, `admin`, `moderator`, `user`, `guest`.
 
-## Code-Standorte
+## Code Locations
 
-| Datei | Zweck |
-|-------|-------|
-| `server/internal/models/user.go` | Backend-Zugriffsebenen-Konstanten |
-| `server/internal/middleware/` | `RequireAccess`-Middleware |
-| `server/internal/usercli/usercli.go` | CLI-Rollenverwaltungsfunktionen |
-| `apps/web/src/lib/user.store.ts` | Frontend-Benutzertyp |
-| `apps/web/src/routes/dashboard/admin.tsx` | Admin-Guard + isReadOnly-Kontext |
-| `apps/web/src/components/admin/UserTable.tsx` | Rollenauswahl-Dropdown + Badges |
-| `apps/web/src/components/admin/RoomTable.tsx` | Schreibgeschützte Raumtabellen-Maskierung |
+| File | Purpose |
+|------|---------|
+| `server/internal/models/user.go` | Backend access level constants |
+| `server/internal/middleware/` | `RequireAccess` middleware |
+| `server/internal/usercli/usercli.go` | CLI role management functions |
+| `apps/web/src/lib/user.store.ts` | Frontend User type |
+| `apps/web/src/routes/dashboard/admin.tsx` | Admin guard + isReadOnly context |
+| `apps/web/src/components/admin/UserTable.tsx` | Role selector dropdown + badges |
+| `apps/web/src/components/admin/RoomTable.tsx` | Read-only room table masking |

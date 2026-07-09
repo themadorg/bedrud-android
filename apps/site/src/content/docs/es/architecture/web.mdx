@@ -4,152 +4,152 @@ description: Arquitectura de la aplicación web React
 order: 8
 ---
 
-El frontend web de Bedrud es una aplicación React construida con TanStack Start, TailwindCSS v4 y shadcn/ui. En producción, el renderizado del lado del servidor pre-renderiza un shell HTML. El binario Go incrusta este shell junto con los activos estáticos del cliente.
+The Bedrud web frontend is a React application built with TanStack Start, TailwindCSS v4, and shadcn/ui. In production, server-side rendering pre-renders an HTML shell. The Go binary embeds this shell alongside the static client assets.
 
-## Stack Tecnológico
+## Technology Stack
 
-| Tecnología | Propósito |
+| Technology | Purpose |
 |-----------|---------|
-| React 19 | Framework de UI |
-| TanStack Start | Framework SSR y enrutamiento basado en archivos |
-| TanStack Router | Enrutamiento del lado del cliente |
-| TanStack Query | Estado del servidor y obtención de datos |
-| TailwindCSS 4 | Estilizado utility-first |
-| shadcn/ui + Radix UI | Primitivas de componentes accesibles |
-| Zustand | Estado de autenticación del lado del cliente |
-| Vite 7 | Herramienta de construcción y servidor de desarrollo |
-| LiveKit React SDK | Manejo de medios WebRTC |
-| Zod | Validación de esquemas |
-| Lucide React | Biblioteca de iconos |
-| Bun | Gestor de paquetes |
+| React 19 | UI framework |
+| TanStack Start | SSR framework and file-based routing |
+| TanStack Router | Client-side routing |
+| TanStack Query | Server state and data fetching |
+| TailwindCSS 4 | Utility-first styling |
+| shadcn/ui + Radix UI | Accessible component primitives |
+| Zustand | Client-side auth state |
+| Vite 7 | Build tool and dev server |
+| LiveKit React SDK | WebRTC media handling |
+| Zod | Schema validation |
+| Lucide React | Icon library |
+| Bun | Package manager |
 
-## Estructura de Directorios
+## Directory Structure
 
 ```
 apps/web/
 ├── src/
-│   ├── routes/                    # Rutas basadas en archivos de TanStack Router
-│   │   ├── index.tsx              # Página de inicio / landing
-│   │   ├── __root.tsx             # Layout raíz
+│   ├── routes/                    # TanStack Router file-based routes
+│   │   ├── index.tsx              # Home / landing page
+│   │   ├── __root.tsx             # Root layout
 │   │   ├── auth/
-│   │   │   ├── login.tsx          # Página de inicio de sesión
-│   │   │   └── register.tsx       # Página de registro
-│   │   ├── dashboard/             # Panel de control del usuario
-│   │   ├── m.$meetId.tsx          # Página de sala de reunión
-│   │   ├── admin/                 # Panel de administración
-│   │   │   ├── index.tsx          # Vista general
-│   │   │   ├── rooms.$id.tsx      # Detalle de sala
-│   │   │   ├── users.$id.tsx      # Detalle de usuario
-│   │   │   └── settings.tsx       # Configuración del servidor + tokens de invitación
-│   │   └── settings.tsx           # Página de configuración de cuenta
+│   │   │   ├── login.tsx          # Sign-in page
+│   │   │   └── register.tsx       # Sign-up page
+│   │   ├── dashboard/             # User dashboard
+│   │   ├── m.$meetId.tsx          # Meeting room page
+│   │   ├── admin/                 # Admin panel
+│   │   │   ├── index.tsx          # Overview
+│   │   │   ├── rooms.$id.tsx      # Room detail
+│   │   │   ├── users.$id.tsx      # User detail
+│   │   │   └── settings.tsx       # Server settings + invite tokens
+│   │   └── settings.tsx           # Account settings page
 │   ├── components/
-│   │   ├── admin/                 # Componentes de tablas de administración
+│   │   ├── admin/                 # Admin table components
 │   │   │   ├── RoomTable.tsx
 │   │   │   └── UserTable.tsx
-│   │   ├── auth/                  # UI de autenticación (OAuth, botones de Passkey)
-│   │   ├── dashboard/             # Tarjetas de sala, diálogo de crear sala
-│   │   ├── meeting/               # Mosaicos de video, controles, selector de dispositivos
+│   │   ├── auth/                  # Auth UI (OAuth, Passkey buttons)
+│   │   ├── dashboard/             # Room cards, create room dialog
+│   │   ├── meeting/               # Video tiles, controls, device picker
 │   │   │   ├── ControlsBar.tsx
 │   │   │   ├── DeviceSelector.tsx
 │   │   │   ├── ParticipantGrid.tsx
 │   │   │   ├── ChatPanel.tsx
 │   │   │   └── SpotlightView.tsx
-│   │   ├── ui/                    # Biblioteca de componentes shadcn/ui
-│   │   └── ThemeToggle.tsx        # Conmutador de modo claro/oscuro
+│   │   ├── ui/                    # shadcn/ui component library
+│   │   └── ThemeToggle.tsx        # Light/dark mode switcher
 │   └── lib/
-│       ├── api.ts                 # wrapper authFetch
-│       └── auth.store.ts          # Store de autenticación Zustand (tokens, usuario)
+│       ├── api.ts                 # authFetch wrapper
+│       └── auth.store.ts          # Zustand auth store (tokens, user)
 ├── scripts/
-│   └── embed.mjs                  # Pre-renderizado SSR + copia a server/frontend/
-├── public/                        # Activos estáticos
+│   └── embed.mjs                  # SSR pre-render + copy to server/frontend/
+├── public/                        # Static assets
 ├── package.json
 ├── tsconfig.json
 └── vite.config.ts
 ```
 
-## Flujo de Autenticación
+## Authentication Flow
 
-El estado de autenticación es gestionado por un store Zustand en `src/lib/auth.store.ts`:
+Auth state is managed by a Zustand store in `src/lib/auth.store.ts`:
 
-1. **Inicio de sesión** - El usuario envía credenciales a `POST /api/auth/login`
-2. **Almacenamiento de tokens** - Los tokens de acceso y actualización se guardan en `localStorage`
-3. **Inyección automática** - `authFetch` envuelve cada llamada API, añadiendo el encabezado `Authorization: Bearer`
-4. **Actualización automática** - Cuando una solicitud devuelve 401, `authFetch` intenta actualizar el token usando el token de actualización
-5. **Cierre de sesión** - Borra los tokens y redirige a la página de inicio de sesión
+1. **Login** - User submits credentials to `POST /api/auth/login`
+2. **Token Storage** - Access and refresh tokens saved to `localStorage`
+3. **Automatic Injection** - `authFetch` wraps every API call, adding the `Authorization: Bearer` header
+4. **Auto-Refresh** - When a request returns 401, `authFetch` attempts to refresh the token using the refresh token
+5. **Logout** - Clears tokens and redirects to the login page
 
 ### authFetch
 
-La función `authFetch` en `src/lib/api.ts` es un reemplazo directo para `fetch` que:
+The `authFetch` function in `src/lib/api.ts` is a drop-in replacement for `fetch` that:
 
-- Adjunta el token de acceso JWT a cada solicitud
-- Captura respuestas 401 e intenta una actualización de token
-- Cierra la sesión del usuario si la actualización falla
+- Attaches the JWT access token to every request
+- Catches 401 responses and attempts a token refresh
+- Logs out the user if the refresh fails
 
-## Página de Reunión
+## Meeting Page
 
-La sala de reunión en `/m/$meetId` maneja:
+The meeting room at `/m/$meetId` handles:
 
-- **Conexión LiveKit** - Se conecta al servidor de medios con el token de la API de unión
-- **Renderizado de tracks** - Se suscribe a tracks de audio/video de otros participantes
-- **Selección de dispositivos** - Cambiar cámara, micrófono o altavoz durante la llamada sin salir de la sala
-- **Controles de administrador** - El creador de la sala ve botones de expulsar, silenciar y apagar video
-- **Chat** - Chat de texto en la sala vía `ChatPanel`
-- **Vista destacada** - Enfocar un solo participante
+- **LiveKit connection** - Connects to the media server with the token from the join API
+- **Track rendering** - Subscribes to audio/video tracks from other participants
+- **Device selection** - Switch camera, microphone, or speaker mid-call without leaving the room
+- **Admin controls** - Room creator sees kick, mute, and video-off buttons
+- **Chat** - In-room text chat via `ChatPanel`
+- **Spotlight view** - Focus a single participant
 
-## Panel de Administración
+## Admin Panel
 
-El panel de administración en `/admin` proporciona:
+The admin panel at `/admin` provides:
 
-- **Gestión de salas** - vista de tabla con acceso a páginas de detalle de sala
-- **Gestión de usuarios** - vista de tabla con acceso a cuentas de usuario individuales y edición de roles
-- **Configuración del servidor** - configurar opciones de toda la instancia, controles de acceso y enlaces de invitación
-- **Tokens de invitación** - generar y revocar enlaces de invitación para controlar quién puede unirse
+- **Room management** - table view with drill-down to room detail pages
+- **User management** - table view with drill-down to individual user accounts and role editing
+- **Server settings** - configure instance-wide options, access controls, and invite links
+- **Invite tokens** - generate and revoke invite links to control who can join
 
-## Modo Oscuro
+## Dark Mode
 
-Un componente `ThemeToggle` permite a los usuarios cambiar entre temas claro y oscuro desde cualquier lugar de la aplicación. La preferencia se persiste en `localStorage` y se aplica al cargar.
+A `ThemeToggle` component lets users switch between light and dark themes from anywhere in the app. The preference is persisted to `localStorage` and applied on load.
 
-## Construcción
+## Build
 
-### Desarrollo
-
-```bash
-cd apps/web
-bun run dev      # Inicia el servidor de desarrollo Vite con HMR en localhost:3000
-```
-
-El servidor de desarrollo redirige las solicitudes `/api` y `/livekit` al servidor Go en `localhost:8090`.
-
-### Producción (paquete web independiente)
+### Development
 
 ```bash
 cd apps/web
-bun run build    # Genera activos estáticos del cliente en dist/client/ y servidor SSR en dist/server/
+bun run dev      # Starts Vite dev server with HMR at localhost:3000
 ```
 
-### Producción (incrustado en binario Go)
+The dev server proxies `/api` and `/livekit` requests to the Go server at `localhost:8090`.
+
+### Production (standalone web bundle)
+
+```bash
+cd apps/web
+bun run build    # Outputs static client assets to dist/client/ and SSR server to dist/server/
+```
+
+### Production (embedded in Go binary)
 
 ```bash
 cd apps/web
 bun run build:embed
 ```
 
-Esto ejecuta `scripts/embed.mjs` que:
+This runs `scripts/embed.mjs` which:
 
-1. Ejecuta `bun run build` para producir `dist/client/` y `dist/server/`
-2. Inicia el servidor SSR localmente
-3. Obtiene `/` para capturar el shell HTML pre-renderizado
-4. Copia `dist/client/` en `server/frontend/`
-5. Escribe el HTML renderizado como `server/frontend/index.html`
+1. Runs `bun run build` to produce `dist/client/` and `dist/server/`
+2. Starts the SSR server locally
+3. Fetches `/` to capture the pre-rendered HTML shell
+4. Copies `dist/client/` into `server/frontend/`
+5. Writes the rendered HTML as `server/frontend/index.html`
 
-### Verificación de Tipos
+### Type Checking
 
 ```bash
-bun run check    # Ejecuta tsc --noEmit
+bun run check    # Runs tsc --noEmit
 ```
 
 ---
 
-## Véase también
+## See also
 
-- [Web Design System](https://github.com/themadorg/bedrud/tree/main/apps/web/AGENTS.md) - patrones de componentes UI, tokens de color y reglas de estilo
+- [Web Design System](https://github.com/themadorg/bedrud/tree/main/apps/web/AGENTS.md) - UI component patterns, color tokens, and styling rules

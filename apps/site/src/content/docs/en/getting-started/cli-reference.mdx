@@ -12,10 +12,20 @@ Complete reference for the `bedrud` command-line interface.
 # Subcommand style
 bedrud <command> [flags]
 
-# Flag style
+# Legacy flag style (systemd units)
 bedrud --livekit --config <path>
 bedrud --run --config <path>
 ```
+
+## Global Flags
+
+| Flag | Env | Description |
+|------|-----|-------------|
+| `--config <path>` | `BEDRUD_CONFIG`, `CONFIG_PATH` | Path to Bedrud YAML config |
+| `--json` | — | Machine-readable JSON output for management commands |
+| `--version` | — | Print version (also `bedrud version`) |
+
+Default config path for `run` is `config.yaml`. Management commands (`user`, `room`, `config`, …) default to `/etc/bedrud/config.yaml` when installed.
 
 ## Commands
 
@@ -24,24 +34,24 @@ bedrud --run --config <path>
 Start the Bedrud meeting server with API, embedded web frontend, and embedded LiveKit (if configured).
 
 ```bash
-bedrud run    [--config <path>]
-bedrud server [--config <path>]
+bedrud run    [--config <path>] [--skip-migrate]
+bedrud server [--config <path>] [--skip-migrate]
 ```
 
-| Flag       | Default                                  | Description                     |
-|------------|------------------------------------------|---------------------------------|
-| `--config` | `$CONFIG_PATH` env var → `"config.yaml"` | Path to Bedrud YAML config file |
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--config` | `BEDRUD_CONFIG` / `CONFIG_PATH` / `config.yaml` | Path to Bedrud YAML config |
+| `--skip-migrate` | `false` | Skip database migrations on startup |
 
 **Behavior:**
 - Loads config from specified path or defaults
-- Starts embedded LiveKit if configured for internal mode
-- Initializes SQLite/PostgreSQL database and runs migrations
-- Creates Fiber HTTP server with all API routes
-- Serves embedded React frontend
-- Supports ACME (Let's Encrypt), self-signed TLS, manual TLS, or plain HTTP
+- Starts embedded LiveKit if not `livekit.external`
+- Initializes SQLite/PostgreSQL and runs migrations (unless skipped)
+- Fiber HTTP server with API routes + embedded React frontend
+- ACME, self-signed TLS, manual TLS, or plain HTTP
 - Graceful shutdown on SIGTERM/SIGINT
 
-**Implementation:** `server/internal/server/server.go`
+**Implementation:** `server/internal/server/server.go`, `server/internal/cli/run.go`
 
 ---
 
@@ -99,6 +109,7 @@ bedrud install [flags]
 | `--behind-proxy`     | `false`                         | Server is behind CDN/reverse-proxy (Cloudflare, nginx)                   |
 | `--external-livekit` | `""`                            | URL of fully external LiveKit server (different machine)                 |
 | `--livekit-domain`   | `""`                            | Separate domain for local LiveKit server (bypasses CDN)                  |
+| `--lk-ip`            | `""`                            | Explicit LiveKit NodeIP when server is behind CDN                        |
 
 **What it does:**
 1. Stops and removes prior installation if `--fresh`
@@ -280,15 +291,117 @@ bedrud cert info [--config <path>]
 
 ---
 
-### `help`
+### `config`
 
-Show usage message with all commands and flags.
+Inspect and edit the Bedrud config file on disk.
+
+```bash
+bedrud config [--config <path>] <subcommand>
+```
+
+| Subcommand | Description |
+|------------|-------------|
+| `path` | Print resolved config file path |
+| `show` | Print loaded config as YAML (secrets redacted; includes env overrides) |
+| `get <key>` | Read dotted key (e.g. `server.port`) |
+| `set <key> <value>` | Write dotted key and save file |
+| `validate` | Parse YAML and check required fields (`jwtSecret`, `sessionSecret`, DB, port) |
+
+**Implementation:** `server/internal/cli/config.go`
+
+---
+
+### `settings`
+
+Inspect/modify runtime `SystemSettings` stored in the database (admin panel overrides).
+
+```bash
+bedrud settings [--config <path>] <subcommand>
+```
+
+| Subcommand | Description |
+|------------|-------------|
+| `show` | Print settings as JSON (`--effective` merges config defaults) |
+| `set <jsonField> <value>` | Set one JSON field by name |
+| `reset --yes` | Reset settings to zero values (requires confirm) |
+
+**Implementation:** `server/internal/cli/settings.go`
+
+---
+
+### `invite-token` (`invite`)
+
+Manage registration invite tokens.
+
+```bash
+bedrud invite-token [--config <path>] <subcommand>
+# alias: bedrud invite ...
+```
+
+| Subcommand | Flags | Description |
+|------------|-------|-------------|
+| `list` | `--page`, `--page-size` | List tokens |
+| `create` | `--email`, `--created-by`, `--ttl-hours` (default 168) | Create token |
+| `delete <id>` | | Delete by ID |
+
+**Implementation:** `server/internal/cli/invite.go`
+
+---
+
+### `db`
+
+Database utilities.
+
+```bash
+bedrud db [--config <path>] <subcommand>
+```
+
+| Subcommand | Description |
+|------------|-------------|
+| `migrate` | Run pending database migrations |
+| `status` | Check database connectivity |
+
+**Implementation:** `server/internal/cli/db.go`
+
+---
+
+### `room`
+
+Manage meetings/rooms from the CLI.
+
+```bash
+bedrud room [--config <path>] <subcommand>
+```
+
+| Subcommand | Flags | Description |
+|------------|-------|-------------|
+| `list` | `--page`, `--page-size`, `--active` | List rooms |
+| `info <id-or-name>` | | Show room details |
+| `close <id-or-name>` | `--yes` (required) | Cascade delete (LiveKit, uploads, DB) |
+| `suspend <id-or-name>` | | Disconnect participants; keep DB row |
+| `reactivate <id-or-name>` | | Reactivate suspended room |
+| `kick <id-or-name>` | `--identity` (required) | Kick participant |
+
+**Implementation:** `server/internal/cli/room.go`, `server/internal/roomcli/`
+
+---
+
+### `version`
+
+```bash
+bedrud version
+```
+
+Prints `bedrud <version>` (version injected at build time).
+
+---
+
+### `help`
 
 ```bash
 bedrud help
+bedrud <command> --help
 ```
-
-Also triggered when no arguments are provided. Displays the `printUsage()` output.
 
 ---
 
@@ -375,6 +488,31 @@ bedrud cert info --config /etc/bedrud/config.yaml
 
 # Force-renew self-signed certificate
 bedrud cert renew --config /etc/bedrud/config.yaml
+```
+
+### Config and settings
+
+```bash
+bedrud config path
+bedrud config show --json
+bedrud config get server.port
+bedrud config set logger.level info
+bedrud config validate
+
+bedrud settings show --effective
+bedrud settings set InstanceName "My Meet"
+```
+
+### Rooms and invite tokens
+
+```bash
+bedrud room list --active
+bedrud room info my-meeting
+bedrud room kick my-meeting --identity user-id-here
+bedrud room close my-meeting --yes
+
+bedrud invite-token create --email newuser@example.com --ttl-hours 72
+bedrud invite-token list
 ```
 
 ---

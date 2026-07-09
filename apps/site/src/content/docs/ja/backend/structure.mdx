@@ -1,129 +1,128 @@
 ---
 title: コード構造
-description: バックエンドのコード構成
+description: バックエンドコードの構成
 order: 16
 ---
 
-`server/`ディレクトリとその内容のマップです。
+Map of the `server/` directory and its contents.
 
-## プロジェクトツリー
-
-`server/`ディレクトリにはGoバックエンドと埋め込みLiveKitメディアサーバーが含まれます。`apps/`ディレクトリにはクライアントアプリケーションが含まれます。
+## Project Tree
 
 ```text
 bedrud/
-├── apps/                # Client Applications
-│   ├── web/             # React Frontend (TanStack Start)
-│   ├── android/         # Native Android Application
-│   └── ios/             # Native iOS Application
-├── server/              # Go Backend (The "Appliance")
-│   ├── cmd/             # CLI Entry points (run, install)
-│   ├── internal/        # Private application code
-│   │   ├── auth/        # JWT, Passkeys, OAuth logic
-│   │   ├── handlers/    # HTTP Controllers
-│   │   ├── models/      # Database Schemas
-│   │   ├── repository/  # GORM Data Access Layer
-│   │   └── livekit/     # Media Server Management
-│   ├── frontend/        # (Generated) Compiled web assets
-│   ├── config.yaml      # Configuration template
-│   └── Makefile         # Build & Deploy automation
-└── docs/                # System Documentation (MkDocs)
+├── apps/
+│   ├── web/             # React frontend (TanStack Start)
+│   ├── site/            # Astro marketing/docs site
+│   ├── desktop/         # Rust + Slint desktop app
+│   ├── android/         # Native Android
+│   └── ios/             # Native iOS
+├── agents/              # Python LiveKit bots
+├── packages/api-types/  # Shared TypeScript types
+├── server/              # Go backend (module: bedrud)
+│   ├── cmd/
+│   │   ├── bedrud/      # Production CLI entrypoint
+│   │   └── server/      # Dev API-only entrypoint (Air hot-reload)
+│   ├── config/          # Config structs + Load() + livekit example
+│   ├── internal/
+│   │   ├── auth/        # JWT, passkeys, OAuth, sessions
+│   │   ├── cli/         # Cobra commands (run, install, user, room, …)
+│   │   ├── database/    # GORM init + migrations
+│   │   ├── handlers/    # Fiber HTTP handlers
+│   │   ├── install/     # bedrud install (systemd/OpenRC/SysV)
+│   │   ├── livekit/     # Embedded LiveKit binary lifecycle
+│   │   ├── lkutil/      # LiveKit client helpers
+│   │   ├── middleware/  # Auth, RBAC, rate limits
+│   │   ├── models/      # GORM models
+│   │   ├── queue/       # Async jobs + email templates
+│   │   ├── repository/  # Data access layer
+│   │   ├── scheduler/   # Background cleanup (gocron)
+│   │   ├── server/      # Bootstrap: Run() wires everything
+│   │   ├── services/    # Room cleanup, recording service
+│   │   ├── storage/     # Chat/avatar/recording storage
+│   │   └── utils/       # TLS certs, net helpers, …
+│   ├── frontend/        # Embedded built web assets (//go:embed)
+│   └── docs/            # Generated Swagger (swag)
+├── docs/server/         # Engineer-facing backend docs (repo)
+└── Makefile             # Build & dev automation (repo root)
 ```
 
-## ディレクトリマップ
+## Directory Map
 
 ### `/cmd/bedrud`
-- **`main.go`**: アプリケーションのエントリポイントです。`run`、`install`、`livekit`などのCLIコマンドを処理します。
+Production entrypoint: Cobra CLI (`run`, `install`, `user`, `room`, `config`, …).
+
+### `/cmd/server`
+Dev API process (Air). No full CLI surface; may differ slightly from prod route registration.
 
 ### `/config`
-- **`config.go`**: `Config`構造体を定義し、`config.yaml`または環境変数から設定を読み込みます。
-- **`livekit.yaml`**: 埋め込みLiveKitサーバーのデフォルト設定。
+- **`config.go`**: `Config` struct, `Load()`, env overrides
+- **`livekit.yaml.example`**: External LiveKit sample
 
 ### `/internal`
 
-- **`/auth`**: JWT生成、OAuthプロバイダー、パスキー（WebAuthn）の登録・ログインのロジックを含みます。
-- **`/database`**: SQLiteまたはPostgreSQLへの接続を管理し、マイグレーションを実行します。
-- **`/handlers`**: Fiber HTTPハンドラ。各APIエンドポイントのロジックがここにあります（例: `auth_handler.go`、`room_handler.go`）。
-- **`/models`**: GORMデータベースモデル。データベースのテーブルを定義するファイルです。
-- **`/repository`**: 「データアクセス層」。ハンドラはDBクエリを直接記述する代わりにリポジトリを呼び出し、ハンドラのロジックをクリーンに保ちます。
-- **`/livekit`**: LiveKit Go SDKとの統合。ルームの作成を管理し、参加者用の「Join Token」を生成します。
-- **`/middleware`**: 認証チェック、ロギング、CORS用のカスタムFiberミドルウェア。
-- **`/server`**: すべてを結びつけるグルーコード。データベースとリポジトリを初期化し、Fiberサーバーを起動します。
-- **`/install`**: `bedrud install`コマンドのロジック。Linux上でイニットサービス（systemd/OpenRC/SysV）とTLSの設定を自動化します。
-- **`/scheduler`**: バックグラウンドタスク（もしあれば）。
-- **`/utils`**: 小さなヘルパー関数（例: パスワードハッシュ化、ランダム文字列生成）。
+| Package | Role |
+|---------|------|
+| `auth` | JWT, OAuth (Goth), passkeys, session store, email verification tokens |
+| `cli` | All management subcommands |
+| `database` | SQLite/Postgres connection, AutoMigrate |
+| `handlers` | HTTP: auth, rooms, admin, webhooks, LiveKit webhook, certs |
+| `install` | Linux installer |
+| `livekit` | Extract/run embedded `livekit-server` |
+| `lkutil` | Shared LiveKit API helpers |
+| `middleware` | `Protected`, `RequireAccess`, rate limiters, email-verified gate |
+| `models` | GORM schemas |
+| `queue` | Job worker + handlers (delete, suspend, webhook, email, …) |
+| `repository` | Data access |
+| `scheduler` | Idle rooms, job cleanup, cert renewal, recording retention |
+| `server` | `Run()` bootstrap and route table (**production** routes) |
+| `services` | Room cascade cleanup; recording service (planned routes) |
+| `storage` | Disk/S3/inline chat uploads, avatars |
+| `utils` | Self-signed TLS, safe IO, keys |
 
-### `/migrations`
+### `/docs` (within server)
 
-- データベーススキーマ更新用のSQLまたはGoファイルを含みます。
+Swagger/OpenAPI generated by `swag` → UI at `/api/swagger` and Scalar at `/api/scalar`.
 
-### `/docs`（server内）
+## Technical Deep Dive
 
-- Swagger/OpenAPIドキュメントファイルを含みます（`swag`で生成）。
+### 1. Binary Embedding
 
-## 技術的詳細
+- **Frontend:** Built assets embedded via `server/ui.go` (`//go:embed all:frontend`)
+- **LiveKit:** Binary under `internal/livekit/bin/`; extracted at runtime and launched as a subprocess
 
-### 1. バイナリ埋め込み（「トリック」）
+### 2. LiveKit Reverse Proxy
 
-Bedrudは`//go:embed`ディレクティブを使用してファイルをコンパイル済みバイナリにバンドルします。
+When not `livekit.external`, requests under `/livekit` are reverse-proxied to the internal LiveKit host (install default often `127.0.0.1:7880`; local multi-process dev often `7072`).
 
-- **フロントエンド:** Reactの`dist/client/`フォルダ（プリレンダリングされた`index.html`を含む）が`server/ui.go`に埋め込まれます。静的ファイルはFiberの`filesystem`ミドルウェアを使用してメモリから直接配信されます。
-- **LiveKitサーバー:** プリコンパイル済みの`livekit-server`実行可能ファイルが`internal/livekit/bin/`に埋め込まれます。実行時に、Bedrudはこれを`/tmp/bedrud-livekit-server`に展開し、バックグラウンドプロセスとして起動します（`internal/livekit/server.go`）。
+### 3. Middleware Locals
 
-### 2. LiveKitリバースプロキシ
+Auth middleware stores claims in `c.Locals("user")`. Handlers read `*auth.Claims`.
 
-複数のポート（シグナリング、APIなど）を開くことを避けるため、BedrudはすべてのLiveKitシグナリングトラフィックをメインのHTTP(S)ポート経由でルーティングします。
+### 4. Configuration Overrides
 
-- `/livekit`で始まるリクエストは`internal/server/server.go`でインターセプトされます。
-- **リバースプロキシ**（`httputil.NewSingleHostReverseProxy`を使用）がこれらのリクエストを内部LiveKitインスタンス（通常は`127.0.0.1:7880`で実行）に転送します。
-- プロキシは転送前に`/livekit`プレフィックスを削除し、LiveKitがルートアプリケーションであるかのように機能できるようにします。
+File + env (see [Configuration](/ja/docs/getting-started/configuration)). Runtime admin overrides live in `SystemSettings` (DB).
 
-### 3. ミドルウェアコンテキストとLocals
-バックエンドはFiberの`.Locals`を使用してミドルウェアとハンドラ間でデータを渡します。
-- **認証ミドルウェア (`internal/middleware/auth.go`):** JWTを検証し、`Claims`オブジェクトを`c.Locals("user")`に保存します。
-- **ハンドラ:** 以下のように現在のユーザーのIDと権限にアクセスできます:
-  ```go
-  claims := c.Locals("user").(*auth.Claims)
-  userID := claims.UserID
-  ```
-
-### 4. 設定の上書き
-
-Bedrudは`config.yaml`ファイルを使用しますが、ほぼすべての設定は**環境変数**で上書きできます。これはDockerやCI/CD環境で重要です。
-
-| 変数 | 説明 |
+| Variable | Description |
 |----------|-------------|
-| `SERVER_PORT` | バックエンドがリッスンするポート（デフォルト: `8090`）。 |
-| `SERVER_ENABLE_TLS` | HTTPSを有効にするブール値（`true/false`）。 |
-| `SERVER_DOMAIN` | 本番環境のドメイン（ACMEとパスキーRP IDに使用）。 |
-| `DB_TYPE` | `sqlite`または`postgres`。 |
-| `DB_PATH` | `.db`ファイルへのパス（SQLite使用時）。 |
-| `LIVEKIT_HOST` | LiveKitの公開URL（例: `https://meet.example.com/livekit`）。 |
-| `LIVEKIT_API_KEY` | LiveKit認証用のキー。 |
-| `JWT_SECRET` | Access Tokenの署名に使用される秘密鍵。 |
+| `SERVER_PORT` | Main listener port |
+| `SERVER_ENABLE_TLS` | HTTPS |
+| `SERVER_DOMAIN` | Domain (ACME / passkey) |
+| `DB_TYPE` / `DB_PATH` | Database type / SQLite path |
+| `LIVEKIT_HOST` | Public LiveKit URL |
+| `LIVEKIT_API_KEY` | LiveKit key |
+| `JWT_SECRET` | Access token secret |
+| `CONFIG_PATH` / `BEDRUD_CONFIG` | Config file path |
 
-## コーディング規約とパターン
+## Coding Standards
 
-バックエンドは以下のパターンに従っています:
+1. **Repository pattern** — handlers call repos, not GORM directly
+2. **Structured errors** — Fiber status + JSON
+3. **Zerolog** — `log.Info` / `Error` / `Debug` (not `fmt.Println`)
+4. **Naming** — files `snake_case.go`, exported types PascalCase
 
-### 1. リポジトリパターン
-ハンドラはデータベースに直接アクセスすべきではありません。リポジトリを使用してください。これにより、コードのテストが容易になり、APIハンドラを変更せずにデータベースロジックを変更できるようになります。
+## See also
 
-### 2. 標準化されたエラーハンドリング
-APIハンドラは明確なエラーメッセージを返す必要があります。
-- バリデーションエラーには`c.Status(fiber.StatusBadRequest).JSON(...)`を使用します。
-- 認証エラーには`c.Status(fiber.StatusUnauthorized).JSON(...)`を使用します。
-- データベースやサーバーエラーには`c.Status(fiber.StatusInternalServerError).JSON(...)`を使用します。
-
-### 3. 構造化ロギング
-バックエンドは**Zerolog**を使用してログを出力します。
-- `log.Info()`: 重要なイベント（例: サーバー起動）。
-- `log.Error()`: エラー。
-- `log.Debug()`: 詳細な開発情報。
-
-コアロジックでの`fmt.Println`によるロギングは避けてください。
-
-### 4. 命名規則
-- **ファイル:** snake_case（例: `user_handler.go`）。
-- **構造体/関数:** PascalCase（例: `GetUserByEmail`）。
-- **変数:** camelCase（例: `hashedPassword`）。
+- [Configuration](/ja/docs/getting-started/configuration)
+- [CLI Reference](/ja/docs/getting-started/cli-reference)
+- [API Handlers](/ja/docs/backend/api-handlers)
+- Repo engineer docs: `docs/server/` (not published to the site)

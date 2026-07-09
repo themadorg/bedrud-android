@@ -4,71 +4,71 @@ description: اپلیکیشن بومی iOS
 order: 10
 ---
 
-اپلیکیشن iOS بدرود با SwiftUI ساخته شده است، تجربه جلسه ویدیویی بومی با پشتیبانی چند نمونه و ذخیره امن اعتبارنامه را فراهم می‌کند.
+The Bedrud iOS app is built with SwiftUI, providing a native video meeting experience with multi-instance support and secure credential storage.
 
-## پشته فناوری
+## Technology Stack
 
-| فناوری | نسخه | هدف |
-|-----------|-------|-----|
-| Swift | 5.9+ | زبان |
-| SwiftUI | Latest | فریم‌ورک UI |
-| LiveKit Swift SDK | 2.0+ | مدیا WebRTC |
-| KeychainAccess | 4.2.2+ | ذخیره امن اعتبارنامه |
+| Technology | Version | Purpose |
+|-----------|---------|---------|
+| Swift | 5.9+ | Language |
+| SwiftUI | Latest | UI framework |
+| LiveKit Swift SDK | 2.0+ | WebRTC media |
+| KeychainAccess | 4.2.2+ | Secure credential storage |
 
-**هدف استقرار:** iOS 18.0
+**Deployment target:** iOS 18.0
 
-## پیکربندی پروژه
+## Project Configuration
 
-پروژه از **XCodeGen** برای تولید پروژه از `project.yml` استفاده می‌کند:
+The project uses **XCodeGen** for project generation from `project.yml`:
 
 - Bundle ID: `com.bedrud.ios`
-- تولید شده با: `xcodegen generate`
+- Generated with: `xcodegen generate`
 
-## ساختار دایرکتوری
+## Directory Structure
 
 ```text
 apps/ios/Bedrud/
-├── BedrudApp.swift                # نقطه ورودی اپ
+├── BedrudApp.swift                # App entry point
 ├── Core/
 │   ├── API/
-│   │   └── APIClient.swift        # کلاینت REST مبتنی بر URLSession
+│   │   └── APIClient.swift        # URLSession-based REST client
 │   ├── Auth/
-│   │   └── AuthManager.swift      # مدیریت توکن، ورود/خروج
+│   │   └── AuthManager.swift      # Token management, login/logout
 │   ├── Instance/
-│   │   ├── InstanceManager.swift  # ارکستراتور چند نمونه مرکزی
-│   │   └── InstanceStore.swift    # ذخیره نمونه پایدار (UserDefaults)
+│   │   ├── InstanceManager.swift  # Central multi-instance orchestrator
+│   │   └── InstanceStore.swift    # Persistent instance storage (UserDefaults)
 │   └── LiveKit/
-│       └── RoomManager.swift      # مدیر اتصال اتاق LiveKit
+│       └── RoomManager.swift      # LiveKit room connection manager
 ├── Features/
 │   ├── Auth/
-│   │   ├── LoginView.swift        # صفحه ورود
-│   │   └── RegisterView.swift     # صفحه ثبت‌نام
+│   │   ├── LoginView.swift        # Login screen
+│   │   └── RegisterView.swift     # Registration screen
 │   ├── Dashboard/
-│   │   └── DashboardView.swift    # لیست اتاق و مدیریت
+│   │   └── DashboardView.swift    # Room list and management
 │   ├── Meeting/
-│   │   └── MeetingView.swift      # رابط تماس ویدیویی
+│   │   └── MeetingView.swift      # Video call interface
 │   ├── Profile/
-│   │   └── ProfileView.swift      # پروفایل کاربر
+│   │   └── ProfileView.swift      # User profile
 │   ├── Instance/
-│   │   ├── AddInstanceView.swift  # افزودن نمونه سرور
-│   │   └── InstanceSwitcherView.swift  # جابجایی بین نمونه‌ها
+│   │   ├── AddInstanceView.swift  # Add server instance
+│   │   └── InstanceSwitcherView.swift  # Switch between instances
 │   ├── Settings/
-│   │   └── SettingsView.swift     # تنظیمات اپلیکیشن
+│   │   └── SettingsView.swift     # App settings
 │   ├── JoinByURL/
-│   │   └── JoinByURLView.swift    # مدیریت لینک عمیق
+│   │   └── JoinByURLView.swift    # Deep link handling
 │   └── Main/
-│       └── MainTabView.swift      # ناوبری تب
+│       └── MainTabView.swift      # Tab navigation
 ├── Models/
 │   ├── User.swift
 │   ├── Room.swift
 │   └── Instance.swift
 └── Design/
-    └── Components/                # کامپوننت‌های قابل استفاده مجدد SwiftUI
+    └── Components/                # Reusable SwiftUI components
 ```
 
-## معماری چند نمونه
+## Multi-Instance Architecture
 
-اپلیکیشن iOS معماری Android را برای پشتیبانی چند نمونه منعکس می‌کند.
+The iOS app mirrors the Android architecture for multi-instance support.
 
 ```mermaid
 flowchart TB
@@ -90,9 +90,9 @@ flowchart TB
     style InstanceManager fill:#f0f0f0,stroke:#333
 ```
 
-### الگوی کلیدی
+### Key Pattern
 
-وابستگی‌ها ویژگی‌های `@Published` روی `InstanceManager` هستند، که یک `ObservableObject` است. Views آن را از طریق `@EnvironmentObject` دریافت می‌کنند:
+Dependencies are `@Published` properties on `InstanceManager`, which is an `ObservableObject`. Views receive it via `@EnvironmentObject`:
 
 ```swift
 struct DashboardView: View {
@@ -106,7 +106,7 @@ struct DashboardView: View {
 }
 ```
 
-### جریان ناوبری
+### Navigation Flow
 
 ```mermaid
 flowchart LR
@@ -116,11 +116,11 @@ flowchart LR
     DashboardView -. "toolbar sheet" .-> InstanceSwitcherView["InstanceSwitcherView"]
 ```
 
-جابجایی نمونه به عنوان `.sheet` که از نوار Dashboard راه‌اندازی می‌شود ظاهر می‌شود.
+The instance switcher appears as a `.sheet` triggered from the Dashboard toolbar.
 
-## نقطه ورودی اپلیکیشن
+## App Entry Point
 
-`BedrudApp.swift` سرویس‌های اصلی را مقداردهی اولیه می‌کند و آنها را در محیط SwiftUI تزریق می‌کند:
+`BedrudApp.swift` initializes the core services and injects them into the SwiftUI environment:
 
 ```swift
 @main
@@ -140,38 +140,38 @@ struct BedrudApp: App {
 }
 ```
 
-## ویژگی‌ها
+## Features
 
-### ذخیره امن
+### Secure Storage
 
-از **KeychainAccess** برای ذخیره توکن‌های JWT و اعتبارنامه‌های حساس استفاده می‌کند، به جای UserDefaults.
+Uses **KeychainAccess** for storing JWT tokens and sensitive credentials, rather than UserDefaults.
 
-### لینک عمیق
+### Deep Linking
 
-URLها را برای پیوستن مستقیم به اتاق و کدهای اتاق مدیریت می‌کند.
+Handles URLs for direct room joining and room codes.
 
-### تنظیمات
+### Settings
 
-ترجیحات کاربر از طریق `SettingsStore` با استفاده از UserDefaults پایدار می‌شوند.
+User preferences are persisted via `SettingsStore` using UserDefaults.
 
-## ساخت
+## Building
 
 ```bash
-# باز کردن در Xcode
+# Open in Xcode
 make dev-ios
 
-# ساخت آرشیو (Release)
+# Build archive (Release)
 make build-ios
 
-# صادر IPA (نیاز به ExportOptions.plist دارد)
+# Export IPA (requires ExportOptions.plist)
 make export-ios
 
-# ساخت برای شبیه‌ساز (Debug)
+# Build for simulator (Debug)
 make build-ios-sim
 ```
 
-### نیازها
+### Requirements
 
-- Xcode (آخرین نسخه پایدار)
-- هدف استقرار iOS 18.0
-- برای ساخت دستگاه: حساب توسعه‌دهنده اپل و پروفایل تأمین
+- Xcode (latest stable)
+- iOS 18.0 deployment target
+- For device builds: Apple Developer account and provisioning profile

@@ -4,15 +4,15 @@ description: Masaüstü ve mobil uygulamaları kurun
 order: 3
 ---
 
-Katılmak için toplantı bağlantısını bir tarayıcıda açın - kurulum gerekmez. Yerel bir uygulama deneyimi için aşağıdan platformunuza uygun istemciyi kurun.
+Open the meeting link in a browser to join - no installation required. For a native app experience, install the client for your platform below.
 
 ---
 
-## Tarayıcı (Sıfır Kurulum)
+## Browser (Zero Install)
 
-Toplantı URL'sini **Chrome**, **Firefox**, **Edge** veya **Safari**'de açın. Kamera ve mikrofon erişimi HTTPS gerektirir (sunucu yöneticiniz bunu halleder).
+Open the meeting URL in **Chrome**, **Firefox**, **Edge**, or **Safari**. Camera and microphone access requires HTTPS (your server admin handles this).
 
-İndirme gerekmez, eklenti gerekmez, konuk erişimi etkinse hesap gerekmez.
+No downloads, no extensions, no account required if guest access is enabled.
 
 ---
 
@@ -21,21 +21,21 @@ Toplantı URL'sini **Chrome**, **Firefox**, **Edge** veya **Safari**'de açın. 
 <Tabs>
   <TabsList>
     <TabsTrigger value="google-play">Google Play</TabsTrigger>
-    <TabsTrigger value="apk-sideload">APK (yan yükleme)</TabsTrigger>
+    <TabsTrigger value="apk-sideload">APK (sideload)</TabsTrigger>
   </TabsList>
   <TabsContent value="google-play">
 
-    Google Play'de **Bedrud** arayın veya sunucu yöneticinizden doğrudan bağlantıyı takip edin.
+    Search for **Bedrud** on Google Play, or follow the direct link from your server admin.
   </TabsContent>
   <TabsContent value="apk-sideload">
 
-    En son APK'yı [GitHub Sürümleri](https://github.com/themadorg/bedrud/releases/latest) sayfasından indirin:
+    Download the latest APK from [GitHub Releases](https://github.com/themadorg/bedrud/releases/latest):
 
     ```bash
-    # Telefonunuza aktarın, ardından kurmak için açın
+    # Transfer to your phone, then open to install
     ```
 
-    Cihaz ayarlarınızda **Bilinmeyen kaynaklardan yükleme**'yi etkinleştirmeniz gerekebilir.
+    You may need to enable **Install from unknown sources** in your device settings.
   </TabsContent>
 </Tabs>
 
@@ -46,35 +46,35 @@ Toplantı URL'sini **Chrome**, **Firefox**, **Edge** veya **Safari**'de açın. 
 <Tabs>
   <TabsList>
     <TabsTrigger value="app-store">App Store</TabsTrigger>
-    <TabsTrigger value="ipa-sideload">IPA (yan yükleme)</TabsTrigger>
+    <TabsTrigger value="ipa-sideload">IPA (sideload)</TabsTrigger>
   </TabsList>
   <TabsContent value="app-store">
 
-    App Store'da **Bedrud** arayın veya sunucu yöneticinizden doğrudan bağlantıyı takip edin.
+    Search for **Bedrud** on the App Store, or follow the direct link from your server admin.
   </TabsContent>
   <TabsContent value="ipa-sideload">
 
-    En son IPA'yı [GitHub Sürümleri](https://github.com/themadorg/bedrud/releases/latest) sayfasından indirin. AltStore veya benzer bir araçla yan yükleyin.
+    Download the latest IPA from [GitHub Releases](https://github.com/themadorg/bedrud/releases/latest). Sideload using AltStore or a similar tool.
   </TabsContent>
 </Tabs>
 
 ---
 
-## Linux Masaüstü
+## Linux Desktop
 
 <Tabs>
   <TabsList>
-    <TabsTrigger value="appimage-recommended">AppImage (önerilen)</TabsTrigger>
+    <TabsTrigger value="appimage-recommended">AppImage (recommended)</TabsTrigger>
     <TabsTrigger value="flatpak">Flatpak</TabsTrigger>
     <TabsTrigger value="snap">Snap</TabsTrigger>
     <TabsTrigger value="ubuntu-debian-apt">Ubuntu / Debian (apt)</TabsTrigger>
     <TabsTrigger value="arch-linux-aur">Arch Linux (AUR)</TabsTrigger>
     <TabsTrigger value="fedora-rhel-dnf">Fedora / RHEL (DNF)</TabsTrigger>
-    <TabsTrigger value="portable-tarxz">Taşınabilir tar.xz</TabsTrigger>
+    <TabsTrigger value="portable-tarxz">Portable tar.xz</TabsTrigger>
   </TabsList>
   <TabsContent value="appimage-recommended">
 
-    Kurulum gerekmez. İndirin, çalıştırılabilir yapın, çalıştırın:
+    No installation required. Download, make executable, run:
 
     ```bash
     wget https://github.com/themadorg/bedrud/releases/latest/download/bedrud-desktop-linux-x86_64.AppImage
@@ -83,7 +83,7 @@ Toplantı URL'sini **Chrome**, **Firefox**, **Edge** veya **Safari**'de açın. 
     ```
 
     <Callout type="tip">
-        AppImage'ı uygulama başlatıcınıza entegre etmek için [AppImageLauncher](https://github.com/TheAssassin/AppImageLauncher) kullanın.
+        To integrate AppImage into your application launcher, use [AppImageLauncher](https://github.com/TheAssassin/AppImageLauncher).
     </Callout>
   </TabsContent>
   <TabsContent value="flatpak">
@@ -101,29 +101,27 @@ Toplantı URL'sini **Chrome**, **Firefox**, **Edge** veya **Safari**'de açın. 
   </TabsContent>
   <TabsContent value="ubuntu-debian-apt">
 
-    Bedrud apt deposu sisteminizde zaten yapılandırılmışsa:
+    If the Bedrud apt repository is already configured on your system:
 
     ```bash
     sudo apt install bedrud-desktop
     ```
 
-    Depo kurulumu için bkz. [Paket Kurulumu kılavuzu](/tr/docs/guides/packages).
+    See the [Package Installation guide](/tr/docs/guides/packages) for repository setup.
   </TabsContent>
   <TabsContent value="arch-linux-aur">
 
     ```bash
     yay -S bedrud-desktop-bin
     ```
-  </TabsContent>
-  <TabsContent value="fedora-rhel-dnf">
 
-    Bedrud DNF deposu zaten yapılandırılmışsa:
+    If the Bedrud DNF repository is already configured:
 
     ```bash
     sudo dnf install bedrud-desktop
     ```
 
-    Depo kurulumu için bkz. [Paket Kurulumu kılavuzu](/tr/docs/guides/packages).
+    See the [Package Installation guide](/tr/docs/guides/packages) for repository setup.
   </TabsContent>
   <TabsContent value="portable-tarxz">
 
@@ -141,7 +139,7 @@ Toplantı URL'sini **Chrome**, **Firefox**, **Edge** veya **Safari**'de açın. 
 
 <Tabs>
   <TabsList>
-    <TabsTrigger value="homebrew-recommended">Homebrew (önerilen)</TabsTrigger>
+    <TabsTrigger value="homebrew-recommended">Homebrew (recommended)</TabsTrigger>
     <TabsTrigger value="dmg-apple-silicon">Apple Silicon (.dmg)</TabsTrigger>
     <TabsTrigger value="dmg-intel">Intel (.dmg)</TabsTrigger>
     <TabsTrigger value="apple-silicon-arm64">Apple Silicon (tar.gz)</TabsTrigger>
@@ -156,23 +154,23 @@ Toplantı URL'sini **Chrome**, **Firefox**, **Edge** veya **Safari**'de açın. 
   </TabsContent>
   <TabsContent value="dmg-apple-silicon">
 
-    DMG'yi [GitHub Sürümleri](https://github.com/themadorg/bedrud/releases/latest) sayfasından indirin:
+    Download the DMG from [GitHub Releases](https://github.com/themadorg/bedrud/releases/latest):
 
-    | Mimari | Dosya |
+    | Architecture | File |
     |---|---|
     | Apple Silicon | `bedrud-desktop-macos-arm64.dmg` |
 
-    DMG'yi açın, Bedrud'u Uygulamalar'a sürükleyin. Gatekeeper uygulamayı engellerse, **Sistem Ayarları → Gizlilik ve Güvenlik**'e gidin ve **Yine de Aç**'a tıklayın.
+    Open the DMG, drag Bedrud to Applications. If Gatekeeper blocks the app, go to **System Settings → Privacy & Security** and click **Open Anyway**.
   </TabsContent>
   <TabsContent value="dmg-intel">
 
-    DMG'yi [GitHub Sürümleri](https://github.com/themadorg/bedrud/releases/latest) sayfasından indirin:
+    Download the DMG from [GitHub Releases](https://github.com/themadorg/bedrud/releases/latest):
 
-    | Mimari | Dosya |
+    | Architecture | File |
     |---|---|
     | Intel | `bedrud-desktop-macos-x86_64.dmg` |
 
-    DMG'yi açın, Bedrud'u Uygulamalar'a sürükleyin. Gatekeeper uygulamayı engellerse, **Sistem Ayarları → Gizlilik ve Güvenlik**'e gidin ve **Yine de Aç**'a tıklayın.
+    Open the DMG, drag Bedrud to Applications. If Gatekeeper blocks the app, go to **System Settings → Privacy & Security** and click **Open Anyway**.
   </TabsContent>
   <TabsContent value="apple-silicon-arm64">
 
@@ -193,7 +191,7 @@ Toplantı URL'sini **Chrome**, **Firefox**, **Edge** veya **Safari**'de açın. 
 </Tabs>
 
 <Callout type="warning">
-    macOS derlemeleri **imzalanmamış** olabilir. Gatekeeper uygulamayı engellerse, yukarıdaki `xattr` komutunu çalıştırın veya **Sistem Ayarları → Gizlilik ve Güvenlik**'e gidip **Yine de Aç**'a tıklayın.
+    macOS builds may be **unsigned**. If Gatekeeper blocks the app, run the `xattr` command above, or go to **System Settings → Privacy & Security** and click **Open Anyway**.
 </Callout>
 
 ---
@@ -204,8 +202,8 @@ Toplantı URL'sini **Chrome**, **Firefox**, **Edge** veya **Safari**'de açın. 
   <TabsList>
     <TabsTrigger value="winget">WinGet</TabsTrigger>
     <TabsTrigger value="chocolatey">Chocolatey</TabsTrigger>
-    <TabsTrigger value="nsis-installer">NSIS Kurucusu</TabsTrigger>
-    <TabsTrigger value="portable-zip">Taşınabilir .zip</TabsTrigger>
+    <TabsTrigger value="nsis-installer">NSIS Installer</TabsTrigger>
+    <TabsTrigger value="portable-zip">Portable .zip</TabsTrigger>
   </TabsList>
   <TabsContent value="winget">
 
@@ -221,44 +219,44 @@ Toplantı URL'sini **Chrome**, **Firefox**, **Edge** veya **Safari**'de açın. 
   </TabsContent>
   <TabsContent value="nsis-installer">
 
-    Kurucusu [GitHub Sürümleri](https://github.com/themadorg/bedrud/releases/latest) sayfasından indirin:
+    Download the installer from [GitHub Releases](https://github.com/themadorg/bedrud/releases/latest):
 
-    | Mimari | Dosya |
+    | Architecture | File |
     |---|---|
     | x86_64 | `bedrud-desktop-windows-x86_64-setup.exe` |
     | ARM64 | `bedrud-desktop-windows-arm64-setup.exe` |
 
-    Kurucusu çalıştırın. Uygulama Başlat Menüsü'nde ve Program Ekle/Kaldır'da görünür.
+    Run the installer. The app appears in Start Menu and Add/Remove Programs.
   </TabsContent>
   <TabsContent value="portable-zip">
 
-    [GitHub Sürümleri](https://github.com/themadorg/bedrud/releases/latest) sayfasından indirin ve çıkarın:
+    Download and extract from [GitHub Releases](https://github.com/themadorg/bedrud/releases/latest):
 
-    | Mimari | Dosya |
+    | Architecture | File |
     |---|---|
     | x86_64 | `bedrud-desktop-windows-x86_64.zip` |
     | ARM64 | `bedrud-desktop-windows-arm64.zip` |
 
-    Kurulum gerekmez - çıkarılan klasörden `bedrud-desktop.exe` dosyasını çalıştırın.
+    No installation required - run `bedrud-desktop.exe` from the extracted folder.
   </TabsContent>
 </Tabs>
 
 ---
 
-## Bir Sunucuya Bağlanma
+## Connecting to a Server
 
-Masaüstü uygulamasını ilk açtığınızda bir sunucu URL'si istenir.
+When you first open the desktop app, you'll be prompted for a server URL.
 
-1. Sunucu yöneticiniz tarafından sağlanan URL'yi girin (örn. `https://meet.example.com`)
-2. Bir hesap kaydedin veya giriş yapın
-3. Bir toplantı odası oluşturun veya katılın
+1. Enter the URL provided by your server admin (e.g. `https://meet.example.com`)
+2. Register an account or sign in
+3. Create or join a meeting room
 
-Masaüstü uygulaması **birden fazla sunucuya** bağlanmayı destekler. Daha fazlasını **Ayarlar**'dan ekleyin.
+The desktop app supports connecting to **multiple servers**. Add more in **Settings**.
 
 ---
 
-## Tüm İndirmeler
+## All Downloads
 
-Tüm istemci kurucuları ve ikili dosyaları [GitHub Sürümleri](https://github.com/themadorg/bedrud/releases/latest) sayfasında mevcuttur.
+All client installers and binaries are available on the [GitHub Releases](https://github.com/themadorg/bedrud/releases/latest) page.
 
-Tüm paket yöneticileri, depolar ve platformlar için tam referans için bkz. [Paket Kurulumu Kılavuzu](/tr/docs/guides/packages).
+For the complete reference of all package managers, repositories, and platforms, see the [Package Installation Guide](/tr/docs/guides/packages).

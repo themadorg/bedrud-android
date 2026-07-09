@@ -4,52 +4,59 @@ description: نمای کلی از معماری سیستم بک‌اند Bedrud
 order: 15
 ---
 
-## مقدمه
+## Introduction
+The Bedrud backend is a single-binary meeting platform written in **Go 1.24+**. All dependencies - media server, web frontend, TURN server - are embedded in one executable.
 
-backend Bedrud یک پلتفرم جلسه تک‌باینری نوشته‌شده در **Go 1.24+** است. تمام وابستگی‌ها — media server، frontend، TURN server — در یک executable embed شده‌اند.
+### Key Technologies
+- **Core Framework:** [Fiber v2](https://gofiber.io/) (Zero allocation router, Express-like API).
+- **Database Layer:** [GORM](https://gorm.io/) with support for **SQLite** (standard) and **PostgreSQL** (production).
+- **Media Engine:** [LiveKit](https://livekit.io/) (Embedded as a sibling binary).
+- **Auth System:** Multi-layered auth supporting JWT, OAuth2 (Google/GitHub/Twitter), and passwordless FIDO2 Passkeys.
+- **Embedded Static Assets:** Uses Go 1.16+ `embed` package to bundle the React frontend (SSR pre-rendered client assets).
+- **Deployment:** Integrated Debian/Ubuntu auto-installer with init system orchestration (systemd, OpenRC, SysV init) and ACME (Let's Encrypt) support.
 
-### فناوری‌های کلیدی
+## Why this Architecture?
+WebRTC platforms typically run separate services for signaling, TURN, web serving, and database management. Bedrud consolidates these into one binary by:
 
-- **فریم‌ورک:** [Fiber v2](https://gofiber.io/) (روتر zero-allocation، API مشابه Express)
-- **دیتابیس:** [GORM](https://gorm.io/) با **SQLite** (پیش‌فرض) و **PostgreSQL** (production)
-- **Media engine:** [LiveKit](https://livekit.io/) (embed شده)
-- **احراز هویت:** چندلایه — JWT، OAuth2 (Google/GitHub/Twitter)، Passkey (FIDO2)
-- **Static assets:** از `embed` در Go 1.16+ برای بسته‌بندی frontend React (SSR)
-- **استقرار:** نصب‌کننده خودکار Debian/Ubuntu با سیستم init (systemd، OpenRC، SysV init) و ACME (Let's Encrypt)
+1.  **Extracting** the media server binary at runtime.
+2.  **Proxying** media traffic through the main HTTP(S) port.
+3.  **Automating** OS-level configuration (SSL, init services) via the binary itself.
 
-## چرا این معماری؟
+## High-Level Architecture
+The backend follows a standard layered architecture with an async job queue:
 
-پلتفرم‌های WebRTC معمولاً سرویس‌های جداگانه برای signaling، TURN، وب و دیتابیس اجرا می‌کنند. Bedrud همه را در یک باینری ادغام کرده:
+1.  **Server Layer (`internal/server`):** Sets up the Fiber app, routes, and middleware.
+2.  **Handler Layer (`internal/handlers`):** Manages HTTP requests and responses.
+3.  **Repository Layer (`internal/repository`):** Handles database queries using GORM.
+4.  **Model Layer (`internal/models`):** Defines the database tables and Go structures.
+5.  **Queue Layer (`internal/queue`):** Async job worker for room/user deletion, suspensions, and uploads. API endpoints return `202 Accepted` and enqueue jobs for background processing.
+6.  **Service/Logic Layer:** Integrated into handlers and repositories for simplicity, with specialized packages like `internal/auth` and `internal/livekit`.
 
-۱. **استخراج** باینری media server در runtime.
-۲. **Proxy** ترافیک media از طریق پورت HTTP(S) اصلی.
-۳. **اتوماسیون** پیکربندی سیستم (SSL، init سرویس‌ها) توسط خود باینری.
+## Main Entry Point
+The application starts in `server/cmd/bedrud/main.go`. It has three main modes:
 
-## معماری سطح بالا
+- `run`: Starts the full meeting server.
+- `livekit`: Starts only the embedded media server.
+- `install`: Automatically sets up the server on Debian/Ubuntu systems.
 
-backend از معماری لایه‌ای پیروی می‌کند:
+## Documentation Sections
+- [**Code Structure**](/fa/docs/backend/structure): Where is everything located?
+- [**Database & Models**](/fa/docs/backend/database): How is data stored?
+- [**Authentication**](/fa/docs/backend/authentication): How do users log in?
+- [**API Handlers**](/fa/docs/backend/api-handlers): How are requests processed?
+- [**LiveKit Integration**](/fa/docs/backend/livekit): How does the video server work?
+- [**WebRTC Connectivity**](/fa/docs/architecture/webrtc-connectivity): How do clients establish media connections? (STUN/ICE/TURN/SFU)
+- [**TURN Server**](/fa/docs/architecture/turn-server): TURN relay architecture, configuration, and troubleshooting
+- [**Installation & Deployment**](/fa/docs/backend/deployment): How does the auto-installer work?
 
-۱. **Server** (`internal/server`): Fiber app، مسیرها و middleware.
-۲. **Handler** (`internal/handlers`): پردازش درخواست و پاسخ HTTP.
-۳. **Repository** (`internal/repository`): queryهای دیتابیس با GORM.
-۴. **Model** (`internal/models`): جداول دیتابیس و structهای Go.
-۵. **Service:** در handlerها و repositoryها ادغام شده، با پکیج‌های `internal/auth` و `internal/livekit`.
+## Contributor documentation (repository)
 
-## نقطه ورودی
+These pages on bedrud.org are written for operators and API consumers. If you are **developing** the backend in the monorepo, use the code-audited internal docs in `docs/server/` (also linked from [AGENTS.md](https://github.com/themadorg/bedrud/blob/master/AGENTS.md)):
 
-برنامه در `server/cmd/bedrud/main.go` شروع می‌شود. سه حالت دارد:
-
-- `run`: سرور کامل جلسات را شروع می‌کند.
-- `livekit`: فقط media server داخلی را شروع می‌کند.
-- `install`: نصب خودکار در Debian/Ubuntu.
-
-## بخش‌های مستندات
-
-- [**ساختار کد**](/fa/docs/backend/structure): همه‌چیز کجاست؟
-- [**دیتابیس و مدل‌ها**](/fa/docs/backend/database): داده‌ها چطور ذخیره می‌شوند؟
-- [**احراز هویت**](/fa/docs/backend/authentication): کاربران چطور login می‌شوند؟
-- [**Handlerهای API**](/fa/docs/backend/api-handlers): درخواست‌ها چطور پردازش می‌شوند؟
-- [**یکپارچگی LiveKit**](/fa/docs/backend/livekit): video server چطور کار می‌کند؟
-- [**اتصال WebRTC**](/fa/docs/architecture/webrtc-connectivity): کلاینت‌ها چطور اتصال media برقرار می‌کنند؟ (STUN/ICE/TURN/SFU)
-- [**TURN server**](/fa/docs/architecture/turn-server): معماری، پیکربندی و عیب‌یابی TURN
-- [**نصب و استقرار**](/fa/docs/backend/deployment): نصب‌کننده خودکار چطور کار می‌کند؟
+| Topic | Internal doc (GitHub) |
+|-------|----------------------|
+| Authoritative route table | [`docs/server/routes.md`](https://github.com/themadorg/bedrud/blob/master/docs/server/routes.md) |
+| Handler method index | [`docs/server/handlers-reference.md`](https://github.com/themadorg/bedrud/blob/master/docs/server/handlers-reference.md) |
+| Queue internals | [`docs/server/queue-deep-dive.md`](https://github.com/themadorg/bedrud/blob/master/docs/server/queue-deep-dive.md) |
+| Public ↔ internal map | [`docs/server/public-docs.md`](https://github.com/themadorg/bedrud/blob/master/docs/server/public-docs.md) |
+| Add endpoints / models | [`docs/server/developer-guide.md`](https://github.com/themadorg/bedrud/blob/master/docs/server/developer-guide.md) |

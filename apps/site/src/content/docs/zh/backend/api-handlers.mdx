@@ -4,92 +4,86 @@ description: REST API 端点实现
 order: 19
 ---
 
-Bedrud 使用 **Fiber** Web 框架（Go 的类 Express API）。
+Bedrud uses the **Fiber** web framework. Production routes are registered in `server/internal/server/server.go` (used by `bedrud run`). Interactive OpenAPI: [API Reference](/zh/docs/api/api-reference).
 
-## 路由逻辑
+## Route Groups
 
-路由定义在 `internal/server/server.go` 中。我们对路由进行分组，以便轻松应用 middleware 或前缀。
+| Prefix | Auth | Purpose |
+|--------|------|---------|
+| `/api/auth/*` | Mixed | Register, login, OAuth, passkeys, profile, preferences, verify, password reset |
+| `/api/room/*` | Mostly protected | Create/join/list/moderate rooms, chat upload |
+| `/api/admin/*` | Superadmin | Users, rooms, settings, invite tokens, webhooks, queue, overview |
+| `/api/livekit/webhook` | LiveKit JWT | Inbound media disconnect events |
+| `/api/cert` | Public | Cert metadata for clients (when applicable) |
+| `/livekit/*` | Proxied | Embedded LiveKit signaling (unless `livekit.external`) |
+| `/uploads/chat/*` | Protected | Chat image files |
+| `/uploads/avatars/*` | Public | Avatar files |
+| `/*` | SPA | Embedded frontend |
 
-### 主要路由组：
+Admin group middleware: `Protected` → `RequireEmailVerified` → `RequireAccess(superadmin)`.
 
-- **`/api/auth`**：认证的公共和受保护路由。
-- **`/api/room`**：房间管理的受保护路由。
-- **`/api/admin`**：仅限 `superadmin` 角色用户访问的路由。
-- **`/livekit`**：特殊的代理路由组，将请求发送到内嵌的 LiveKit 音视频服务器。
+## Auth Highlights
 
-## 专用 Handler 逻辑
+- Local register/login/refresh, OAuth (`/auth/:provider/login|callback`)
+- Passkey register/login/signup begin/finish
+- Profile + avatar: `GET/PUT /auth/me`, avatar upload/delete
+- Preferences: `GET/PUT /auth/preferences`
+- Email verify + resend; forgot/reset password
+- Public settings: `GET /auth/settings`
 
-### 房间管理（`internal/handlers/room.go`）
-`RoomHandler` 在 Bedrud 的房间元数据和 LiveKit 的媒体引擎之间进行转换。
+## Room Highlights
 
-#### 1. 房间创建
-通过 `POST /api/room/create` 创建房间时：
+- `POST /room/create`, `/room/join`, `/room/guest-join`, `/room/refresh-token`
+- `GET /room/list`, `/room/archived`
+- Moderation: kick, mute, ban, video off, promote/demote, chat block, deafen, ask, spotlight, screenshare stop, stage bring/remove
+- `PUT /room/:roomId/settings`, `DELETE /room/:roomId` (async job → **202**)
+- `POST /room/:roomId/chat/upload`
+- Presence: `GET /room/:roomId/presence`
 
-- **规范化：** 房间名称会被修剪并转为小写。
-- **自动生成：** 如果未提供名称，Bedrud 会生成一个随机的 URL 安全名称（如 `fancy-blue-whale`）。
-- **同步创建：** 后端首先调用内部 LiveKit API 创建媒体会话，然后将元数据保存到本地数据库中。
+## Admin Highlights
 
-#### 2. 加入与令牌
-当用户通过 `POST /api/room/join` 加入时：
+- Users: list, detail, status, accesses, force-logout, set password, verify, sessions, **delete** (async), bulk ban/promote/delete
+- Rooms: list, events, token, close, suspend, reactivate, update, participants, bulk suspend/close
+- Settings: get/put, send-test-email, validate connectivity
+- Invite tokens CRUD; webhooks CRUD + rotate-secret + test
+- Overview, online-count, LiveKit stats, cert-info, queue stats
 
-- **访问控制：** 后端检查房间是否存在以及用户是否已授权。
-- **令牌生成：** 生成一个签名的 JWT（加入令牌），包含：
-  - `Identity`：Bedrud 中的用户 ID。
-  - `Name`：用户的显示名称。
-  - `Grants`：特定权限，如 `CanJoin`、`CanPublish`、`CanSubscribe`。
-- **客户端握手：** 前端同时获取本地房间元数据和 LiveKit 令牌，以启动 WebRTC 连接。
+Recording admin/user routes are **not registered** in production (planned feature).
 
-## 管理员与用户管理（`internal/handlers/users.go`）
-`/api/admin` 下的路由由 `RequireAccess("superadmin")` middleware 严格保护。
+## Async Operations (Job Queue)
 
-### 1. 用户控制
-`UsersHandler` 允许管理员：
+Destructive work and some side effects return **202 Accepted** and enqueue jobs:
 
-- **列出所有用户：** 获取已注册用户的完整目录，包括其认证提供商和最后登录的元数据。
-- **更新状态：** 即时激活或停用账户访问权限。停用用户会立即阻止其登录或刷新令牌。
+| Endpoint | Job type (approx.) |
+|----------|--------------------|
+| `DELETE /api/room/:roomId` | `room_delete` |
+| `DELETE /api/admin/rooms/:roomId` | `room_delete` |
+| `POST /api/admin/rooms/:roomId/suspend` | `room_suspend` |
+| `POST /api/admin/rooms/bulk/suspend` | bulk suspend |
+| `POST /api/admin/rooms/bulk/close` | bulk close |
+| `DELETE /api/admin/users/:id` | `user_delete` |
+| `POST /api/admin/users/bulk/delete` | bulk `user_delete` |
 
-### 2. 房间概览
-管理员路由允许列出整个平台上所有活跃和历史房间，无论创建者是谁。这用于平台管理。
+Other job types: `dispatch_webhook`, email sends, chat upload processing. Worker polls ~500ms (configurable); retries with exponential backoff `2^attempts * 5s` (cap 1h).
 
-## 请求生命周期
+## Room Creation & Join (summary)
 
-1.  **请求到达**：Fiber 接收 HTTP 请求。
-2.  **Middleware**：
+**Create** (`POST /api/room/create`): normalize/generate name → LiveKit room → DB metadata → optional `room.created` webhook.
 
-    - `recover`：防止服务器在出错时崩溃。
-    - `cors`：处理跨源资源共享。
-    - `Protected`：（可选）检查 `Authorization` 头中是否存在有效的 JWT。
-3.  **Handler**：调用 `internal/handlers` 中的函数。
+**Join** (`POST /api/room/join`): authorize → LiveKit JWT (identity, name, grants) → client connects via WebRTC.
 
-    - 使用 `c.BodyParser` 解析 JSON 请求体（如果有）。
-    - 调用必要的 Service 或 Repository。
-    - 使用 `c.JSON` 返回 JSON 响应。
+## Request Lifecycle
 
-## 示例：创建房间 Handler
+1. Fiber receives request
+2. Middleware: recover, CORS, rate limit, optional JWT + email-verified
+3. Handler parses body, calls repo/service, returns JSON
 
-```go
-func (h *RoomHandler) CreateRoom(c *fiber.Ctx) error {
-    var input struct {
-        Name string `json:"name"`
-    }
-    // 1. Parse Input
-    if err := c.BodyParser(&input); err != nil {
-        return c.Status(400).JSON(fiber.Map{"error": "Invalid input"})
-    }
+## Static Frontend
 
-    // 2. Business Logic (via Repository)
-    room := &models.Room{Name: input.Name}
-    if err := h.roomRepo.Create(room); err != nil {
-        return c.Status(500).JSON(fiber.Map{"error": "Failed to create room"})
-    }
+Built React assets are embedded and served from the binary. Non-`/api` routes fall through to the SPA shell.
 
-    // 3. Response
-    return c.Status(201).JSON(room)
-}
-```
+## See also
 
-## 静态文件（前端）
-
-Web 前端在构建时**嵌入**到 Go 二进制文件中。Fiber 使用 `filesystem.New` 从 `frontend/` 目录提供 React 文件。
-
-任何不以 `/api` 开头的路由都会重定向到 React 应用的 `index.html`。这使得客户端路由在页面刷新时不会出现 404 错误。
+- [Authentication](/zh/docs/backend/authentication)
+- [Webhooks Guide](/zh/docs/guides/webhooks)
+- [Configuration](/zh/docs/getting-started/configuration)

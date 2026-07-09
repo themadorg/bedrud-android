@@ -109,21 +109,13 @@ When a user joins a room, the server:
 
 ### Recordings & LiveKit Egress
 
-Room recording uses a three-layer authorization architecture:
+🚧 **Planned feature.** Recording HTTP routes and queue handlers are present in the codebase but **not registered** on the production route table (`// TODO oncoming feature` in `internal/server/server.go`). YAML keys under `recording:` are reserved for the upcoming release.
 
-1. **Middleware** (`RecordingsEnabled`) — checks system-level `SystemSettings.RecordingsEnabled`
-2. **Service** (`RecordingService`) — checks room-level `Room.Settings.RecordingsAllowed` + LK egress client availability
-3. **Handler** (`RecordingHandler`) — checks user is room moderator via `isRoomModerator()`
-
-Recording flow:
-- `POST /api/rooms/:id/recording/start` → moderator check → `RecordingService.StartRecording()` → LK `StartRoomCompositeEgress()`
-- `POST /api/rooms/:id/recording/stop` → moderator check → `RecordingService.StopRecording()` → LK `StopEgress()` → transition to `processing`
-- A background job (`process_recording`) downloads the file from LiveKit and stores it
-- On completion, `recording.completed` webhook event is dispatched
+When enabled, the design uses three-layer authorization (system setting → room setting → moderator check), LiveKit Room Composite Egress, and a `process_recording` job. Until then, do not rely on recording API endpoints.
 
 ### Webhooks
 
-Webhook system allows superadmins to register HTTP callbacks for real-time events. Events include `room.ended`, `participant.joined`, `participant.left`, and `recording.completed`.
+Webhook system allows superadmins to register HTTP callbacks for real-time events. Active events: `room.created`, `room.ended`, `participant.joined`, and `ping` (test). `recording.completed` is reserved for a planned feature. Delivery headers: `X-Bedrud-Signature`, `X-Bedrud-Event`, `X-Bedrud-Timestamp`.
 
 - **Storage:** `Webhook` model in database, CRUD via `WebhookRepository`
 - **Dispatch:** Background job (`dispatch_webhook`) sends HMAC-SHA256 signed POST requests with 10s timeout

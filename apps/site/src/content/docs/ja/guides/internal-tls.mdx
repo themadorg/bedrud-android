@@ -4,33 +4,34 @@ description: 内部ネットワーク向けの自己署名証明書
 order: 30
 ---
 
-分離されたネットワーク向け - パブリックドメインなし、外部インターネット接続なし、接続制限あり。
+For isolated networks - no public domain, no outbound internet, restricted connectivity.
 
-ブラウザは WebRTC 経由のカメラ/マイクに信頼済み HTTPS を要求します。自己署名証明書でも動作しますが警告が表示されます。警告なしでクリーンに設定するには、プライベート CA を生成しクライアントに配布します。
+Browsers require trusted HTTPS for camera/mic via WebRTC. Self-signed certs work but show warnings. For a clean setup, generate a private CA and distribute it to clients.
 
-## プライベート CA とサーバー証明書の生成
+## Generate Private CA and Server Certificate
 
-最新のブラウザでは証明書に Subject Alternative Names (SANs) が必要です。インストーラーが自動的に処理します。
+Modern browsers require Subject Alternative Names (SANs) on certificates. The installer handles this automatically.
 
-### オプション 1：インストーラーを使用（推奨）
+### Option 1: Use the Installer (Recommended)
 
-`bedrud install` コマンドは、指定された IP とドメインに対して適切な SAN を持つ自己署名証明書を生成します：
+The `bedrud install` command generates self-signed certificates with proper SANs for the given IPs and domains:
 
 ```bash
 sudo bedrud install --tls --ip YOUR_SERVER_IP
 ```
 
-ドメイン名も含める場合：
+To also include a domain name:
 
 ```bash
 sudo bedrud install --tls --ip YOUR_SERVER_IP --domain your.domain.com
 ```
 
-### オプション 2：手動による証明書生成
+### Option 2: Manual Certificate Generation
 
-インストーラーの組み込み生成がワークフローに合わない場合は、openssl コマンドに `-addext` フラグを追加します：
+If the installer's built-in generation doesn't fit your workflow, add `-addext` flags to the openssl commands.
 
-```bash
+Bedrud generates **Ed25519** keys by default (PKCS8 format, ~128-bit security, deterministic signatures, 32-byte public keys), configurable to ECDSA P256 or RSA via the `certAlgorithm` config field or `--cert-algorithm` CLI flag. Choose the key type that matches your environment:
+
 #### Ed25519 (matches Bedrud's built-in generation, recommended)
 
 ```bash
@@ -85,9 +86,42 @@ openssl x509 -req -days 365 -in server.csr \
 sudo ./bedrud install --tls --cert server.crt --key server.key --ip YOUR_SERVER_IP
 ```
 
-## クライアントトラストストアへの CA 追加
+## HTTP Listener Port
 
-`ca.crt` をすべてのクライアントマシンに配布します：
+When TLS is enabled, Bedrud also starts an HTTP listener (default port 80) for bots and local access. Ports below 1024 require root on Linux.
+
+### TURN/TLS Auto-Configuration
+
+When server TLS is enabled (via the installer or `server.enableTLS: true`), the embedded LiveKit process automatically generates a temporary config with TURN/TLS settings. The server's TLS certificate is reused for TURN/TLS on port 5349. The TURN `domain` is auto-set from `server.host`, UDP port 3478 is configured for TURN/STUN, and relative `certFile`/`keyFile` paths are resolved to absolute paths before being passed to LiveKit. No additional configuration is needed.
+
+For custom TURN settings (separate domain, different cert, port overrides), provide a LiveKit YAML config file via `livekit.configPath` in `config.yaml` or the `LIVEKIT_CONFIG_PATH` environment variable.
+
+**Non-root setups** — set an unprivileged port in `/etc/bedrud/config.yaml`:
+
+```yaml
+server:
+  httpPort: "8080"
+```
+
+Or via environment variable:
+
+```bash
+export SERVER_HTTP_PORT=8080
+```
+
+Alternatively, grant the binary permission to bind low ports:
+
+```bash
+sudo setcap 'cap_net_bind_service=+ep' $(which bedrud)
+```
+
+<Callout type="warning">
+    `setcap` must be re-run after each binary update (reinstall, upgrade, new build).
+</Callout>
+
+## Add CA to Client Trust Stores
+
+Distribute `ca.crt` to all client machines:
 
 ### Windows
 
@@ -102,34 +136,44 @@ sudo security add-trusted-cert -d -r trustRoot \
   -k /Library/Keychains/System.keychain ca.crt
 ```
 
-### Linux（Debian/Ubuntu）
+### Linux (Debian/Ubuntu)
 
 ```bash
 sudo cp ca.crt /usr/local/share/ca-certificates/bedrud-ca.crt
 sudo update-ca-certificates
 ```
 
-### Linux（Arch/Fedora）
+### Linux (Arch/Fedora)
 
 ```bash
 sudo cp ca.crt /etc/pki/ca-trust/source/anchors/bedrud-ca.crt
 sudo update-ca-trust
 ```
 
-ブラウザを再起動してから `https://YOUR_SERVER_IP`（サーバーの実際の IP アドレスに置き換えてください。例：`192.168.1.100`）を開きます。再起動後、証明書が信頼済みとなり、カメラ/マイクへのアクセスが警告なしで動作します。
+## Distributing the Certificate
 
-## トラブルシューティング
+After enabling TLS, clients can fetch the server's PEM certificate directly via the API:
 
-| 問題 | 解決策 |
+```bash
+curl -o bedrud-cert.pem https://YOUR_SERVER_IP/api/cert
+```
+
+This endpoint returns the server certificate currently in use. Combine with the CA distribution steps above for a complete trusted setup.
+
+Restart browsers, then open `https://YOUR_SERVER_IP` (replace with the server's actual IP address, e.g. `192.168.1.100`). After restarting, the certificate will be trusted and camera/microphone access will work without warnings.
+
+## Troubleshooting
+
+| Problem | Fix |
 |---------|-----|
-| ブラウザがまだ証明書を信頼できないと警告する | ブラウザキャッシュをクリアし、CA インストール後にブラウザを再起動 |
-| カメラ/マイクがブロックされる | CA が中間 CA ではなく信頼済みルート CA にあることを確認 |
-| 証明書の有効期限切れ | `sudo bedrud cert renew` を実行して再生成（毎日 09:00 に自動更新） |
-| CN の不一致 | 最新のブラウザは CN フィールドを無視します — SAN が優先されます。インストーラーの組み込み証明書生成（推奨）を使用するか、openssl コマンドに `-addext 'subjectAltName=...'` を追加してください |
-| SANs 不足 | 最新のブラウザは CN フィールドを無視します。インストーラーの組み込み証明書生成（推奨）を使用するか、openssl コマンドに `-addext 'subjectAltName=...'` を追加してください |
+| Browser still warns certificate untrusted | Clear browser cache, restart browser after CA install |
+| Camera/mic blocked | Verify CA is in Trusted Root CAs, not intermediate |
+| Certificate expired | Run `sudo bedrud cert renew` to regenerate (auto-renewal every 24h at 09:00) |
+| CN mismatch | Modern browsers ignore the CN field — SAN is authoritative. Use the installer's built-in cert generation (recommended) or add `-addext 'subjectAltName=...'` to the openssl command |
+| Missing SANs | Modern browsers ignore the CN field. Use the installer's built-in cert generation (recommended) or add `-addext 'subjectAltName=...'` to the openssl command |
 
 ---
 
-## 関連項目
-- [インストールガイド](/ja/docs/getting-started/installation) - インストール方法
-- [設定リファレンス](/ja/docs/getting-started/configuration) - 設定オプションの詳細
+## See also
+- [Installation Guide](/ja/docs/getting-started/installation) - install methods
+- [Configuration Reference](/ja/docs/getting-started/configuration) - full config options

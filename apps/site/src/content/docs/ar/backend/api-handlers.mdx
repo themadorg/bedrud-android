@@ -1,95 +1,89 @@
 ---
 title: معالجات API
-description: تطبيقات نقاط نهاية REST API
+description: تنفيذ نقاط نهاية REST
 order: 19
 ---
 
-يستخدم Bedrud إطار العمل **Fiber** (واجهة برمجة تشبه Express لـ Go).
+Bedrud uses the **Fiber** web framework. Production routes are registered in `server/internal/server/server.go` (used by `bedrud run`). Interactive OpenAPI: [API Reference](/ar/docs/api/api-reference).
 
-## منطق التوجيه
+## Route Groups
 
-تُعرَّف المسارات في `internal/server/server.go`. نُجمّع المسارات لتطبيق البرمجيات الوسيطة أو البادئات بسهولة.
+| Prefix | Auth | Purpose |
+|--------|------|---------|
+| `/api/auth/*` | Mixed | Register, login, OAuth, passkeys, profile, preferences, verify, password reset |
+| `/api/room/*` | Mostly protected | Create/join/list/moderate rooms, chat upload |
+| `/api/admin/*` | Superadmin | Users, rooms, settings, invite tokens, webhooks, queue, overview |
+| `/api/livekit/webhook` | LiveKit JWT | Inbound media disconnect events |
+| `/api/cert` | Public | Cert metadata for clients (when applicable) |
+| `/livekit/*` | Proxied | Embedded LiveKit signaling (unless `livekit.external`) |
+| `/uploads/chat/*` | Protected | Chat image files |
+| `/uploads/avatars/*` | Public | Avatar files |
+| `/*` | SPA | Embedded frontend |
 
-### المجموعات الرئيسية:
+Admin group middleware: `Protected` → `RequireEmailVerified` → `RequireAccess(superadmin)`.
 
-- **`/api/auth`**: مسارات عامة ومحمية للمصادقة.
-- **`/api/room`**: مسارات محمية لإدارة الغرف.
-- **`/api/admin`**: مسارات مقيّدة بالمستخدمين ذوي دور `superadmin`.
-- **`/livekit`**: مجموعة بروكسي خاصة ترسل الطلبات إلى خادم الصوت/الفيديو LiveKit المدمج.
+## Auth Highlights
 
-## منطق المعالجات المتخصصة
+- Local register/login/refresh, OAuth (`/auth/:provider/login|callback`)
+- Passkey register/login/signup begin/finish
+- Profile + avatar: `GET/PUT /auth/me`, avatar upload/delete
+- Preferences: `GET/PUT /auth/preferences`
+- Email verify + resend; forgot/reset password
+- Public settings: `GET /auth/settings`
 
-### إدارة الغرف (`internal/handlers/room.go`)
-يترجم `RoomHandler` بين بيانات الغرف الوصفية في Bedrud ومحرك وسائط LiveKit.
+## Room Highlights
 
-#### ١. إنشاء الغرفة
-عند إنشاء غرفة عبر `POST /api/room/create`:
+- `POST /room/create`, `/room/join`, `/room/guest-join`, `/room/refresh-token`
+- `GET /room/list`, `/room/archived`
+- Moderation: kick, mute, ban, video off, promote/demote, chat block, deafen, ask, spotlight, screenshare stop, stage bring/remove
+- `PUT /room/:roomId/settings`, `DELETE /room/:roomId` (async job → **202**)
+- `POST /room/:roomId/chat/upload`
+- Presence: `GET /room/:roomId/presence`
 
-- **التسوية:** تُقلم أسماء الغرف وتُحوّل إلى حروف صغيرة.
-- **التوليد التلقائي:** إذا لم يُقدَّم اسم، يُنشئ Bedrud اسمًا عشوائيًا آمنًا للروابط (مثلاً `fancy-blue-whale`).
-- **الإنشاء المتزامن:** تستدعي الخلفية أولاً واجهة برمجة تطبيقات LiveKit الداخلية لإنشاء جلسة الوسائط، ثم تحفظ البيانات الوصفية في قاعدة البيانات المحلية.
+## Admin Highlights
 
-#### ٢. الانضمام والرموز
-عند انضمام مستخدم عبر `POST /api/room/join`:
+- Users: list, detail, status, accesses, force-logout, set password, verify, sessions, **delete** (async), bulk ban/promote/delete
+- Rooms: list, events, token, close, suspend, reactivate, update, participants, bulk suspend/close
+- Settings: get/put, send-test-email, validate connectivity
+- Invite tokens CRUD; webhooks CRUD + rotate-secret + test
+- Overview, online-count, LiveKit stats, cert-info, queue stats
 
-- **التحكم في الوصول:** تتحقق الخلفية من وجود الغرفة وكون المستخدم مُصرحًا له.
-- **توليد الرمز:** يُنشأ JWT مُوقَّع (رمز الانضمام) يحتوي على:
-  - `Identity`: معرّف المستخدم من Bedrud.
-  - `Name`: اسم العرض للمستخدم.
-  - `Grants`: صلاحيات محددة مثل `CanJoin`، `CanPublish`، `CanSubscribe`.
-- **مصافحة العميل:** تتلقى الواجهة الأمامية كلًا من البيانات الوصفية المحلية للغرفة ورمز LiveKit لبدء اتصال WebRTC.
+Recording admin/user routes are **not registered** in production (planned feature).
 
-## الإدارة وإدارة المستخدمين (`internal/handlers/users.go`)
-المسارات تحت `/api/admin` محمية بصرامة بواسطة البرمجية الوسيطة `RequireAccess("superadmin")`.
+## Async Operations (Job Queue)
 
-### ١. التحكم في المستخدمين
-يتيح `UsersHandler` للمشرفين:
+Destructive work and some side effects return **202 Accepted** and enqueue jobs:
 
-- **عرض جميع المستخدمين:** جلب دليل كامل للمستخدمين المسجلين بما في ذلك مزود المصادقة وبيانات آخر تسجيل دخول.
-- **تحديث الحالة:** تفعيل أو إلغاء تفعيل الوصول للحساب فورًا. إلغاء تفعيل المستخدم يمنعه فورًا من تسجيل الدخول أو تحديث رموزه.
+| Endpoint | Job type (approx.) |
+|----------|--------------------|
+| `DELETE /api/room/:roomId` | `room_delete` |
+| `DELETE /api/admin/rooms/:roomId` | `room_delete` |
+| `POST /api/admin/rooms/:roomId/suspend` | `room_suspend` |
+| `POST /api/admin/rooms/bulk/suspend` | bulk suspend |
+| `POST /api/admin/rooms/bulk/close` | bulk close |
+| `DELETE /api/admin/users/:id` | `user_delete` |
+| `POST /api/admin/users/bulk/delete` | bulk `user_delete` |
 
-### ٢. نظرة عامة على الغرف
-تسمح مسارات المشرف بعرض جميع الغرف النشطة والتاريخية عبر المنصة بأكملها، بغض النظر عن مَن أنشأها. هذا مُعد للإشراف على المنصة.
+Other job types: `dispatch_webhook`, email sends, chat upload processing. Worker polls ~500ms (configurable); retries with exponential backoff `2^attempts * 5s` (cap 1h).
 
-## دورة حياة الطلب
+## Room Creation & Join (summary)
 
-١.  **وصول الطلب**: يستقبل Fiber طلب HTTP.
-٢.  **البرمجية الوسيطة**:
+**Create** (`POST /api/room/create`): normalize/generate name → LiveKit room → DB metadata → optional `room.created` webhook.
 
-    - `recover`: تمنع تعطل الخادم عند حدوث خطأ.
-    - `cors`: تتعامل مع مشاركة الموارد عبر الأصول.
-    - `Protected`: (اختياري) تتحقق من JWT صالح في ترويسة `Authorization`.
-٣.  **المعالج**: تُستدعى الدالة في `internal/handlers`.
+**Join** (`POST /api/room/join`): authorize → LiveKit JWT (identity, name, grants) → client connects via WebRTC.
 
-    - تحلل جسم JSON (إن وُجد) باستخدام `c.BodyParser`.
-    - تستدعي الخدمة أو المستودع اللازم.
-    - تُرجع استجابة JSON باستخدام `c.JSON`.
+## Request Lifecycle
 
-## مثال: معالج إنشاء الغرفة
+1. Fiber receives request
+2. Middleware: recover, CORS, rate limit, optional JWT + email-verified
+3. Handler parses body, calls repo/service, returns JSON
 
-```go
-func (h *RoomHandler) CreateRoom(c *fiber.Ctx) error {
-    var input struct {
-        Name string `json:"name"`
-    }
-    // 1. Parse Input
-    if err := c.BodyParser(&input); err != nil {
-        return c.Status(400).JSON(fiber.Map{"error": "Invalid input"})
-    }
+## Static Frontend
 
-    // 2. Business Logic (via Repository)
-    room := &models.Room{Name: input.Name}
-    if err := h.roomRepo.Create(room); err != nil {
-        return c.Status(500).JSON(fiber.Map{"error": "Failed to create room"})
-    }
+Built React assets are embedded and served from the binary. Non-`/api` routes fall through to the SPA shell.
 
-    // 3. Response
-    return c.Status(201).JSON(room)
-}
-```
+## See also
 
-## الملفات الثابتة (الواجهة الأمامية)
-
-الواجهة الأمامية للويب **مدمجة** في الملف الثنائي Go وقت البناء. يخدم Fiber ملفات React من دليل `frontend/` باستخدام `filesystem.New`.
-
-أي مسار لا يبدأ بـ `/api` يُعاد توجيهه إلى `index.html` الخاص بتطبيق React. هذا يفعّل التوجيه من جانب العميل بدون أخطاء 404 عند تحديث الصفحة.
+- [Authentication](/ar/docs/backend/authentication)
+- [Webhooks Guide](/ar/docs/guides/webhooks)
+- [Configuration](/ar/docs/getting-started/configuration)

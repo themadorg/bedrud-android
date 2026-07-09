@@ -4,190 +4,189 @@ description: Derleme otomasyon komutları
 order: 31
 ---
 
-Kök dizindeki `Makefile`, Bedrud monoreposu için merkezi derleme orkestrasyon aracıdır. Tüm platformlarda geliştirme, derleme ve dağıtım için komutlar sağlar.
+The root `Makefile` is the central build orchestration tool for the Bedrud monorepo. It provides commands for development, building, and deployment across all platforms.
 
-## Kullanım
+## Usage
 
 ```bash
-make <hedef>
-make help       # Tüm kullanılabilir hedefleri göster
+make <target>
+make help       # Show all available targets
 ```
 
-## Geliştirme Hedefleri
+## Development Targets
 
-| Hedef | Açıklama |
+| Target | Description |
 |--------|-------------|
-| `make init` | Tüm bağımlılıkları kurar (LiveKit + yapılandırma + bun + Go) |
-| `make dev` | LiveKit + sunucu (hot reload) + web'i eşzamanlı çalıştırır |
-| `make dev-web` | Yalnızca ön uç geliştirme sunucusunu çalıştırır |
-| `make dev-server` | Arka uç sunucusu + LiveKit çalıştırır |
-| `make dev-server-hot` | Air ile hot reload arka ucu çalıştırır |
-| `make dev-api` | Yalnızca arka ucu çalıştırır, LiveKit yok |
-| `make dev-livekit` | Yerel LiveKit sunucusunu çalıştırır |
-| `make dev-site` | Astro site geliştirme sunucusunu çalıştırır |
-| `make dev-ios` | iOS projesini Xcode'da açar |
-| `make dev-android` | Android projesini Android Studio'da açar |
-| `make livekit-download` | Mevcut İşletim Sistemi/Mimari için LiveKit sunucusunu indir |
-
+| `make init` | Install all dependencies (LiveKit + config + bun + Go) |
+| `make dev` | Run LiveKit + server (hot reload) + web concurrently |
+| `make dev-web` | Run frontend dev server only |
+| `make dev-server` | Run backend server + LiveKit |
+| `make dev-server-hot` | Run backend with Air hot reload |
+| `make dev-api` | Run backend only, no LiveKit |
+| `make dev-livekit` | Run local LiveKit server |
+| `make dev-site` | Run Astro site dev server |
+| `make dev-ios` | Open iOS project in Xcode |
+| `make dev-android` | Open Android project in Android Studio |
+| `make livekit-download` | Download LiveKit server for current OS/arch |
 
 ### `make init`
 
-Yeni geliştirme ortamının tam kurulumu:
+Full setup for a new development environment:
 
-1. LiveKit sunucu ikilisini `~/.local/bin/` dizinine indirir (PATH'te yoksa)
-2. `config.local.yaml` şablonundan `server/config.yaml` oluşturur (yoksa)
-3. `server/internal/livekit/bin/livekit-server` konumunda LiveKit gömme yer tutucusu oluşturur
-4. Go hot reload için `air` kurar (kurulu değilse)
-5. Bağımlılıkları kurar: `apps/web` (bun), `apps/site` (bun), `server` (go mod)
+1. Downloads LiveKit server binary to `~/.local/bin/` (if not in PATH)
+2. Creates `server/config.yaml` from `config.local.yaml` template (if missing)
+3. Creates LiveKit embed placeholder at `server/internal/livekit/bin/livekit-server`
+4. Installs `air` for Go hot reload (if not present)
+5. Installs dependencies: `apps/web` (bun), `apps/site` (bun), `server` (go mod)
 
 ### `make dev`
 
-Üç geliştirme servisini eşzamanlı başlatır. Durdurmak için `Ctrl+C` tuşlarına basın:
+Starts all three development services concurrently. Press `Ctrl+C` to stop all:
 
-- **LiveKit** `localhost:7880` adresinde
-- **Sunucu** `localhost:8090` adresinde
-- **Web** `localhost:3000` adresinde
+- **LiveKit** at `localhost:7880`
+- **Server** at `localhost:8090`
+- **Web** at `localhost:3000`
 
-## Derleme Hedefleri
+## Build Targets
 
-| Hedef | Açıklama |
+| Target | Description |
 |--------|-------------|
-| `make build` | Ön uç + arka uç derlemesi (gömülü) |
-| `make build-front` | Yalnızca ön uç derlemesi |
-| `make build-back` | Yalnızca arka uç derlemesi |
-| `make build-dist` | Üretim linux/amd64 arşivi oluşturur |
-| `make build-back-win` | Windows için arka uç derle |
-| `make build-dist-win` | Windows için üretim dağıtımı derle |
-| `make prep-livekit-win` | Gömme için LiveKit Windows ikilisinin mevcut olduğundan emin ol |
-| `make build-site` | Astro sitesini derler (SSG) |
+| `make build` | Build frontend + backend (embedded) |
+| `make build-front` | Build frontend only |
+| `make build-back` | Build backend only |
+| `make build-dist` | Build production linux/amd64 tarball |
+| `make build-back-win` | Build backend for Windows |
+| `make build-dist-win` | Build production Windows distribution |
+| `make prep-livekit-win` | Ensure LiveKit Windows binary is available for embedding |
+| `make build-site` | Build Astro site (SSG) |
 
 ### `make build`
 
-Tam üretim derlemesi:
+Full production build:
 
-1. `apps/web` dizininde `bun run build` çalıştırır — React uygulamasını derler
-2. `apps/web/dist/client/*` → `server/frontend/` dizinine kopyalar
-3. Gömülü ön uçla birlikte Go ikili dosyasını derler
+1. Runs `bun run build` in `apps/web` — builds the React app
+2. Copies `apps/web/dist/client/*` → `server/frontend/`
+3. Builds the Go binary with the embedded frontend
 
-Çıktı: `server/dist/bedrud`
+Output: `server/dist/bedrud`
 
 ### `make build-dist`
 
-Sıkıştırılmış, üretim hazır bir dağıtım oluşturur:
+Creates a compressed, production-ready distribution:
 
-1. `make build` çalıştırır
-2. Hata ayıklama sembolleri çıkarılarak `linux/amd64` için çapraz derler
-3. `dist/bedrud_linux_amd64.tar.xz` oluşturur
+1. Runs `make build`
+2. Cross-compiles for `linux/amd64` with stripped debug symbols
+3. Creates `dist/bedrud_linux_amd64.tar.xz`
 
-## Masaüstü Hedefleri
+## Desktop Targets
 
-| Hedef | Açıklama |
+| Target | Description |
 |--------|-------------|
-| `make dev-desktop` | Masaüstü uygulamasını derler ve çalıştırır (debug) |
-| `make build-desktop` | Optimize edilmiş release ikili dosyasını derler |
+| `make dev-desktop` | Build and run desktop app (debug) |
+| `make build-desktop` | Build optimized release binary |
 
-## Yerel Tek İkili Dosya
+## Local Single Binary
 
-| Hedef | Açıklama |
+| Target | Description |
 |--------|-------------|
-| `make local-build` | Ön uç + arka ucu tek ikili dosyaya derler |
-| `make local-run` | Derler + yerel olarak çalıştırır (SQLite, gömülü LiveKit) |
+| `make local-build` | Build frontend + backend into one binary |
+| `make local-run` | Build + run locally (SQLite, embedded LiveKit) |
 
 ### `make local-run`
 
-Yerel yapılandırmayla tek ikili dosyayı derler ve başlatır:
+Builds and starts the single binary with local config:
 
 ```bash
 CONFIG_PATH=server/config.local.yaml server/dist/bedrud run
 ```
 
-Hazır olduğunda `http://localhost:8090` adresini açın.
+Open `http://localhost:8090` when ready.
 
-## API Belgeleri
+## API Docs
 
-| Hedef | Açıklama |
+| Target | Description |
 |--------|-------------|
-| `make swagger-gen` | Ek açıklamalardan Swagger belgelerini yeniden oluşturur |
-| `make swagger-open` | Swagger UI'ı tarayıcıda açar |
-| `make scalar-open` | Scalar UI'ı tarayıcıda açar |
+| `make swagger-gen` | Regenerate Swagger docs from annotations |
+| `make swagger-open` | Open Swagger UI in browser |
+| `make scalar-open` | Open Scalar UI in browser |
 
-`swag` CLI gerektirir (`go install github.com/swaggo/swag/cmd/swag@latest`). `swagger-open` ve `scalar-open` için sunucu çalışıyor olmalıdır.
+Requires `swag` CLI (`go install github.com/swaggo/swag/cmd/swag@latest`). Server must be running for `swagger-open` and `scalar-open`.
 
-## Android Hedefleri
+## Android Targets
 
-| Hedef | Açıklama |
+| Target | Description |
 |--------|-------------|
-| `make build-android-debug` | Debug APK derler |
-| `make build-android` | Release APK derler (keystore gerektirir) |
-| `make install-android` | Release APK'yı bağlı cihaza kurar |
-| `make release-android` | Derler + release APK'yı cihaza kurar |
+| `make build-android-debug` | Build debug APK |
+| `make build-android` | Build release APK (requires keystore) |
+| `make install-android` | Install release APK on connected device |
+| `make release-android` | Build + install release APK |
 
-### APK Çıktı Yolları
+### APK Output Paths
 
 - Debug: `apps/android/app/build/outputs/apk/debug/app-debug.apk`
 - Release: `apps/android/app/build/outputs/apk/release/app-release.apk`
 
-## iOS Hedefleri
+## iOS Targets
 
-| Hedef | Açıklama |
+| Target | Description |
 |--------|-------------|
-| `make build-ios` | iOS arşivi derler (Release) |
-| `make export-ios` | Arşivden IPA dışa aktarır |
-| `make build-ios-sim` | iOS Simülatörü için derler (Debug) |
+| `make build-ios` | Build iOS archive (Release) |
+| `make export-ios` | Export IPA from archive |
+| `make build-ios-sim` | Build for iOS Simulator (Debug) |
 
-### Çıktı Yolları
+### Output Paths
 
-- Arşiv: `apps/ios/build/Bedrud.xcarchive`
+- Archive: `apps/ios/build/Bedrud.xcarchive`
 - IPA: `apps/ios/build/export/Bedrud.ipa`
 
-## Dağıtım Hedefi
+## Deploy Target
 
-| Hedef | Açıklama |
+| Target | Description |
 |--------|-------------|
-| `make deploy ARGS=...` | Dağıtım CLI aracını çalıştırır |
+| `make deploy ARGS=...` | Run the deployment CLI tool |
 
-### Örnek
+### Example
 
 ```bash
 make deploy ARGS="--auto-config --ip 1.2.3.4 --user root --domain meet.example.com"
 ```
 
-Bu, `tools/cli/bedrud.py` konumundaki Python CLI aracını belirtilen argümanlarla çalıştırır.
+This runs the Python CLI at `tools/cli/bedrud.py` with the provided arguments.
 
 ## Test
 
-| Hedef | Açıklama |
+| Target | Description |
 |--------|-------------|
-| `make test-back` | Arka uç testlerini çalıştırır (`go test -v -count=1 ./...`) |
+| `make test-back` | Run backend tests (`go test -v -count=1 ./...`) |
 
-## Temizleme Hedefleri
+## Clean Targets
 
-| Hedef | Açıklama |
+| Target | Description |
 |--------|-------------|
-| `make clean` | Derleme çıktılarını ve derlenmiş ikili dosyaları kaldırır |
-| `make full-clean` | Çıktılar + tüm kurulmuş bağımlılıkları kaldırır |
+| `make clean` | Remove build artifacts and compiled binaries |
+| `make full-clean` | Remove artifacts + all installed dependencies |
 
 ### `make clean`
 
-Şunları kaldırır:
+Removes:
 
-- `dist/` — dağıtım arşivleri
-- `server/dist/` — derlenmiş sunucu ikilisi
-- `apps/web/dist/` — React derleme çıktısı
-- `server/frontend/` içeriği — gömülü ön uç varlıkları
-- `apps/android/app/build/` — Android derleme çıktıları
-- `apps/ios/build/` — iOS derleme çıktıları
-- `apps/site/dist/` — Astro site derleme çıktısı
-- `target/` — Rust/Cargo derleme çıktısı
+- `dist/` — distribution tarballs
+- `server/dist/` — compiled server binary
+- `apps/web/dist/` — React build output
+- `server/frontend/` contents — embedded frontend assets
+- `apps/android/app/build/` — Android build outputs
+- `apps/ios/build/` — iOS build outputs
+- `apps/site/dist/` — Astro site build output
+- `target/` — Rust/Cargo build output
 
 ### `make full-clean`
 
-`clean` komutunun yaptığı her şey, ayrıca:
+Everything `clean` does, plus:
 
 - `apps/web/node_modules/`
 - `apps/site/node_modules/`
 - `apps/android/.gradle/`
 - `apps/android/build/`
-- Go modül önbelleği (`go clean -modcache`)
+- Go module cache (`go clean -modcache`)
 
-Sonrasında bağımlılıkları yeniden kurmak için `make init` çalıştırın.
+Run `make init` afterwards to reinstall dependencies.

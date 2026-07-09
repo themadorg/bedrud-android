@@ -4,39 +4,35 @@ description: Détails de l'implémentation de l'auth
 order: 18
 ---
 
-Bedrud prend en charge plusieurs méthodes d'authentification.
+Bedrud supports multiple authentication methods.
 
 ## JWT (JSON Web Tokens)
+Bedrud uses JWT for session management. On login, the server returns two tokens:
 
-Bedrud utilise JWT pour la gestion de session. Lors de la connexion, le serveur renvoie deux jetons :
+1.  **Access Token:** Short-lived (e.g., 1 hour). Used to access protected API endpoints.
+2.  **Refresh Token:** Long-lived (e.g., 30 days). Used to get a new Access Token without logging in again.
 
-1.  **Jeton d'Accès (Access Token) :** À courte durée de vie (ex: 1 heure). Utilisé pour accéder aux points de terminaison API protégés.
-2.  **Jeton de Rafraîchissement (Refresh Token) :** À longue durée de vie (ex: 30 jours). Utilisé pour obtenir un nouveau Jeton d'Accès sans se reconnecter.
+The backend validates these tokens in the `internal/middleware/auth.go` file.
 
-Le backend valide ces jetons dans le fichier `internal/middleware/auth.go`.
+## Token Management & Security
 
-## Gestion & Sécurité des Jetons
+### 1. Token Pair Strategy (Rotation)
+Bedrud uses a secure token rotation strategy. When a user authenticates, they receive:
 
-### 1. Stratégie de Paire de Jetons (Rotation)
+- **Access Token:** Signed with HS256, contains user ID, name, and permissions. Valid for a short duration (configured via `tokenDuration`).
+- **Refresh Token:** A separate long-lived token.
 
-Bedrud utilise une stratégie de rotation sécurisée des jetons. Lorsqu'un utilisateur s'authentifie, il reçoit :
+**Rotation:** When the Access Token expires, the client sends the Refresh Token to `/api/auth/refresh`. The server then issues a **brand new pair** of tokens and updates the stored refresh token in the database. This limits the window of opportunity even if a token is stolen.
 
-- **Jeton d'Accès :** Signé avec HS256, contient l'ID utilisateur, le nom et les permissions. Valide pour une courte durée (configuré via `tokenDuration`).
-- **Jeton de Rafraîchissement :** Un jeton distinct à longue durée de vie.
+### 2. Token Revocation (Blacklisting)
+To support secure logout, Bedrud implements a **Token Blacklist**.
 
-**Rotation :** Lorsque le Jeton d'Accès expire, le client envoie le Jeton de Rafraîchissement à `/api/auth/refresh`. Le serveur émet alors une **nouvelle paire complète** de jetons et met à jour le jeton de rafraîchissement stocké dans la base de données. Cela limite la fenêtre d'opportunité même si un jeton est volé.
+- When a user logs out, their current Refresh Token is added to the `blocked_refresh_tokens` table.
+- Before refreshing any session, the server checks this table. If a token is blocked, the request is rejected immediately.
+- A background task (Scheduler) is designed to clean up these blocked tokens once they naturally expire.
 
-### 2. Révocation de Jeton (Liste Noire)
-
-Pour supporter une déconnexion sécurisée, Bedrud implémente une **Liste Noire de Jetons**.
-
-- Lorsqu'un utilisateur se déconnecte, son Jeton de Rafraîchissement actuel est ajouté à la table `blocked_refresh_tokens`.
-- Avant de rafraîchir toute session, le serveur vérifie cette table. Si un jeton est bloqué, la requête est immédiatement rejetée.
-- Une tâche en arrière-plan (Scheduler) est conçue pour nettoyer ces jetons bloqués une fois qu'ils expirent naturellement.
-
-### 3. Structure des Claims JWT
-
-Les jetons portent des métadonnées qui permettent au backend et au frontend de prendre des décisions rapides sans accès à la base de données :
+### 3. JWT Claims Structure
+The tokens carry metadata that allows the backend and frontend to make quick decisions without database hits:
 ```json
 {
   "userId": "uuid-string",
@@ -48,110 +44,105 @@ Les jetons portent des métadonnées qui permettent au backend et au frontend de
 }
 ```
 
-## Méthodes d'Authentification
+## Authentication Methods
 
-### 1. Email & Mot de Passe Local
+### 1. Local Email & Password
 
-- Les mots de passe sont hachés en utilisant **bcrypt** - jamais stockés en texte brut.
-- Lors de l'inscription, un nouvel enregistrement Utilisateur est créé dans la base de données.
+- Passwords are hashed using **bcrypt** - never stored as plain text.
+- When you register, a new User record is created in the database.
 
-### 2. Connexion Sociale (OAuth2)
-
-Bedrud utilise la bibliothèque `Goth` pour supporter :
+### 2. Social Login (OAuth2)
+Bedrud uses the `Goth` library to support:
 
 - **Google**
 - **GitHub**
 - **Twitter**
 
-Vous pouvez activer ces services en remplissant la section `auth:` dans votre `config.yaml` avec votre ID Client et Secret API.
+You can enable these by filling in the `auth:` section in your `config.yaml` with your Client ID and API Secret.
 
 ### 3. Passkeys (WebAuthn/FIDO2)
+Bedrud supports passwordless authentication via the FIDO2 standard (WebAuthn).
 
-Bedrud supporte l'authentification sans mot de passe via le standard FIDO2 (WebAuthn).
+- **Registration Ceremony:**
+  1.  **Begin:** The server generates a cryptographically secure **Challenge** and stores it in the user's session.
+  2.  **Finish:** The client's authenticator (e.g., TouchID, YubiKey) signs the challenge. The server verifies the attestation, extracts the **Public Key**, and saves it in the `passkeys` table.
+- **Authentication Ceremony:**
+  1.  **Begin:** The server issues a new challenge.
+  2.  **Finish:** The client signs the challenge with their private key. The server retrieves the Public Key from the database, verifies the signature, and checks the **Sign Counter**.
+- **Security:** The matching of the `Counter` field prevents **Replay Attacks**. If the authenticator's counter is not higher than the stored counter, the login is rejected.
 
-- **Cérémonie d'Inscription :**
-   1.  **Début :** Le serveur génère un **Challenge** cryptographiquement sécurisé et le stocke dans la session de l'utilisateur.
-   2.  **Fin :** L'authentificateur du client (ex: TouchID, YubiKey) signe le challenge. Le serveur vérifie l'attestation, extrait la **Clé Publique**, et la sauvegarde dans la table `passkeys`.
-- **Cérémonie d'Authentification :**
-   1.  **Début :** Le serveur émet un nouveau challenge.
-   2.  **Fin :** Le client signe le challenge avec sa clé privée. Le serveur récupère la Clé Publique de la base de données, vérifie la signature, et vérifie le **Compteur de Signe (Sign Counter)**.
-- **Sécurité :** La correspondance du champ `Counter` empêche les **Attaques par Rejeu**. Si le compteur de l'authentificateur n'est pas supérieur au compteur stocké, la connexion est rejetée.
+### 4. Guest Login
+Allows users to join a meeting instantly with just a name. The server creates a temporary user record with the role `guest`.
 
-### 4. Connexion Invité
+## Email Verification
 
-Permet aux utilisateurs de rejoindre une réunion instantanément avec juste un nom. Le serveur crée un enregistrement utilisateur temporaire avec le rôle `guest`.
+When `requireEmailVerification: true` in config, local (non-OAuth) registration and login require email confirmation:
 
+- **Registration** creates the user but sets `EmailVerifiedAt` to `nil`. User cannot log in until verified.
+- **Login** returns `403` with `{"requiresVerification": true}` for unverified accounts.
+- **Resend** via `POST /api/auth/verify/resend` — rate-limited by `verificationEmailCooldownMins` and a separate rate limit bucket (`authResendMaxRequests`).
+- **Auto-cleanup** deletes unverified accounts after `unverifiedAccountTTLHours` (default 48h, 0 to disable).
+- **Email change** triggers a new verification flow. User stays logged in; new token issued.
 
-## Vérification des e-mails
+Guest users are exempt — they have no email.
 
-Lorsque `requireEmailVerification: true` est défini dans la configuration, l'inscription et la connexion locales (non OAuth) nécessitent une confirmation par e-mail :
+## Password Reset
 
-- **Inscription** crée l'utilisateur mais définit `EmailVerifiedAt` à `nil`. L'utilisateur ne peut pas se connecter tant qu'il n'est pas vérifié.
-- **Connexion** renvoie `403` avec `{"requiresVerification": true}` pour les comptes non vérifiés.
-- **Renvoyer** via `POST /api/auth/verify/resend` — limité par `verificationEmailCooldownMins` et un compartiment de limite de débit séparé (`authResendMaxRequests`).
-- **Nettoyage automatique** supprime les comptes non vérifiés après `unverifiedAccountTTLHours` (48h par défaut, 0 pour désactiver).
-- **Changement d'e-mail** déclenche un nouveau flux de vérification. L'utilisateur reste connecté ; un nouveau jeton est émis.
+Password reset flow (requires SMTP):
 
-Les utilisateurs invités sont exemptés — ils n'ont pas d'e-mail.
+1. `POST /api/auth/forgot-password` with `{"email": "..."}` — server sends reset link to email
+2. `POST /api/auth/reset-password` with `{"token": "...", "newPassword": "..."}` — sets new password
 
-## Réinitialisation du mot de passe
+The reset token TTL is controlled by `resetTokenTTLHours` (default 1 hour). The forgot-password endpoint shares the auth rate limit bucket.
 
-Processus de réinitialisation du mot de passe (nécessite SMTP) :
+## Cooldown & Rate Limiting
 
-1. `POST /api/auth/forgot-password` avec `{"email": "..."}` — le serveur envoie un lien de réinitialisation par e-mail
-2. `POST /api/auth/reset-password` avec `{"token": "...", "newPassword": "..."}` — définit un nouveau mot de passe
+Bedrud uses four separate rate limit buckets:
 
-La durée de vie du jeton de réinitialisation est contrôlée par `resetTokenTTLHours` (1 heure par défaut). Le point d'accès forgot-password partage le compartiment de limite de débit Auth.
-
-## Limitation de débit & Refroidissement
-
-Bedrud utilise quatre compartiments de limite de débit distincts :
-| Compartiment | Points d'accès | Défaut | Fenêtre |
+| Bucket | Endpoints | Default | Window |
 |--------|-----------|---------|--------|
 | Auth | login, register, refresh, passkey, forgot-password | 10 | 60s |
-| Invité | guest-login | 5 | 60s |
-| API | API générale | 30 | 60s |
-| Renvoi | verify/resend | 3 | 60s |
+| Guest | guest-login | 5 | 60s |
+| API | general API | 30 | 60s |
+| Resend | verify/resend | 3 | 60s |
 
-Compartiment à `0` = désactivé. Toutes les limites par IP distante. Les requêtes excessives renvoient `429 Too Many Requests` avec l'en-tête `Retry-After`.
+Bucket set to `0` = disabled. All limits per remote IP. Exceeded requests return `429 Too Many Requests` with `Retry-After` header.
 
+## Interoperability & CORS
+Bedrud is designed to be accessible from multiple origins, which is crucial for development (React dev server) and production (different subdomains).
 
-## Interopérabilité & CORS
+- **CORS Policy:** Defined in `config.yaml`. It supports `AllowCredentials: true`, which is required for the session cookies used during OAuth and Passkey ceremonies.
+- **Allowed Origins:** By default, it allows the server's own domain and `localhost:3000` (the React dev server port).
 
-Bedrud est conçu pour être accessible depuis plusieurs origines, ce qui est crucial pour le développement (serveur dev React) et la production (sous-domaines différents).
+## User Roles (Access Control)
 
-- **Politique CORS :** Définie dans `config.yaml`. Elle supporte `AllowCredentials: true`, ce qui est requis pour les cookies de session utilisés pendant les cérémonies OAuth et Passkey.
-- **Origines Autorisées :** Par défaut, elle permet le propre domaine du serveur et `localhost:3000` (le port du serveur dev React).
+Each user has an `accesses` array that can contain multiple access levels simultaneously. The JWT claims include the full `accesses` array, allowing middleware to check granular permissions.
 
-## Rôles Utilisateur (Contrôle d'Accès)
+### Access Levels
 
-Chaque utilisateur possède un tableau `accesses` qui peut contenir plusieurs niveaux d'accès simultanément. Les claims JWT incluent le tableau `accesses` complet, permettant au middleware de vérifier des permissions granulaires.
-
-### Niveaux d'Accès
-
-| Niveau d'accès | Portée | Octroie |
+| Access Level | Scope | Grants |
 |---|---|---|
-| `superadmin` | Système entier | Accès complet au tableau de bord administrateur (`/dashboard/admin`), tous les points de terminaison de l'API admin (`/api/admin/*`), gestion des utilisateurs, gestion des salles, paramètres système, jetons d'invitation. Agit comme un contournement global pour toutes les actions de modération de salle. Protégé par le middleware `RequireAccess("superadmin")`. |
-| `admin` | Défini, non appliqué | Disponible dans le tableau `accesses` mais actuellement **non utilisé par aucun middleware**. Informatif uniquement. Réservé pour de futures fonctionnalités de contrôle d'accès basé sur les rôles. |
-| `moderator` | Limité à la salle | Peut modérer une salle spécifique : bloquer le chat, couper/rétablir le son des participants, mettre en avant, arrêter le partage d'écran, désactiver la vidéo. Promu par le créateur de la salle ou un superadmin pendant un appel via `PromoteParticipant`. Vérifié via la fonction helper `isRoomModerator()`. |
-| `user` | Standard | Défaut pour toutes les inscriptions. Peut créer des salles, rejoindre des salles, gérer son profil et gérer ses propres passkeys. Protégé par le middleware `Protected()`. |
-| `guest` | Limité | Utilisateur temporaire pour rejoindre des salles publiques via la connexion invité. Ne peut pas créer de salles ni accéder aux fonctionnalités protégées. |
+| `superadmin` | System-wide | Full access to the admin dashboard (`/dashboard/admin`), all admin API endpoints (`/api/admin/*`), user management, room management, system settings, invite tokens. Acts as a global bypass for all room moderation actions. Protected by `RequireAccess("superadmin")` middleware. |
+| `admin` | Defined, not enforced | Available in the `accesses` array but currently **not used by any middleware**. Informational only. Reserved for future role-based access control features. |
+| `moderator` | Room-scoped | Can moderate a specific room: block chat, deafen/undeafen participants, spotlight, stop screen share, disable video. Promoted by the room creator or a superadmin during a call via `PromoteParticipant`. Checked via `isRoomModerator()` helper. |
+| `user` | Standard | Default for all registrations. Can create rooms, join rooms, manage profile, and manage own passkeys. Protected by `Protected()` middleware. |
+| `guest` | Limited | Temporary user for joining public rooms via guest login. Cannot create rooms or access protected features. |
 
-### Hiérarchie des Rôles
+### Role Hierarchy
 
 ```
 superadmin > admin > moderator > user > guest
 ```
 
-Un `superadmin` peut effectuer n'importe quelle action de modération dans n'importe quelle salle sans être promu modérateur de salle. Les créateurs de salle sont automatiquement admins de leur salle et peuvent promouvoir des participants au rôle de modérateur.
+A `superadmin` can perform any moderation action in any room without being promoted as a room moderator. Room creators are automatically room admins and can promote participants to moderator.
 
-### Attribution des Rôles
+### Assigning Roles
 
-Les rôles sont gérés via plusieurs canaux :
+Roles are managed through multiple channels:
 
-- **CLI :** `bedrud user create` (crée en tant que `user`), `bedrud user promote` (ajoute `superadmin`), `bedrud user demote` (retire `superadmin`)
-- **Tableau de bord administrateur :** La page de détail utilisateur a des boutons promouvoir/rétrograder
-- **API Admin :** `PUT /api/admin/users/:id/accesses` avec le tableau `accesses` souhaité
-- **En réunion :** Le créateur de la salle peut promouvoir des participants au rôle de modérateur de salle
+- **CLI:** `bedrud user create` (creates as `user`), `bedrud user promote` (adds `superadmin`), `bedrud user demote` (removes `superadmin`)
+- **Admin Dashboard:** User detail page has promote/demote buttons
+- **Admin API:** `PUT /api/admin/users/:id/accesses` with desired `accesses` array
+- **In-Meeting:** Room creator can promote participants to room-level moderator
 
-> **Note :** Il n'y a pas de point de terminaison API ni d'interface web pour créer le premier superadmin. Après l'installation, vous devez utiliser la CLI (`bedrud user create` + `bedrud user promote`) pour initialiser l'accès admin. C'est une mesure de sécurité délibérée.
+> **Note:** There is no API endpoint or web UI to create the first superadmin. After installation, you must use the CLI (`bedrud user create` + `bedrud user promote`) to bootstrap initial admin access. This is a deliberate security measure.

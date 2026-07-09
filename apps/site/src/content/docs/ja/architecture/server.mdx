@@ -4,24 +4,24 @@ description: バックエンドサーバーの設計とコンポーネント
 order: 7
 ---
 
-Bedrud サーバーは、REST API を提供し、組み込みの Web フロントエンドを配信し、LiveKit メディアサーバーを管理する Go アプリケーションです。
+The Bedrud server is a Go application that provides the REST API, serves the embedded web frontend, and manages the LiveKit media server.
 
-## テクノロジースタック
+## Technology Stack
 
-| テクノロジー | 目的 |
+| Technology | Purpose |
 |-----------|---------|
-| Go 1.24 | コア言語 |
-| Fiber v2 | Web フレームワーク（Express 風） |
-| GORM | SQLite および PostgreSQL 用 ORM |
-| LiveKit Protocol SDK | WebRTC ルームとトークン管理 |
-| Zerolog | 構造化 JSON ロギング |
-| Goth | マルチプロバイダー OAuth2 |
-| go-passkeys | FIDO2/WebAuthn サポート |
-| golang-jwt | JWT トークンの作成と検証 |
-| gocron | バックグラウンドジョブスケジューリング |
-| Swagger (swaggo) | API ドキュメント自動生成 |
+| Go 1.24 | Core language |
+| Fiber v2 | Web framework (Express-like) |
+| GORM | ORM for SQLite and PostgreSQL |
+| LiveKit Protocol SDK | WebRTC room and token management |
+| Zerolog | Structured JSON logging |
+| Goth | Multi-provider OAuth2 |
+| go-passkeys | FIDO2/WebAuthn support |
+| golang-jwt | JWT token creation and validation |
+| gocron | Background job scheduling |
+| Swagger (swaggo) | API documentation generation |
 
-## ディレクトリ構造
+## Directory Structure
 
 ```
 server/
@@ -36,18 +36,27 @@ server/
 │   ├── database/              # Database initialization and migrations
 │   ├── handlers/              # HTTP request handlers (controller layer)
 │   │   ├── auth_handler.go    # Auth endpoints
+│   │   ├── recording_handler.go # Recording start/stop/list/get
 │   │   ├── room.go            # Room endpoints
 │   │   └── users.go           # User management endpoints
 │   ├── middleware/             # Fiber middleware
-│   │   └── auth.go            # JWT validation, permission checks
+│   │   ├── auth.go            # JWT validation, permission checks
+│   │   └── recordings_enabled.go # Recordings sys-setting gate
 │   ├── models/                # GORM models (database schemas)
 │   │   ├── user.go            # User model
+│   │   ├── webhook.go         # Webhook model
+│   │   ├── recording.go       # Recording model
 │   │   ├── room.go            # Room model
 │   │   └── passkey.go         # Passkey model
 │   ├── repository/            # Data access layer (SQL via GORM)
 │   │   ├── user_repository.go
+│   │   ├── webhook_repository.go
+│   │   ├── recording_repository.go
 │   │   ├── room_repository.go
 │   │   └── passkey_repository.go
+│   ├── services/               # Business logic layer
+│   │   ├── recording_service.go # Recording gate chain + LK egress
+│   │   └── room_cleanup.go     # Room deletion/suspend cascade
 │   ├── livekit/               # Embedded LiveKit server management
 │   ├── scheduler/             # Background job scheduling
 │   └── utils/                 # TLS and other utilities
@@ -58,9 +67,9 @@ server/
 └── go.sum
 ```
 
-## レイヤードアーキテクチャ
+## Layered Architecture
 
-サーバーは3層アーキテクチャに従っています。
+The server follows a layered architecture:
 
 ```mermaid
 flowchart TB
@@ -72,62 +81,76 @@ flowchart TB
     Database["Database<br/>SQLite (dev) or PostgreSQL (production)"]
 ```
 
-## 主要なパターン
+## Key Patterns
 
-### 組み込みフロントエンド
+### Embedded Frontend
 
-Web フロントエンドは静的ファイルにコンパイルされ、`//go:embed` を使用して Go バイナリに組み込まれます。
+The web frontend is compiled to static files and embedded into the Go binary using `//go:embed`:
 
 ```go
 //go:embed frontend/*
 var frontendFS embed.FS
 ```
 
-ビルド時に、`bun run build:embed` で React アプリを SSR プリレンダリングし、`dist/client/` を `server/frontend/` にコピーします。Go コンパイラがこれをバイナリにバンドルします。Fiber サーバーは API 以外のルートに対してこれらのファイルを配信します。
+At build time, `bun run build:embed` SSR pre-renders the React app and copies `dist/client/` into `server/frontend/`. The Go compiler then bundles it into the binary. The Fiber server serves these files for any non-API route.
 
-### JWT 認証
+### JWT Authentication
 
-ミドルウェアは `Authorization: Bearer <token>` ヘッダーから JWT を抽出し、検証して、ユーザーコンテキストをリクエストにアタッチします。保護されたルートは `RequireAccess` ミドルウェアを使用してユーザーロールを確認します。
+The middleware extracts the JWT from the `Authorization: Bearer <token>` header, validates it, and attaches the user context to the request. Protected routes use `RequireAccess` middleware to check user roles.
 
-### LiveKit トークン生成
+### LiveKit Token Generation
 
-ユーザーがルームに参加する際、サーバーは以下の処理を行います。
+When a user joins a room, the server:
 
-1. ルームの権限を検証
-2. API シークレットで署名された LiveKit アクセストークンを作成
-3. トークンをクライアントに返す
-4. クライアントはトークンを使用して LiveKit に直接接続
+1. Validates room permissions
+2. Creates a LiveKit access token signed with the API secret
+3. Returns the token to the client
+4. The client connects directly to LiveKit using the token
 
-### Swagger ドキュメント
+### Recordings & LiveKit Egress
 
-API ドキュメントは swaggo を使用してコードアノテーションから自動生成されます。開発環境では `/api/swagger/` でアクセスできます。
+🚧 **Planned feature.** Recording HTTP routes and queue handlers are present in the codebase but **not registered** on the production route table (`// TODO oncoming feature` in `internal/server/server.go`). YAML keys under `recording:` are reserved for the upcoming release.
 
-## データベース
+When enabled, the design uses three-layer authorization (system setting → room setting → moderator check), LiveKit Room Composite Egress, and a `process_recording` job. Until then, do not rely on recording API endpoints.
 
-### SQLite（デフォルト）
+### Webhooks
 
-開発環境や小規模なデプロイメントでは、Bedrud は SQLite を使用します。データベースファイルは設定された `database.path`（デフォルト: `data.db`）に保存されます。
+Webhook system allows superadmins to register HTTP callbacks for real-time events. Active events: `room.created`, `room.ended`, `participant.joined`, and `ping` (test). `recording.completed` is reserved for a planned feature. Delivery headers: `X-Bedrud-Signature`, `X-Bedrud-Event`, `X-Bedrud-Timestamp`.
+
+- **Storage:** `Webhook` model in database, CRUD via `WebhookRepository`
+- **Dispatch:** Background job (`dispatch_webhook`) sends HMAC-SHA256 signed POST requests with 10s timeout
+- **Secrets:** Per-webhook HMAC secret, rotatable via admin panel
+- See the [Webhooks API](/ja/docs/api/api-reference) for endpoint details.
+
+### Swagger Documentation
+
+API documentation is auto-generated from code annotations using swaggo. In development, it's available at `/api/swagger/`.
+
+## Database
+
+### SQLite (Default)
+
+For development and small deployments, Bedrud uses SQLite. The database file is stored at the configured `database.path` (default: `data.db`).
 
 ### PostgreSQL
 
-高い同時実行性が求められる本番環境では、PostgreSQL の接続文字列を設定します。GORM は両方のダイアレクトを透過的に処理します。
+For production with higher concurrency requirements, configure a PostgreSQL connection string. GORM handles both dialects transparently.
 
-### マイグレーション
+### Migrations
 
-GORM は起動時にモデル構造体に基づいてスキーマを自動マイグレーションします。モデルは `internal/models/` で定義されています。
+GORM auto-migrates the schema on startup based on the model structs. The models are defined in `internal/models/`.
 
-## バックグラウンドジョブ
+## Background Jobs
 
-`gocron` スケジューラは以下の定期タスクを実行します。
-
-- 期限切れのリフレッシュトークンのクリーンアップ
-- 古いルーム参加者の削除
+The `gocron` scheduler runs periodic tasks such as:
+- Cleaning up expired refresh tokens
+- Removing stale room participants
 
 ---
 
-## 関連項目
+## See also
 
-- [バックエンドコード構造](/ja/docs/backend/structure) - ディレクトリマップとコーディング規約
-- [API ハンドラー](/ja/docs/backend/api-handlers) - ルーティングとリクエストライフサイクル
-- [データベースとモデル](/ja/docs/backend/database) - GORM モデルとリポジトリパターン
-- [認証フロー](/ja/docs/backend/authentication) - JWT、OAuth、パスキーの内部構造
+- [Backend Code Structure](/ja/docs/backend/structure) - directory map and coding standards
+- [API Handlers](/ja/docs/backend/api-handlers) - routing and request lifecycle
+- [Database and Models](/ja/docs/backend/database) - GORM models and repository pattern
+- [Authentication Flow](/ja/docs/backend/authentication) - JWT, OAuth, and passkey internals

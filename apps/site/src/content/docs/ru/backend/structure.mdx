@@ -1,129 +1,128 @@
 ---
 title: Структура кода
-description: Организация кода бэкенда
+description: Организация бэкенд-кода
 order: 16
 ---
 
-Карта директории `server/` и её содержимого.
+Map of the `server/` directory and its contents.
 
-## Дорожная карта проекта и дерево
-
-Директория `server/` содержит бэкенд на Go и встроенный медиасервер LiveKit. Директория `apps/` содержит клиентские приложения.
+## Project Tree
 
 ```text
 bedrud/
-├── apps/                # Клиентские приложения
-│   ├── web/             # React-фронтенд (TanStack Start)
-│   ├── android/         # Нативное Android-приложение
-│   └── ios/             # Нативное iOS-приложение
-├── server/              # Бэкенд на Go («Аплаенс»)
-│   ├── cmd/             # Точки входа CLI (run, install)
-│   ├── internal/        # Приватный код приложения
-│   │   ├── auth/        # JWT, Passkeys, логика OAuth
-│   │   ├── handlers/    # HTTP-контроллеры
-│   │   ├── models/      # Схемы базы данных
-│   │   ├── repository/  # Слой доступа к данным GORM
-│   │   └── livekit/     # Управление медиасервером
-│   ├── frontend/        # (Сгенерировано) Скомпилированные веб-ассеты
-│   ├── config.yaml      # Шаблон конфигурации
-│   └── Makefile         # Автоматизация сборки и развёртывания
-└── docs/                # Системная документация (MkDocs)
+├── apps/
+│   ├── web/             # React frontend (TanStack Start)
+│   ├── site/            # Astro marketing/docs site
+│   ├── desktop/         # Rust + Slint desktop app
+│   ├── android/         # Native Android
+│   └── ios/             # Native iOS
+├── agents/              # Python LiveKit bots
+├── packages/api-types/  # Shared TypeScript types
+├── server/              # Go backend (module: bedrud)
+│   ├── cmd/
+│   │   ├── bedrud/      # Production CLI entrypoint
+│   │   └── server/      # Dev API-only entrypoint (Air hot-reload)
+│   ├── config/          # Config structs + Load() + livekit example
+│   ├── internal/
+│   │   ├── auth/        # JWT, passkeys, OAuth, sessions
+│   │   ├── cli/         # Cobra commands (run, install, user, room, …)
+│   │   ├── database/    # GORM init + migrations
+│   │   ├── handlers/    # Fiber HTTP handlers
+│   │   ├── install/     # bedrud install (systemd/OpenRC/SysV)
+│   │   ├── livekit/     # Embedded LiveKit binary lifecycle
+│   │   ├── lkutil/      # LiveKit client helpers
+│   │   ├── middleware/  # Auth, RBAC, rate limits
+│   │   ├── models/      # GORM models
+│   │   ├── queue/       # Async jobs + email templates
+│   │   ├── repository/  # Data access layer
+│   │   ├── scheduler/   # Background cleanup (gocron)
+│   │   ├── server/      # Bootstrap: Run() wires everything
+│   │   ├── services/    # Room cleanup, recording service
+│   │   ├── storage/     # Chat/avatar/recording storage
+│   │   └── utils/       # TLS certs, net helpers, …
+│   ├── frontend/        # Embedded built web assets (//go:embed)
+│   └── docs/            # Generated Swagger (swag)
+├── docs/server/         # Engineer-facing backend docs (repo)
+└── Makefile             # Build & dev automation (repo root)
 ```
 
-## Карта директорий
+## Directory Map
 
 ### `/cmd/bedrud`
-- **`main.go`**: Точка входа приложения. Обрабатывает CLI-команды, такие как `run`, `install` и `livekit`.
+Production entrypoint: Cobra CLI (`run`, `install`, `user`, `room`, `config`, …).
+
+### `/cmd/server`
+Dev API process (Air). No full CLI surface; may differ slightly from prod route registration.
 
 ### `/config`
-- **`config.go`**: Определяет структуру `Config` и загружает настройки из `config.yaml` или переменных окружения.
-- **`livekit.yaml`**: Конфигурация по умолчанию для встроенного сервера LiveKit.
+- **`config.go`**: `Config` struct, `Load()`, env overrides
+- **`livekit.yaml.example`**: External LiveKit sample
 
 ### `/internal`
 
-- **`/auth`**: содержит логику генерации JWT, провайдеров OAuth и регистрации/входа через Passkey (WebAuthn).
-- **`/database`**: управляет подключением к SQLite или PostgreSQL и запускает миграции.
-- **`/handlers`**: HTTP-обработчики Fiber. Здесь находится логика для каждой конечной точки API (например, `auth_handler.go`, `room_handler.go`).
-- **`/models`**: Модели базы данных GORM. Эти файлы определяют таблицы в вашей базе данных.
-- **`/repository`**: «Слой доступа к данным». Обработчики вызывают репозитории вместо прямого написания запросов к БД, что сохраняет логику обработчиков чистой.
-- **`/livekit`**: Интеграция с LiveKit Go SDK. Управляет созданием комнат и генерирует «токены присоединения» для участников.
-- **`/middleware`**: Пользовательские middleware Fiber для проверки аутентификации, логирования и CORS.
-- **`/server`**: Код-«клей», который объединяет всё воедино. Инициализирует базу данных, репозитории и запускает сервер Fiber.
-- **`/install`**: Логика для команды `bedrud install`, которая автоматизирует настройку init-сервисов (systemd/OpenRC/SysV) и TLS на Linux.
-- **`/scheduler`**: Фоновые задачи (если есть).
-- **`/utils`**: Небольшие вспомогательные функции (например, хеширование паролей, случайные строки).
+| Package | Role |
+|---------|------|
+| `auth` | JWT, OAuth (Goth), passkeys, session store, email verification tokens |
+| `cli` | All management subcommands |
+| `database` | SQLite/Postgres connection, AutoMigrate |
+| `handlers` | HTTP: auth, rooms, admin, webhooks, LiveKit webhook, certs |
+| `install` | Linux installer |
+| `livekit` | Extract/run embedded `livekit-server` |
+| `lkutil` | Shared LiveKit API helpers |
+| `middleware` | `Protected`, `RequireAccess`, rate limiters, email-verified gate |
+| `models` | GORM schemas |
+| `queue` | Job worker + handlers (delete, suspend, webhook, email, …) |
+| `repository` | Data access |
+| `scheduler` | Idle rooms, job cleanup, cert renewal, recording retention |
+| `server` | `Run()` bootstrap and route table (**production** routes) |
+| `services` | Room cascade cleanup; recording service (planned routes) |
+| `storage` | Disk/S3/inline chat uploads, avatars |
+| `utils` | Self-signed TLS, safe IO, keys |
 
-### `/migrations`
+### `/docs` (within server)
 
-- содержит SQL- или Go-файлы для обновления схемы базы данных.
+Swagger/OpenAPI generated by `swag` → UI at `/api/swagger` and Scalar at `/api/scalar`.
 
-### `/docs` (внутри server)
+## Technical Deep Dive
 
-- содержит файлы документации Swagger/OpenAPI (генерируются с помощью `swag`).
+### 1. Binary Embedding
 
-## Техническое погружение
+- **Frontend:** Built assets embedded via `server/ui.go` (`//go:embed all:frontend`)
+- **LiveKit:** Binary under `internal/livekit/bin/`; extracted at runtime and launched as a subprocess
 
-### 1. Встраивание бинарников («Трюк»)
+### 2. LiveKit Reverse Proxy
 
-Bedrud использует директиву `//go:embed` для упаковки файлов в скомпилированный бинарный файл.
+When not `livekit.external`, requests under `/livekit` are reverse-proxied to the internal LiveKit host (install default often `127.0.0.1:7880`; local multi-process dev often `7072`).
 
-- **Фронтенд:** Папка React `dist/client/` (плюс пре-рендеренный `index.html`) встроена в `server/ui.go`. Статические файлы отдаются напрямую из памяти с использованием middleware `filesystem` от Fiber.
-- **Сервер LiveKit:** Предварительно скомпилированный исполняемый файл `livekit-server` встроен в `internal/livekit/bin/`. Во время выполнения Bedrud извлекает его в `/tmp/bedrud-livekit-server` и запускает как фоновый процесс (`internal/livekit/server.go`).
+### 3. Middleware Locals
 
-### 2. Обратный прокси LiveKit
+Auth middleware stores claims in `c.Locals("user")`. Handlers read `*auth.Claims`.
 
-Чтобы избежать открытия нескольких портов (сигнализация, API и т. д.), Bedrud направляет весь трафик сигнализации LiveKit через свой основной HTTP(S)-порт.
+### 4. Configuration Overrides
 
-- Любой запрос, начинающийся с `/livekit`, перехватывается в `internal/server/server.go`.
-- **Обратный прокси** (с использованием `httputil.NewSingleHostReverseProxy`) перенаправляет эти запросы к внутреннему экземпляру LiveKit (обычно работающему на `127.0.0.1:7880`).
-- Прокси удаляет префикс `/livekit` перед пересылкой, позволяя LiveKit функционировать так, как будто он является корневым приложением.
+File + env (see [Configuration](/ru/docs/getting-started/configuration)). Runtime admin overrides live in `SystemSettings` (DB).
 
-### 3. Контекст middleware и Locals
-Бэкенд использует `.Locals` от Fiber для передачи данных между middleware и обработчиками.
-- **Auth Middleware (`internal/middleware/auth.go`):** Проверяет JWT и сохраняет объект `Claims` в `c.Locals("user")`.
-- **Обработчики:** Могут получить доступ к ID и правам текущего пользователя с помощью:
-  ```go
-  claims := c.Locals("user").(*auth.Claims)
-  userID := claims.UserID
-  ```
-
-### 4. Переопределение конфигурации
-
-Хотя Bedrud использует файл `config.yaml`, почти каждую настройку можно переопределить с помощью **переменных окружения**. Это необходимо для сред Docker и CI/CD.
-
-| Переменная | Описание |
+| Variable | Description |
 |----------|-------------|
-| `SERVER_PORT` | Порт, который прослушивает бэкенд (по умолчанию: `8090`). |
-| `SERVER_ENABLE_TLS` | Логическое значение (`true/false`) для включения HTTPS. |
-| `SERVER_DOMAIN` | Ваш продакшен-домен (используется для ACME и Passkey RP ID). |
-| `DB_TYPE` | `sqlite` или `postgres`. |
-| `DB_PATH` | Путь к файлу `.db` (если используется SQLite). |
-| `LIVEKIT_HOST` | Публичный URL для LiveKit (например, `https://meet.example.com/livekit`). |
-| `LIVEKIT_API_KEY` | Ключ для аутентификации LiveKit. |
-| `JWT_SECRET` | Секретный ключ для подписи токенов доступа. |
+| `SERVER_PORT` | Main listener port |
+| `SERVER_ENABLE_TLS` | HTTPS |
+| `SERVER_DOMAIN` | Domain (ACME / passkey) |
+| `DB_TYPE` / `DB_PATH` | Database type / SQLite path |
+| `LIVEKIT_HOST` | Public LiveKit URL |
+| `LIVEKIT_API_KEY` | LiveKit key |
+| `JWT_SECRET` | Access token secret |
+| `CONFIG_PATH` / `BEDRUD_CONFIG` | Config file path |
 
-## Стандарты кодирования и паттерны
+## Coding Standards
 
-Бэкенд следует этим паттернам:
+1. **Repository pattern** — handlers call repos, not GORM directly
+2. **Structured errors** — Fiber status + JSON
+3. **Zerolog** — `log.Info` / `Error` / `Debug` (not `fmt.Println`)
+4. **Naming** — files `snake_case.go`, exported types PascalCase
 
-### 1. Паттерн Repository
-Обработчики не должны обращаться к базе данных напрямую. Используйте Repository. Это делает код легче для тестирования и позволяет изменять логику базы данных без изменения API-обработчиков.
+## See also
 
-### 2. Стандартизированная обработка ошибок
-API-обработчики должны возвращать понятные сообщения об ошибках.
-- Используйте `c.Status(fiber.StatusBadRequest).JSON(...)` для ошибок валидации.
-- Используйте `c.Status(fiber.StatusUnauthorized).JSON(...)` для ошибок аутентификации.
-- Используйте `c.Status(fiber.StatusInternalServerError).JSON(...)` для ошибок базы данных или сервера.
-
-### 3. Структурированное логирование
-Бэкенд использует **Zerolog** для логирования.
-- `log.Info()`: Для важных событий (например, запуск сервера).
-- `log.Error()`: Для сбоев.
-- `log.Debug()`: Для подробной информации при разработке.
-
-Избегайте использования `fmt.Println` для логирования в основной логике.
-
-### 4. Соглашения об именовании
-- **Файлы:** snake_case (например, `user_handler.go`).
-- **Структуры/Функции:** PascalCase (например, `GetUserByEmail`).
-- **Переменные:** camelCase (например, `hashedPassword`).
+- [Configuration](/ru/docs/getting-started/configuration)
+- [CLI Reference](/ru/docs/getting-started/cli-reference)
+- [API Handlers](/ru/docs/backend/api-handlers)
+- Repo engineer docs: `docs/server/` (not published to the site)

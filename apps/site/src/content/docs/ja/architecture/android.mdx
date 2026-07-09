@@ -4,24 +4,24 @@ description: ネイティブ Android アプリケーション
 order: 9
 ---
 
-Bedrud Android アプリは Jetpack Compose と Kotlin で構築され、ピクチャーインピクチャー、ディープリンク、マルチインスタンスサポートを備えたネイティブビデオ会議エクスペリエンスを提供します。
+The Bedrud Android app is built with Jetpack Compose and Kotlin, providing a native video meeting experience with picture-in-picture, deep linking, and multi-instance support.
 
-## テクノロジースタック
+## Technology Stack
 
-| テクノロジー | バージョン | 目的 |
+| Technology | Version | Purpose |
 |-----------|---------|---------|
-| Kotlin | 2.1.0 | 言語 |
-| Jetpack Compose | Material 3 | UI ツールキット |
-| Koin | 4.0.0 | 依存性注入 |
-| Retrofit + OkHttp | Latest | HTTP クライアント |
-| LiveKit Android SDK | 2.23.3 | WebRTC メディア |
-| Credentials API | Latest | パスキーサポート |
-| Encrypted SharedPreferences | Latest | 安全な保存 |
-| Coil | Latest | 画像読み込み |
+| Kotlin | 2.1.0 | Language |
+| Jetpack Compose | Material 3 | UI toolkit |
+| Koin | 4.0.0 | Dependency injection |
+| Retrofit + OkHttp | Latest | HTTP client |
+| LiveKit Android SDK | 2.23.3 | WebRTC media |
+| Credentials API | Latest | Passkey support |
+| Encrypted SharedPreferences | Latest | Secure storage |
+| Coil | Latest | Image loading |
 
-**ターゲット：** Min SDK 28、Target SDK 35、JDK 17
+**Target:** Min SDK 28, Target SDK 35, JDK 17
 
-## ディレクトリ構造
+## Directory Structure
 
 ```
 apps/android/app/src/main/java/com/bedrud/app/
@@ -74,9 +74,9 @@ apps/android/app/src/main/java/com/bedrud/app/
     └── theme/                      # Material 3 theme definition
 ```
 
-## マルチインスタンスアーキテクチャ
+## Multi-Instance Architecture
 
-Android アプリは複数の Bedrud サーバーへの同時接続をサポートします。
+The Android app supports connecting to multiple Bedrud servers simultaneously.
 
 ```mermaid
 flowchart TB
@@ -98,18 +98,18 @@ flowchart TB
     AI */} DEPS
 ```
 
-### 主要なパターン
+### Key Pattern
 
-インスタンスごとの依存関係はすべて `InstanceManager` 上の `StateFlow<T?>` として公開されます。コンポーザブルはこれらを収集します。
+All per-instance dependencies are exposed as `StateFlow<T?>` on `InstanceManager`. Composables collect them:
 
 ```kotlin
 val authManager = instanceManager.authManager.collectAsState().value ?: return
 val roomApi = instanceManager.roomApi.collectAsState().value ?: return
 ```
 
-`?: return` パターンにより、インスタンスが完全に初期化されるまでコンポーザブルは描画されません。
+The `?: return` pattern ensures the composable doesn't render until the instance is fully initialized.
 
-### ナビゲーションフロー
+### Navigation Flow
 
 ```mermaid
 flowchart LR
@@ -118,34 +118,34 @@ flowchart LR
     E["Has instances, logged in"] */} F[DashboardScreen]
 ```
 
-インスタンススイッチャーは Dashboard ツールバーからトリガーされる `ModalBottomSheet` として表示されます。
+The instance switcher appears as a `ModalBottomSheet` triggered from the Dashboard toolbar.
 
-## 機能
+## Features
 
-### ディープリンク
+### Deep Linking
 
-アプリは以下の URL パターンを処理します。
+The app handles URLs matching:
 
-- `https://bedrud.com/m/*` - ルームへの直接参加
-- `https://bedrud.com/c/*` - コードによるルーム参加
+- `https://bedrud.com/m/*` - Direct room join
+- `https://bedrud.com/c/*` - Room join by code
 
-`AndroidManifest.xml` のインテントフィルターで設定されています。
+Configured via intent filters in `AndroidManifest.xml`.
 
-### 通話管理
+### Call Management
 
-- **CallService** - 通話中に接続を維持するフォアグラウンドサービス
-- **CallConnectionService** - Android のテレフォニーフレームワークとの統合で適切な通話 UI を表示
-- 必要なパーミッション：`MANAGE_OWN_CALLS`、`FOREGROUND_SERVICE_PHONE_CALL`、`FOREGROUND_SERVICE_CAMERA`、`FOREGROUND_SERVICE_MICROPHONE`
+- **CallService** - Foreground service that keeps the connection alive during calls
+- **CallConnectionService** - Integrates with Android's telephony framework for proper call UI
+- Required permissions: `MANAGE_OWN_CALLS`, `FOREGROUND_SERVICE_PHONE_CALL`, `FOREGROUND_SERVICE_CAMERA`, `FOREGROUND_SERVICE_MICROPHONE`
 
-### ピクチャーインピクチャー
+### Picture-in-Picture
 
-会議画面は PiP モードをサポートし、他のアプリを使用中でもビデオフィードを表示できます。
+The meeting screen supports PiP mode, allowing users to see the video feed while using other apps.
 
-### パスキー
+### Passkeys
 
-Android の Credentials API を使用して FIDO2/WebAuthn パスキーの登録とログインを行います。
+Uses Android's Credentials API for FIDO2/WebAuthn passkey registration and login.
 
-## ビルド
+## Building
 
 ```bash
 # Debug APK
@@ -161,6 +161,6 @@ make release-android
 make dev-android
 ```
 
-### リリース署名
+### Release Signing
 
-リリースビルドには Android プロジェクトルートに署名設定を含む `keystore.properties` ファイルが必要です。
+Release builds require a `keystore.properties` file in the android project root with your signing configuration.

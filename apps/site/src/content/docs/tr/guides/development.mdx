@@ -4,41 +4,41 @@ description: Geliştirme ortamını kurun
 order: 27
 ---
 
-Bu rehber, Bedrud projesine katkıda bulunmak için günlük geliştirme iş akışını açıklar.
+This guide covers the day-to-day development workflow for contributing to Bedrud.
 
-## Depo Yapısı
+## Repository Layout
 
 ```
 bedrud/
-├── server/          # Go arka ucu
+├── server/          # Go backend
 ├── apps/
-│   ├── web/         # React ön ucu (TanStack Start)
-│   ├── android/     # Android uygulaması
-│   ├── ios/         # iOS uygulaması
-│   └── desktop/     # Masaüstü uygulaması (Rust + Slint)
-├── agents/          # Python bot aracıları
-├── packages/        # Paylaşılan TypeScript türleri
-├── tools/cli/       # Dağıtım CLI'si
-├── docs/            # Belgelendirme (MkDocs)
-├── Cargo.toml       # Rust çalışma alanı kökü
-├── Makefile         # Derleme orkestrasyonu
-└── Dockerfile       # Konteyner derlemesi
+│   ├── web/         # React frontend (TanStack Start)
+│   ├── android/     # Android app
+│   ├── ios/         # iOS app
+│   └── desktop/     # Desktop app (Rust + Slint)
+├── agents/          # Python bot agents
+├── packages/        # Shared TypeScript types
+├── tools/cli/       # Deployment CLI
+├── docs/            # Documentation (MkDocs)
+├── Cargo.toml       # Rust workspace root
+├── Makefile         # Build orchestration
+└── Dockerfile       # Container build
 ```
 
-## Ön Koşullar
+## Prerequisites
 
-| Araç                     | Gerekli Yer             |
-|--------------------------|-------------------------|
-| Go 1.24+                 | Sunucu                  |
-| Bun                      | Web ön ucu              |
-| LiveKit Sunucusu         | Yerel medya sunucusu    |
-| Android Studio + JDK 17  | Android uygulaması      |
-| Xcode                    | iOS uygulaması          |
-| Rust (stable)            | Masaüstü uygulaması     |
-| Python 3.10+             | Bot aracıları           |
-| FFmpeg                   | Radyo ve video aracıları |
+| Tool | Required For |
+|------|-------------|
+| Go 1.24+ | Server |
+| Bun | Web frontend |
+| LiveKit Server | Local media server |
+| Android Studio + JDK 17 | Android app |
+| Xcode | iOS app |
+| Rust (stable) | Desktop app |
+| Python 3.10+ | Bot agents |
+| FFmpeg | Radio and video agents |
 
-## İlk Kurulum
+## Initial Setup
 
 ```bash
 git clone https://github.com/themadorg/bedrud.git
@@ -46,22 +46,22 @@ cd bedrud
 make init
 ```
 
-## Tam Yığın Geliştirme
+## Full-Stack Development
 
-Tüm yığını yerel olarak çalıştırmak için:
+To run the entire stack locally:
 
 ```bash
 make dev
 ```
 
-Bu, LiveKit, Go sunucusu ve React geliştirme sunucusunu eşzamanlı başlatır. Tüm süreçleri durdurmak için `Ctrl+C` tuşlarına basın.
+This starts LiveKit, the Go server, and the React dev server concurrently. Press `Ctrl+C` to stop all processes.
 
-### Servisleri Ayrı Ayrı Çalıştırma
+### Running Services Individually
 
 <Tabs>
   <TabsList>
-    <TabsTrigger value="web-frontend">Web Ön Ucu</TabsTrigger>
-    <TabsTrigger value="go-server">Go Sunucusu</TabsTrigger>
+    <TabsTrigger value="web-frontend">Web Frontend</TabsTrigger>
+    <TabsTrigger value="go-server">Go Server</TabsTrigger>
     <TabsTrigger value="livekit">LiveKit</TabsTrigger>
   </TabsList>
 
@@ -69,133 +69,133 @@ Bu, LiveKit, Go sunucusu ve React geliştirme sunucusunu eşzamanlı başlatır.
     ```bash
     make dev-web
     ```
-    `http://localhost:3000` adresinde hot module replacement ile çalışır.
+    Runs at `http://localhost:3000` with hot module replacement.
   </TabsContent>
 
   <TabsContent value="go-server">
     ```bash
     make dev-server
     ```
-    `http://localhost:8090` adresinde çalışır. Go kodu değişikliklerinden sonra manuel olarak yeniden başlatın.
+    Runs at `http://localhost:8090`. Restart manually after Go code changes.
   </TabsContent>
 
   <TabsContent value="livekit">
     ```bash
     make dev-livekit
     ```
-    `http://localhost:7880` adresinde geliştirme kimlik bilgileriyle çalışır.
+    Runs at `http://localhost:7880` with development credentials.
   </TabsContent>
 </Tabs>
 
-## Sunucu Geliştirme
+## Server Development
 
-Go sunucusunun giriş noktası `server/cmd/server/main.go` dosyasıdır.
+The Go server entry point is `server/cmd/server/main.go`.
 
-### API Uç Noktası Ekleme
+### Adding an API Endpoint
 
-1. **İşleyiciyi tanımlayın** `server/internal/handlers/` dizininde
-2. **Repository metotları ekleyin** yeni veritabanı sorguları gerekiyorsa `server/internal/repository/` dizininde
-3. **Rotayı kaydedin** sunucu kurulumunda (genellikle `main.go` veya bir rota dosyasında)
-4. **Middleware ekleyin** uç nokta kimlik doğrulama veya yönetici kontrolü gerektiriyorsa
+1. **Define the handler** in `server/internal/handlers/`
+2. **Add repository methods** in `server/internal/repository/` if new DB queries are needed
+3. **Register the route** in the server setup (usually in `main.go` or a routes file)
+4. **Add middleware** if the endpoint needs auth or admin checks
 
-### Veritabanı Değişiklikleri
+### Database Changes
 
-`server/internal/models/` dizinindeki GORM model struct'larını ekleyin veya değiştirin. GORM başlangıçta otomatik migrate eder.
+Add or modify GORM model structs in `server/internal/models/`. GORM auto-migrates on startup.
 
-### Swagger Belgeleri
+### Swagger Docs
 
-API belgelendirme ek açıklamaları swaggo formatını kullanır. Değişikliklerden sonra yeniden oluşturun:
+API documentation annotations use swaggo format. After changes, regenerate:
 
 ```bash
 cd server
 swag init -g cmd/server/main.go
 ```
 
-> Tam dizin yapısı ve katmanlı tasarım için [Sunucu Mimarisi](/tr/docs/architecture/server) sayfasına bakın.
+> See [Server Architecture](/tr/docs/architecture/server) for the full directory layout and layered design.
 
-## Web Ön Ucu Geliştirme
+## Web Frontend Development
 
-Ön uç `apps/web/` dizinindedir ve React 19 ile TanStack Start kullanır.
+The frontend is at `apps/web/` and uses React 19 with TanStack Start.
 
-### Sayfa Ekleme
+### Adding a Page
 
-[TanStack Router dosya tabanlı yönlendirme kuralını](https://tanstack.com/router/latest/docs/framework/react/guide/file-based-routing) izleyerek `src/routes/` altında yeni bir dosya oluşturun (ör. `src/routes/settings.tsx`). `createFileRoute` ile oluşturulmuş bir `Route` dışa aktarın.
+Create a new file under `src/routes/` following [TanStack Router's file-based routing convention](https://tanstack.com/router/latest/docs/framework/react/guide/file-based-routing) (e.g. `src/routes/settings.tsx`). Export a `Route` created with `createFileRoute`.
 
-### API İstemci Fonksiyonu Ekleme
+### Adding an API Client Function
 
-1. Fonksiyonu `src/lib/api.ts` dosyasında `authFetch` kullanarak ekleyin
-2. TypeScript türlerini satır içi veya paylaşılan bir tür dosyasında tanımlayın
-3. Fonksiyonu rota bileşeninizden kullanın, genellikle bir TanStack Query `useQuery` hook'u aracılığıyla
+1. Add the function in `src/lib/api.ts` using `authFetch`
+2. Define TypeScript types inline or in a shared types file
+3. Use the function from your route component, typically via a TanStack Query `useQuery` hook
 
-### Tip Kontrolü
+### Type Checking
 
 ```bash
 cd apps/web
-bun run check    # Biome lint + TypeScript tip kontrolü çalıştırır
+bun run check    # runs Biome lint + TypeScript type check
 ```
 
-> Tam ön uç yapısı ve örüntüleri için [Web Ön Ucu Mimarisi](/tr/docs/architecture/web) sayfasına bakın.
+> See [Web Frontend Architecture](/tr/docs/architecture/web) for the complete frontend structure and patterns.
 
-## Android Geliştirme
+## Android Development
 
 ```bash
-make dev-android    # Android Studio'da açar
+make dev-android    # Opens in Android Studio
 ```
 
-### Temel Örüntüler
+### Key Patterns
 
-- Tüm ekranlar Composable fonksiyonlardır
-- Bağımlılıklar `InstanceManager` üzerinden `koinInject()` ile sağlanır
-- Null olabilen `StateFlow` değerleri için `collectAsState().value ?: return` kullanın
-- Navigasyon `MainActivity.kt` dosyasında yönetilir
+- All screens are Composable functions
+- Dependencies come from `InstanceManager` via `koinInject()`
+- Use `collectAsState().value ?: return` for nullable `StateFlow` values
+- Navigation is handled in `MainActivity.kt`
 
-### Derleme
+### Building
 
 ```bash
 make build-android-debug    # Debug APK
-make build-android          # Release APK (keystore gerektirir)
-make release-android        # Derler + cihaza kurar
+make build-android          # Release APK (needs keystore)
+make release-android        # Build + install on device
 ```
 
-> Ayrıntılı mobil uygulama mimarisi için [Android Uygulama Mimarisi](/tr/docs/architecture/android) sayfasına bakın.
+> See [Android App Architecture](/tr/docs/architecture/android) for detailed mobile app architecture.
 
-## iOS Geliştirme
+## iOS Development
 
 ```bash
-make dev-ios    # Xcode'da açar
+make dev-ios    # Opens in Xcode
 ```
 
-### Temel Örüntüler
+### Key Patterns
 
-- Görünümler SwiftUI struct'larıdır
-- Bağımlılıklar `InstanceManager` üzerinden `@EnvironmentObject` ile sağlanır
-- Null olabilen yayınlanmış özellikler için optional binding kullanın
-- Navigasyon SwiftUI'nin yerel navigasyon yığınını kullanır
+- Views are SwiftUI structs
+- Dependencies come from `InstanceManager` via `@EnvironmentObject`
+- Use optional binding for nullable published properties
+- Navigation uses SwiftUI's native navigation stack
 
-### Proje Oluşturma
+### Project Generation
 
-`project.yml` dosyasını değiştirirseniz, Xcode projesini yeniden oluşturun:
+If you modify `project.yml`, regenerate the Xcode project:
 
 ```bash
 cd apps/ios
 xcodegen generate
 ```
 
-### Derleme
+### Building
 
 ```bash
-make build-ios          # Release arşivi
-make build-ios-sim      # Simülatör derlemesi
-make export-ios         # IPA dışa aktarma
+make build-ios          # Release archive
+make build-ios-sim      # Simulator build
+make export-ios         # Export IPA
 ```
 
-> Ayrıntılı mobil uygulama mimarisi için [iOS Uygulama Mimarisi](/tr/docs/architecture/ios) sayfasına bakın.
+> See [iOS App Architecture](/tr/docs/architecture/ios) for detailed mobile app architecture.
 
-## Masaüstü Geliştirme
+## Desktop Development
 
-Masaüstü uygulaması `apps/desktop/` dizinindedir ve çalışma alanında bir Rust crate'idir.
+The desktop app lives in `apps/desktop/` and is a Rust crate in the workspace.
 
-### Ön Koşullar (Linux)
+### Prerequisites (Linux)
 
 ```bash
 sudo apt-get install -y \
@@ -205,31 +205,31 @@ sudo apt-get install -y \
   libasound2-dev
 ```
 
-Windows, C++ iş yükü (MSVC) ile Visual Studio Build Tools gerektirir.
+Windows requires Visual Studio Build Tools with the C++ workload (MSVC).
 
-### Çalıştırma
+### Running
 
 ```bash
 make dev-desktop    # cargo run -p bedrud-desktop
 ```
 
-### Derleme
+### Building
 
 ```bash
-make build-desktop           # Geçerli platform için optimize edilmiş ikili dosya
+make build-desktop           # optimised binary for the current platform
 ```
 
-### Temel Örüntüler
+### Key Patterns
 
-- Tüm UI `apps/desktop/ui/` altındaki `.slint` dosyalarında tanımlanır; derleme zamanında `build.rs` tarafından Rust'a derlenir
-- `apps/desktop/src/ui/bridge.rs`, Slint geri çağrılarının Rust mantığına bağlandığı tek yerdir - iş mantığını `.slint` dosyalarının dışında tutun
-- Arka plan görevlerinde UI'ı güncellemesi gereken `Weak<AppWindow>` kullanın
+- All UI is defined in `.slint` files under `apps/desktop/ui/`; compiled to Rust at build time by `build.rs`
+- `apps/desktop/src/ui/bridge.rs` is the only place where Slint callbacks are wired to Rust logic - keep business logic out of the `.slint` files
+- Use `Weak<AppWindow>` when spawning background tasks that need to update the UI
 
-> Ayrıntılı masaüstü uygulama mimarisi için [Masaüstü Uygulama Mimarisi](/tr/docs/architecture/desktop) sayfasına bakın.
+> See [Desktop App Architecture](/tr/docs/architecture/desktop) for detailed desktop app architecture.
 
-## Bot Aracı Geliştirme
+## Bot Agent Development
 
-Aracılar `agents/` dizinindedir, her aracı için bir alt dizin bulunur.
+Agents are in `agents/` with one directory per agent.
 
 ```bash
 cd agents/music_agent
@@ -237,34 +237,34 @@ pip install -r requirements.txt
 python agent.py "http://localhost:8090/m/test-room"
 ```
 
-Tüm aracılar, kimlik doğrulaması yapmak için çalışan bir Bedrud sunucusuna ihtiyaç duyar.
+All agents need a running Bedrud server to authenticate against.
 
 ## CI/CD
 
-GitHub Actions, `master` dalına her push ve her pull request'te çalışır:
+GitHub Actions runs on every push to `master` and on pull requests:
 
-| İş      | Kontrol ettiği şey                       |
-|---------|------------------------------------------|
-| Server  | `go vet`, derleme, testler               |
-| Web     | Tip kontrolü, derleme                    |
-| Android | Lint, birim testleri, debug APK          |
-| iOS     | Derleme + test (simülatör, kapsama dahil) |
-| Desktop | `cargo build`, `cargo test`              |
+| Job | What it checks |
+|-----|---------------|
+| Server | `go vet`, build, tests |
+| Web | Type check, build |
+| Android | Lint, unit tests, debug APK |
+| iOS | Build + test (simulator, with coverage) |
+| Desktop | `cargo build`, `cargo test` |
 
-Sürüm derlemeleri sürüm etiketleri (`v*`) tarafından tetiklenir.
+Release builds are triggered by version tags (`v*`).
 
-## Kod Stili
+## Code Style
 
-- **Go:** Standart `gofmt` biçimlendirmesi
-- **TypeScript/React:** Biome (`apps/web/biome.json` dosyasında yapılandırılır)
-- **Kotlin:** Android Studio varsayılan biçimlendirmesi
-- **Swift:** Xcode varsayılan biçimlendirmesi
+- **Go:** Standard `gofmt` formatting
+- **TypeScript/React:** Biome (configured in `apps/web/biome.json`)
+- **Kotlin:** Android Studio default formatting
+- **Swift:** Xcode default formatting
 
-## Test
+## Testing
 
 <Tabs>
   <TabsList>
-    <TabsTrigger value="server">Sunucu</TabsTrigger>
+    <TabsTrigger value="server">Server</TabsTrigger>
     <TabsTrigger value="web">Web</TabsTrigger>
     <TabsTrigger value="android">Android</TabsTrigger>
     <TabsTrigger value="ios">iOS</TabsTrigger>
@@ -293,14 +293,14 @@ Sürüm derlemeleri sürüm etiketleri (`v*`) tarafından tetiklenir.
 
   <TabsContent value="ios">
     ```bash
-    make build-ios-sim   # Derler ve testleri çalıştırır
+    make build-ios-sim   # Builds and runs tests
     ```
   </TabsContent>
 </Tabs>
 
 ---
 
-## Ayrıca bakın
+## See also
 
-- [Makefile Referansı](/tr/docs/guides/makefile) - tüm derleme ve geliştirme komutları
-- [Mimari Genel Bakış](/tr/docs/architecture/overview) - bileşenler nasıl bir araya gelir
+- [Makefile Reference](/tr/docs/guides/makefile) - all build and dev commands
+- [Architecture Overview](/tr/docs/architecture/overview) - how components fit together

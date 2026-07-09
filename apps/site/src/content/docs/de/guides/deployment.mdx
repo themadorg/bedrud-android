@@ -4,25 +4,25 @@ description: Bedrud in der Produktion bereitstellen
 order: 28
 ---
 
-Diese Anleitung erklärt, wie Sie Bedrud auf einem Produktionsserver bereitstellen.
+This guide explains how to deploy Bedrud to a production server.
 
-## Bereitstellungsoptionen
+## Deployment Options
 
-| Methode | Am besten für |
-|---------|---------------|
-| [Paketverwaltung (apt/AUR)](#package-manager) | Verwaltete Installation auf unterstützten Linux-Distributionen |
-| [Automatisierte CLI](#automated-cli-deployment) | Schnelles Remote-Setup |
-| [Manuelle Installation](#manual-installation) | Volle Kontrolle über die Konfiguration |
-| [Docker](#docker-deployment) | Containerisierte Umgebungen |
-| [Appliance-Modus](/de/docs/guides/appliance) | Single-Binary-All-in-One-Setup |
+| Method | Best For |
+|--------|----------|
+| [Package Manager (apt/AUR)](#package-manager) | Managed install on supported Linux distros |
+| [Automated CLI](#automated-cli-deployment) | Quick remote setup |
+| [Manual Install](#manual-installation) | Full control over configuration |
+| [Docker](#docker-deployment) | Containerized environments |
+| [Appliance Mode](/de/docs/guides/appliance) | Single-binary all-in-one setup |
 
 ---
 
-## Paketverwaltung
+## Package Manager
 
-Installieren Sie Bedrud auf Debian/Ubuntu oder Arch Linux über den nativen Paketmanager. Dies ist die empfohlene Methode für dauerhafte Serverbereitstellungen, bei denen Sie automatische Updates über `apt upgrade` oder das AUR wünschen.
+Install Bedrud on Debian/Ubuntu or Arch Linux using the native package manager. This is the recommended method for persistent server deployments where you want automatic updates via `apt upgrade` or the AUR.
 
-Siehe die [Paketinstallationsanleitung](/de/docs/guides/packages) für vollständige Anweisungen, einschließlich des Hinzufügens des apt-GPG-Schlüssels und des Repositorys.
+See the [Package Installation guide](/de/docs/guides/packages) for full instructions, including adding the apt GPG key and repository.
 
 ```bash
 # Ubuntu / Debian
@@ -32,7 +32,7 @@ sudo apt install bedrud
 yay -S bedrud-bin
 ```
 
-Führen Sie nach der Installation das interaktive Installationsprogramm aus, um TLS, Init-Services (systemd/OpenRC/SysV) und die Datenbank zu konfigurieren:
+After installation, run the interactive installer to configure TLS, init services (systemd/OpenRC/SysV), and the database:
 
 ```bash
 sudo bedrud install
@@ -40,11 +40,11 @@ sudo bedrud install
 
 ---
 
-## Automatisierte CLI-Bereitstellung
+## Automated CLI Deployment
 
-Der schnellste Weg zur Bereitstellung. Führen Sie es von Ihrem lokalen Rechner aus:
+The fastest way to deploy. Run from your local machine:
 
-**Voraussetzungen:** Python 3.10+, [uv](https://github.com/astral-sh/uv) und SSH-Zugriff auf den Zielserver.
+**Prerequisites:** Python 3.10+, [uv](https://github.com/astral-sh/uv), and SSH access to the target server.
 
 ```bash
 cd tools/cli
@@ -56,79 +56,81 @@ uv run python bedrud.py --auto-config \
   --acme-email admin@example.com
 ```
 
-Dies wird:
+This will:
 
-1. Das Backend-Binary lokal erstellen
-2. Es komprimieren und per rsync hochladen
-3. Konfliktreiche Webserver entfernen
-4. Die Firewall konfigurieren
-5. Dienste auf dem Server installieren und starten
+1. Build the backend binary locally
+2. Compress and upload it via rsync
+3. Clear conflicting web servers
+4. Configure the firewall
+5. Install and start services on the server
 
-### CLI-Optionen
+### CLI Options
 
-| Flag | Beschreibung |
+| Flag | Description |
 |------|-------------|
-| `--ip` | Server-IP-Adresse |
-| `--user` | SSH-Benutzer (Standard: root) |
-| `--auth-key` | Pfad zum privaten SSH-Schlüssel |
-| `--domain` | Domainname für Let's Encrypt |
-| `--acme-email` | E-Mail für Let's Encrypt |
-| `--uninstall` | Bedrud vom Server entfernen |
+| `--ip` | Server IP address |
+| `--user` | SSH user (default: root) |
+| `--auth-key` | Path to SSH private key |
+| `--domain` | Domain name for Let's Encrypt |
+| `--acme-email` | Email for Let's Encrypt |
+| `--uninstall` | Remove Bedrud from server |
 
 ---
 
-## Manuelle Installation
+## Manual Installation
 
-### 1. Binary erstellen
+### 1. Build the Binary
 
 ```bash
 make build-dist
 ```
 
-Dies erzeugt `dist/bedrud_linux_amd64.tar.xz`.
+This produces `dist/bedrud_linux_amd64.tar.xz`.
 
-### 2. Auf den Server hochladen
+### 2. Upload to Server
 
 ```bash
 scp dist/bedrud_linux_amd64.tar.xz root@server:/tmp/
 ssh root@server "cd /tmp && tar xf bedrud_linux_amd64.tar.xz"
 ```
 
-### 3. Installieren
+### 3. Install
 
 ```bash
 ssh root@server
 sudo /tmp/bedrud install --tls --domain meet.example.com --email admin@example.com
 ```
 
-Siehe die [Installationsanleitung](/de/docs/getting-started/installation) für alle Installationsszenarien.
+See the [Installation Guide](/de/docs/getting-started/installation) for all installation scenarios.
 
-### 4. Administrator erstellen
+### 4. Create Admin User
 
 <CreateAdmin />
 
 ---
 
-## Docker-Bereitstellung
+## Docker Deployment
 
-Erstellen und Ausführen mit Docker:
+Build and run with Docker:
 
 ```bash
 docker build -t bedrud .
 docker run -d --name bedrud -p 8090:8090 -p 7880:7880 -v bedrud-data:/var/lib/bedrud bedrud
 ```
 
-Ein vorgefertigtes Image ist ebenfalls verfügbar:
+When server TLS is enabled in Docker (via `SERVER_ENABLE_TLS=true` with mounted certs), the embedded LiveKit process automatically configures TURN/TLS using the server's certificate. For custom LiveKit configuration, mount a LiveKit YAML and set `LIVEKIT_CONFIG_PATH`.
+
+A pre-built image is also available:
 
 ```bash
 docker pull ghcr.io/themadorg/bedrud:latest
 ```
 
-Siehe die [Docker-Anleitung](/de/docs/guides/docker) für vollständige Details inklusive Volumes, Konfiguration und Docker Compose.
+See the [Docker Guide](/de/docs/guides/docker) for full details including volumes, configuration, and Docker Compose.
 
 ---
 
-## Produktionsarchitektur
+## Production Architecture
 
 ```mermaid
 flowchart TB
@@ -138,20 +140,20 @@ flowchart TB
     BEDRUD */} DB["SQLite<br/>(or PostgreSQL)"]
 ```
 
-Für WebRTC-Konnektivität öffnen Sie zusätzlich diese Ports in der Firewall:
+For WebRTC connectivity, also open these ports on the firewall:
 
-| Port | Protokoll | Zweck |
-|------|-----------|-------|
+| Port | Protocol | Purpose |
+|------|----------|---------|
 | 3478 | UDP | TURN/UDP + STUN |
-| 5349 | TCP | TURN/TLS (oder 443 verwenden) |
-| 7881 | TCP | ICE/TCP-Fallback |
-| 50000-60000 | UDP | RTC-Medienstreams |
+| 5349 | TCP | TURN/TLS (or use 443) |
+| 7881 | TCP | ICE/TCP fallback |
+| 50000-60000 | UDP | RTC media streams |
 
-Siehe [WebRTC-Konnektivität](/de/docs/architecture/webrtc-connectivity) für den vollständigen Konnektivitäts-Stack.
+See [WebRTC Connectivity](/de/docs/architecture/webrtc-connectivity) for the full connectivity stack.
 
 <SystemdServices />
 
-### Dienste verwalten
+### Managing Services
 
 ```bash
 # Check status
@@ -178,51 +180,51 @@ Root-level redirects (`/health` → `/api/health`, `/ready` → `/api/ready`) ex
 
 ---
 
-## Dateipfade (Produktion)
+## File Locations (Production)
 
-| Pfad | Inhalt |
-|------|--------|
+| Path | Content |
+|------|---------|
 | `/usr/local/bin/bedrud` | Binary |
-| `/etc/bedrud/config.yaml` | Serverkonfiguration |
-| `/etc/bedrud/livekit.yaml` | LiveKit-Konfiguration |
-| `/var/lib/bedrud/bedrud.db` | SQLite-Datenbank |
-| `/var/log/bedrud/bedrud.log` | Anwendungsprotokolle |
+| `/etc/bedrud/config.yaml` | Server configuration |
+| `/etc/bedrud/livekit.yaml` | LiveKit configuration |
+| `/var/lib/bedrud/bedrud.db` | SQLite database |
+| `/var/log/bedrud/bedrud.log` | Application logs |
 
 ---
 
 ## CI/CD
 
-### Release-Pipeline
+### Release Pipeline
 
-Der `release.yml`-Workflow wird bei Versions-Tags (`v*`) ausgelöst und erzeugt:
+The `release.yml` workflow triggers on version tags (`v*`) and produces:
 
-| Artefakt | Beschreibung |
+| Artifact | Description |
 |---|---|
-| `bedrud_linux_amd64.tar.xz` / `bedrud_linux_arm64.tar.xz` | Server-Binaries (Linux x86_64 / ARM64) |
-| `bedrud_amd64.deb` / `bedrud_arm64.deb` | Debian/Ubuntu-Pakete (Server) |
-| Docker-Image (`ghcr.io/themadorg/bedrud`) | Multi-Arch-Container-Image, pushed to GHCR |
-| `bedrud-desktop-linux-x86_64.AppImage` | Desktop - universelles Linux-AppImage |
-| `bedrud-desktop-linux-x86_64.deb` | Desktop - Debian/Ubuntu-Paket |
-| `bedrud-desktop-linux-x86_64.tar.xz` | Desktop - Linux-portables Tar-Archiv |
-| `bedrud-desktop-windows-x86_64-setup.exe` / `-arm64-setup.exe` | Desktop - Windows-NSIS-Installer |
-| `bedrud-desktop-windows-x86_64.zip` / `-arm64.zip` | Desktop - Windows-portabel |
-| `bedrud-desktop-macos-x86_64.tar.gz` / `-arm64.tar.gz` | Desktop - macOS-portabel (nicht signiert) |
-| Android APK (Debug + Release, pro Arch) | Android-Client-Builds |
-| iOS IPA (optional, Signierung erforderlich) | iOS-Client-Archiv |
+| `bedrud_linux_amd64.tar.xz` / `bedrud_linux_arm64.tar.xz` | Server binaries (Linux x86_64 / ARM64) |
+| `bedrud_amd64.deb` / `bedrud_arm64.deb` | Debian/Ubuntu packages (server) |
+| Docker image (`ghcr.io/themadorg/bedrud`) | Multi-arch container image pushed to GHCR |
+| `bedrud-desktop-linux-x86_64.AppImage` | Desktop - universal Linux AppImage |
+| `bedrud-desktop-linux-x86_64.deb` | Desktop - Debian/Ubuntu package |
+| `bedrud-desktop-linux-x86_64.tar.xz` | Desktop - Linux portable tarball |
+| `bedrud-desktop-windows-x86_64-setup.exe` / `-arm64-setup.exe` | Desktop - Windows NSIS installer |
+| `bedrud-desktop-windows-x86_64.zip` / `-arm64.zip` | Desktop - Windows portable |
+| `bedrud-desktop-macos-x86_64.tar.gz` / `-arm64.tar.gz` | Desktop - macOS portable (unsigned) |
+| Android APK (debug + release, per-arch) | Android client builds |
+| iOS IPA (optional, requires signing) | iOS client archive |
 
-Alle Artefakte werden an das GitHub-Release angehängt.
+All artifacts are attached to the GitHub release.
 
-### Nightly-Builds
+### Nightly Builds
 
-Der `dev-nightly.yml`-Workflow erzeugt zeitgesteuerte Development-Builds.
+The `dev-nightly.yml` workflow produces development builds on a schedule.
 
-### CI-Prüfungen
+### CI Checks
 
-Bei jedem Push auf `master` und jedem Pull Request werden folgende Prüfungen ausgeführt:
+Every push to `master` and every pull request runs:
 
-| Prüfung | Plattform |
-|---------|-----------|
-| `go vet` + Build + Tests | ubuntu-latest (Go 1.24) |
-| Typprüfung + Build | ubuntu-latest (Bun) |
-| Lint + Unit-Tests | ubuntu-latest (JDK 17) |
-| Build + Test | macos-15 (Xcode) |
+| Check | Platform |
+|-------|----------|
+| `go vet` + build + tests | ubuntu-latest (Go 1.24) |
+| Type check + build | ubuntu-latest (Bun) |
+| Lint + unit tests | ubuntu-latest (JDK 17) |
+| Build + test | macos-15 (Xcode) |

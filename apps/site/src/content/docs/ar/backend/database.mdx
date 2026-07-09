@@ -1,78 +1,73 @@
 ---
 title: قاعدة البيانات والنماذج
-description: نماذج البيانات ومخطط قاعدة البيانات
+description: نماذج البيانات ومخطط القاعدة
 order: 17
 ---
 
-يستخدم Bedrud **GORM** كأداة ORM، ويدعم كلًا من SQLite و PostgreSQL.
+Bedrud uses **GORM** as its ORM, supporting both SQLite and PostgreSQL.
 
-## قواعد البيانات المدعومة
-- **SQLite:** يُستخدم افتراضيًا لسهولة التطوير والتركيبات الصغيرة. تُخزَّن قاعدة البيانات في ملف (عادةً `bedrud.db`).
-- **PostgreSQL:** مُوصى به لبيئات الإنتاج ذات المستخدمين الكثيرين.
+## Supported Databases
 
-يمكنك تهيئة نوع قاعدة البيانات وتفاصيل الاتصال في ملف `config.yaml` تحت قسم `database:`.
+- **SQLite:** Default for development and small installs. File path via `database.path`.
+- **PostgreSQL:** Recommended for higher concurrency. Use discrete fields (`host`, `port`, `user`, `password`, `dbname`, `sslmode`) — not a URL in `path`.
 
-## تخطيط ملفات SQLite
+See [Configuration → Database](/ar/docs/getting-started/configuration).
 
-عند استخدام SQLite، يقوم Bedrud بتمكين **وضع WAL (Write-Ahead Log)** لأداء أفضل للقراءة المتزامنة. يؤدي هذا إلى إنشاء ملفين إضافيين بجانب قاعدة البيانات الرئيسية:
+## SQLite File Layout
 
-| الملف | الغرض |
-|-------|-------|
-| `bedrud-local.db` | ملف قاعدة البيانات الرئيسي |
-| `bedrud-local.db-shm` | ملف الذاكرة المشتركة — ينسق الوصول بين القراء والكتّاب |
-| `bedrud-local.db-wal` | Write-Ahead Log — الكتابات الجديدة تذهب هنا أولاً، ثم تُنقل إلى قاعدة البيانات الرئيسية |
+WAL mode is enabled for concurrent reads:
 
-**هذه الملفات طبيعية.** يتم إنشاؤها تلقائيًا عند بدء تشغيل الخادم وتنظيفها عند الإيقاف النظيف. إذا تعطل الخادم، يستعيد SQLite تلقائيًا — بدون فقدان البيانات.
+| File | Purpose |
+|------|---------|
+| `*.db` | Main database file |
+| `*.db-shm` | Shared memory |
+| `*.db-wal` | Write-ahead log |
 
-لتعطيل وضع WAL (غير موصى به)، قم بتعيين `PRAGMA journal_mode=DELETE;` في إعدادات SQLite، لكن توقع قراءات متزامنة أبطأ.
+These files are normal. SQLite recovers after crashes automatically.
 
-## النماذج الأساسية
+## Core Models
 
-تقع النماذج في `internal/models/`. إليك أهمها:
+Located in `server/internal/models/`:
 
-### المستخدم (`user.go`)
+| Model | File | Purpose |
+|-------|------|---------|
+| `User` | `user.go` | Accounts, roles (`accesses`), credentials |
+| `Room` | `room.go` | Meetings; settings embedded with `settings_` prefix |
+| `RoomParticipant` | `room.go` | Join/presence records |
+| `Passkey` | `passkey.go` | WebAuthn credentials |
+| `UserPreferences` | `user_preferences.go` | Per-user UI/media prefs |
+| `InviteToken` | `invite_token.go` | Gated registration tokens |
+| `ChatUpload` | `chat_upload.go` | Chat image metadata/quotas |
+| `Job` | `job.go` | Async queue jobs |
+| `Webhook` | `webhook.go` | Outbound webhook endpoints |
+| `SystemSettings` | `settings.go` | Runtime admin overrides (singleton) |
+| `VerificationEvent` | `verification_event.go` | Email verification audit |
+| `Refresh` / refresh tokens | `refresh.go` | Refresh token storage |
+| `Recording` | `recording.go` | Planned recording records |
+| Stats DTOs | `stats.go`, `queue_stats.go` | Aggregates for admin overview |
 
-يخزّن معلومات الحساب بما في ذلك بيانات الاعتماد والأدوار.
+### Custom Types: `StringArray`
 
-### الغرفة (`room.go`)
-تمثل جلسة اجتماع. تستخدم **البنى المدمجة** في GORM لتنظيم الإعدادات.
-بدلاً من جدول منفصل أو كتلة JSON، تُخزَّن حقول `RoomSettings` (مثل `allow_chat`، `allow_video`) مباشرة في جدول `rooms` مع بادئة `settings_` (مثلاً `settings_allow_chat`). هذا يوفر نموذجًا نظيفًا في Go مع الحفاظ على بنية قاعدة بيانات مسطحة وعالية الأداء.
+`StringArray` in `user.go` implements `sql.Scanner` / `driver.Valuer` for cross-DB role arrays (native `text[]` on Postgres; serialized form on SQLite).
 
-### مفتاح المرور (`passkey.go`)
+### Foreign Keys
 
-يخزّن المفاتيح العامة FIDO2/WebAuthn لتسجيل الدخول بدون كلمة مرور.
+Composite keys (e.g. participants) and cascade constraints are applied in `internal/database/migrations.go` beyond plain AutoMigrate.
 
-### أنواع مخصصة: `StringArray`
+## Repository Pattern
 
-تتعامل قواعد بيانات SQL القياسية مع المصفوفات بشكل مختلف (PostgreSQL لديها مصفوفات أصلية، SQLite لا). للحفاظ على التوافق، يُعرّف Bedrud نوع `StringArray` في `internal/models/user.go`.
+Handlers use repositories under `internal/repository/`:
 
-- يُنفّذ `sql.Scanner` و `driver.Valuer`.
-- في **PostgreSQL**، يستخدم النوع الأصلي `text[]`.
-- في **SQLite**، يُحوّل المصفوفة إلى سلسلة نصية (مثلاً `{admin,user}`) للتخزين.
+- `user_repository`, `room_repository`, `passkey_repository`
+- `settings_repository`, `invite_token_repository`, `webhook_repository`
+- `user_preferences_repository`, `recording_repository`, `verification_event_repository`
 
-### إدارة المفاتيح الأجنبية
-
-لا يتعامل `AutoMigrate` في GORM مع المفاتيح الأساسية المركبة (مثلاً `room_participants`).
-
-في `internal/database/migrations.go`، ينفّذ Bedrud عبارات `ALTER TABLE` يدويًا لضمان تطبيق قيود المفاتيح الأجنبية (مثل `ON DELETE CASCADE`) بشكل صحيح في الإنتاج (PostgreSQL).
-
-## نمط المستودع
-
-تستخدم الخلفية **نمط المستودع** للوصول إلى قاعدة البيانات. المعالجات لا تستدعي GORM مباشرة - بل تستخدم مستودعًا.
-
-مثال:
 ```go
-// In handler:
 user, err := h.userRepo.GetByEmail(email)
-
-// In repository:
-func (r *UserRepository) GetByEmail(email string) (*models.User, error) {
-    var user models.User
-    err := r.db.Where("email = ?", email).First(&user).Error
-    return &user, err
-}
 ```
 
-## التهييرات التلقائية
+## Automatic Migrations
 
-عند بدء الخادم، يشغّل "AutoMigrate" تلقائيًا. هذا ينشئ أو يُحدّث جداول قاعدة البيانات بناءً على بنى Go في `internal/models`. لا حاجة لعبارات `CREATE TABLE` يدوية للتغييرات البسيطة على المخطط.
+On startup (unless `bedrud run --skip-migrate`), GORM AutoMigrate creates/updates tables from models. Manual SQL helpers live in `internal/database/migrations.go`.
+
+CLI: `bedrud db migrate` / `bedrud db status`.

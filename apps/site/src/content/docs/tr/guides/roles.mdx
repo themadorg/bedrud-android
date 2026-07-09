@@ -4,33 +4,33 @@ description: 5 kademeli rol tabanlı erişim kontrolü — süper admin, admin, 
 order: 36
 ---
 
-Bedrud, erişim kontrolü için 5 kademeli bir rol sistemi uygular. Her rol, kullanıcı kaydında saklanan ve hem API katmanında (backend middleware) hem de UI katmanında (frontend korumaları ve koşullu işleme) uygulanan bir dizi erişim dizesine eşlenir.
+Bedrud implements a 5-tier role system for access control. Each role maps to a set of access strings stored on the user record and enforced at both the API layer (backend middleware) and the UI layer (frontend guards and conditional rendering).
 
-## Rol Hiyerarşisi
+## Role Hierarchy
 
-| Rol | Erişim Dizisi | Backend Ağırlığı | Açıklama |
-|-----|--------------|-----------------|----------|
-| Süper Admin | `['superadmin', 'user']` | 4 | Tam sistem erişimi, tüm yönetici yetenekleri |
-| Admin | `['admin', 'user']` | 3 | Tam yönetici erişimi, süper admin ile aynı |
-| Moderatör | `['moderator', 'user']` | 2 | Salt okunur yönetici görünümü, değişiklik yok |
-| Kullanıcı | `['user']` | 1 | Standart kayıtlı kullanıcı |
-| Misafir | `['guest']` | 0 | Kayıtsız katılımcı, yalnızca katılma |
+| Role | Access Array | Backend Weight | Description |
+|------|-------------|----------------|-------------|
+| Superadmin | `['superadmin', 'user']` | 4 | Full system access, all admin capabilities |
+| Admin | `['admin', 'user']` | 3 | Full admin access, same as superadmin |
+| Moderator | `['moderator', 'user']` | 2 | Read-only admin view, no mutations |
+| User | `['user']` | 1 | Standard registered user |
+| Guest | `['guest']` | 0 | Unregistered participant, join-only |
 
-## Backend Uygulaması
+## Backend Enforcement
 
-Erişim seviyeleri, her admin rotasında `RequireAccess` middleware'i aracılığıyla uygulanır. Middleware, kullanıcının erişim dizisini gereken minimum seviyeye karşı kontrol eder:
+Access levels are enforced via the `RequireAccess` middleware on every admin route. The middleware checks the user's accesses array against the minimum required level:
 
-- `superadmin` erişimi gerektiren rotalar admin, moderatör, kullanıcı ve misafiri reddeder
-- `admin` erişimi gerektiren rotalar süper admin ve admine izin verir
-- `moderator` erişimi gerektiren rotalar süper admin, admin ve moderatöre izin verir
+- Routes requiring `superadmin` access reject admin, moderator, user, and guest
+- Routes requiring `admin` access allow superadmin and admin
+- Routes requiring `moderator` access allow superadmin, admin, and moderator
 
-Backend, erişimleri veritabanında virgülle ayrılmış bir dize olarak saklar (`users` tablosundaki `accesses` sütunu). `StringArray` GORM türü, serileştirme ve seri durumdan çıkarmayı yönetir.
+The backend stores accesses as a comma-separated string in the database (`accesses` column on the `users` table). The `StringArray` GORM type handles serialization and deserialization.
 
-## Frontend Entegrasyonu
+## Frontend Integration
 
-### Kullanıcı Türü
+### User Type
 
-`user.store.ts` dosyasındaki `User` arayüzü, erişim dizisinden türetilen iki boolean alan içerir:
+The `User` interface in `user.store.ts` includes two boolean fields derived from the accesses array:
 
 ```ts
 interface User {
@@ -41,49 +41,49 @@ interface User {
 }
 ```
 
-### Admin Koruması
+### Admin Guard
 
-Admin düzeni (`/dashboard/admin`), süper admin, admin ve moderatörün geçmesine izin verir. Moderatörler bir `isReadOnly=true` bağlam değişkeni alır:
+The admin layout (`/dashboard/admin`) lets through superadmin, admin, and moderator. Moderators receive an `isReadOnly=true` context variable:
 
 ```tsx
 // routes/dashboard/admin.tsx
 const canAccess = user?.isSuperAdmin || accesses.includes('admin') || accesses.includes('moderator')
 ```
 
-`useAdminContext()` hook'u, `isReadOnly` bayrağını tüm alt rotalara sağlar:
+The `useAdminContext()` hook provides the `isReadOnly` flag to all child routes:
 
 ```tsx
 const { isReadOnly } = useAdminContext()
 ```
 
-### Moderatörlerin Görebildikleri vs Yapabildikleri
+### What Moderators Can See vs Do
 
-| Sayfa | Görüntüle | Değiştir |
-|-------|-----------|----------|
-| Genel bakış istatistikleri | ✅ Tam istatistikler | N/A |
-| Kullanıcı listesi | ✅ Tam liste | ❌ Toplu işlem yok |
-| Kullanıcı detayı | ✅ Tam profil | ❌ Durum/rol/silme/çıkış yok |
-| Oda listesi | ✅ Tam liste | ❌ Askıya alma/silme/düzenleme sınırı yok |
-| Oda detayı | ✅ Tam bilgi | ❌ Askıya alma/silme/atma/susturma yok |
-| Ayarlar | ❌ Yönlendirildi | ❌ |
+| Page | View | Mutate |
+|------|------|--------|
+| Overview stats | ✅ Full stats | N/A |
+| Users list | ✅ Full list | ❌ No bulk actions |
+| User detail | ✅ Full profile | ❌ No status/role/delete/logout |
+| Rooms list | ✅ Full list | ❌ No suspend/delete/edit cap |
+| Room detail | ✅ Full info | ❌ No suspend/delete/kick/mute |
+| Settings | ❌ Redirected | ❌ |
 
-### Rol Seçici
+### Role Selector
 
-Admin arayüzü, önceki ikili süper admin anahtarını değiştirerek hem kullanıcı listesi tablosunda hem de kullanıcı detay sayfasında bir `<Select>` açılır menüsü sağlar. Mevcut seçenekler:
+The admin UI provides a `<Select>` dropdown on both the users list table and the user detail page, replacing the previous binary superadmin toggle. Available options:
 
-| Seçenek | Kaydeder |
-|---------|----------|
-| Süper Admin | `['superadmin', 'user']` |
+| Option | Saves as |
+|--------|----------|
+| Superadmin | `['superadmin', 'user']` |
 | Admin | `['admin', 'user']` |
-| Moderatör | `['moderator', 'user']` |
-| Kullanıcı | `['user']` |
-| Misafir | `['guest']` |
+| Moderator | `['moderator', 'user']` |
+| User | `['user']` |
+| Guest | `['guest']` |
 
-Açılır menü, tam erişim dizisiyle birlikte bir `PUT /api/admin/users/:id/accesses` isteği gönderir.
+The dropdown sends a `PUT /api/admin/users/:id/accesses` request with the full access array.
 
-## CLI Yönetimi
+## CLI Management
 
-`bedrud user promote` ve `bedrud user demote` komutları bir `--role` bayrağı kabul eder:
+The `bedrud user promote` and `bedrud user demote` commands accept a `--role` flag:
 
 ```bash
 # Promote to superadmin (default)
@@ -99,16 +99,16 @@ bedrud user promote --email user@example.com --role moderator
 bedrud user demote --email user@example.com --role admin
 ```
 
-Geçerli `--role` değerleri: `superadmin`, `admin`, `moderator`, `user`, `guest`.
+Valid `--role` values: `superadmin`, `admin`, `moderator`, `user`, `guest`.
 
-## Kod Konumları
+## Code Locations
 
-| Dosya | Amaç |
-|-------|------|
-| `server/internal/models/user.go` | Backend erişim seviyesi sabitleri |
-| `server/internal/middleware/` | `RequireAccess` middleware'i |
-| `server/internal/usercli/usercli.go` | CLI rol yönetimi fonksiyonları |
-| `apps/web/src/lib/user.store.ts` | Frontend User türü |
-| `apps/web/src/routes/dashboard/admin.tsx` | Admin koruması + isReadOnly bağlamı |
-| `apps/web/src/components/admin/UserTable.tsx` | Rol seçici açılır menüsü + rozetler |
-| `apps/web/src/components/admin/RoomTable.tsx` | Salt okunur oda tablosu maskeleme |
+| File | Purpose |
+|------|---------|
+| `server/internal/models/user.go` | Backend access level constants |
+| `server/internal/middleware/` | `RequireAccess` middleware |
+| `server/internal/usercli/usercli.go` | CLI role management functions |
+| `apps/web/src/lib/user.store.ts` | Frontend User type |
+| `apps/web/src/routes/dashboard/admin.tsx` | Admin guard + isReadOnly context |
+| `apps/web/src/components/admin/UserTable.tsx` | Role selector dropdown + badges |
+| `apps/web/src/components/admin/RoomTable.tsx` | Read-only room table masking |
