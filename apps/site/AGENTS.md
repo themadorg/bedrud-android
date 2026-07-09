@@ -51,6 +51,9 @@ apps/site/
 │   ├── generate-search-index.ts   Builds per-locale MiniSearch JSON
 │   └── rehype-code-ltr.ts         Forces LTR on <code>/<pre> in RTL locales
 ├── public/                  Static assets (favicons, fonts, install scripts, search indexes, swagger.json)
+│   ├── auth.md              Agent auth discovery (honest JWT/register docs; not Auth.md protocol runtime)
+│   └── .well-known/
+│       └── api-catalog      RFC 9727 linkset (OpenAPI + docs + demo health)
 └── src/
     ├── components/
     │   ├── api-reference/   Scalar API reference (empty — uses page-level integration)
@@ -359,7 +362,9 @@ Handled in `Base.astro` via `astro-seo`:
 - **Biome excludes** — Search index JSON and swagger.json excluded from Biome checks.
 - **shadcn/ui has no RSC** — `rsc: false` in `components.json`. Don't use `"use client"` directives.
 - **React in Astro** — React components need `client:load`, `client:idle`, or `client:visible` directives in parent `.astro` files.
-- **`swagger.json`** — Lives in `public/`, consumed by API docs page. Not auto-generated here.
+- **`swagger.json`** — Lives in `public/`, consumed by API docs page. Not auto-generated here. Copied from `server/docs/swagger.json` on dev/build.
+- **`/.well-known/api-catalog`** — Hand-maintained RFC 9727 linkset in `public/.well-known/api-catalog`. Points at `/swagger.json`, English API reference, and demo health (`bedrud.xyz`). GitHub Pages may serve the wrong `Content-Type` (not `application/linkset+json`); body is still valid linkset JSON. Custom headers need CDN/proxy (out of static SSG scope).
+- **`/auth.md`** — Hand-maintained honest agent discovery in `public/auth.md`. Documents JWT + human registration; does **not** advertise unimplemented agent registration endpoints or OAuth AS metadata.
 - **Fonts in `public/fonts/`** — Self-hosted Geist Sans, Geist Mono, Vazirmatn. Referenced via `@font-face` in `global.css`.
 
 ---
