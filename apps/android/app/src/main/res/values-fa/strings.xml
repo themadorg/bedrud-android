@@ -181,4 +181,45 @@
   <string name="profile_label_userId">شناسه کاربر</string>
   <string name="profile_label_provider">ارائه‌دهنده</string>
   <string name="profile_button_signOut">خروج</string>
+
+  <string name="meeting_contentDescription_stopScreenShare">توقف اشتراک‌گذاری صفحه</string>
+  <string name="meeting_contentDescription_maximizeScreenShare">تمام‌صفحه</string>
+  <string name="meeting_contentDescription_minimizeScreenShare">خروج از تمام‌صفحه</string>
+  <string name="meeting_stage_screenShareTitle">اشتراک‌گذاری صفحه</string>
+  <string name="meeting_stage_screenSharePresenting"><xliff:g id="name" example="Alex">%1$s</xliff:g> در حال ارائه است</string>
+  <string name="meeting_stage_screenShareWaiting">در انتظار صفحه <xliff:g id="name" example="Alex">%1$s</xliff:g>…</string>
+  <string name="meeting_contentDescription_closeImagePreview">بستن پیش‌نمایش تصویر</string>
+  <string name="meeting_contentDescription_viewImage">مشاهده تصویر</string>
+  <string name="call_default_room_name">جلسه</string>
+  <string name="screen_share_channel_name">اشتراک‌گذاری صفحه</string>
+  <string name="screen_share_channel_description">هنگام اشتراک‌گذاری صفحه نمایش داده می‌شود</string>
+  <string name="screen_share_notification_title">در حال اشتراک‌گذاری صفحه</string>
+  <string name="screen_share_notification_text">صفحه شما برای شرکت‌کنندگان جلسه قابل مشاهده است</string>
+  <string name="meeting_error_permissionsRequired">برای پیوستن، مجوز دوربین و میکروفون لازم است.</string>
+  <string name="meeting_error_screenShareFailed">شروع اشتراک‌گذاری صفحه ممکن نشد.</string>
+  <string name="meeting_sheet_chat">گفتگو</string>
+  <string name="meeting_sheet_addOthers">افزودن دیگران</string>
+  <string name="meeting_share_chooserTitle">اشتراک لینک جلسه</string>
+  <string name="meeting_sheet_flipCamera">چرخش دوربین</string>
+  <string name="meeting_sheet_settings">تنظیمات</string>
+  <string name="meeting_sheet_tools">ابزارها</string>
+  <string name="meeting_sheet_report">گزارش سوءاستفاده</string>
+  <string name="meeting_contentDescription_audioSource">منبع صدا</string>
+  <string name="meeting_audio_sheet_title">صدا</string>
+  <string name="meeting_audio_sheet_microphone">میکروفون</string>
+  <string name="meeting_audio_sheet_micOn">صدا باز</string>
+  <string name="meeting_audio_sheet_micOff">بی‌صدا</string>
+  <string name="meeting_audio_sheet_output">خروجی صدا</string>
+  <string name="meeting_audio_device_speaker">بلندگو</string>
+  <string name="meeting_audio_device_earpiece">گوشی</string>
+  <string name="meeting_audio_device_wired_headset">هدست سیمی</string>
+  <string name="meeting_audio_device_bluetooth">بلوتوث</string>
+  <string name="meeting_audio_sheet_noDevices">دستگاه صوتی در دسترس نیست</string>
+  <string name="dashboard_filter_recent">اخیر</string>
+  <string name="dashboard_dialog_deleteTitle">اتاق حذف شود؟</string>
+  <string name="dashboard_dialog_deleteMessage">آیا مطمئن هستید که می‌خواهید <xliff:g id="roomName" example="team-standup">%1$s</xliff:g> را حذف کنید؟ این کار قابل بازگشت نیست.</string>
+  <string name="dashboard_empty_noRecent">اتاق اخیری نیست</string>
+  <string name="dashboard_empty_noRecentHint">اتاق‌هایی که به آن‌ها می‌پیوندید اینجا ظاهر می‌شوند، از جمله در سرورهای دیگر.</string>
+  <string name="dashboard_contentDescription_removeRecent">حذف از اخیر</string>
+  <string name="dashboard_recent_onServer">در <xliff:g id="serverName" example="My Server">%1$s</xliff:g></string>
 </resources>

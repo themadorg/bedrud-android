@@ -184,4 +184,45 @@
   <string name="profile_label_userId">Kullanıcı Kimliği</string>
   <string name="profile_label_provider">Sağlayıcı</string>
   <string name="profile_button_signOut">Çıkış Yap</string>
+
+  <string name="meeting_contentDescription_stopScreenShare">Ekran paylaşımını durdur</string>
+  <string name="meeting_contentDescription_maximizeScreenShare">Tam ekran</string>
+  <string name="meeting_contentDescription_minimizeScreenShare">Tam ekrandan çık</string>
+  <string name="meeting_stage_screenShareTitle">Ekran paylaşımı</string>
+  <string name="meeting_stage_screenSharePresenting"><xliff:g id="name" example="Alex">%1$s</xliff:g> sunum yapıyor</string>
+  <string name="meeting_stage_screenShareWaiting"><xliff:g id="name" example="Alex">%1$s</xliff:g> kişisinin ekranı bekleniyor…</string>
+  <string name="meeting_contentDescription_closeImagePreview">Görsel önizlemesini kapat</string>
+  <string name="meeting_contentDescription_viewImage">Görseli görüntüle</string>
+  <string name="call_default_room_name">Toplantı</string>
+  <string name="screen_share_channel_name">Ekran Paylaşımı</string>
+  <string name="screen_share_channel_description">Ekranınız paylaşılırken gösterilir</string>
+  <string name="screen_share_notification_title">Ekran paylaşılıyor</string>
+  <string name="screen_share_notification_text">Ekranınız toplantı katılımcılarına görünür</string>
+  <string name="meeting_error_permissionsRequired">Katılmak için kamera ve mikrofon izinleri gerekli.</string>
+  <string name="meeting_error_screenShareFailed">Ekran paylaşımı başlatılamadı.</string>
+  <string name="meeting_sheet_chat">Sohbet</string>
+  <string name="meeting_sheet_addOthers">Başkalarını ekle</string>
+  <string name="meeting_share_chooserTitle">Toplantı bağlantısını paylaş</string>
+  <string name="meeting_sheet_flipCamera">Kamerayı çevir</string>
+  <string name="meeting_sheet_settings">Ayarlar</string>
+  <string name="meeting_sheet_tools">Araçlar</string>
+  <string name="meeting_sheet_report">Kötüye kullanımı bildir</string>
+  <string name="meeting_contentDescription_audioSource">Ses kaynağı</string>
+  <string name="meeting_audio_sheet_title">Ses</string>
+  <string name="meeting_audio_sheet_microphone">Mikrofon</string>
+  <string name="meeting_audio_sheet_micOn">Sessiz değil</string>
+  <string name="meeting_audio_sheet_micOff">Sessizde</string>
+  <string name="meeting_audio_sheet_output">Ses çıkışı</string>
+  <string name="meeting_audio_device_speaker">Hoparlör</string>
+  <string name="meeting_audio_device_earpiece">Telefon</string>
+  <string name="meeting_audio_device_wired_headset">Kablolu kulaklık</string>
+  <string name="meeting_audio_device_bluetooth">Bluetooth</string>
+  <string name="meeting_audio_sheet_noDevices">Kullanılabilir ses cihazı yok</string>
+  <string name="dashboard_filter_recent">Son</string>
+  <string name="dashboard_dialog_deleteTitle">Oda silinsin mi?</string>
+  <string name="dashboard_dialog_deleteMessage"><xliff:g id="roomName" example="team-standup">%1$s</xliff:g> odasını silmek istediğinize emin misiniz? Bu geri alınamaz.</string>
+  <string name="dashboard_empty_noRecent">Son oda yok</string>
+  <string name="dashboard_empty_noRecentHint">Katıldığınız odalar burada görünür, diğer sunucular dahil.</string>
+  <string name="dashboard_contentDescription_removeRecent">Son kullanılanlardan kaldır</string>
+  <string name="dashboard_recent_onServer"><xliff:g id="serverName" example="My Server">%1$s</xliff:g> üzerinde</string>
 </resources>

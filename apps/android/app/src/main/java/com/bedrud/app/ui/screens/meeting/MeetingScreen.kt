@@ -153,6 +153,8 @@ fun MeetingScreen(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
+    val screenShareFailedMessage = stringResource(R.string.meeting_error_screenShareFailed)
+    val permissionsRequiredMessage = stringResource(R.string.meeting_error_permissionsRequired)
     val isInPipMode by pipStateHolder.isInPipMode.collectAsState()
     val flatFabElevation = FloatingActionButtonDefaults.elevation(
         defaultElevation = 0.dp,
@@ -222,8 +224,7 @@ fun MeetingScreen(
             scope.launch {
                 val started = roomManager.startScreenShare(result.data!!)
                 if (!started) {
-                    val message = roomManager.error.value
-                        ?: context.getString(R.string.meeting_error_screenShareFailed)
+                    val message = roomManager.error.value ?: screenShareFailedMessage
                     snackbarHostState.showSnackbar(message)
                 }
             }
@@ -257,7 +258,7 @@ fun MeetingScreen(
                 pending()
             } else {
                 scope.launch {
-                    snackbarHostState.showSnackbar(context.getString(R.string.meeting_error_permissionsRequired))
+                    snackbarHostState.showSnackbar(permissionsRequiredMessage)
                 }
             }
             return@rememberLauncherForActivityResult
@@ -269,7 +270,7 @@ fun MeetingScreen(
             startMeetingCall(roomInfo!!)
         } else if (!mediaGranted) {
             scope.launch {
-                snackbarHostState.showSnackbar(context.getString(R.string.meeting_error_permissionsRequired))
+                snackbarHostState.showSnackbar(permissionsRequiredMessage)
             }
             isJoining = false
         }

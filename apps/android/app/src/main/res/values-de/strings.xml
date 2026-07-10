@@ -184,4 +184,45 @@
   <string name="profile_label_userId">Benutzer-ID</string>
   <string name="profile_label_provider">Anbieter</string>
   <string name="profile_button_signOut">Abmelden</string>
+
+  <string name="meeting_contentDescription_stopScreenShare">Bildschirmfreigabe beenden</string>
+  <string name="meeting_contentDescription_maximizeScreenShare">Vollbild</string>
+  <string name="meeting_contentDescription_minimizeScreenShare">Vollbild beenden</string>
+  <string name="meeting_stage_screenShareTitle">Bildschirmfreigabe</string>
+  <string name="meeting_stage_screenSharePresenting"><xliff:g id="name" example="Alex">%1$s</xliff:g> präsentiert</string>
+  <string name="meeting_stage_screenShareWaiting">Warte auf den Bildschirm von <xliff:g id="name" example="Alex">%1$s</xliff:g>…</string>
+  <string name="meeting_contentDescription_closeImagePreview">Bildvorschau schließen</string>
+  <string name="meeting_contentDescription_viewImage">Bild anzeigen</string>
+  <string name="call_default_room_name">Meeting</string>
+  <string name="screen_share_channel_name">Bildschirmfreigabe</string>
+  <string name="screen_share_channel_description">Wird angezeigt, während dein Bildschirm geteilt wird</string>
+  <string name="screen_share_notification_title">Bildschirm wird geteilt</string>
+  <string name="screen_share_notification_text">Dein Bildschirm ist für Meeting-Teilnehmer sichtbar</string>
+  <string name="meeting_error_permissionsRequired">Kamera- und Mikrofonberechtigungen sind erforderlich, um beizutreten.</string>
+  <string name="meeting_error_screenShareFailed">Bildschirmfreigabe konnte nicht gestartet werden.</string>
+  <string name="meeting_sheet_chat">Chat</string>
+  <string name="meeting_sheet_addOthers">Andere hinzufügen</string>
+  <string name="meeting_share_chooserTitle">Meeting-Link teilen</string>
+  <string name="meeting_sheet_flipCamera">Kamera wechseln</string>
+  <string name="meeting_sheet_settings">Einstellungen</string>
+  <string name="meeting_sheet_tools">Werkzeuge</string>
+  <string name="meeting_sheet_report">Missbrauch melden</string>
+  <string name="meeting_contentDescription_audioSource">Audioquelle</string>
+  <string name="meeting_audio_sheet_title">Audio</string>
+  <string name="meeting_audio_sheet_microphone">Mikrofon</string>
+  <string name="meeting_audio_sheet_micOn">Stummschaltung aus</string>
+  <string name="meeting_audio_sheet_micOff">Stummgeschaltet</string>
+  <string name="meeting_audio_sheet_output">Audioausgabe</string>
+  <string name="meeting_audio_device_speaker">Lautsprecher</string>
+  <string name="meeting_audio_device_earpiece">Telefon</string>
+  <string name="meeting_audio_device_wired_headset">Kabelgebundenes Headset</string>
+  <string name="meeting_audio_device_bluetooth">Bluetooth</string>
+  <string name="meeting_audio_sheet_noDevices">Keine Audiogeräte verfügbar</string>
+  <string name="dashboard_filter_recent">Zuletzt</string>
+  <string name="dashboard_dialog_deleteTitle">Raum löschen?</string>
+  <string name="dashboard_dialog_deleteMessage">Möchtest du <xliff:g id="roomName" example="team-standup">%1$s</xliff:g> wirklich löschen? Das kann nicht rückgängig gemacht werden.</string>
+  <string name="dashboard_empty_noRecent">Keine kürzlichen Räume</string>
+  <string name="dashboard_empty_noRecentHint">Räume, denen du beitrittst, erscheinen hier – auch von anderen Servern.</string>
+  <string name="dashboard_contentDescription_removeRecent">Aus zuletzt entfernen</string>
+  <string name="dashboard_recent_onServer">auf <xliff:g id="serverName" example="My Server">%1$s</xliff:g></string>
 </resources>
