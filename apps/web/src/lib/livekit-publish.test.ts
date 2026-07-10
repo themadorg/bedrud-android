@@ -18,11 +18,13 @@ import {
 
 describe('livekit-publish', () => {
   it('detects publish-ready room state', () => {
+    // isRoomPublishReady requires a non-null pcManager (transport not dead).
     const ready = {
       state: ConnectionState.Connected,
       engine: {
         verifyTransport: () => true,
         reliableDC: { readyState: 'open' },
+        pcManager: {},
       },
     } as unknown as Room
     expect(isRoomPublishReady(ready)).toBe(true)
@@ -33,7 +35,7 @@ describe('livekit-publish', () => {
       engine: {
         verifyTransport: () => true,
         reliableDC: { readyState: 'open' },
-        pcManager: {},
+        pcManager: { mode: 'publisher-only' },
       },
     } as unknown as Room
     expect(isRoomPublishReady(publisherOnlyReady)).toBe(true)
