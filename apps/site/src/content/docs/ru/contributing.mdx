@@ -4,27 +4,27 @@ description: Как внести вклад в Bedrud
 order: 34
 ---
 
-Вклад в Bedrud приветствуется. В этом руководстве описан процесс отправки изменений.
+Contributions to Bedrud are welcome. This guide covers the process for submitting changes.
 
-> **Примечание:** Каноническое руководство по участию находится в корне репозитория: [CONTRIBUTING.md](https://github.com/themadorg/bedrud/blob/main/CONTRIBUTING.md). Эта страница оставлена только для справки.
+> **Note:** The canonical contributing guide is at the repository root: [CONTRIBUTING.md](https://github.com/themadorg/bedrud/blob/main/CONTRIBUTING.md). This page is archived for reference only.
 
-## Начало работы
+## Getting Started
 
-1. Сделайте форк репозитория
-2. Клонируйте свой форк
-3. Создайте ветку для функции от `master`
-4. Внесите свои изменения
-5. Отправьте pull request
+1. Fork the repository
+2. Clone your fork
+3. Create a feature branch from `master`
+4. Make your changes
+5. Submit a pull request
 
-## Предварительные требования
+## Prerequisites
 
 - Go 1.22+
-- Bun (для веб-фронтенда)
-- Rust (для десктопного приложения)
+- Bun (for web frontend)
+- Rust (for desktop app)
 - Make
 - Git
 
-## Настройка окружения разработки
+## Development Setup
 
 ```bash
 # After forking on GitHub, clone your fork
@@ -34,75 +34,75 @@ make init
 make dev
 ```
 
-См. [Рабочий процесс разработки](/ru/docs/guides/development) для подробных инструкций по настройке.
+See the [Development Workflow](/ru/docs/guides/development) for detailed setup instructions.
 
-## Структура проекта
+## Project Structure
 
-| Директория       | Язык         | Описание                      |
+| Directory       | Language         | Description                      |
 |-----------------|------------------|----------------------------------|
-| `server/`       | Go               | Бэкенд API и встроенный LiveKit |
-| `apps/web/`     | TypeScript/React | Веб-фронтенд                     |
-| `apps/desktop/` | Rust + Slint     | Десктопное приложение                      |
-| `apps/android/` | Kotlin           | Приложение для Android                      |
-| `apps/ios/`     | Swift            | Приложение для iOS                          |
-| `agents/`       | Python           | Бот-агенты                       |
-| `packages/`     | TypeScript       | Общие определения типов          |
-| `tools/cli/`    | Python           | CLI для развёртывания                   |
-| `docs/`         | Markdown         | Документация                    |
+| `server/`       | Go               | Backend API, embedded LiveKit, recording system, webhook dispatch |
+| `apps/web/`     | TypeScript/React | Web frontend                     |
+| `apps/desktop/` | Rust + Slint     | Desktop app                      |
+| `apps/android/` | Kotlin           | Android app                      |
+| `apps/ios/`     | Swift            | iOS app                          |
+| `agents/`       | Python           | Bot agents                       |
+| `packages/`     | TypeScript       | Shared type definitions          |
+| `tools/cli/`    | Python           | Deployment CLI                   |
+| `docs/`         | Markdown         | Documentation                    |
 
-## Стиль кода
+## Code Style
 
-| Язык         | Стандарт                |
+| Language         | Standard                |
 |------------------|-------------------------|
 | Go               | `gofmt`                 |
 | TypeScript/React | Biome                   |
-| Kotlin           | Стандартное форматирование Android Studio |
-| Swift            | Стандартное форматирование Xcode          |
+| Kotlin           | Android Studio defaults |
+| Swift            | Xcode defaults          |
 | Python           | ruff                    |
 
-## Процесс Pull Request
+## Pull Request Process
 
-1. **Именование веток:** `feature/description`, `fix/description` или `docs/description`
-2. **Сообщения коммитов:** `<действие> <что> для <почему>` (например, `add user model for auth feature`, `fix login redirect for expired sessions`)
-3. **CI-проверки:** Все проверки GitHub Actions должны пройти
-4. **Описание:** Укажите, что изменилось и почему
+1. **Branch naming:** `feature/description`, `fix/description`, or `docs/description`
+2. **Commit messages:** `<action> <what> for <why>` (e.g., `add user model for auth feature`, `fix login redirect for expired sessions`)
+3. **CI checks:** All GitHub Actions checks must pass
+4. **Description:** Include what changed and why
 
-### CI-проверки
+### CI Checks
 
-Каждый PR автоматически проходит следующие проверки:
+Every PR runs these checks automatically:
 
-| Проверка   | Что проверяет            |
+| Check   | What it validates            |
 |---------|------------------------------|
-| Server  | `go vet`, сборка, тесты       |
-| Web     | Проверка типов TypeScript, сборка |
-| Android | Lint, модульные тесты             |
-| iOS     | Сборка, тесты (симулятор)      |
+| Server  | `go vet`, build, tests       |
+| Web     | TypeScript type check, build |
+| Android | Lint, unit tests             |
+| iOS     | Build, test (simulator)      |
 
-## Сообщение о проблемах
+## Reporting Issues
 
-Создавайте issues на [GitHub Issues](https://github.com/themadorg/bedrud/issues) с указанием:
+File issues on [GitHub Issues](https://github.com/themadorg/bedrud/issues) with:
 
-- Шагов для воспроизведения
-- Ожидаемого и фактического поведения
-- Деталей окружения (ОС, браузер, версия приложения)
+- Steps to reproduce
+- Expected vs actual behavior
+- Environment details (OS, browser, app version)
 
-## Документация
+## Documentation
 
-Документация находится в `docs/` и собирается с помощью [MkDocs Material](https://squidfunk.github.io/mkdocs-material/).
+Documentation lives in `docs/` and is built with [MkDocs Material](https://squidfunk.github.io/mkdocs-material/).
 
-### Локальный предпросмотр
+### Local Preview
 
 ```bash
 pip install mkdocs-material
 mkdocs serve
 ```
 
-Затем откройте `http://localhost:8000` в браузере.
+Then open `http://localhost:8000` in your browser.
 
-### Структура
+### Structure
 
-Страницы документации организованы по темам. Навигация определяется в `mkdocs.yml` в корне проекта.
+Documentation pages are organized by topic. The navigation is defined in `mkdocs.yml` at the project root.
 
-## Лицензия
+## License
 
-Внося вклад, вы соглашаетесь с тем, что ваши изменения будут лицензированы под [Apache License 2.0](https://github.com/themadorg/bedrud/blob/main/LICENSE).
+By contributing, you agree that your contributions will be licensed under the [Apache License 2.0](https://github.com/themadorg/bedrud/blob/main/LICENSE).

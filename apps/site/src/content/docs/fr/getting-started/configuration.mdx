@@ -1,16 +1,25 @@
 ---
 title: Configuration
-description: Configurez Bedrud selon vos besoins
+description: Configurer Bedrud selon vos besoins
 order: 4
 ---
 
-Bedrud utilise des fichiers de configuration YAML pour le serveur principal et le serveur média LiveKit intégré.
+Bedrud uses YAML configuration files for both the main server and the embedded LiveKit media server.
 
-**Voir aussi :** [Démarrage rapide](/fr/docs/getting-started/quickstart) | [Installation](/fr/docs/getting-started/installation) | [Guide de déploiement](/fr/docs/guides/deployment) | [Guide Docker](/fr/docs/guides/docker)
+**See also:** [Quick Start](/fr/docs/getting-started/quickstart) | [Installation](/fr/docs/getting-started/installation) | [Deployment Guide](/fr/docs/guides/deployment) | [Docker Guide](/fr/docs/guides/docker) | [CLI Reference](/fr/docs/getting-started/cli-reference)
 
-## Configuration minimale de production
+## Ports: development vs production
 
-La configuration par défaut fonctionne pour le développement. Pour la production, modifiez ces valeurs dans `/etc/bedrud/config.yaml` :
+| Context | API / HTTPS | LiveKit signaling (embedded) | Frontend (dev only) |
+|---------|-------------|------------------------------|---------------------|
+| Local multi-process dev (`config.local.yaml.example`) | `7071` | `7072` (`ws://localhost:7072`) | `7070` (Vite) |
+| Installer / production defaults | `8090` (HTTP) or `443` (TLS) | `7880` (often proxied at `/livekit`) | Embedded in binary |
+
+Examples below use **production-style** ports (`8090` / `7880`). For local dev, copy `server/config.local.yaml.example` → `config.yaml` and use the `707x` ports.
+
+## Minimum Production Config
+
+Default config works for development. For production, change these values in `/etc/bedrud/config.yaml`:
 
 ```yaml
 auth:
@@ -18,365 +27,446 @@ auth:
   sessionSecret: "change-to-another-random-string"
 ```
 
-Redémarrez après les modifications :
+Restart after changes:
 
 ```bash
+# Separate LiveKit unit (installer default for local LiveKit service)
 sudo systemctl restart bedrud livekit
+
+# Or single service when LiveKit is fully embedded / external
+sudo systemctl restart bedrud
 ```
 
-Référence complète ci-dessous.
+Full reference below.
 
 ---
 
-## Configuration du serveur
+## Server Configuration
 
-**Emplacement :** `server/config.yaml` (développement) ou `/etc/bedrud/config.yaml` (production)
+**Location:** `config.yaml` next to the binary (development) or `/etc/bedrud/config.yaml` (production).
 
-### Référence complète
+Override path: `--config`, `BEDRUD_CONFIG`, or `CONFIG_PATH`.
+
+Dev template: `server/config.local.yaml.example`.
+
+### Full Reference
 
 ```yaml
 server:
-  port: 8090                    # Port HTTP
-  host: "localhost"             # Adresse de liaison
+  port: "8090"                  # Main listener (HTTPS if TLS enabled, else HTTP)
+  httpPort: ""                  # HTTP listener when TLS enabled. Default: "80". Unprivileged: "8080". Empty = default behavior.
+  host: "0.0.0.0"               # Bind address
+  readTimeout: 30               # Seconds
+  writeTimeout: 30              # Seconds
+  enableTLS: false              # Enable HTTPS. Env: SERVER_ENABLE_TLS
+  disableTLS: false             # Force plain HTTP even if enableTLS was set
+  certFile: ""                  # TLS certificate path. Env: SERVER_CERT_FILE
+  keyFile: ""                   # TLS private key path. Env: SERVER_KEY_FILE
+  domain: ""                    # Public domain (ACME, passkey RP ID). Env: SERVER_DOMAIN
+  email: ""                     # ACME registration email. Env: SERVER_EMAIL
+  useACME: false                # Let's Encrypt. Env: SERVER_USE_ACME
+  behindProxy: false            # Trusted-proxy mode (Cloudflare, nginx). If true, trustedProxies MUST be non-empty or the process refuses to start.
+  trustedProxies: []            # Required when behindProxy=true (proxy IPs/CIDRs). Never defaults to 0.0.0.0/0. Env: SERVER_TRUSTED_PROXIES
+  proxyHeader: ""               # Client IP header (e.g. X-Forwarded-For). Env: SERVER_PROXY_HEADER
+  certAlgorithm: "ed25519"      # Self-signed key algo: ed25519, ecdsa256, rsa2048, rsa4096. Env: SERVER_CERT_ALGORITHM
   maxParticipantsLimit: 1000    # Hard ceiling for room capacity (0 = unlimited). Env: SERVER_MAX_PARTICIPANTS_LIMIT
   maxRoomsPerUser: 100          # Max active rooms per user (0 = unlimited). Env: SERVER_MAX_ROOMS_PER_USER
 
 database:
-  type: "sqlite"                # Type de base de données : sqlite ou postgres
-  path: "data.db"               # Chemin vers le fichier de base de données SQLite
+  type: "sqlite"                # sqlite or postgres
+  path: "./bedrud-local.db"     # SQLite file path only (ignored for postgres)
+  # PostgreSQL (use discrete fields — not a URL in path):
+  # host: "localhost"
+  # port: "5432"
+  # user: "bedrud"
+  # password: "secret"
+  # dbname: "bedrud"
+  # sslmode: "disable"
+  # maxIdleConns: 10
+  # maxOpenConns: 100
+  # maxLifetime: 60              # minutes
 
 logger:
-  level: "debug"                # Niveau de log : debug, info, warn, error. Contrôle les logs applicatifs et les requêtes SQL.
-  outputPath: ""                # Chemin vers le fichier de log (vide = stdout)
+  level: "debug"                # debug, info, warn, error (app + GORM SQL)
+  outputPath: ""                # Empty = stdout
 
 livekit:
-  host: "http://localhost:8090/livekit"  # URL externe LiveKit
-  internalHost: "http://127.0.0.1:7880"  # URL interne LiveKit
-  apiKey: "devkey"              # Clé API LiveKit (auto-generated if empty)
-  apiSecret: "devsecret"        # Secret API LiveKit
+  host: "ws://localhost:7880"   # Browser signaling URL (ws:// or wss://). Env: LIVEKIT_HOST
+  # hostLocal: "ws://localhost:7070/livekit"  # Optional localhost override (remote debug). Env: LIVEKIT_HOST_LOCAL
+  internalHost: "http://127.0.0.1:7880"  # Server-to-server API. Env: LIVEKIT_INTERNAL_HOST
+  apiKey: "devkey"              # Auto-generated as gen-<32hex> if empty. Env: LIVEKIT_API_KEY
+  apiSecret: "devsecret"        # Auto-generated if empty. Env: LIVEKIT_API_SECRET
+  external: false               # true = skip embedded LiveKit + /livekit proxy. Env: LIVEKIT_EXTERNAL
+  skipTLSVerify: false          # Skip TLS verify for LiveKit client. Env: LIVEKIT_SKIP_TLS_VERIFY
+  # configPath: "/etc/bedrud/livekit.yaml"  # External LiveKit YAML. Env: LIVEKIT_CONFIG_PATH
+  # nodeIP: "203.0.113.1"       # Explicit RTC node IP (disables STUN). Env: LIVEKIT_NODE_IP
+  #
+  # Webhook (disconnect detection) — LiveKit → Bedrud:
+  #   Embedded: auto-configured to local API.
+  #   External: https://<domain>/api/livekit/webhook in LiveKit dashboard / YAML.
 
 auth:
-  jwtSecret: "your-jwt-secret"           # Secret pour signer les jetons JWT
-  tokenDuration: 24                       # Expiration du jeton en heures
-  sessionSecret: "your-session-secret"    # Secret pour les cookies de session
-  frontendURL: "http://localhost:8090"    # URL du frontend (pour les redirections OAuth)
-  passkeyChallengeTTL: 5                # Expiration du défi Passkey en minutes
+  jwtSecret: "your-jwt-secret"           # JWT signing secret (prefer 32+ chars). Env: JWT_SECRET
+  tokenDuration: 24                       # Access token hours
+  sessionSecret: "your-session-secret"    # OAuth session cookies
+  frontendURL: "http://localhost:8090"    # Frontend base for redirects. Env: AUTH_FRONTEND_URL
+  passkeyChallengeTTL: 5                  # Minutes. Env: AUTH_PASSKEY_CHALLENGE_TTL
+  resetTokenTTLHours: 1                   # Password reset link hours (0 = default 1). Env: AUTH_RESET_TOKEN_TTL_HOURS
 
-  # Fournisseurs OAuth (optionnels)
+  # Email verification (requires SMTP — see email section)
+  requireEmailVerification: false         # Env: AUTH_REQUIRE_EMAIL_VERIFICATION
+  verificationEmailCooldownMins: 2        # Env: AUTH_VERIFICATION_COOLDOWN_MINS
+  verificationTokenTTLHours: 24           # Env: AUTH_VERIFICATION_TOKEN_TTL_HOURS
+  unverifiedAccountTTLHours: 48           # Auto-delete unverified accounts; 0 = disabled. Env: AUTH_UNVERIFIED_ACCOUNT_TTL_HOURS
+
   google:
     clientId: ""
     clientSecret: ""
+    redirectUrl: ""
   github:
     clientId: ""
     clientSecret: ""
+    redirectUrl: ""
   twitter:
-    clientKey: ""
+    clientId: ""                # Not clientKey
     clientSecret: ""
+    redirectUrl: ""
 
 cors:
-  allowedOrigins: "http://localhost:8090,http://localhost:3000"  # Séparé par des virgules
+  allowedOrigins: "http://localhost:8090,http://localhost:3000"
   allowedHeaders: "Origin, Content-Type, Accept, Authorization"
   allowedMethods: "GET, POST, PUT, DELETE, OPTIONS"
   allowCredentials: true
+  exposeHeaders: ""
+  maxAge: 0
 
 rateLimit:
-  authMaxRequests: 10       # Max auth requests per window (login, register, refresh, passkey). 0 = disable
-  authWindowSecs: 60         # Auth rate limit window in seconds
-  guestMaxRequests: 5        # Max guest join requests per window. 0 = disable
-  guestWindowSecs: 60        # Guest rate limit window in seconds
+  authMaxRequests: 10           # 0 = disable. Env: RATELIMIT_AUTH_MAX
+  authWindowSecs: 60            # Env: RATELIMIT_AUTH_WINDOW
+  guestMaxRequests: 5           # Env: RATELIMIT_GUEST_MAX
+  guestWindowSecs: 60           # Env: RATELIMIT_GUEST_WINDOW
+  authResendMaxRequests: 3      # Verification resend. Env: RATELIMIT_AUTH_RESEND_MAX
+  authResendWindowSecs: 60      # Env: RATELIMIT_AUTH_RESEND_WINDOW
+  apiMaxRequests: 30            # General API. Env: RATELIMIT_API_MAX
+  apiWindowSecs: 60             # Env: RATELIMIT_API_WINDOW
 
 chat:
-  maxUploadBytesPerUser: 524288000       # Per-user upload quota (500 MB). 0 = unlimited. Env: CHAT_MAX_UPLOAD_BYTES_PER_USER
-  globalDiskThresholdBytes: 0            # Global storage ceiling across all users. 0 = unlimited. Env: CHAT_GLOBAL_DISK_THRESHOLD_BYTES
-  maxMessageCount: 10000                 # Max chat messages kept per room (0 = unlimited). Env: CHAT_MAX_MESSAGE_COUNT
-  messageTTLHours: 2160                  # Purge messages older than this in hours (0 = forever). 2160 = 90 days. Env: CHAT_MESSAGE_TTL_HOURS
+  maxUploadBytesPerUser: 524288000       # 500 MB. 0 = unlimited. Env: CHAT_MAX_UPLOAD_BYTES_PER_USER
+  globalDiskThresholdBytes: 0            # 0 = unlimited. Env: CHAT_GLOBAL_DISK_THRESHOLD_BYTES
+  maxMessageCount: 10000                 # Client-side retention. Env: CHAT_MAX_MESSAGE_COUNT
+  messageTTLHours: 2160                  # 90 days. Env: CHAT_MESSAGE_TTL_HOURS
+  uploads:
+    backend: "disk"                      # disk | s3 | inline
+    maxBytes: 10485760                   # Hard per-file limit (default 10 MB). Server HTTP body limit is aligned to this value.
+    maxDimension: 8192                   # Max image width/height in pixels (default 8192). 0 = use default.
+    inlineMaxBytes: 512000               # Below this → data URI (0 = disable)
+    diskDir: "./data/uploads/chat"
+    # s3:
+    #   endpoint: ""
+    #   bucket: ""
+    #   region: ""
+    #   accessKey: ""
+    #   secretKey: ""
+    #   publicBaseUrl: ""
 
-
+# Reserved for planned recording feature (routes not registered in production yet)
 recording:
-  maxFileSizeMB: 2048           # Max recording file size in MB (0 = unlimited). Env: RECORDING_MAX_FILE_SIZE_MB
-  storageDir: "./data/recordings"  # Local storage path for disk-backed recordings. Env: RECORDING_STORAGE_DIR
-  maxRecordingsPerRoom: 100     # Max total recordings per room (0 = unlimited). Env: RECORDING_MAX_PER_ROOM
+  maxFileSizeMB: 2048                    # 0 = unlimited
+  storageDir: "./data/recordings"
+  maxRecordingsPerRoom: 0                # 0 = unlimited
+  retentionHours: 720                    # 30 days. Env: RECORDING_RETENTION_HOURS
+  cleanupIntervalHours: 24               # Env: RECORDING_CLEANUP_INTERVAL_HOURS
 
 queue:
-  pollInterval: 500              # ms between job polls. Env: QUEUE_POLL_INTERVAL
-  maxAttempts: 3                 # retries before marking failed. Env: QUEUE_MAX_ATTEMPTS
-  concurrency: 1                 # worker goroutines. Env: QUEUE_CONCURRENCY
+  pollInterval: 500                      # ms. Env: QUEUE_POLL_INTERVAL
+  maxAttempts: 3                         # Env: QUEUE_MAX_ATTEMPTS
+  concurrency: 1                         # Env: QUEUE_CONCURRENCY
 
 email:
-  smtpHost: ""                    # SMTP server hostname. Env: EMAIL_SMTP_HOST
-  smtpPort: 587                   # SMTP server port. Env: EMAIL_SMTP_PORT
-  username: ""                    # SMTP username. Env: EMAIL_USERNAME
-  password: ""                    # SMTP password. Env: EMAIL_PASSWORD
-  fromAddress: ""                 # From address. Env: EMAIL_FROM_ADDRESS
-  fromName: "Bedrud"              # From display name. Env: EMAIL_FROM_NAME
-  tlsSkipVerify: false       # Skip TLS certificate validation. Env: EMAIL_TLS_SKIP_VERIFY
-  smtpsMode: false           # Direct TLS (SMTPS, port 465). Env: EMAIL_SMTPS_MODE
+  smtpHost: ""                           # Env: EMAIL_SMTP_HOST
+  smtpPort: 587                          # Env: EMAIL_SMTP_PORT
+  username: ""                           # Env: EMAIL_USERNAME
+  password: ""                           # Env: EMAIL_PASSWORD
+  fromAddress: ""                        # Env: EMAIL_FROM_ADDRESS
+  fromName: "Bedrud"                     # Env: EMAIL_FROM_NAME
+  tlsSkipVerify: false                   # Env: EMAIL_TLS_SKIP_VERIFY
+  smtpsMode: false                       # SMTPS port 465. Env: EMAIL_SMTPS_MODE
+  # templates:
+  #   instanceName: "Bedrud"
+  #   supportEmail: ""
+  #   instanceUrl: ""
+  #   headerBgColor: "#1a1a2e"
+  #   buttonBgColor: "#e11d48"
+  #   subjectLines: { welcome: "", password_reset: "", verify_email: "" }
+  #   preheaderText: { welcome: "", password_reset: "", verify_email: "" }
 ```
 
-### Paramètres clés
+### Key Settings
 
-#### Base de données
+#### Database
 
-Par défaut, Bedrud utilise **SQLite** avec un fichier au chemin `path` configuré. Pour la production avec une concurrence plus élevée, passez à PostgreSQL en fournissant une chaîne de connexion à la place. Lors de l'utilisation de PostgreSQL, le champ `path` contient une chaîne de connexion, pas un chemin de fichier :
+**SQLite (default):** set `type: "sqlite"` and `path` to a file path.
+
+**PostgreSQL:** set discrete connection fields — **not** a URL in `path`:
 
 ```yaml
 database:
   type: "postgres"
-  path: "postgres://user:password@localhost:5432/bedrud?sslmode=disable"
+  host: "localhost"
+  port: "5432"
+  user: "bedrud"
+  password: "secret"
+  dbname: "bedrud"
+  sslmode: "disable"
 ```
 
-#### Authentification
+Env: `DB_TYPE`, `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME`, `DB_PATH` (SQLite path only).
 
-Le `jwtSecret` est utilisé pour signer les jetons d'accès et de rafraîchissement. Modifiez-le depuis la valeur par défaut en production.
+#### Authentication
 
-Les **fournisseurs OAuth** sont optionnels. Si vous ne les configurez pas, les boutons de connexion sociale n'apparaîtront pas dans l'interface. Chaque fournisseur nécessite l'enregistrement d'une application OAuth avec le service correspondant et la fourniture de l'ID client et du secret.
+`jwtSecret` signs access tokens. Change defaults in production.
+
+**OAuth providers** are optional. Each uses `clientId`, `clientSecret`, and optional `redirectUrl` (Google, GitHub, Twitter/X).
 
 #### CORS
 
-La chaîne `allowedOrigins` (séparée par des virgules) doit inclure l'URL où votre frontend est servi. En développement, c'est `http://localhost:3000`. En production, définissez-la sur votre domaine (ex. `https://meet.example.com`).
+`allowedOrigins` (comma-separated) must include the URL where the frontend is served.
 
-#### Limitation de débit
+#### Rate Limiting
 
-La limitation de débit protège les points d'accès d'authentification contre les attaques par force brute et les dénis de service. Deux catégories :
+Four buckets (omit `rateLimit` for defaults; set any `*MaxRequests: 0` to disable):
 
-- **Points d'accès Auth** (connexion, inscription, rafraîchissement, Passkey) — défaut : 10 requêtes par 60 secondes par IP
-- **Invité** — défaut : 5 requêtes par 60 secondes par IP
-
-Omettez la section `rateLimit` pour conserver les valeurs par défaut. Définissez `authMaxRequests: 0` ou `guestMaxRequests: 0` pour désactiver.
+- **Auth** — login, register, refresh, passkey
+- **Guest join**
+- **General API**
+- **Verification resend** (separate from auth)
 
 #### Chat History
 
-Bedrud applies advisory retention limits to in-room chat messages. Since LiveKit — the real-time media layer — does not persist data channel messages server-side, these limits are enforced on the client:
+Advisory client-side retention (LiveKit does not persist data-channel messages server-side):
 
-- **`maxMessageCount`** — caps the number of chat messages held in memory and sessionStorage per room. When exceeded, the oldest messages are trimmed. Default: 10000. Set to `0` for unlimited.
-- **`messageTTLHours`** — messages older than this threshold are purged from the local cache. Default: 2160 (90 days). Set to `0` to keep messages indefinitely.
+- **`maxMessageCount`** — default `10000` (`0` = unlimited)
+- **`messageTTLHours`** — default `2160` / 90 days (`0` = forever)
 
-<Callout type="info">
-  Chat messages in Bedrud are transmitted exclusively through LiveKit data channels and are not stored on the server. The retention limits above control how many messages the frontend keeps in memory and sessionStorage. A dedicated chat history service (with server-side persistence) would be needed for true history across sessions — this is tracked as a future enhancement.
-</Callout>
+#### Chat Uploads
 
-{/* TODO oncoming feature: recordings */}
+`chat.uploads` controls image storage:
+
+| Champ | Signification |
+|-------|---------------|
+| `backend` | `disk` (défaut), `s3` ou `inline` |
+| `maxBytes` | Limite dure par fichier (défaut 10 MB). Surchargeable à l'exécution via l'admin `chatUploadMaxBytes`. |
+| `maxDimension` | Largeur/hauteur max en pixels (défaut 8192). Surchargeable via l'admin `chatUploadMaxDimension`. |
+| `inlineMaxBytes` | Images plus petites renvoyées en data URI |
+| `diskDir` | Chemin du backend disque |
+| `s3.*` | Identifiants S3-compatibles et URL de base publique |
+
+L'UI de réunion et `GET /api/auth/settings` exposent les valeurs effectives `chatUploadMaxBytes` et `chatUploadMaxDimension` pour la pré-validation côté client. L'API d'upload applique les mêmes limites (`413` trop volumineux, `400` dimensions excessives).
+
 #### Recordings
 
-Room recording is controlled by the `RecordingsEnabled` system setting (toggle in admin Settings → General). When enabled:
+🚧 **Planned.** HTTP routes and queue handlers are not registered in the production server. YAML keys under `recording:` are reserved. Defaults: `maxFileSizeMB: 2048`, `maxRecordingsPerRoom: 0` (unlimited), `retentionHours: 720`, `cleanupIntervalHours: 24`.
 
-- Moderators can start/stop composite MP4 recordings from the meeting controls bar
-- Recordings are stored alongside chat uploads using the configured storage backend (disk/S3)
-- Each room has a per-room `recordingsAllowed` toggle that must also be enabled
-- Failed/pending recordings over 7 days old are automatically cleaned up daily
-- Non-persistent rooms have a configurable per-room recording cap (`maxRecordingsPerRoom`) to prevent abuse
-- After a room is deleted, the recording creator can still access their recordings from the same room URL
+Env overrides that **are** loaded: `RECORDING_RETENTION_HOURS`, `RECORDING_CLEANUP_INTERVAL_HOURS`.
 
-**YAML Reference:**
+#### Queue (Job System)
 
-- **`maxFileSizeMB`** — maximum file size for a single recording in MB. 0 = unlimited. Default: 2048. Env: `RECORDING_MAX_FILE_SIZE_MB`
-- **`storageDir`** — directory for disk-backed recordings. Only used when S3 is not configured. Default: `./data/recordings`. Env: `RECORDING_STORAGE_DIR`
-- **`maxRecordingsPerRoom`** — caps total recordings per room (all statuses: completed, failed, etc.). 0 = unlimited. Only enforced for non-persistent rooms. Default: 100. Env: `RECORDING_MAX_PER_ROOM`
+Async jobs: room/user delete, suspension, chat upload (S3), outbound webhooks, email.
 
-See the [Recordings Guide](/en/docs/guides/recordings) for full details.
+- **`pollInterval`** — ms between polls (default `500`)
+- **`maxAttempts`** — retries before `failed` (default `3`); backoff `2^attempts * 5s`, cap 1h
+- **`concurrency`** — worker goroutines (default `1`; keep low on SQLite)
 
+#### Email Verification
 
+When `requireEmailVerification: true` (needs SMTP):
 
-#### File d'attente (système de tâches)
+- Local register/login require verified email
+- Resend via `POST /api/auth/verify/resend` (cooldown + rate limit)
+- Unverified accounts may be auto-deleted after `unverifiedAccountTTLHours`
+- Guests are exempt
 
-La file d'attente interne des tâches traite les tâches asynchrones en arrière-plan comme la suppression d'utilisateurs/salles, la suspension et les téléchargements de chat.
+#### Password Reset
 
-- **`pollInterval`** — fréquence à laquelle le worker vérifie les nouvelles tâches (en ms). Des valeurs plus faibles réduisent la latence au prix de davantage de requêtes à la base de données.
-- **`maxAttempts`** — nombre maximum de tentatives avant qu'une tâche soit marquée comme échouée. Les tentatives utilisent un backoff exponentiel (`2^tentative * 5s`, plafonné à 1h).
-- **`concurrency`** — nombre de goroutines workers. Augmentez pour un débit plus élevé avec PostgreSQL. SQLite est limité à un seul worker (une connexion).
+Requires SMTP. Token TTL: `resetTokenTTLHours` (default 1 hour). Endpoints: `POST /api/auth/forgot-password`, `POST /api/auth/reset-password`.
 
-#### Notifications par e-mail
+#### Email Notifications
 
-Bedrud peut envoyer des e-mails transactionnels (bienvenue, réinitialisation de mot de passe, invitation à une salle) via SMTP.
-
-- **`smtpHost`** / **`smtpPort`** — adresse du serveur SMTP. Le port 587 (STARTTLS) est la valeur par défaut.
-- **`username`** / **`password`** — identifiants d'authentification SMTP.
-- **`fromAddress`** / **`fromName`** — identité de l'expéditeur pour les e-mails sortants.
-- **`tlsSkipVerify`** — ignorer la validation du certificat TLS (pour les certificats auto-signés).
-- **`smtpsMode`** — TLS direct (SMTPS, port 465).
+Transactional mail via SMTP + job queue. Templates: `welcome`, `password_changed`, `password_reset`, `room_invite`, `verify_email` (HTML + text). Branding via `email.templates.*`.
 
 ---
 
-## Configuration LiveKit
+## LiveKit Configuration
 
-**Emplacement :** `server/config/livekit.yaml` (développement) ou `/etc/bedrud/livekit.yaml` (production)
+**Typical paths:** installer writes `/etc/bedrud/livekit.yaml`; embed mode can auto-generate temp config.
 
 ```yaml
-port: 7880                      # Port HTTP/WebSocket LiveKit
+port: 7880
 
 rtc:
-  port_range_start: 50000       # Début de la plage de ports UDP
-  port_range_end: 60000         # Fin de la plage de ports UDP
-  use_external_ip: true         # Utiliser l'IP externe pour RTC
+  port_range_start: 50000
+  port_range_end: 60000
+  use_external_ip: true
+  # node_ip: 203.0.113.1
 
 turn:
   enabled: true
-  domain: "localhost"
-  tls_port: 5349
   udp_port: 3478
+  # domain / tls_port / cert_file / key_file for TURN/TLS
 
 keys:
-  devkey: "devsecret"           # Doit correspondre à la configuration du serveur
+  devkey: "devsecret"           # Must match livekit.apiKey / apiSecret
 
 logging:
   level: info
 
 room:
-  auto_create: true              # Créer automatiquement des salles lorsque les participants rejoignent
-  empty_timeout: 60              # Secondes avant suppression d'une salle vide
-  departure_timeout: 60          # Secondes pour garder la salle après le départ de tous les participants
-  max_participants: 20           # Maximum de participants par salle (0 = illimité)
-  enable_remote_unmute: true     # Permettre le démappareillage côté serveur des participants
+  auto_create: true
+  empty_timeout: 60
+  departure_timeout: 60
+  max_participants: 20
+  enable_remote_unmute: true
 ```
 
 <Callout type="warning">
-    Les `keys` dans `livekit.yaml` doivent correspondre à `livekit.apiKey` et `livekit.apiSecret` dans le `config.yaml` du serveur.
+  The `keys` in LiveKit YAML must match `livekit.apiKey` and `livekit.apiSecret` in Bedrud's `config.yaml`.
 </Callout>
 
-### Plage de ports RTC
+### Webhook (Disconnect Detection)
 
-LiveKit utilise des ports UDP pour les flux média. La plage par défaut `50000-60000` fonctionne pour la plupart des configurations. Si vous êtes derrière un pare-feu, assurez-vous que ces ports sont ouverts.
-
-Voir [Connectivité WebRTC](/fr/docs/architecture/webrtc-connectivity) pour l'architecture et le dépannage.
-
-### Serveur TURN
-
-Le serveur TURN intégré relaie les médias pour les clients derrière des NAT restrictifs ou des pare-feux d'entreprise. Il est activé par défaut sur les ports 3478 (UDP) et 5349 (TLS).
-
-TURN est un relais de dernier recours - la plupart des clients (~80%) se connectent directement via UDP et ne l'utilisent jamais. Lorsque TURN s'active, le serveur transporte toute la bande passante média relayée.
-
-**Exigence TLS :** TURN/TLS (port 5349) nécessite un certificat TLS valide. Pour la production, définissez `turn.tls_port: 443` et pointez `cert_file`/`key_file` vers votre certificat, ou placez un équilibreur de charge de couche 4 devant avec `external_tls: true`.
-
-Voir le [Guide du serveur TURN](/fr/docs/architecture/turn-server) pour l'architecture, les détails de configuration, les calculs de bande passante et le dépannage.
-
-
-### Webhook (détection de déconnexion)
-
-Bedrud receives webhook events from LiveKit to detect when participants disconnect unexpectedly (e.g., browser crash, network drop) and mark them as inactive in the database.
-
-**Endpoint:** `POST /api/livekit/webhook`
-
-**Authentication:** Uses LiveKit JWT signing with the same `apiKey`/`apiSecret`. No separate secret needed.
-
-**Embedded LiveKit:** When Bedrud manages its own LiveKit server (default), the webhook URL is **auto-configured** in the generated LiveKit YAML. No user action needed.
-
-**External LiveKit** (Cloud or self-hosted with `external: true`): Manually configure the webhook URL in your LiveKit dashboard:
-
-```
-https://<your-domain>/api/livekit/webhook
-```
-
-**Events handled:**
+Bedrud receives LiveKit webhooks at `POST /api/livekit/webhook` (JWT signed with the same API key/secret).
 
 | Event | Action |
 |-------|--------|
-| `participant_disconnected` | Marks participant as inactive in `room_participants` |
-| `room_finished` | Marks all participants + room as inactive |
+| `participant_disconnected` | Marks participant inactive |
+| `room_finished` | Marks all participants + room inactive |
 
-<Callout type="info">
-  If `apiKey` is left empty in config, a random keypair is generated at startup. The embedded LiveKit server and webhook handler both use the same generated key — no manual configuration needed.
-</Callout>
+**Embedded LiveKit:** webhook URL auto-configured.  
+**External LiveKit:** set webhook URL to `https://<your-domain>/api/livekit/webhook`.
 
-### Paramètres de salle
-
-La section `room:` contrôle le comportement des salles de réunion :
-
-- **`auto_create`** - Crée automatiquement des salles lorsque les participants rejoignent (par défaut : `true`)
-- **`empty_timeout`** - Secondes avant suppression d'une salle qui n'a jamais été rejointe (par défaut : `60`)
-- **`departure_timeout`** - Secondes pour garder la salle active après le départ de tous les participants (par défaut : `60`)
-- **`max_participants`** - Maximum de participants par salle. Définissez à `0` pour aucune limite (par défaut : `20`)
-- **`enable_remote_unmute`** - Permettre le muet/démuet côté serveur des participants (par défaut : `true`)
-
-**Réglage pour la capacité :**
-- Petites réunions d'équipe : `max_participants: 10-20`
-- Grands webinaires : `max_participants: 100` (ou `0` pour illimité)
-- Serveurs à ressources limitées : Réduisez `max_participants` pour diminuer l'utilisation CPU/mémoire
+See [WebRTC Connectivity](/fr/docs/architecture/webrtc-connectivity) and [TURN Server](/fr/docs/architecture/turn-server).
 
 ---
 
-## Variables d'environnement
+## Environment Variables
 
-Les valeurs de configuration peuvent être remplacées par des variables d'environnement. La convention de nommage suit un préfixe par section :
-
-Pour les déploiements Docker, voir le [Guide Docker](/fr/docs/guides/docker).
+Only variables actually applied in `config.Load()` are listed.
 
 ```bash
 export SERVER_PORT=8090
+export SERVER_HTTP_PORT=8080
 export DB_PATH=/var/lib/bedrud/bedrud.db
 export JWT_SECRET=production-secret
-export LIVEKIT_HOST=http://localhost:8090/livekit
+export LIVEKIT_HOST=wss://meet.example.com/livekit
 export LIVEKIT_API_KEY=prodkey
 export LIVEKIT_API_SECRET=prodsecret
 ```
 
-### Référence complète des variables d'environnement
+### Full Environment Variable Reference
 
-| Var d'env | Chemin YAML | Description |
-|-----------|-------------|-------------|
-| `SERVER_PORT` | `server.port` | Port d'écoute HTTP |
-| `SERVER_ENABLE_TLS` | `server.enableTLS` | Activer HTTPS (`true`/`false`) |
-| `SERVER_CERT_FILE` | `server.certFile` | Chemin vers le certificat TLS |
-| `SERVER_KEY_FILE` | `server.keyFile` | Chemin vers la clé privée TLS |
-| `SERVER_DOMAIN` | `server.domain` | Nom de domaine |
-| `SERVER_EMAIL` | `server.email` | E-mail pour Let's Encrypt |
-| `SERVER_USE_ACME` | `server.useACME` | Activer Let's Encrypt automatique (`true`/`false`) |
-| `SERVER_TRUSTED_PROXIES` | `server.trustedProxies` | IPs de proxy de confiance séparées par des virgules |
-| `SERVER_PROXY_HEADER` | `server.proxyHeader` | En-tête pour lire l'IP client (ex. `X-Forwarded-For`) |
-| `DB_HOST` | `database.host` | Hôte de base de données (PostgreSQL) |
-| `DB_PORT` | `database.port` | Port de base de données |
-| `DB_USER` | `database.user` | Utilisateur de base de données |
-| `DB_PASSWORD` | `database.password` | Mot de passe de base de données |
-| `DB_NAME` | `database.dbname` | Nom de base de données |
-| `DB_TYPE` | `database.type` | `sqlite` ou `postgres` |
-| `DB_PATH` | `database.path` | Chemin de fichier SQLite ou chaîne de connexion PostgreSQL |
-| `LIVEKIT_HOST` | `livekit.host` | URL externe LiveKit |
-| `LIVEKIT_INTERNAL_HOST` | `livekit.internalHost` | URL interne LiveKit |
-| `LIVEKIT_API_KEY` | `livekit.apiKey` | Clé API LiveKit (auto-generated as `gen-<32hex>` if empty) |
-| `LIVEKIT_API_SECRET` | `livekit.apiSecret` | Secret API LiveKit (64-char hex auto-generated if empty) |
-| `JWT_SECRET` | `auth.jwtSecret` | Secret pour signer les jetons JWT |
-| `AUTH_FRONTEND_URL` | `auth.frontendURL` | URL du frontend pour les redirections OAuth |
-| `AUTH_PASSKEY_CHALLENGE_TTL` | `auth.passkeyChallengeTTL` | Délai d'expiration du défi Passkey en minutes |
-| `CORS_ALLOWED_ORIGINS` | `cors.allowedOrigins` | Origines autorisées séparées par des virgules |
-| `CORS_ALLOWED_HEADERS` | `cors.allowedHeaders` | En-têtes de requête autorisés |
-| `CORS_ALLOWED_METHODS` | `cors.allowedMethods` | Méthodes HTTP autorisées |
-| `CORS_ALLOW_CREDENTIALS` | `cors.allowCredentials` | Autoriser les identifiants (`true`/`false`) |
-| `CORS_EXPOSE_HEADERS` | `cors.exposeHeaders` | En-têtes exposés au navigateur |
-| `CORS_MAX_AGE` | `cors.maxAge` | Durée du cache préflight en secondes |
-| `RATELIMIT_AUTH_MAX` | `rateLimit.authMaxRequests` | Nombre max de requêtes d'auth par fenêtre |
-| `RATELIMIT_AUTH_WINDOW` | `rateLimit.authWindowSecs` | Fenêtre de limitation en secondes |
-| `RATELIMIT_GUEST_MAX` | `rateLimit.guestMaxRequests` | Nombre max de requêtes invité par fenêtre |
-| `RATELIMIT_GUEST_WINDOW` | `rateLimit.guestWindowSecs` | Fenêtre de limitation invité en secondes |
-| `LIVEKIT_CONFIG_PATH` | `livekit.configPath` | Path to external LiveKit YAML config |
-| `LIVEKIT_NODE_IP` | `livekit.nodeIP` | Explicit node IP for embedded LiveKit RTC (disables STUN) |
-| `SERVER_CERT_ALGORITHM` | `server.certAlgorithm` | Key algorithm for cert generation: `ed25519`, `ecdsa256`, `rsa2048`, `rsa4096` |
+| Env Var | YAML Path | Description |
+|---------|-----------|-------------|
+| `SERVER_PORT` | `server.port` | Main listener port |
+| `SERVER_HTTP_PORT` | `server.httpPort` | HTTP port when TLS enabled |
+| `SERVER_ENABLE_TLS` | `server.enableTLS` | Enable HTTPS |
+| `SERVER_CERT_FILE` | `server.certFile` | TLS certificate path |
+| `SERVER_KEY_FILE` | `server.keyFile` | TLS private key path |
+| `SERVER_DOMAIN` | `server.domain` | Domain name |
+| `SERVER_EMAIL` | `server.email` | ACME email |
+| `SERVER_USE_ACME` | `server.useACME` | Let's Encrypt |
+| `SERVER_TRUSTED_PROXIES` | `server.trustedProxies` | Comma-separated proxy IPs |
+| `SERVER_PROXY_HEADER` | `server.proxyHeader` | Client IP header |
+| `SERVER_CERT_ALGORITHM` | `server.certAlgorithm` | Self-signed key algorithm |
+| `SERVER_MAX_ROOMS_PER_USER` | `server.maxRoomsPerUser` | Active rooms per user |
 | `SERVER_MAX_PARTICIPANTS_LIMIT` | `server.maxParticipantsLimit` | Hard ceiling for room capacity (default 1000) |
-| `SERVER_MAX_ROOMS_PER_USER` | `server.maxRoomsPerUser` | Max active rooms per user (default 100, 0 = unlimited) |
-| `CHAT_MAX_UPLOAD_BYTES_PER_USER` | `chat.maxUploadBytesPerUser` | Per-user upload quota in bytes (default 524288000, 0 = unlimited) |
-| `CHAT_GLOBAL_DISK_THRESHOLD_BYTES` | `chat.globalDiskThresholdBytes` | Global upload storage ceiling in bytes (default 0 = unlimited) |
-| `CHAT_MAX_MESSAGE_COUNT` | `chat.maxMessageCount` | Max chat messages kept per room (default 10000, 0 = unlimited) |
-| `CHAT_MESSAGE_TTL_HOURS` | `chat.messageTTLHours` | Max age of chat messages in hours (default 2160 = 90 days, 0 = forever) |
-| `QUEUE_POLL_INTERVAL` | `queue.pollInterval` | Job poll interval in ms (default 500) |
-| `QUEUE_MAX_ATTEMPTS` | `queue.maxAttempts` | Max job retries before marking failed (default 3) |
-| `QUEUE_CONCURRENCY` | `queue.concurrency` | Worker goroutine count (default 1) |
-| `EMAIL_SMTP_HOST` | `email.smtpHost` | SMTP server hostname |
-| `EMAIL_SMTP_PORT` | `email.smtpPort` | SMTP server port (default 587) |
-| `EMAIL_USERNAME` | `email.username` | SMTP username |
+| `DB_HOST` | `database.host` | PostgreSQL host |
+| `DB_PORT` | `database.port` | PostgreSQL port |
+| `DB_USER` | `database.user` | PostgreSQL user |
+| `DB_PASSWORD` | `database.password` | PostgreSQL password |
+| `DB_NAME` | `database.dbname` | PostgreSQL database name |
+| `DB_TYPE` | `database.type` | `sqlite` or `postgres` |
+| `DB_PATH` | `database.path` | SQLite file path |
+| `LIVEKIT_HOST` | `livekit.host` | Browser signaling URL |
+| `LIVEKIT_HOST_LOCAL` | `livekit.hostLocal` | Localhost signaling override |
+| `LIVEKIT_INTERNAL_HOST` | `livekit.internalHost` | Internal API URL |
+| `LIVEKIT_API_KEY` | `livekit.apiKey` | LiveKit API key |
+| `LIVEKIT_API_SECRET` | `livekit.apiSecret` | LiveKit API secret |
+| `LIVEKIT_CONFIG_PATH` | `livekit.configPath` | External LiveKit YAML path |
+| `LIVEKIT_NODE_IP` | `livekit.nodeIP` | Explicit RTC node IP |
+| `LIVEKIT_EXTERNAL` | `livekit.external` | Use external LiveKit instead of embedded (`true`/`false`) |
+| `LIVEKIT_SKIP_TLS_VERIFY` | `livekit.skipTLSVerify` | Skip TLS verification for LiveKit client (`true`/`false`) |
+| `JWT_SECRET` | `auth.jwtSecret` | JWT signing secret |
+| `AUTH_FRONTEND_URL` | `auth.frontendURL` | Frontend URL |
+| `AUTH_PASSKEY_CHALLENGE_TTL` | `auth.passkeyChallengeTTL` | Passkey challenge minutes |
+| `AUTH_REQUIRE_EMAIL_VERIFICATION` | `auth.requireEmailVerification` | Gate on email verify |
+| `AUTH_VERIFICATION_COOLDOWN_MINS` | `auth.verificationEmailCooldownMins` | Resend cooldown |
+| `AUTH_VERIFICATION_TOKEN_TTL_HOURS` | `auth.verificationTokenTTLHours` | How long verification links remain valid (hours) |
+| `AUTH_UNVERIFIED_ACCOUNT_TTL_HOURS` | `auth.unverifiedAccountTTLHours` | Auto-delete unverified accounts after N hours (0 = disabled) |
+| `AUTH_RESET_TOKEN_TTL_HOURS` | `auth.resetTokenTTLHours` | Password reset token hours |
+| `CHAT_MAX_UPLOAD_BYTES_PER_USER` | `chat.maxUploadBytesPerUser` | Per-user upload quota |
+| `CHAT_GLOBAL_DISK_THRESHOLD_BYTES` | `chat.globalDiskThresholdBytes` | Global upload ceiling |
+| `CHAT_MAX_MESSAGE_COUNT` | `chat.maxMessageCount` | Client chat message cap |
+| `CHAT_MESSAGE_TTL_HOURS` | `chat.messageTTLHours` | Client chat TTL hours |
+| `QUEUE_POLL_INTERVAL` | `queue.pollInterval` | Job poll interval (ms) |
+| `QUEUE_MAX_ATTEMPTS` | `queue.maxAttempts` | Max job retries |
+| `QUEUE_CONCURRENCY` | `queue.concurrency` | Worker count |
+| `EMAIL_SMTP_HOST` | `email.smtpHost` | SMTP host |
+| `EMAIL_SMTP_PORT` | `email.smtpPort` | SMTP port |
+| `EMAIL_USERNAME` | `email.username` | SMTP user |
 | `EMAIL_PASSWORD` | `email.password` | SMTP password |
-| `EMAIL_FROM_ADDRESS` | `email.fromAddress` | From email address |
-| `EMAIL_FROM_NAME` | `email.fromName` | From display name (default "Bedrud") |
-| `EMAIL_TLS_SKIP_VERIFY` | `email.tlsSkipVerify` | Skip TLS certificate validation for self-signed SMTP certs |
-| `EMAIL_SMTPS_MODE` | `email.smtpsMode` | Enable direct TLS (SMTPS) mode for port 465 |
+| `EMAIL_FROM_ADDRESS` | `email.fromAddress` | From address |
+| `EMAIL_FROM_NAME` | `email.fromName` | From display name |
+| `EMAIL_TLS_SKIP_VERIFY` | `email.tlsSkipVerify` | Skip SMTP TLS verify |
+| `EMAIL_SMTPS_MODE` | `email.smtpsMode` | SMTPS mode |
+| `CORS_ALLOWED_ORIGINS` | `cors.allowedOrigins` | Allowed origins |
+| `CORS_ALLOWED_HEADERS` | `cors.allowedHeaders` | Allowed headers |
+| `CORS_ALLOWED_METHODS` | `cors.allowedMethods` | Allowed methods |
+| `CORS_ALLOW_CREDENTIALS` | `cors.allowCredentials` | Allow credentials |
+| `CORS_EXPOSE_HEADERS` | `cors.exposeHeaders` | Exposed headers |
+| `CORS_MAX_AGE` | `cors.maxAge` | Preflight max age |
+| `RATELIMIT_AUTH_MAX` | `rateLimit.authMaxRequests` | Auth rate limit max |
+| `RATELIMIT_AUTH_WINDOW` | `rateLimit.authWindowSecs` | Auth window seconds |
+| `RATELIMIT_GUEST_MAX` | `rateLimit.guestMaxRequests` | Guest rate limit max |
+| `RATELIMIT_GUEST_WINDOW` | `rateLimit.guestWindowSecs` | Guest window seconds |
+| `RATELIMIT_AUTH_RESEND_MAX` | `rateLimit.authResendMaxRequests` | Resend rate limit max |
+| `RATELIMIT_AUTH_RESEND_WINDOW` | `rateLimit.authResendWindowSecs` | Resend window seconds |
+| `RATELIMIT_API_MAX` | `rateLimit.apiMaxRequests` | API rate limit max |
+| `RATELIMIT_API_WINDOW` | `rateLimit.apiWindowSecs` | API window seconds |
+| `RECORDING_RETENTION_HOURS` | `recording.retentionHours` | Recording retention hours |
+| `RECORDING_CLEANUP_INTERVAL_HOURS` | `recording.cleanupIntervalHours` | Recording cleanup interval |
+
+Config path resolution also honors `BEDRUD_CONFIG` / `CONFIG_PATH` (CLI).
 
 ---
 
-## Liste de contrôle pour la production
+## Production Checklist
 
-- [ ] Changer `jwtSecret` et `sessionSecret` par des valeurs aléatoires fortes
-- [ ] Définir `logger.level` à `info` ou `warn`
-- [ ] Configurer TLS (via l'installateur ou un reverse proxy)
-- [ ] Définir `cors.allowedOrigins` à votre domaine de production
-- [ ] Configurer les fournisseurs OAuth si nécessaire
-- [ ] Ouvrir la plage de ports RTC LiveKit dans votre pare-feu
-- [ ] Configurer la rotation des logs pour `/var/log/bedrud/`
+- [ ] Change `jwtSecret` and `sessionSecret` to strong random values
+- [ ] Set `logger.level` to `info` or `warn`
+- [ ] Configure TLS (installer, ACME, or reverse proxy + `behindProxy`)
+- [ ] Set `cors.allowedOrigins` to your production domain
+- [ ] Configure PostgreSQL for multi-user production if needed
+- [ ] Configure SMTP if using email verification / password reset
+- [ ] Open LiveKit RTC UDP range and TURN ports in the firewall
+- [ ] Set up log rotation for `/var/log/bedrud/`
 
-Pour une configuration complète de production, voir le [Guide de déploiement](/fr/docs/guides/deployment).
+### Privileged Ports (< 1024)
+
+When TLS is enabled, Bedrud may also listen on HTTP (default port 80). Non-root options:
+
+```yaml
+server:
+  httpPort: "8080"
+```
+
+```bash
+export SERVER_HTTP_PORT=8080
+# or
+sudo setcap 'cap_net_bind_service=+ep' $(which bedrud)
+```
+
+<Callout type="warning">
+  `setcap` must be re-run after each binary update.
+</Callout>
+
+For complete production setup, see the [Deployment Guide](/fr/docs/guides/deployment).

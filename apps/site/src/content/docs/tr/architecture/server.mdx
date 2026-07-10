@@ -1,66 +1,75 @@
 ---
 title: Sunucu Mimarisi
-description: Arka uç sunucu tasarımı ve bileşenleri
+description: Backend sunucu tasarımı ve bileşenler
 order: 7
 ---
 
-Bedrud sunucusu; REST API sağlayan, gömülü web ön ucunu sunan ve LiveKit medya sunucusunu yöneten bir Go uygulamasıdır.
+The Bedrud server is a Go application that provides the REST API, serves the embedded web frontend, and manages the LiveKit media server.
 
-## Teknoloji Yığını
+## Technology Stack
 
-| Teknoloji | Amaç |
-|-----------|------|
-| Go 1.24 | Temel dil |
-| Fiber v2 | Web çerçevesi (Express benzeri) |
-| GORM | SQLite ve PostgreSQL için ORM |
-| LiveKit Protocol SDK | WebRTC oda ve token yönetimi |
-| Zerolog | Yapılandırılmış JSON günlüklemesi |
-| Goth | Çoklu sağlayıcı OAuth2 |
-| go-passkeys | FIDO2/WebAuthn desteği |
-| golang-jwt | JWT token oluşturma ve doğrulama |
-| gocron | Arka plan iş planlaması |
-| Swagger (swaggo) | API belgeleri oluşturma |
+| Technology | Purpose |
+|-----------|---------|
+| Go 1.24 | Core language |
+| Fiber v2 | Web framework (Express-like) |
+| GORM | ORM for SQLite and PostgreSQL |
+| LiveKit Protocol SDK | WebRTC room and token management |
+| Zerolog | Structured JSON logging |
+| Goth | Multi-provider OAuth2 |
+| go-passkeys | FIDO2/WebAuthn support |
+| golang-jwt | JWT token creation and validation |
+| gocron | Background job scheduling |
+| Swagger (swaggo) | API documentation generation |
 
-## Dizin Yapısı
+## Directory Structure
 
 ```
 server/
 ├── cmd/
-│   ├── server/main.go        # Geliştirme giriş noktası
-│   └── bedrud/main.go        # Üretim giriş noktası (install/livekit bayrakları ile)
+│   ├── server/main.go        # Development entry point
+│   └── bedrud/main.go        # Production entry point (with install/livekit flags)
 ├── internal/
-│   ├── auth/                  # Kimlik doğrulama servisleri
-│   │   ├── auth.go            # Temel auth servisi (kayıt, giriş, OAuth)
-│   │   ├── jwt.go             # JWT token oluşturma ve doğrulama
-│   │   └── session_store.go   # OAuth durumu için Gorilla oturum deposu
-│   ├── database/              # Veritabanı başlatma ve geçişler
-│   ├── handlers/              # HTTP istek işleyicileri (denetleyici katmanı)
-│   │   ├── auth_handler.go    # Auth uç noktaları
-│   │   ├── room.go            # Oda uç noktaları
-│   │   └── users.go           # Kullanıcı yönetimi uç noktaları
-│   ├── middleware/             # Fiber ara katmanı
-│   │   └── auth.go            # JWT doğrulama, izin kontrolleri
-│   ├── models/                # GORM modelleri (veritabanı şemaları)
-│   │   ├── user.go            # Kullanıcı modeli
-│   │   ├── room.go            # Oda modeli
-│   │   └── passkey.go         # Passkey modeli
-│   ├── repository/            # Veri erişim katmanı (GORM ile SQL)
+│   ├── auth/                  # Authentication services
+│   │   ├── auth.go            # Core auth service (register, login, OAuth)
+│   │   ├── jwt.go             # JWT token creation and validation
+│   │   └── session_store.go   # Gorilla session store for OAuth state
+│   ├── database/              # Database initialization and migrations
+│   ├── handlers/              # HTTP request handlers (controller layer)
+│   │   ├── auth_handler.go    # Auth endpoints
+│   │   ├── recording_handler.go # Recording start/stop/list/get
+│   │   ├── room.go            # Room endpoints
+│   │   └── users.go           # User management endpoints
+│   ├── middleware/             # Fiber middleware
+│   │   ├── auth.go            # JWT validation, permission checks
+│   │   └── recordings_enabled.go # Recordings sys-setting gate
+│   ├── models/                # GORM models (database schemas)
+│   │   ├── user.go            # User model
+│   │   ├── webhook.go         # Webhook model
+│   │   ├── recording.go       # Recording model
+│   │   ├── room.go            # Room model
+│   │   └── passkey.go         # Passkey model
+│   ├── repository/            # Data access layer (SQL via GORM)
 │   │   ├── user_repository.go
+│   │   ├── webhook_repository.go
+│   │   ├── recording_repository.go
 │   │   ├── room_repository.go
 │   │   └── passkey_repository.go
-│   ├── livekit/               # Gömülü LiveKit sunucusu yönetimi
-│   ├── scheduler/             # Arka plan iş planlaması
-│   └── utils/                 # TLS ve diğer yardımcı araçlar
-├── frontend/                  # Gömülü web ön ucu (derleme zamanında doldurulur)
-├── config.yaml                # Geliştirme yapılandırması
-├── livekit.yaml               # Geliştirme LiveKit yapılandırması
+│   ├── services/               # Business logic layer
+│   │   ├── recording_service.go # Recording gate chain + LK egress
+│   │   └── room_cleanup.go     # Room deletion/suspend cascade
+│   ├── livekit/               # Embedded LiveKit server management
+│   ├── scheduler/             # Background job scheduling
+│   └── utils/                 # TLS and other utilities
+├── frontend/                  # Embedded web frontend (populated at build time)
+├── config.yaml                # Development configuration
+├── livekit.yaml               # Development LiveKit configuration
 ├── go.mod
 └── go.sum
 ```
 
-## Katmanlı Mimari
+## Layered Architecture
 
-Sunucu üç katmanlı bir mimari izler:
+The server follows a layered architecture:
 
 ```mermaid
 flowchart TB
@@ -72,61 +81,81 @@ flowchart TB
     Database["Database<br/>SQLite (dev) or PostgreSQL (production)"]
 ```
 
-## Temel Örüntüler
+## Key Patterns
 
-### Gömülü Ön Uç
+### Embedded Frontend
 
-Web ön ucu statik dosyalara derlenir ve `//go:embed` kullanılarak Go ikili dosyasına gömülür:
+The web frontend is compiled to static files and embedded into the Go binary using `//go:embed`:
 
 ```go
 //go:embed frontend/*
 var frontendFS embed.FS
 ```
 
-Derleme zamanında `bun run build:embed`, React uygulamasını SSR ile ön_RENDERLER ve `dist/client/` klasörünü `server/frontend/` içine kopyalar. Go derleyicisi daha sonra bunu ikili dosyaya dahil eder. Fiber sunucusu API olmayan tüm yollar için bu dosyaları sunar.
+At build time, `bun run build:embed` SSR pre-renders the React app and copies `dist/client/` into `server/frontend/`. The Go compiler then bundles it into the binary. The Fiber server serves these files for any non-API route.
 
-### JWT Kimlik Doğrulama
+### JWT kimlik doğrulama
 
-Ara katman JWT'yi `Authorization: Bearer <token>` başlığından çıkarır, doğrular ve istek üzerine kullanıcı bağlamını ekler. Korumalı yollar kullanıcı rollerini denetlemek için `RequireAccess` ara katmanını kullanır.
+Ara katman JWT’yi `Authorization: Bearer <token>` başlığından okur (okumada çerez yedek), doğrular ve kullanıcı bağlamını isteğe ekler. Korumalı rotalar roller için `RequireAccess` kullanır.
 
-### LiveKit Token Üretimi
+- **Amaçlı jetonlar** (`email_verify`, `password_reset`) imza anahtarını paylaşır ancak `Protected` rotalarda erişim jetonu olarak **kullanılamaz**.
+- **Değiştirici istekler** (kimlik doğrulamalı POST/PUT/PATCH/DELETE) `RequireBearerForMutations` ile Bearer ister — yalnızca çerezli çapraz site POST’lar reddedilir (CSRF koruması).
+- **Erişim jetonu iptali** (çıkış / parola değişimi) veritabanında saklanır; yeniden başlatma ve çoklu örnekte geçerli kalır.
+- **Oda varlık kimlik listeleri** kimlik doğrulama ister; genel odalar `?countOnly=1` sunabilir (yalnızca sayı, kimlik yok).
 
-Bir kullanıcı odaya katıldığında sunucu:
+### LiveKit Token Generation
 
-1. Oda izinlerini doğrular
-2. API gizli anahtarı ile imzalı bir LiveKit erişim tokenı oluşturur
-3. Tokenı istemciye döndürür
-4. İstemci bu tokenı kullanarak doğrudan LiveKit'e bağlanır
+When a user joins a room, the server:
 
-### Swagger Belgeleri
+1. Validates room permissions
+2. Creates a LiveKit access token signed with the API secret
+3. Returns the token to the client
+4. The client connects directly to LiveKit using the token
 
-API belgeleri swaggo kullanılarak kod ek açıklamalarından otomatik olarak oluşturulur. Geliştirme ortamında `/api/swagger/` adresinden erişilebilir.
+### Kayıtlar ve LiveKit Egress
 
-## Veritabanı
+Kuyruk işleyicileri **`process_recording`** ve **`recording_delete`** worker’da kayıtlıdır. LiveKit `egress_ended` webhook’ları `process_recording` kuyruğa alır (indirme → depolama → tamamlandı işaretle → isteğe bağlı `recording.completed` webhook).
 
-### SQLite (Varsayılan)
+🚧 **HTTP kayıt rotaları** (API start/stop/list) üretim rota tablosunda hâlâ `// TODO oncoming feature` — gelene kadar herkese açık kayıt REST uçlarına güvenmeyin. `recording:` altındaki YAML anahtarları işlem hattı depolamasını yapılandırır.
 
-Geliştirme ve küçük dağıtımlar için Bedrud SQLite kullanır. Veritabanı dosyası yapılandırılan `database.path` konumunda saklanır (varsayılan: `data.db`).
+### Webhooks
+
+Webhook system allows superadmins to register HTTP callbacks for real-time events. Active events: `room.created`, `room.ended`, `participant.joined`, and `ping` (test). `recording.completed` is reserved for a planned feature. Delivery headers: `X-Bedrud-Signature`, `X-Bedrud-Event`, `X-Bedrud-Timestamp`.
+
+- **Storage:** `Webhook` model in database, CRUD via `WebhookRepository`
+- **Dispatch:** Background job (`dispatch_webhook`) sends HMAC-SHA256 signed POST requests with 10s timeout
+- **Secrets:** Per-webhook HMAC secret, rotatable via admin panel
+- See the [Webhooks API](/tr/docs/api/api-reference) for endpoint details.
+
+### Swagger Documentation
+
+API documentation is auto-generated from code annotations using swaggo. In development, it's available at `/api/swagger/`.
+
+## Database
+
+### SQLite (Default)
+
+For development and small deployments, Bedrud uses SQLite. The database file is stored at the configured `database.path` (default: `data.db`).
 
 ### PostgreSQL
 
-Daha yüksek eşzamanlılık gerektiren üretim ortamları için bir PostgreSQL bağlantı dizesi yapılandırın. GORM her iki diyalekti de şeffaf şekilde yönetir.
+For production with higher concurrency requirements, configure a PostgreSQL connection string. GORM handles both dialects transparently.
 
-### Geçişler
+### Migrations
 
-GORM başlangıçta model yapılarına göre şemayı otomatik olarak geçirir. Modeller `internal/models/` dizininde tanımlanır.
+GORM auto-migrates the schema on startup based on the model structs. The models are defined in `internal/models/`.
 
-## Arka Plan İşleri
+## Background Jobs
 
-`gocron` planlayıcısı şu periyodik görevleri çalıştırır:
-- Süresi dolmuş yenileme tokenlarını temizleme
-- Eski oda katılımcılarını kaldırma
+The `gocron` scheduler runs periodic tasks such as:
+- Cleaning up expired refresh tokens
+- Removing stale room participants
 
 ---
 
-## Ayrıca bakınız
+## See also
 
-- [Arka Uç Kod Yapısı](/tr/docs/backend/structure) - dizin haritası ve kodlama standartları
-- [API İşleyicileri](/tr/docs/backend/api-handlers) - yönlendirme ve istek yaşam döngüsü
-- [Veritabanı ve Modeller](/tr/docs/backend/database) - GORM modelleri ve repository örüntüsü
-- [Kimlik Doğrulama Akışı](/tr/docs/backend/authentication) - JWT, OAuth ve passkey iç işleyişi
+- [Backend Code Structure](/tr/docs/backend/structure) - directory map and coding standards
+- [API Handlers](/tr/docs/backend/api-handlers) - routing and request lifecycle
+- [Database and Models](/tr/docs/backend/database) - GORM models and repository pattern
+- [Authentication Flow](/tr/docs/backend/authentication) - JWT, OAuth, and passkey internals

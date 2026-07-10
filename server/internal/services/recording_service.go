@@ -2,14 +2,15 @@
 package services
 
 import (
-	"bedrud/config"
-	"bedrud/internal/lkutil"
-	"bedrud/internal/models"
-	"bedrud/internal/repository"
 	"context"
 	"errors"
 	"fmt"
 	"time"
+
+	"bedrud/config"
+	"bedrud/internal/lkutil"
+	"bedrud/internal/models"
+	"bedrud/internal/repository"
 
 	"github.com/google/uuid"
 	lkauth "github.com/livekit/protocol/auth"

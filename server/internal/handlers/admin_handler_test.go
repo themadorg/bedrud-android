@@ -1,11 +1,6 @@
 package handlers
 
 import (
-	"bedrud/config"
-	"bedrud/internal/auth"
-	"bedrud/internal/models"
-	"bedrud/internal/repository"
-	"bedrud/internal/testutil"
 	"bytes"
 	"encoding/json"
 	"fmt"
@@ -15,6 +10,12 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"bedrud/config"
+	"bedrud/internal/auth"
+	"bedrud/internal/models"
+	"bedrud/internal/repository"
+	"bedrud/internal/testutil"
 
 	"github.com/gofiber/fiber/v2"
 )
@@ -80,7 +81,10 @@ func TestAdminHandler_GetPublicSettings(t *testing.T) {
 	app, _, _ := setupAdminTestApp(t)
 
 	req := httptest.NewRequest(http.MethodGet, "/public/settings", http.NoBody)
-	resp, _ := app.Test(req, -1)
+	resp, err := app.Test(req, -1)
+	if err != nil {
+		t.Fatal(err)
+	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("expected %d, got %d", http.StatusOK, resp.StatusCode)
@@ -88,12 +92,38 @@ func TestAdminHandler_GetPublicSettings(t *testing.T) {
 
 	body, _ := io.ReadAll(resp.Body)
 	var result map[string]interface{}
-	_ = json.Unmarshal(body, &result)
+	if err := json.Unmarshal(body, &result); err != nil {
+		t.Fatal(err)
+	}
 	if _, ok := result["registrationEnabled"]; !ok {
 		t.Fatal("expected 'registrationEnabled' in public settings response")
 	}
 	if _, ok := result["tokenRegistrationOnly"]; !ok {
 		t.Fatal("expected 'tokenRegistrationOnly' in public settings response")
+	}
+	if _, ok := result["chatUploadMaxBytes"]; !ok {
+		t.Fatal("expected 'chatUploadMaxBytes' in public settings response")
+	}
+	if _, ok := result["chatUploadMaxDimension"]; !ok {
+		t.Fatal("expected 'chatUploadMaxDimension' in public settings response")
+	}
+}
+
+func TestAdminHandler_UpdateSettings_NegativeMaxDimension(t *testing.T) {
+	app, _, _ := setupAdminTestApp(t)
+	body, _ := json.Marshal(map[string]interface{}{
+		"chatUploadMaxDimension": -1,
+	})
+	req := httptest.NewRequest(http.MethodPut, "/admin/settings", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := app.Test(req, -1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusBadRequest {
+		respBody, _ := io.ReadAll(resp.Body)
+		t.Fatalf("expected 400, got %d: %s", resp.StatusCode, string(respBody))
 	}
 }
 
@@ -106,7 +136,10 @@ func TestAdminHandler_UpdateSettings_Success(t *testing.T) {
 	})
 	req := httptest.NewRequest(http.MethodPut, "/admin/settings", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
-	resp, _ := app.Test(req, -1)
+	resp, err := app.Test(req, -1)
+	if err != nil {
+		t.Fatal(err)
+	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
 		respBody, _ := io.ReadAll(resp.Body)
@@ -142,7 +175,10 @@ func TestAdminHandler_UpdateSettings_FailsOnTypeMismatch(t *testing.T) {
 			body, _ := json.Marshal(tc.body)
 			req := httptest.NewRequest(http.MethodPut, "/admin/settings", bytes.NewReader(body))
 			req.Header.Set("Content-Type", "application/json")
-			resp, _ := app.Test(req, -1)
+			resp, err := app.Test(req, -1)
+			if err != nil {
+				t.Fatal(err)
+			}
 			defer resp.Body.Close()
 			if resp.StatusCode != http.StatusBadRequest {
 				respBody, _ := io.ReadAll(resp.Body)
@@ -157,7 +193,10 @@ func TestAdminHandler_UpdateSettings_InvalidBody(t *testing.T) {
 
 	req := httptest.NewRequest(http.MethodPut, "/admin/settings", bytes.NewReader([]byte("{invalid")))
 	req.Header.Set("Content-Type", "application/json")
-	resp, _ := app.Test(req, -1)
+	resp, err := app.Test(req, -1)
+	if err != nil {
+		t.Fatal(err)
+	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusBadRequest {
 		t.Fatalf("expected %d, got %d", http.StatusBadRequest, resp.StatusCode)
@@ -168,7 +207,10 @@ func TestAdminHandler_ListInviteTokens_Empty(t *testing.T) {
 	app, _, _ := setupAdminTestApp(t)
 
 	req := httptest.NewRequest(http.MethodGet, "/admin/invite-tokens", http.NoBody)
-	resp, _ := app.Test(req, -1)
+	resp, err := app.Test(req, -1)
+	if err != nil {
+		t.Fatal(err)
+	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("expected %d, got %d", http.StatusOK, resp.StatusCode)
@@ -176,7 +218,9 @@ func TestAdminHandler_ListInviteTokens_Empty(t *testing.T) {
 
 	body, _ := io.ReadAll(resp.Body)
 	var result map[string]interface{}
-	_ = json.Unmarshal(body, &result)
+	if err := json.Unmarshal(body, &result); err != nil {
+		t.Fatal(err)
+	}
 	tokens, _ := result["tokens"].([]interface{})
 	if len(tokens) != 0 {
 		t.Fatalf("expected empty token list, got %d", len(tokens))
@@ -192,7 +236,10 @@ func TestAdminHandler_CreateInviteToken_Success(t *testing.T) {
 	})
 	req := httptest.NewRequest(http.MethodPost, "/admin/invite-tokens", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
-	resp, _ := app.Test(req, -1)
+	resp, err := app.Test(req, -1)
+	if err != nil {
+		t.Fatal(err)
+	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusCreated {
 		respBody, _ := io.ReadAll(resp.Body)
@@ -201,7 +248,9 @@ func TestAdminHandler_CreateInviteToken_Success(t *testing.T) {
 
 	respBody, _ := io.ReadAll(resp.Body)
 	var result map[string]interface{}
-	_ = json.Unmarshal(respBody, &result)
+	if err := json.Unmarshal(respBody, &result); err != nil {
+		t.Fatal(err)
+	}
 	if result["token"] == nil || result["token"] == "" {
 		t.Fatal("expected 'token' field in response")
 	}
@@ -216,7 +265,10 @@ func TestAdminHandler_CreateInviteToken_DefaultExpiry(t *testing.T) {
 	body, _ := json.Marshal(map[string]interface{}{"email": "default@example.com"})
 	req := httptest.NewRequest(http.MethodPost, "/admin/invite-tokens", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
-	resp, _ := app.Test(req, -1)
+	resp, err := app.Test(req, -1)
+	if err != nil {
+		t.Fatal(err)
+	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusCreated {
 		t.Fatalf("expected %d, got %d", http.StatusCreated, resp.StatusCode)
@@ -232,12 +284,17 @@ func TestAdminHandler_DeleteInviteToken_Success(t *testing.T) {
 	})
 	createReq := httptest.NewRequest(http.MethodPost, "/admin/invite-tokens", bytes.NewReader(createBody))
 	createReq.Header.Set("Content-Type", "application/json")
-	createResp, _ := app.Test(createReq, -1)
+	createResp, err := app.Test(createReq, -1)
+	if err != nil {
+		t.Fatal(err)
+	}
 	defer createResp.Body.Close()
 
 	createRespBody, _ := io.ReadAll(createResp.Body)
 	var created map[string]interface{}
-	_ = json.Unmarshal(createRespBody, &created)
+	if err := json.Unmarshal(createRespBody, &created); err != nil {
+		t.Fatal(err)
+	}
 	tokenID, _ := created["id"].(string)
 
 	tokens, _, _ := inviteTokenRepo.List(repository.PaginationParams{Page: 1, Limit: 50})
@@ -246,7 +303,10 @@ func TestAdminHandler_DeleteInviteToken_Success(t *testing.T) {
 	}
 
 	req := httptest.NewRequest(http.MethodDelete, "/admin/invite-tokens/"+tokenID, http.NoBody)
-	resp, _ := app.Test(req, -1)
+	resp, err := app.Test(req, -1)
+	if err != nil {
+		t.Fatal(err)
+	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
 		respBody, _ := io.ReadAll(resp.Body)
@@ -736,7 +796,10 @@ func TestAdminHandler_ValidateSettingsConnectivity_EmptyBody(t *testing.T) {
 	body, _ := json.Marshal(map[string]interface{}{})
 	req := httptest.NewRequest(http.MethodPost, "/admin/settings/validate", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
-	resp, _ := app.Test(req, -1)
+	resp, err := app.Test(req, -1)
+	if err != nil {
+		t.Fatal(err)
+	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
@@ -745,7 +808,9 @@ func TestAdminHandler_ValidateSettingsConnectivity_EmptyBody(t *testing.T) {
 
 	var result map[string]interface{}
 	respBody, _ := io.ReadAll(resp.Body)
-	json.Unmarshal(respBody, &result)
+	if err := json.Unmarshal(respBody, &result); err != nil {
+		t.Fatal(err)
+	}
 	checks, ok := result["checks"].(map[string]interface{})
 	if !ok {
 		t.Fatal("expected 'checks' object in response")
@@ -760,7 +825,10 @@ func TestAdminHandler_ValidateSettingsConnectivity_InvalidBody(t *testing.T) {
 
 	req := httptest.NewRequest(http.MethodPost, "/admin/settings/validate", bytes.NewReader([]byte("{invalid")))
 	req.Header.Set("Content-Type", "application/json")
-	resp, _ := app.Test(req, -1)
+	resp, err := app.Test(req, -1)
+	if err != nil {
+		t.Fatal(err)
+	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusBadRequest {
 		t.Fatalf("expected 400, got %d", resp.StatusCode)
@@ -859,15 +927,30 @@ func TestAdminOverviewHandler_GetOverview_WithData(t *testing.T) {
 	app.Get("/admin/overview", handler.GetOverview)
 
 	// Seed data
-	db.Create(&models.User{ID: "ov-u1", Email: "ov1@ex.com", Name: "Ov1", Provider: "local", IsActive: true})
-	db.Create(&models.User{ID: "ov-u2", Email: "ov2@ex.com", Name: "Ov2", Provider: "github", IsActive: true})
-	db.Create(&models.User{ID: "ov-u3", Email: "ov3@ex.com", Name: "Ov3", Provider: "local", IsActive: true})
+	if err := db.Create(&models.User{ID: "ov-u1", Email: "ov1@ex.com", Name: "Ov1", Provider: "local", IsActive: true}).Error; err != nil {
+		t.Fatal(err)
+	}
+	if err := db.Create(&models.User{ID: "ov-u2", Email: "ov2@ex.com", Name: "Ov2", Provider: "github", IsActive: true}).Error; err != nil {
+		t.Fatal(err)
+	}
+	if err := db.Create(&models.User{ID: "ov-u3", Email: "ov3@ex.com", Name: "Ov3", Provider: "local", IsActive: true}).Error; err != nil {
+		t.Fatal(err)
+	}
 
-	room1, _ := roomRepo.CreateRoom("ov-u1", "ov-room-1", true, "standard", 0, &models.RoomSettings{})
-	roomRepo.CreateRoom("ov-u2", "ov-room-2", false, "standard", 0, &models.RoomSettings{})
+	room1, err := roomRepo.CreateRoom("ov-u1", "ov-room-1", true, "standard", 0, &models.RoomSettings{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := roomRepo.CreateRoom("ov-u2", "ov-room-2", false, "standard", 0, &models.RoomSettings{}); err != nil {
+		t.Fatal(err)
+	}
 
-	roomRepo.AddParticipant(room1.ID, "ov-u1")
-	roomRepo.AddParticipant(room1.ID, "ov-u2")
+	if err := roomRepo.AddParticipant(room1.ID, "ov-u1"); err != nil {
+		t.Fatal(err)
+	}
+	if err := roomRepo.AddParticipant(room1.ID, "ov-u2"); err != nil {
+		t.Fatal(err)
+	}
 
 	req := httptest.NewRequest(http.MethodGet, "/admin/overview", http.NoBody)
 	resp, err := app.Test(req, -1)
@@ -1096,7 +1179,11 @@ func TestAdminHandler_SendTestEmail_InvalidEmail(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPost, "/admin/settings/send-test-email",
 		bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
-	resp, _ := app.Test(req, -1)
+	resp, err := app.Test(req, -1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusBadRequest {
 		t.Fatalf("expected 400, got %d", resp.StatusCode)
 	}
@@ -1108,7 +1195,11 @@ func TestAdminHandler_SendTestEmail_MissingTo(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPost, "/admin/settings/send-test-email",
 		bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
-	resp, _ := app.Test(req, -1)
+	resp, err := app.Test(req, -1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusBadRequest {
 		t.Fatalf("expected 400, got %d", resp.StatusCode)
 	}
@@ -1120,7 +1211,11 @@ func TestAdminHandler_SendTestEmail_SMTPNotConfigured(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPost, "/admin/settings/send-test-email",
 		bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
-	resp, _ := app.Test(req, -1)
+	resp, err := app.Test(req, -1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
 	// Should return 400 with "SMTP not configured" error
 	if resp.StatusCode != http.StatusBadRequest {
 		respBody, _ := io.ReadAll(resp.Body)
@@ -1136,7 +1231,10 @@ func TestWebhook_List_Empty(t *testing.T) {
 	app, _, _ := setupAdminTestApp(t)
 
 	req := httptest.NewRequest(http.MethodGet, "/admin/webhooks", http.NoBody)
-	resp, _ := app.Test(req, -1)
+	resp, err := app.Test(req, -1)
+	if err != nil {
+		t.Fatal(err)
+	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("expected 200, got %d", resp.StatusCode)
@@ -1167,7 +1265,10 @@ func TestWebhook_Create_Success(t *testing.T) {
 	})
 	req := httptest.NewRequest(http.MethodPost, "/admin/webhooks", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
-	resp, _ := app.Test(req, -1)
+	resp, err := app.Test(req, -1)
+	if err != nil {
+		t.Fatal(err)
+	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusCreated {
 		respBody, _ := io.ReadAll(resp.Body)
@@ -1176,7 +1277,9 @@ func TestWebhook_Create_Success(t *testing.T) {
 
 	var result map[string]interface{}
 	respBody, _ := io.ReadAll(resp.Body)
-	json.Unmarshal(respBody, &result)
+	if err := json.Unmarshal(respBody, &result); err != nil {
+		t.Fatal(err)
+	}
 	if result["id"] == nil || result["id"] == "" {
 		t.Fatal("expected 'id' in response")
 	}
@@ -1197,7 +1300,10 @@ func TestWebhook_Create_MissingName(t *testing.T) {
 	})
 	req := httptest.NewRequest(http.MethodPost, "/admin/webhooks", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
-	resp, _ := app.Test(req, -1)
+	resp, err := app.Test(req, -1)
+	if err != nil {
+		t.Fatal(err)
+	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusBadRequest {
 		t.Fatalf("expected 400, got %d", resp.StatusCode)
@@ -1213,7 +1319,10 @@ func TestWebhook_Create_MissingURL(t *testing.T) {
 	})
 	req := httptest.NewRequest(http.MethodPost, "/admin/webhooks", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
-	resp, _ := app.Test(req, -1)
+	resp, err := app.Test(req, -1)
+	if err != nil {
+		t.Fatal(err)
+	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusBadRequest {
 		t.Fatalf("expected 400, got %d", resp.StatusCode)
@@ -1230,7 +1339,10 @@ func TestWebhook_Create_InvalidURL(t *testing.T) {
 	})
 	req := httptest.NewRequest(http.MethodPost, "/admin/webhooks", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
-	resp, _ := app.Test(req, -1)
+	resp, err := app.Test(req, -1)
+	if err != nil {
+		t.Fatal(err)
+	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusBadRequest {
 		t.Fatalf("expected 400, got %d", resp.StatusCode)
@@ -1247,7 +1359,10 @@ func TestWebhook_Create_InvalidEvents(t *testing.T) {
 	})
 	req := httptest.NewRequest(http.MethodPost, "/admin/webhooks", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
-	resp, _ := app.Test(req, -1)
+	resp, err := app.Test(req, -1)
+	if err != nil {
+		t.Fatal(err)
+	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusBadRequest {
 		t.Fatalf("expected 400, got %d", resp.StatusCode)
@@ -1265,7 +1380,10 @@ func TestWebhook_List_AfterCreate(t *testing.T) {
 	})
 	createReq := httptest.NewRequest(http.MethodPost, "/admin/webhooks", bytes.NewReader(createBody))
 	createReq.Header.Set("Content-Type", "application/json")
-	createResp, _ := app.Test(createReq, -1)
+	createResp, err := app.Test(createReq, -1)
+	if err != nil {
+		t.Fatal(err)
+	}
 	defer createResp.Body.Close()
 	if createResp.StatusCode != http.StatusCreated {
 		t.Fatalf("failed to create webhook: %d", createResp.StatusCode)
@@ -1273,7 +1391,10 @@ func TestWebhook_List_AfterCreate(t *testing.T) {
 
 	// List should return 1
 	req := httptest.NewRequest(http.MethodGet, "/admin/webhooks", http.NoBody)
-	resp, _ := app.Test(req, -1)
+	resp, err := app.Test(req, -1)
+	if err != nil {
+		t.Fatal(err)
+	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("expected 200, got %d", resp.StatusCode)
@@ -1306,10 +1427,15 @@ func TestWebhook_Update_Success(t *testing.T) {
 	})
 	createReq := httptest.NewRequest(http.MethodPost, "/admin/webhooks", bytes.NewReader(createBody))
 	createReq.Header.Set("Content-Type", "application/json")
-	createResp, _ := app.Test(createReq, -1)
+	createResp, err := app.Test(createReq, -1)
+	if err != nil {
+		t.Fatal(err)
+	}
 	defer createResp.Body.Close()
 	var created map[string]interface{}
-	json.NewDecoder(createResp.Body).Decode(&created)
+	if err := json.NewDecoder(createResp.Body).Decode(&created); err != nil {
+		t.Fatal(err)
+	}
 	id := created["id"].(string)
 
 	// Update name and events
@@ -1319,7 +1445,10 @@ func TestWebhook_Update_Success(t *testing.T) {
 	})
 	updateReq := httptest.NewRequest(http.MethodPut, "/admin/webhooks/"+id, bytes.NewReader(updateBody))
 	updateReq.Header.Set("Content-Type", "application/json")
-	updateResp, _ := app.Test(updateReq, -1)
+	updateResp, err := app.Test(updateReq, -1)
+	if err != nil {
+		t.Fatal(err)
+	}
 	defer updateResp.Body.Close()
 	if updateResp.StatusCode != http.StatusOK {
 		respBody, _ := io.ReadAll(updateResp.Body)
@@ -1327,7 +1456,9 @@ func TestWebhook_Update_Success(t *testing.T) {
 	}
 
 	var updated map[string]interface{}
-	json.NewDecoder(updateResp.Body).Decode(&updated)
+	if err := json.NewDecoder(updateResp.Body).Decode(&updated); err != nil {
+		t.Fatal(err)
+	}
 	if updated["name"] != "Updated" {
 		t.Fatalf("expected name 'Updated', got %v", updated["name"])
 	}
@@ -1339,7 +1470,10 @@ func TestWebhook_Update_NotFound(t *testing.T) {
 	body, _ := json.Marshal(map[string]interface{}{"name": "Nope"})
 	req := httptest.NewRequest(http.MethodPut, "/admin/webhooks/nonexistent", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
-	resp, _ := app.Test(req, -1)
+	resp, err := app.Test(req, -1)
+	if err != nil {
+		t.Fatal(err)
+	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusNotFound {
 		t.Fatalf("expected 404, got %d", resp.StatusCode)
@@ -1357,15 +1491,23 @@ func TestWebhook_Delete_Success(t *testing.T) {
 	})
 	createReq := httptest.NewRequest(http.MethodPost, "/admin/webhooks", bytes.NewReader(createBody))
 	createReq.Header.Set("Content-Type", "application/json")
-	createResp, _ := app.Test(createReq, -1)
+	createResp, err := app.Test(createReq, -1)
+	if err != nil {
+		t.Fatal(err)
+	}
 	defer createResp.Body.Close()
 	var created map[string]interface{}
-	json.NewDecoder(createResp.Body).Decode(&created)
+	if err := json.NewDecoder(createResp.Body).Decode(&created); err != nil {
+		t.Fatal(err)
+	}
 	id := created["id"].(string)
 
 	// Delete
 	delReq := httptest.NewRequest(http.MethodDelete, "/admin/webhooks/"+id, http.NoBody)
-	delResp, _ := app.Test(delReq, -1)
+	delResp, err := app.Test(delReq, -1)
+	if err != nil {
+		t.Fatal(err)
+	}
 	defer delResp.Body.Close()
 	if delResp.StatusCode != http.StatusOK {
 		t.Fatalf("expected 200, got %d", delResp.StatusCode)
@@ -1373,11 +1515,16 @@ func TestWebhook_Delete_Success(t *testing.T) {
 
 	// Verify list is empty
 	listReq := httptest.NewRequest(http.MethodGet, "/admin/webhooks", http.NoBody)
-	listResp, _ := app.Test(listReq, -1)
+	listResp, err := app.Test(listReq, -1)
+	if err != nil {
+		t.Fatal(err)
+	}
 	defer listResp.Body.Close()
 	body, _ := io.ReadAll(listResp.Body)
 	var result map[string]interface{}
-	json.Unmarshal(body, &result)
+	if err := json.Unmarshal(body, &result); err != nil {
+		t.Fatal(err)
+	}
 	webhooks, _ := result["webhooks"].([]interface{})
 	if len(webhooks) != 0 {
 		t.Fatalf("expected empty after delete, got %d", len(webhooks))
@@ -1388,7 +1535,10 @@ func TestWebhook_Delete_NotFound(t *testing.T) {
 	app, _, _ := setupAdminTestApp(t)
 
 	req := httptest.NewRequest(http.MethodDelete, "/admin/webhooks/nonexistent", http.NoBody)
-	resp, _ := app.Test(req, -1)
+	resp, err := app.Test(req, -1)
+	if err != nil {
+		t.Fatal(err)
+	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusNotFound {
 		t.Fatalf("expected 404, got %d", resp.StatusCode)
@@ -1406,23 +1556,33 @@ func TestWebhook_RotateSecret(t *testing.T) {
 	})
 	createReq := httptest.NewRequest(http.MethodPost, "/admin/webhooks", bytes.NewReader(createBody))
 	createReq.Header.Set("Content-Type", "application/json")
-	createResp, _ := app.Test(createReq, -1)
+	createResp, err := app.Test(createReq, -1)
+	if err != nil {
+		t.Fatal(err)
+	}
 	defer createResp.Body.Close()
 	var created map[string]interface{}
-	json.NewDecoder(createResp.Body).Decode(&created)
+	if err := json.NewDecoder(createResp.Body).Decode(&created); err != nil {
+		t.Fatal(err)
+	}
 	id := created["id"].(string)
 	oldSecret := created["secret"].(string)
 
 	// Rotate
 	rotReq := httptest.NewRequest(http.MethodPost, "/admin/webhooks/"+id+"/rotate-secret", http.NoBody)
-	rotResp, _ := app.Test(rotReq, -1)
+	rotResp, err := app.Test(rotReq, -1)
+	if err != nil {
+		t.Fatal(err)
+	}
 	defer rotResp.Body.Close()
 	if rotResp.StatusCode != http.StatusOK {
 		t.Fatalf("expected 200, got %d", rotResp.StatusCode)
 	}
 
 	var rotated map[string]interface{}
-	json.NewDecoder(rotResp.Body).Decode(&rotated)
+	if err := json.NewDecoder(rotResp.Body).Decode(&rotated); err != nil {
+		t.Fatal(err)
+	}
 	newSecret, _ := rotated["secret"].(string)
 	if newSecret == "" {
 		t.Fatal("expected new secret in response")
@@ -1436,7 +1596,10 @@ func TestWebhook_RotateSecret_NotFound(t *testing.T) {
 	app, _, _ := setupAdminTestApp(t)
 
 	req := httptest.NewRequest(http.MethodPost, "/admin/webhooks/nonexistent/rotate-secret", http.NoBody)
-	resp, _ := app.Test(req, -1)
+	resp, err := app.Test(req, -1)
+	if err != nil {
+		t.Fatal(err)
+	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusNotFound {
 		t.Fatalf("expected 404, got %d", resp.StatusCode)
@@ -1447,7 +1610,10 @@ func TestWebhook_Test_NotFound(t *testing.T) {
 	app, _, _ := setupAdminTestApp(t)
 
 	req := httptest.NewRequest(http.MethodPost, "/admin/webhooks/nonexistent/test", http.NoBody)
-	resp, _ := app.Test(req, -1)
+	resp, err := app.Test(req, -1)
+	if err != nil {
+		t.Fatal(err)
+	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusNotFound {
 		t.Fatalf("expected 404, got %d", resp.StatusCode)
@@ -1471,15 +1637,23 @@ func TestWebhook_Test_Success(t *testing.T) {
 	})
 	createReq := httptest.NewRequest(http.MethodPost, "/admin/webhooks", bytes.NewReader(createBody))
 	createReq.Header.Set("Content-Type", "application/json")
-	createResp, _ := app.Test(createReq, -1)
+	createResp, err := app.Test(createReq, -1)
+	if err != nil {
+		t.Fatal(err)
+	}
 	defer createResp.Body.Close()
 	var created map[string]interface{}
-	json.NewDecoder(createResp.Body).Decode(&created)
+	if err := json.NewDecoder(createResp.Body).Decode(&created); err != nil {
+		t.Fatal(err)
+	}
 	id := created["id"].(string)
 
 	// Send test
 	testReq := httptest.NewRequest(http.MethodPost, "/admin/webhooks/"+id+"/test", http.NoBody)
-	testResp, _ := app.Test(testReq, -1)
+	testResp, err := app.Test(testReq, -1)
+	if err != nil {
+		t.Fatal(err)
+	}
 	defer testResp.Body.Close()
 	if testResp.StatusCode != http.StatusOK {
 		respBody, _ := io.ReadAll(testResp.Body)
@@ -1495,24 +1669,31 @@ func TestListInviteTokens_Pagination_Defaults(t *testing.T) {
 	app, _, inviteTokenRepo := setupAdminTestApp(t)
 
 	// Seed tokens
-	for i := 0; i < 3; i++ {
-		inviteTokenRepo.Create(&models.InviteToken{
+	for i := range 3 {
+		if err := inviteTokenRepo.Create(&models.InviteToken{
 			ID:        "tok-" + fmt.Sprint(i),
 			Token:     "seed-" + fmt.Sprint(i),
 			CreatedBy: "admin",
 			ExpiresAt: time.Now().Add(24 * time.Hour),
-		})
+		}); err != nil {
+			t.Fatal(err)
+		}
 	}
 
 	t.Run("page=0 defaults to 1", func(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/admin/invite-tokens?page=0", http.NoBody)
-		resp, _ := app.Test(req, -1)
+		resp, err := app.Test(req, -1)
+		if err != nil {
+			t.Fatal(err)
+		}
 		defer resp.Body.Close()
 		if resp.StatusCode != http.StatusOK {
 			t.Fatalf("expected 200, got %d", resp.StatusCode)
 		}
 		var body map[string]any
-		json.NewDecoder(resp.Body).Decode(&body)
+		if err := json.NewDecoder(resp.Body).Decode(&body); err != nil {
+			t.Fatal(err)
+		}
 		tokens, _ := body["tokens"].([]any)
 		if len(tokens) != 3 {
 			t.Fatalf("expected 3 tokens with page=0, got %d", len(tokens))
@@ -1525,13 +1706,18 @@ func TestListInviteTokens_Pagination_Defaults(t *testing.T) {
 
 	t.Run("limit=0 defaults to 50", func(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/admin/invite-tokens?limit=0", http.NoBody)
-		resp, _ := app.Test(req, -1)
+		resp, err := app.Test(req, -1)
+		if err != nil {
+			t.Fatal(err)
+		}
 		defer resp.Body.Close()
 		if resp.StatusCode != http.StatusOK {
 			t.Fatalf("expected 200, got %d", resp.StatusCode)
 		}
 		var body map[string]any
-		json.NewDecoder(resp.Body).Decode(&body)
+		if err := json.NewDecoder(resp.Body).Decode(&body); err != nil {
+			t.Fatal(err)
+		}
 		tokens, _ := body["tokens"].([]any)
 		if len(tokens) != 3 {
 			t.Fatalf("expected 3 tokens with limit=0, got %d", len(tokens))
@@ -1540,13 +1726,18 @@ func TestListInviteTokens_Pagination_Defaults(t *testing.T) {
 
 	t.Run("limit=-1 defaults to 50", func(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/admin/invite-tokens?limit=-1", http.NoBody)
-		resp, _ := app.Test(req, -1)
+		resp, err := app.Test(req, -1)
+		if err != nil {
+			t.Fatal(err)
+		}
 		defer resp.Body.Close()
 		if resp.StatusCode != http.StatusOK {
 			t.Fatalf("expected 200, got %d", resp.StatusCode)
 		}
 		var body map[string]any
-		json.NewDecoder(resp.Body).Decode(&body)
+		if err := json.NewDecoder(resp.Body).Decode(&body); err != nil {
+			t.Fatal(err)
+		}
 		total, _ := body["total"].(float64)
 		if total != 3 {
 			t.Fatalf("expected total 3, got %f", total)
@@ -1555,13 +1746,18 @@ func TestListInviteTokens_Pagination_Defaults(t *testing.T) {
 
 	t.Run("page > total returns empty", func(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/admin/invite-tokens?page=999", http.NoBody)
-		resp, _ := app.Test(req, -1)
+		resp, err := app.Test(req, -1)
+		if err != nil {
+			t.Fatal(err)
+		}
 		defer resp.Body.Close()
 		if resp.StatusCode != http.StatusOK {
 			t.Fatalf("expected 200, got %d", resp.StatusCode)
 		}
 		var body map[string]any
-		json.NewDecoder(resp.Body).Decode(&body)
+		if err := json.NewDecoder(resp.Body).Decode(&body); err != nil {
+			t.Fatal(err)
+		}
 		tokens, _ := body["tokens"].([]any)
 		if len(tokens) != 0 {
 			t.Fatalf("expected empty list for page beyond total, got %d", len(tokens))
@@ -1573,7 +1769,7 @@ func TestListWebhooks_Pagination(t *testing.T) {
 	app, _, _ := setupAdminTestApp(t)
 
 	// Seed webhooks via POST endpoint
-	for i := 0; i < 3; i++ {
+	for i := range 3 {
 		body, _ := json.Marshal(map[string]interface{}{
 			"name":   "WH-" + fmt.Sprint(i),
 			"url":    "https://example.com/" + fmt.Sprint(i),
@@ -1581,7 +1777,10 @@ func TestListWebhooks_Pagination(t *testing.T) {
 		})
 		req := httptest.NewRequest(http.MethodPost, "/admin/webhooks", bytes.NewReader(body))
 		req.Header.Set("Content-Type", "application/json")
-		resp, _ := app.Test(req, -1)
+		resp, err := app.Test(req, -1)
+		if err != nil {
+			t.Fatal(err)
+		}
 		resp.Body.Close()
 		if resp.StatusCode != http.StatusCreated {
 			t.Fatalf("failed to seed webhook %d: %d", i, resp.StatusCode)
@@ -1590,13 +1789,18 @@ func TestListWebhooks_Pagination(t *testing.T) {
 
 	t.Run("response has pagination fields", func(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/admin/webhooks", http.NoBody)
-		resp, _ := app.Test(req, -1)
+		resp, err := app.Test(req, -1)
+		if err != nil {
+			t.Fatal(err)
+		}
 		defer resp.Body.Close()
 		if resp.StatusCode != http.StatusOK {
 			t.Fatalf("expected 200, got %d", resp.StatusCode)
 		}
 		var body map[string]any
-		json.NewDecoder(resp.Body).Decode(&body)
+		if err := json.NewDecoder(resp.Body).Decode(&body); err != nil {
+			t.Fatal(err)
+		}
 		if _, ok := body["webhooks"]; !ok {
 			t.Fatal("expected webhooks key in response")
 		}
@@ -1613,10 +1817,15 @@ func TestListWebhooks_Pagination(t *testing.T) {
 
 	t.Run("page=0 defaults to 1", func(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/admin/webhooks?page=0", http.NoBody)
-		resp, _ := app.Test(req, -1)
+		resp, err := app.Test(req, -1)
+		if err != nil {
+			t.Fatal(err)
+		}
 		defer resp.Body.Close()
 		var body map[string]any
-		json.NewDecoder(resp.Body).Decode(&body)
+		if err := json.NewDecoder(resp.Body).Decode(&body); err != nil {
+			t.Fatal(err)
+		}
 		webhooks, _ := body["webhooks"].([]any)
 		if len(webhooks) != 3 {
 			t.Fatalf("expected 3 webhooks with page=0, got %d", len(webhooks))
@@ -1625,14 +1834,18 @@ func TestListWebhooks_Pagination(t *testing.T) {
 
 	t.Run("limit=0 defaults to 50", func(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/admin/webhooks?limit=0", http.NoBody)
-		resp, _ := app.Test(req, -1)
+		resp, err := app.Test(req, -1)
+		if err != nil {
+			t.Fatal(err)
+		}
 		defer resp.Body.Close()
 		var body map[string]any
-		json.NewDecoder(resp.Body).Decode(&body)
+		if err := json.NewDecoder(resp.Body).Decode(&body); err != nil {
+			t.Fatal(err)
+		}
 		webhooks, _ := body["webhooks"].([]any)
 		if len(webhooks) != 3 {
 			t.Fatalf("expected 3 webhooks with limit=0, got %d", len(webhooks))
 		}
 	})
 }
-

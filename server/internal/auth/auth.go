@@ -1,9 +1,6 @@
 package auth
 
 import (
-	"bedrud/config"
-	"bedrud/internal/models"
-	"bedrud/internal/repository"
 	"crypto/rand"
 	"crypto/sha256"
 	"crypto/x509"
@@ -13,6 +10,11 @@ import (
 	"net/mail"
 	"strings"
 	"time"
+
+	"bedrud/config"
+	"bedrud/internal/models"
+	"bedrud/internal/repository"
+	"bedrud/internal/storage"
 
 	"golang.org/x/net/idna"
 
@@ -137,7 +139,7 @@ func (s *AuthService) Register(email, password, name string) (*models.User, erro
 	user := &models.User{
 		ID:        uuid.New().String(),
 		Email:     email,
-		Password:  string(hashedPassword),
+		Password:  hashedPassword,
 		Name:      name,
 		Provider:  "local",
 		Accesses:  models.StringArray{"user"}, // Use our custom type
@@ -164,9 +166,16 @@ func (s *AuthService) Register(email, password, name string) (*models.User, erro
 // @Failure 401 {object} ErrorResponse
 // @Router /auth/login [post]
 func (s *AuthService) Login(email, password string) (*LoginResponse, error) {
-	user, err := s.GetUserByEmail(email)
+	// Prefer local provider; fall back to passkey accounts that set a password.
+	user, err := s.userRepo.GetUserByEmailAndProvider(email, models.ProviderLocal)
 	if err != nil {
 		return nil, err
+	}
+	if user == nil {
+		user, err = s.userRepo.GetUserByEmailAndProvider(email, models.ProviderPasskey)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	// Dummy bcrypt hash used to maintain constant-time response when user is nil,
@@ -205,6 +214,7 @@ func (s *AuthService) Login(email, password string) (*LoginResponse, error) {
 	if err := s.userRepo.UpdateRefreshToken(user.ID, refreshToken); err != nil {
 		return nil, errors.New("failed to save refresh token")
 	}
+	UnbanUser(user.ID)
 
 	return &LoginResponse{
 		User: user,
@@ -342,6 +352,33 @@ func (s *AuthService) UpdateProfile(userID, name string) (*models.User, error) {
 	return user, nil
 }
 
+func (s *AuthService) UpdateAvatarURL(userID, avatarURL string) (*models.User, error) {
+	user, err := s.userRepo.GetUserByID(userID)
+	if err != nil || user == nil {
+		return nil, errors.New("user not found")
+	}
+	user.AvatarURL = avatarURL
+	if err := s.userRepo.UpdateUser(user); err != nil {
+		return nil, err
+	}
+	return user, nil
+}
+
+func (s *AuthService) ClearAvatar(userID string) (*models.User, error) {
+	user, err := s.userRepo.GetUserByID(userID)
+	if err != nil || user == nil {
+		return nil, errors.New("user not found")
+	}
+	if strings.HasPrefix(user.AvatarURL, "/uploads/avatars/") {
+		_ = storage.DeleteUserAvatarFiles(userID)
+	}
+	user.AvatarURL = ""
+	if err := s.userRepo.UpdateUser(user); err != nil {
+		return nil, err
+	}
+	return user, nil
+}
+
 // ChangeEmail updates the user's email address, clears verification status,
 // and invalidates all existing sessions (forces re-login).
 func (s *AuthService) ChangeEmail(userID, newEmail string) error {
@@ -404,7 +441,7 @@ func (s *AuthService) ChangePassword(userID, currentPassword, newPassword, acces
 	}
 	// Use UpdatePassword to atomically update the hash and clear refresh_token,
 	// invalidating all active sessions. Matches admin SetUserPassword behavior.
-	if err := s.userRepo.UpdatePassword(userID, string(hashed)); err != nil {
+	if err := s.userRepo.UpdatePassword(userID, hashed); err != nil {
 		return err
 	}
 	RevokeAccessToken(accessToken, config.Get())
@@ -425,8 +462,8 @@ func (s *AuthService) ResetPassword(userID, newPassword string, accessTokens ...
 		return err
 	}
 
-	// Atomically update password and clear refresh_token (invalidates all sessions)
-	if err := s.userRepo.UpdatePassword(userID, string(hashed)); err != nil {
+	// Concurrent-safe: only one reset wins when PasswordChangedAt still matches.
+	if err := s.userRepo.UpdatePasswordIfUnchanged(userID, hashed, user.PasswordChangedAt); err != nil {
 		return err
 	}
 
@@ -444,7 +481,7 @@ func (s *AuthService) ResetPassword(userID, newPassword string, accessTokens ...
 // @Summary Logout user
 // @Description Invalidate refresh token and logout user
 // @Tags auth
-func (s *AuthService) Logout(userID string, refreshToken string, accessToken string) error {
+func (s *AuthService) Logout(userID, refreshToken, accessToken string) error {
 	if err := s.BlockRefreshToken(userID, refreshToken); err != nil {
 		return err
 	}
@@ -724,6 +761,7 @@ func (s *AuthService) FinishLoginPasskey(challengeStr string, credentialID, clie
 	if err := s.userRepo.UpdateRefreshToken(user.ID, refreshToken); err != nil {
 		return nil, errors.New("failed to save refresh token")
 	}
+	UnbanUser(user.ID)
 
 	return &LoginResponse{
 		User: user,
@@ -779,10 +817,7 @@ func buildProviders(
 	googleID, googleSecret, googleRedirect,
 	githubID, githubSecret, githubRedirect,
 	twitterID, twitterSecret, twitterRedirect string,
-) ([]goth.Provider, []string) {
-	var providers []goth.Provider
-	var names []string
-
+) (providers []goth.Provider, names []string) {
 	if googleID != "" && googleSecret != "" && !looksLikePlaceholder(googleID) && !looksLikePlaceholder(googleSecret) {
 		p := google.New(googleID, googleSecret, googleRedirect, "email", "profile", "openid")
 		p.SetHostedDomain("")

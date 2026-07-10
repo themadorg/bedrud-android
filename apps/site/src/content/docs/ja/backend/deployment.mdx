@@ -4,31 +4,31 @@ description: バックエンドのデプロイ戦略
 order: 21
 ---
 
-組み込みのインストーラーは、1つのコマンドで新規Linuxサーバーを本番環境用に設定します。
+The built-in installer configures a fresh Linux server for production use with a single command.
 
 <InstallerSteps />
 
 <SystemdServices />
 
-## セキュリティとTLS
+## Security and TLS
 
-インストーラーはセキュリティ設定を自動的に行います:
+The installer handles security automatically:
 
-- **ACME (Let's Encrypt):** ドメインとメールアドレスを指定すると、自動証明書更新を設定します。
-- **自己署名証明書:** ドメインが指定されていない場合、自己署名証明書を生成し、HTTPSでサイトが機能するようにします。
-- **リバースプロキシ:** バックエンドはリバースプロキシとして機能します。ポート443でトラフィックを受け付け、`/livekit`リクエストを内部メディアサーバーに転送します。
+- **ACME (Let's Encrypt):** If you provide a domain and email, it sets up automatic certificate renewal.
+- **Self-Signed Certs:** If no domain is provided, it generates a self-signed certificate so that the site still works over HTTPS. The server auto-renews the certificate daily when it's within 30 days of expiry. Use `bedrud cert renew` for manual renewal.
+- **Reverse Proxy:** The backend acts as a reverse proxy. It receives traffic on port 443 and sends `/livekit` requests to the internal media server.
 
-## アンインストール
+## Uninstallation
 
-Bedrudを削除する必要がある場合、以下を実行します:
+If you need to remove Bedrud, you can run:
 ```bash
 sudo bedrud uninstall
 ```
-このコマンドはサービスを停止し、イニットサービスファイル（systemd、OpenRC、SysV init）を削除し、設定フォルダとデータフォルダを削除します。
+This stops the services, deletes the init service files (systemd, OpenRC, or SysV init), and removes the configuration and data folders.
 
 ---
 
-## 関連情報
+## See also
 
-- [デプロイガイド](/ja/docs/guides/deployment) - 本番環境デプロイの詳細な手順
-- [アプライアンスモード](/ja/docs/guides/appliance) - シングルバイナリセットアップのリファレンス
+- [Deployment Guide](/ja/docs/guides/deployment) - full production deployment instructions
+- [Appliance Mode](/ja/docs/guides/appliance) - single-binary setup reference

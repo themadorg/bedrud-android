@@ -184,4 +184,45 @@
   <string name="profile_label_userId">ID пользователя</string>
   <string name="profile_label_provider">Провайдер</string>
   <string name="profile_button_signOut">Выйти</string>
+
+  <string name="meeting_contentDescription_stopScreenShare">Остановить демонстрацию экрана</string>
+  <string name="meeting_contentDescription_maximizeScreenShare">На весь экран</string>
+  <string name="meeting_contentDescription_minimizeScreenShare">Выйти из полноэкранного режима</string>
+  <string name="meeting_stage_screenShareTitle">Демонстрация экрана</string>
+  <string name="meeting_stage_screenSharePresenting"><xliff:g id="name" example="Alex">%1$s</xliff:g> демонстрирует экран</string>
+  <string name="meeting_stage_screenShareWaiting">Ожидание экрана <xliff:g id="name" example="Alex">%1$s</xliff:g>…</string>
+  <string name="meeting_contentDescription_closeImagePreview">Закрыть просмотр изображения</string>
+  <string name="meeting_contentDescription_viewImage">Просмотреть изображение</string>
+  <string name="call_default_room_name">Встреча</string>
+  <string name="screen_share_channel_name">Демонстрация экрана</string>
+  <string name="screen_share_channel_description">Отображается, пока вы делитесь экраном</string>
+  <string name="screen_share_notification_title">Идёт демонстрация экрана</string>
+  <string name="screen_share_notification_text">Ваш экран виден участникам встречи</string>
+  <string name="meeting_error_permissionsRequired">Для входа нужны разрешения на камеру и микрофон.</string>
+  <string name="meeting_error_screenShareFailed">Не удалось начать демонстрацию экрана.</string>
+  <string name="meeting_sheet_chat">Чат</string>
+  <string name="meeting_sheet_addOthers">Добавить других</string>
+  <string name="meeting_share_chooserTitle">Поделиться ссылкой на встречу</string>
+  <string name="meeting_sheet_flipCamera">Переключить камеру</string>
+  <string name="meeting_sheet_settings">Настройки</string>
+  <string name="meeting_sheet_tools">Инструменты</string>
+  <string name="meeting_sheet_report">Сообщить о нарушении</string>
+  <string name="meeting_contentDescription_audioSource">Источник звука</string>
+  <string name="meeting_audio_sheet_title">Звук</string>
+  <string name="meeting_audio_sheet_microphone">Микрофон</string>
+  <string name="meeting_audio_sheet_micOn">Микрофон включён</string>
+  <string name="meeting_audio_sheet_micOff">Микрофон выключен</string>
+  <string name="meeting_audio_sheet_output">Вывод звука</string>
+  <string name="meeting_audio_device_speaker">Динамик</string>
+  <string name="meeting_audio_device_earpiece">Телефон</string>
+  <string name="meeting_audio_device_wired_headset">Проводная гарнитура</string>
+  <string name="meeting_audio_device_bluetooth">Bluetooth</string>
+  <string name="meeting_audio_sheet_noDevices">Нет доступных аудиоустройств</string>
+  <string name="dashboard_filter_recent">Недавние</string>
+  <string name="dashboard_dialog_deleteTitle">Удалить комнату?</string>
+  <string name="dashboard_dialog_deleteMessage">Вы уверены, что хотите удалить <xliff:g id="roomName" example="team-standup">%1$s</xliff:g>? Это действие нельзя отменить.</string>
+  <string name="dashboard_empty_noRecent">Нет недавних комнат</string>
+  <string name="dashboard_empty_noRecentHint">Комнаты, в которые вы входите, появляются здесь, в том числе с других серверов.</string>
+  <string name="dashboard_contentDescription_removeRecent">Удалить из недавних</string>
+  <string name="dashboard_recent_onServer">на <xliff:g id="serverName" example="My Server">%1$s</xliff:g></string>
 </resources>

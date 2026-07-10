@@ -4,189 +4,189 @@ description: أوامر أتمتة البناء
 order: 31
 ---
 
-ملف `Makefile` الرئيسي هو أداة تنسيق البناء المركزية لمستودع Bedrud الأحادي. يوفر أوامر للتطوير والبناء والنشر عبر جميع المنصات.
+The root `Makefile` is the central build orchestration tool for the Bedrud monorepo. It provides commands for development, building, and deployment across all platforms.
 
-## الاستخدام
+## Usage
 
 ```bash
 make <target>
 make help       # Show all available targets
 ```
 
-## أهداف التطوير
+## Development Targets
 
-| الهدف | الوصف |
+| Target | Description |
 |--------|-------------|
-| `make init` | تثبيت جميع التبعيات (LiveKit + الإعدادات + bun + Go) |
-| `make dev` | تشغيل LiveKit + الخادم (إعادة التحميل التلقائي) + الويب بشكل متزامن |
-| `make dev-web` | تشغيل خادم تطوير الواجهة فقط |
-| `make dev-server` | تشغيل خادم الخلفية + LiveKit |
-| `make dev-server-hot` | تشغيل الخلفية مع Air (إعادة التحميل التلقائي) |
-| `make dev-api` | تشغيل الخلفية فقط، بدون LiveKit |
-| `make dev-livekit` | تشغيل خادم LiveKit المحلي |
-| `make dev-site` | تشغيل خادم تطوير موقع Astro |
-| `make dev-ios` | فتح مشروع iOS في Xcode |
-| `make dev-android` | فتح مشروع Android في Android Studio |
-| `make livekit-download` | تنزيل خادم LiveKit لنظام التشغيل والمعمارية الحاليين |
+| `make init` | Install all dependencies (LiveKit + config + bun + Go) |
+| `make dev` | Run LiveKit + server (hot reload) + web concurrently |
+| `make dev-web` | Run frontend dev server only |
+| `make dev-server` | Run backend server + LiveKit |
+| `make dev-server-hot` | Run backend with Air hot reload |
+| `make dev-api` | Run backend only, no LiveKit |
+| `make dev-livekit` | Run local LiveKit server |
+| `make dev-site` | Run Astro site dev server |
+| `make dev-ios` | Open iOS project in Xcode |
+| `make dev-android` | Open Android project in Android Studio |
+| `make livekit-download` | Download LiveKit server for current OS/arch |
 
 ### `make init`
 
-إعداد كامل لبيئة تطوير جديدة:
+Full setup for a new development environment:
 
-1. تنزيل ملف LiveKit الثنائي إلى `~/.local/bin/` (إذا لم يكن في PATH)
-2. إنشاء `server/config.yaml` من قالب `config.local.yaml` (إذا لم يكن موجودًا)
-3. إنشاء عنصر نائب لـ LiveKit المدمج في `server/internal/livekit/bin/livekit-server`
-4. تثبيت `air` لإعادة التحميل التلقائي لـ Go (إذا لم يكن مثبتًا)
-5. تثبيت التبعيات: `apps/web` (bun)، `apps/site` (bun)، `server` (go mod)
+1. Downloads LiveKit server binary to `~/.local/bin/` (if not in PATH)
+2. Creates `server/config.yaml` from `config.local.yaml` template (if missing)
+3. Creates LiveKit embed placeholder at `server/internal/livekit/bin/livekit-server`
+4. Installs `air` for Go hot reload (if not present)
+5. Installs dependencies: `apps/web` (bun), `apps/site` (bun), `server` (go mod)
 
 ### `make dev`
 
-يُشغّل خدمات التطوير الثلاث بشكل متزامن. اضغط `Ctrl+C` لإيقاف الكل:
+Starts all three development services concurrently. Press `Ctrl+C` to stop all:
 
-- **LiveKit** على `localhost:7880`
-- **الخادم** على `localhost:8090`
-- **الويب** على `localhost:3000`
+- **LiveKit** at `localhost:7880`
+- **Server** at `localhost:8090`
+- **Web** at `localhost:3000`
 
-## أهداف البناء
+## Build Targets
 
-| الهدف | الوصف |
+| Target | Description |
 |--------|-------------|
-| `make build` | بناء الواجهة + الخلفية (مضمنة) |
-| `make build-front` | بناء الواجهة فقط |
-| `make build-back` | بناء الخلفية فقط |
-| `make build-dist` | بناء أرشيف إنتاج linux/amd64 |
-| `make build-back-win` | بناء الخلفية لنظام Windows |
-| `make build-dist-win` | بناء توزيعة إنتاج لنظام Windows |
-| `make prep-livekit-win` | التأكد من توفر ملف LiveKit الثنائي لنظام Windows للتضمين |
-| `make build-site` | بناء موقع Astro (SSG) |
+| `make build` | Build frontend + backend (embedded) |
+| `make build-front` | Build frontend only |
+| `make build-back` | Build backend only |
+| `make build-dist` | Build production linux/amd64 tarball |
+| `make build-back-win` | Build backend for Windows |
+| `make build-dist-win` | Build production Windows distribution |
+| `make prep-livekit-win` | Ensure LiveKit Windows binary is available for embedding |
+| `make build-site` | Build Astro site (SSG) |
 
 ### `make build`
 
-بناء إنتاجي كامل:
+Full production build:
 
-1. يُشغّل `bun run build` في `apps/web` — يبني تطبيق React
-2. ينسخ `apps/web/dist/client/*` → `server/frontend/`
-3. يبني الملف الثنائي Go مع الواجهة المضمنة
+1. Runs `bun run build` in `apps/web` — builds the React app
+2. Copies `apps/web/dist/client/*` → `server/frontend/`
+3. Builds the Go binary with the embedded frontend
 
-المخرجات: `server/dist/bedrud`
+Output: `server/dist/bedrud`
 
 ### `make build-dist`
 
-ينشئ توزيعة إنتاجية مضغوطة:
+Creates a compressed, production-ready distribution:
 
-1. يُشغّل `make build`
-2. يُترجم تصادريًا لـ `linux/amd64` مع إزالة رموز التنقيح
-3. ينشئ `dist/bedrud_linux_amd64.tar.xz`
+1. Runs `make build`
+2. Cross-compiles for `linux/amd64` with stripped debug symbols
+3. Creates `dist/bedrud_linux_amd64.tar.xz`
 
-## أهداف سطح المكتب
+## Desktop Targets
 
-| الهدف | الوصف |
+| Target | Description |
 |--------|-------------|
-| `make dev-desktop` | بناء وتشغيل تطبيق سطح المكتب (تصحيح) |
-| `make build-desktop` | بناء ملف ثنائي release محسّن |
+| `make dev-desktop` | Build and run desktop app (debug) |
+| `make build-desktop` | Build optimized release binary |
 
-## ملف ثنائي محلي واحد
+## Local Single Binary
 
-| الهدف | الوصف |
+| Target | Description |
 |--------|-------------|
-| `make local-build` | بناء الواجهة + الخلفية في ملف ثنائي واحد |
-| `make local-run` | بناء + تشغيل محلي (SQLite، LiveKit مضمن) |
+| `make local-build` | Build frontend + backend into one binary |
+| `make local-run` | Build + run locally (SQLite, embedded LiveKit) |
 
 ### `make local-run`
 
-يبني ويبدأ الملف الثنائي الواحد بالإعدادات المحلية:
+Builds and starts the single binary with local config:
 
 ```bash
 CONFIG_PATH=server/config.local.yaml server/dist/bedrud run
 ```
 
-افتح `http://localhost:8090` عند الاستعداد.
+Open `http://localhost:8090` when ready.
 
-## توثيق API
+## API Docs
 
-| الهدف | الوصف |
+| Target | Description |
 |--------|-------------|
-| `make swagger-gen` | إعادة توليد توثيق Swagger من التعليقات التوضيحية |
-| `make swagger-open` | فتح Swagger UI في المتصفح |
-| `make scalar-open` | فتح Scalar UI في المتصفح |
+| `make swagger-gen` | Regenerate Swagger docs from annotations |
+| `make swagger-open` | Open Swagger UI in browser |
+| `make scalar-open` | Open Scalar UI in browser |
 
-يتطلب CLI `swag` (`go install github.com/swaggo/swag/cmd/swag@latest`). يجب أن يكون الخادم قيد التشغيل لاستخدام `swagger-open` و `scalar-open`.
+Requires `swag` CLI (`go install github.com/swaggo/swag/cmd/swag@latest`). Server must be running for `swagger-open` and `scalar-open`.
 
-## أهداف Android
+## Android Targets
 
-| الهدف | الوصف |
+| Target | Description |
 |--------|-------------|
-| `make build-android-debug` | بناء APK تصحيح |
-| `make build-android` | بناء APK إصدار (يتطلب مخزن مفاتيح) |
-| `make install-android` | تثبيت APK الإصدار على الجهاز المتصل |
-| `make release-android` | بناء + تثبيت APK الإصدار |
+| `make build-android-debug` | Build debug APK |
+| `make build-android` | Build release APK (requires keystore) |
+| `make install-android` | Install release APK on connected device |
+| `make release-android` | Build + install release APK |
 
-### مسارات مخرجات APK
+### APK Output Paths
 
-- التصحيح: `apps/android/app/build/outputs/apk/debug/app-debug.apk`
-- الإصدار: `apps/android/app/build/outputs/apk/release/app-release.apk`
+- Debug: `apps/android/app/build/outputs/apk/debug/app-debug.apk`
+- Release: `apps/android/app/build/outputs/apk/release/app-release.apk`
 
-## أهداف iOS
+## iOS Targets
 
-| الهدف | الوصف |
+| Target | Description |
 |--------|-------------|
-| `make build-ios` | بناء أرشيف iOS (إصدار) |
-| `make export-ios` | تصدير IPA من الأرشيف |
-| `make build-ios-sim` | بناء لمحاكي iOS (تصحيح) |
+| `make build-ios` | Build iOS archive (Release) |
+| `make export-ios` | Export IPA from archive |
+| `make build-ios-sim` | Build for iOS Simulator (Debug) |
 
-### مسارات المخرجات
+### Output Paths
 
-- الأرشيف: `apps/ios/build/Bedrud.xcarchive`
+- Archive: `apps/ios/build/Bedrud.xcarchive`
 - IPA: `apps/ios/build/export/Bedrud.ipa`
 
-## هدف النشر
+## Deploy Target
 
-| الهدف | الوصف |
+| Target | Description |
 |--------|-------------|
-| `make deploy ARGS=...` | تشغيل أداة نشر CLI |
+| `make deploy ARGS=...` | Run the deployment CLI tool |
 
-### مثال
+### Example
 
 ```bash
 make deploy ARGS="--auto-config --ip 1.2.3.4 --user root --domain meet.example.com"
 ```
 
-يُشغّل أداة CLI في Python عند `tools/cli/bedrud.py` بالمعطيات المقدمة.
+This runs the Python CLI at `tools/cli/bedrud.py` with the provided arguments.
 
-## الاختبار
+## Test
 
-| الهدف | الوصف |
+| Target | Description |
 |--------|-------------|
-| `make test-back` | تشغيل اختبارات الخلفية (`go test -v -count=1 ./...`) |
+| `make test-back` | Run backend tests (`go test -v -count=1 ./...`) |
 
-## أهداف التنظيف
+## Clean Targets
 
-| الهدف | الوصف |
+| Target | Description |
 |--------|-------------|
-| `make clean` | إزالة مُنتَجات البناء والملفات الثنائية المُترجمة |
-| `make full-clean` | إزالة المُنتَجات + جميع التبعيات المثبتة |
+| `make clean` | Remove build artifacts and compiled binaries |
+| `make full-clean` | Remove artifacts + all installed dependencies |
 
 ### `make clean`
 
-يزيل:
+Removes:
 
-- `dist/` — أرشيفات التوزيعة
-- `server/dist/` — الملف الثنائي المُترجم للخادم
-- `apps/web/dist/` — مخرجات بناء React
-- محتويات `server/frontend/` — أصول الواجهة المضمنة
-- `apps/android/app/build/` — مخرجات بناء Android
-- `apps/ios/build/` — مخرجات بناء iOS
-- `apps/site/dist/` — مخرجات بناء موقع Astro
-- `target/` — مخرجات بناء Rust/Cargo
+- `dist/` — distribution tarballs
+- `server/dist/` — compiled server binary
+- `apps/web/dist/` — React build output
+- `server/frontend/` contents — embedded frontend assets
+- `apps/android/app/build/` — Android build outputs
+- `apps/ios/build/` — iOS build outputs
+- `apps/site/dist/` — Astro site build output
+- `target/` — Rust/Cargo build output
 
 ### `make full-clean`
 
-كل ما يفعله `clean`، بالإضافة إلى:
+Everything `clean` does, plus:
 
 - `apps/web/node_modules/`
 - `apps/site/node_modules/`
 - `apps/android/.gradle/`
 - `apps/android/build/`
-- ذاكرة تخزين وحدات Go (`go clean -modcache`)
+- Go module cache (`go clean -modcache`)
 
-شغّل `make init` بعدها لإعادة تثبيت التبعيات.
+Run `make init` afterwards to reinstall dependencies.

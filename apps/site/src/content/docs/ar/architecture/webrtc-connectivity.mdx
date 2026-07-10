@@ -4,13 +4,13 @@ description: STUN/ICE/TURN وتوجيه الوسائط
 order: 13
 ---
 
-كيف يؤسس العملاء اتصالات وسائط في الوقت الفعلي في بدرود. يغطي مسار الاتصال الكامل: الإشارات و`ICE` و`STUN` و`TURN` ومسار وسائط `SFU`.
+How clients establish real-time media connections in Bedrud. Covers the full connectivity stack: signaling, ICE, STUN, TURN, and the SFU media path.
 
 ---
 
-## نظرة عامة
+## Overview
 
-يتطلب WebRTC سلسلة من الخطوات قبل أن يتدفق الصوت والفيديو بين العميل والخادم. يستخدم بدرود بنية `SFU` (وحدة الإرسال الانتقائي) من LiveKit - يتصل العملاء بالخادم، وليس ببعضهم. **هذا يعني أن مسار الشبكة بين العميل والخادم فقط هو المهم**، وليس الاتصال بين المشاركين فرديًا.
+WebRTC requires a series of steps before audio and video flow between client and server. Bedrud uses LiveKit's SFU (Selective Forwarding Unit) architecture - clients connect to the server, not to each other. **This means only the client-to-server network path matters**, not the connection between individual participants.
 
 ```mermaid
 sequenceDiagram
@@ -46,9 +46,9 @@ sequenceDiagram
 
 ---
 
-## مسار الاتصال
+## Connectivity Stack
 
-خمس طبقات تعمل معًا لتأسيس مسار الوسائط:
+Five layers work together to establish the media path:
 
 ```mermaid
 flowchart TB
@@ -68,21 +68,21 @@ flowchart TB
     TURN */} SFU
 ```
 
-### تفاصيل الطبقات
+### Layer Details
 
-**١. الإشارات** - يتبادل العميل والخادم بيانات الاتصال الوصفية باستخدام عروض وإجابات `SDP` (بروتوكول وصف الجلسة) عبر WebSocket. هذا ليس وسائط - إنه مرحلة الإعداد. يُوَجِّه بدرود الإشارات عبر خادم API إلى مثيل LiveKit المدمج.
+**1. Signaling** - Client and server exchange connection metadata using SDP (Session Description Protocol) offers and answers via WebSocket. This is not media - it is the setup phase. Bedrud proxies signaling through the API server to the embedded LiveKit instance.
 
-**٢. `ICE` (إنشاء الاتصال التفاعلي)** - يجمع جميع مسارات الاتصال الممكنة، المسماة مرشحين، ويختبرها حسب الأولوية. `ICE` هو إطار عمل - ينسق محاولات الاتصال لكنه ليس بروتوكولًا بحد ذاته.
+**2. ICE (Interactive Connectivity Establishment)** - Gathers all possible connection paths, called candidates, and tests them in order of priority. ICE is a framework - it coordinates the connection attempts but is not a protocol itself.
 
-**٣. `STUN` (أدوات عبور الجلسة لـ NAT)** - بروتوكول خفيف. يرسل العميل طلب ربط إلى خادم `STUN`، الذي يرد بعنوان IP العام للعميل والمنفذ. يُختَبر هذا المرشح "الانعكاسي الخادمي" للاتصال المباشر. يعمل لحوالي 80% من الاتصالات.
+**3. STUN (Session Traversal Utilities for NAT)** - Lightweight protocol. Client sends a binding request to the STUN server, which responds with the client's public IP and port. This "server reflexive" candidate is then tested for direct connectivity. Works for ~80% of connections.
 
-**٤. `TURN` (العبور باستخدام المرحلات حول NAT)** - عندما يفشل الاتصال المباشر، يخصص `TURN` عنوان مرحل على الخادم. تُمرَّر جميع حزم الوسائط عبر هذا المرحل. أعلى تكلفة - عرض نطاق الخادم يزداد مع المستخدمين المُرحَّلين. راجع [دليل خادم TURN](turn-server.mdx) للتغطية المعمقة.
+**4. TURN (Traversal Using Relays around NAT)** - When direct connectivity fails, TURN allocates a relay address on the server. All media packets are forwarded through this relay. Highest cost - server bandwidth scales with relayed users. See the [TURN Server Guide](turn-server.mdx) for deep coverage.
 
-**٥. `SFU` (وحدة الإرسال الانتقائي)** - بمجرد تأسيس مسار النقل، يُوجِّه `SFU` الخاص بـ LiveKit الوسائط بين المشاركين. يرسل كل مشارك تدفقًا واحدًا للأعلى؛ يُعيد `SFU` توجيه نسخ للمشاركين الآخرين. هذا ليس نظير-لنظير - الخادم دائمًا في المسار.
+**5. SFU (Selective Forwarding Unit)** - Once the transport path is established, LiveKit's SFU routes media between participants. Each participant sends one stream up; the SFU forwards copies to other participants. This is not peer-to-peer - the server is always in the path.
 
 ---
 
-## جمع مرشحي ICE
+## ICE Candidate Gathering
 
 ```mermaid
 flowchart TD
@@ -102,21 +102,21 @@ flowchart TD
     TEST */}|"None work"| FAIL[Connection failed]
 ```
 
-يجمع `ICE` ثلاثة أنواع من المرشحين في وقت واحد:
+ICE gathers three candidate types simultaneously:
 
-| النوع | المصدر | الأولوية | طريقة العمل |
+| Type | Source | Priority | How it works |
 |------|--------|----------|-------------|
-| **host** | واجهات الشبكة المحلية | الأعلى | IP مباشر من الجهاز. يعمل على الشبكة المحلية. |
-| **srflx** (انعكاسي خادمي) | استجابة خادم `STUN` | متوسطة | عنوان IP العام المكتشف عبر `STUN`. يعلم لمعظم أنواع `NAT`. |
-| **relay** (مرحل) | تخصيص خادم `TURN` | الأدنى | عنوان على خادم `TURN`. يعمل دائمًا. أعلى تكلفة. |
+| **host** | Local network interfaces | Highest | Direct IP from machine. Works on LAN. |
+| **srflx** (server reflexive) | STUN server response | Medium | Public IP discovered via STUN. Works for most NAT types. |
+| **relay** | TURN server allocation | Lowest | Address on TURN server. Always works. Highest cost. |
 
-يختبر `ICE` جميع المرشحين ويختار الزوج الأعلى أولوية الذي ينجح. إذا نجح `srflx`، يتخطى `relay`.
+ICE tests all candidates and selects the highest-priority pair that succeeds. If `srflx` works, it skips `relay`.
 
 ---
 
-## أنواع NAT والاتصال
+## NAT Types & Connectivity
 
-تؤثر أنواع `NAT` المختلفة على إمكانية الاتصال المباشر:
+Different NAT types affect whether direct connectivity works:
 
 ```mermaid
 flowchart LR
@@ -146,22 +146,22 @@ flowchart LR
 
 ```
 
-| نوع NAT | الوصف | P2P مباشر | يحتاج TURN |
+| NAT Type | Description | Direct P2P | Needs TURN |
 |----------|-------------|------------|-----------|
-| **مخروطي كامل** | جميع الطلبات من نفس IP/منفذ داخلي تُربَط بنفس IP/منفذ عام. أي مضيف خارجي يمكنه الإرسال. | نعم | لا |
-| **مخروطي مقيد** | نفس الربط كالمخروطي الكامل، لكن فقط المضيفون الخارجيون الذين استلموا حزمة يمكنهم الرد. | عادةً | لا |
-| **مخروطي مقيد المنفذ** | مشابه للمخروطي المقيد، لكن `NAT` يقيد رقم المنفذ الخارجي أيضًا. النوع الأكثر شيوعًا في موجهات المنازل. | عادةً | نادرًا |
-| **متماثل** | ربط IP/منفذ عام مختلف لكل وجهة. العنوان المكتشف عبر `STUN` لا يمكن إعادة استخدامه. | لا (عندما يكون كلاهما متماثلًا) | **نعم** |
+| **Full Cone** | All requests from same internal IP/port map to same public IP/port. Any external host can send to it. | Yes | No |
+| **Restricted Cone** | Same mapping as Full Cone, but only external hosts that received a packet can send back. | Usually | No |
+| **Port Restricted Cone** | Similar to Restricted Cone, but the NAT also restricts the external port number. Most common home router type. | Usually | Rarely |
+| **Symmetric** | Different public IP/port mapping per destination. The STUN-discovered address cannot be reused. | No (when both symmetric) | **Yes** |
 
-**نقطة رئيسية:** بما أن الخادم يمتلك عنوان IP عام ونطاق منافذ قابل للتنبؤ، تعمل معظم أنواع `NAT` مباشرة. `TURN` مطلوب بشكل أساسي عندما يمنع جدار حماية العميل UDP الصادر بالكامل.
+**Key insight:** Since the server has a public IP and predictable port range, most NAT types work directly. TURN is mainly needed when the client's firewall blocks outbound UDP entirely.
 
 ---
 
-## ملخص التهيئة
+## Configuration Summary
 
-مفاتيح تهيئة بدرود/LiveKit التي تؤثر على اتصال WebRTC:
+Which Bedrud/LiveKit config keys affect WebRTC connectivity:
 
-**مفاتيح `livekit.yaml`:**
+**`livekit.yaml` keys:**
 
 ```yaml
 rtc:
@@ -184,7 +184,7 @@ turn:
   external_tls: false           # L4 LB terminates TLS
 ```
 
-**مفاتيح `config.yaml` (خادم بدرود):**
+**`config.yaml` keys (Bedrud server):**
 
 ```yaml
 server:
@@ -193,23 +193,23 @@ server:
   domain: "meet.example.com"    # Public domain
 ```
 
-### تصحيح مشاكل الاتصال
+### Debugging Connectivity Issues
 
-| العَرَض | التحقق |
+| Symptom | Check |
 |---------|-------|
-| لا يمكن الاتصال إطلاقًا | هل `rtc.use_external_ip: true`؟ هل جدار الحماية مفتوح على 443 + نطاق UDP؟ |
-| يتصل لكن بدون صوت/فيديو | هل UDP 50000-60000 محظور؟ تحقق من مرشحي `ICE` في المتصفح. |
-| اتصال بطيء | مرحل `TURN` نشط (تحقق من المرشحين). متوقع إذا كان العميل خلف `NAT` صارم. |
-| يفشل خلف شبكة مؤسسية | `TURN`/TLS غير مُهيأ. اضبط `turn.tls_port: 443` مع شهادة صالحة. |
-| يعمل على الشبكة المحلية، يفشل عن بُعد | عنوان IP العام غير مُعلَن. اضبط `rtc.use_external_ip: true`. |
+| Can't connect at all | `rtc.use_external_ip: true`? Firewall open on 443 + UDP range? |
+| Connects but no audio/video | UDP 50000-60000 blocked? Check ICE candidates in browser. |
+| Slow connection | TURN relay active (check candidates). Expected if client behind strict NAT. |
+| Fails behind corporate network | TURN/TLS not configured. Set `turn.tls_port: 443` with valid cert. |
+| Works on LAN, fails remotely | Public IP not advertised. Set `rtc.use_external_ip: true`. |
 
-لاستكشاف مشاكل `TURN` بعمق، راجع [دليل خادم TURN](/ar/docs/architecture/turn-server).
+For deep TURN troubleshooting, see the [TURN Server Guide](/ar/docs/architecture/turn-server).
 
 ---
 
-## انظر أيضًا
+## See also
 
-- [دليل خادم TURN](/ar/docs/architecture/turn-server) - بنية `TURN` وتهيئته وTLS وتصحيح الأخطاء
-- [تكامل LiveKit](/ar/docs/backend/livekit) - كيف يُدمَج LiveKit في بدرود
-- [نظرة عامة على البنية](/ar/docs/architecture/overview) - بنية النظام الكاملة
-- [TLS الداخلي](/ar/docs/guides/internal-tls) - TLS للشبكات المعزولة
+- [TURN Server Guide](/ar/docs/architecture/turn-server) - TURN architecture, configuration, TLS, debugging
+- [LiveKit Integration](/ar/docs/backend/livekit) - how Bedrud embeds LiveKit
+- [Architecture Overview](/ar/docs/architecture/overview) - full system architecture
+- [Internal TLS](/ar/docs/guides/internal-tls) - TLS for isolated networks

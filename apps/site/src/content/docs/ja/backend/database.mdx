@@ -1,78 +1,73 @@
 ---
 title: データベースとモデル
-description: データモデルとデータベーススキーマ
+description: データモデルとスキーマ
 order: 17
 ---
 
-Bedrudは**GORM**をORMとして使用し、SQLiteとPostgreSQLの両方をサポートしています。
+Bedrud uses **GORM** as its ORM, supporting both SQLite and PostgreSQL.
 
-## サポートされているデータベース
-- **SQLite:** 開発の容易さと小規模なインストール用にデフォルトで使用されます。データベースはファイル（通常は`bedrud.db`）に保存されます。
-- **PostgreSQL:** 多くのユーザーがいる本番環境で推奨されます。
+## Supported Databases
 
-データベースの種類と接続の詳細は、`config.yaml`ファイルの`database:`セクションで設定できます。
+- **SQLite:** Default for development and small installs. File path via `database.path`.
+- **PostgreSQL:** Recommended for higher concurrency. Use discrete fields (`host`, `port`, `user`, `password`, `dbname`, `sslmode`) — not a URL in `path`.
 
-## SQLiteファイルレイアウト
+See [Configuration → Database](/ja/docs/getting-started/configuration).
 
-SQLiteを使用する場合、Bedrudは同時読み取りパフォーマンスを向上させるために**WAL（Write-Ahead Log）モード**を有効にします。これにより、メインのデータベースファイルと一緒に2つの追加ファイルが作成されます：
+## SQLite File Layout
 
-| ファイル | 目的 |
-|---------|------|
-| `bedrud-local.db` | メインのデータベースファイル |
-| `bedrud-local.db-shm` | 共有メモリファイル — 読み取りと書き込みのアクセスを調整 |
-| `bedrud-local.db-wal` | Write-Ahead Log — 新しい書き込みは最初にここに保存され、後でメインDBにチェックポイントされる |
+WAL mode is enabled for concurrent reads:
 
-**これらのファイルは正常です。** サーバー起動時に自動的に作成され、正常なシャットダウン時にクリーンアップされます。サーバーがクラッシュしても、SQLiteは自動的に復旧します — データ損失はありません。
+| File | Purpose |
+|------|---------|
+| `*.db` | Main database file |
+| `*.db-shm` | Shared memory |
+| `*.db-wal` | Write-ahead log |
 
-WALモードを無効にするには（推奨しません）、SQLite設定で`PRAGMA journal_mode=DELETE;`を設定しますが、同時読み取りが遅くなります。
+These files are normal. SQLite recovers after crashes automatically.
 
-## コアモデル
+## Core Models
 
-モデルは`internal/models/`に配置されています。以下は最も重要なものです:
+Located in `server/internal/models/`:
 
-### User (`user.go`)
+| Model | File | Purpose |
+|-------|------|---------|
+| `User` | `user.go` | Accounts, roles (`accesses`), credentials |
+| `Room` | `room.go` | Meetings; settings embedded with `settings_` prefix |
+| `RoomParticipant` | `room.go` | Join/presence records |
+| `Passkey` | `passkey.go` | WebAuthn credentials |
+| `UserPreferences` | `user_preferences.go` | Per-user UI/media prefs |
+| `InviteToken` | `invite_token.go` | Gated registration tokens |
+| `ChatUpload` | `chat_upload.go` | Chat image metadata/quotas |
+| `Job` | `job.go` | Async queue jobs |
+| `Webhook` | `webhook.go` | Outbound webhook endpoints |
+| `SystemSettings` | `settings.go` | Runtime admin overrides (singleton) |
+| `VerificationEvent` | `verification_event.go` | Email verification audit |
+| `Refresh` / refresh tokens | `refresh.go` | Refresh token storage |
+| `Recording` | `recording.go` | Planned recording records |
+| Stats DTOs | `stats.go`, `queue_stats.go` | Aggregates for admin overview |
 
-認証情報やロールを含むアカウント情報を保存します。
+### Custom Types: `StringArray`
 
-### Room (`room.go`)
-ミーティングセッションを表します。GORMの**埋め込み構造体**を使用して設定を整理しています。
-別のテーブルやJSONブロブの代わりに、`RoomSettings`フィールド（`allow_chat`、`allow_video`など）は`settings_`プレフィックス（例: `settings_allow_chat`）付きで`rooms`テーブルに直接保存されます。これにより、Goではクリーンなモデルを維持しながら、フラットで高性能なデータベース構造を実現しています。
+`StringArray` in `user.go` implements `sql.Scanner` / `driver.Valuer` for cross-DB role arrays (native `text[]` on Postgres; serialized form on SQLite).
 
-### Passkey (`passkey.go`)
+### Foreign Keys
 
-パスワードレスログイン用のFIDO2/WebAuthn公開鍵を保存します。
+Composite keys (e.g. participants) and cascade constraints are applied in `internal/database/migrations.go` beyond plain AutoMigrate.
 
-### カスタム型: `StringArray`
+## Repository Pattern
 
-標準SQLデータベースは配列の処理が異なります（PostgreSQLはネイティブ配列を持ち、SQLiteは持ちません）。互換性を維持するため、Bedrudは`internal/models/user.go`で`StringArray`型を定義しています。
+Handlers use repositories under `internal/repository/`:
 
-- `sql.Scanner`と`driver.Valuer`を実装しています。
-- **PostgreSQL**では、ネイティブの`text[]`型を使用します。
-- **SQLite**では、配列を文字列（例: `{admin,user}`）にシリアライズして保存します。
+- `user_repository`, `room_repository`, `passkey_repository`
+- `settings_repository`, `invite_token_repository`, `webhook_repository`
+- `user_preferences_repository`, `recording_repository`, `verification_event_repository`
 
-### 外部キー管理
-
-GORMの`AutoMigrate`は複合主キー（例: `room_participants`）を処理できません。
-
-`internal/database/migrations.go`で、Bedrudは手動で`ALTER TABLE`ステートメントを実行し、外部キー制約（`ON DELETE CASCADE`など）が本番環境（PostgreSQL）で正しく適用されるようにしています。
-
-## リポジトリパターン
-
-バックエンドはデータベースアクセスに**リポジトリパターン**を使用しています。ハンドラはGORMを直接呼び出さず、リポジトリを使用します。
-
-例:
 ```go
-// In handler:
 user, err := h.userRepo.GetByEmail(email)
-
-// In repository:
-func (r *UserRepository) GetByEmail(email string) (*models.User, error) {
-    var user models.User
-    err := r.db.Where("email = ?", email).First(&user).Error
-    return &user, err
-}
 ```
 
-## 自動マイグレーション
+## Automatic Migrations
 
-サーバー起動時に、自動的に「AutoMigrate」が実行されます。これにより、`internal/models`のGo構造体に基づいてデータベーステーブルが作成または更新されます。単純なスキーマ変更であれば、手動の`CREATE TABLE`ステートメントは不要です。
+On startup (unless `bedrud run --skip-migrate`), GORM AutoMigrate creates/updates tables from models. Manual SQL helpers live in `internal/database/migrations.go`.
+
+CLI: `bedrud db migrate` / `bedrud db status`.

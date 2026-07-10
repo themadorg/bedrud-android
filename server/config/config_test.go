@@ -1,6 +1,7 @@
 package config
 
 import (
+	"os"
 	"testing"
 
 	"gopkg.in/yaml.v3"
@@ -359,5 +360,153 @@ func TestParse_MissingNumerics(t *testing.T) {
 	}
 	if cfg.Server.ReadTimeout.Int() != 0 {
 		t.Fatalf("ReadTimeout: got %d, want 0", cfg.Server.ReadTimeout.Int())
+	}
+}
+
+func TestLoad_NewEnvOverrides(t *testing.T) {
+	ResetLoadForTest()
+	t.Cleanup(ResetLoadForTest)
+
+	dir := t.TempDir()
+	path := dir + "/config.yaml"
+	yamlBody := `
+server:
+  port: "8090"
+  maxParticipantsLimit: 100
+  maxRoomsPerUser: 10
+livekit:
+  host: "ws://localhost:7880"
+  external: false
+  skipTLSVerify: false
+auth:
+  jwtSecret: "test-jwt-secret-at-least-32-chars!!"
+  sessionSecret: "test-session-secret-32chars-long!"
+  verificationTokenTTLHours: 24
+  unverifiedAccountTTLHours: 48
+database:
+  type: "sqlite"
+  path: ":memory:"
+`
+	if err := os.WriteFile(path, []byte(yamlBody), 0o600); err != nil {
+		t.Fatalf("write config: %v", err)
+	}
+
+	t.Setenv("SERVER_MAX_PARTICIPANTS_LIMIT", "250")
+	t.Setenv("AUTH_VERIFICATION_TOKEN_TTL_HOURS", "12")
+	t.Setenv("AUTH_UNVERIFIED_ACCOUNT_TTL_HOURS", "72")
+	t.Setenv("LIVEKIT_EXTERNAL", "true")
+	t.Setenv("LIVEKIT_SKIP_TLS_VERIFY", "true")
+
+	cfg, err := Load(path)
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if cfg.Server.MaxParticipantsLimit != 250 {
+		t.Fatalf("MaxParticipantsLimit: got %d, want 250", cfg.Server.MaxParticipantsLimit)
+	}
+	if cfg.Auth.VerificationTokenTTLHours != 12 {
+		t.Fatalf("VerificationTokenTTLHours: got %d, want 12", cfg.Auth.VerificationTokenTTLHours)
+	}
+	if cfg.Auth.UnverifiedAccountTTLHours != 72 {
+		t.Fatalf("UnverifiedAccountTTLHours: got %d, want 72", cfg.Auth.UnverifiedAccountTTLHours)
+	}
+	if !cfg.LiveKit.External {
+		t.Fatal("expected LiveKit.External true")
+	}
+	if !cfg.LiveKit.SkipTLSVerify {
+		t.Fatal("expected LiveKit.SkipTLSVerify true")
+	}
+}
+
+func TestLoad_NewEnvOverrides_InvalidIgnored(t *testing.T) {
+	ResetLoadForTest()
+	t.Cleanup(ResetLoadForTest)
+
+	dir := t.TempDir()
+	path := dir + "/config.yaml"
+	yamlBody := `
+server:
+  port: "8090"
+  maxParticipantsLimit: 100
+livekit:
+  host: "ws://localhost:7880"
+  external: true
+  skipTLSVerify: true
+auth:
+  jwtSecret: "test-jwt-secret-at-least-32-chars!!"
+  sessionSecret: "test-session-secret-32chars-long!"
+  verificationTokenTTLHours: 24
+  unverifiedAccountTTLHours: 48
+database:
+  type: "sqlite"
+  path: ":memory:"
+`
+	if err := os.WriteFile(path, []byte(yamlBody), 0o600); err != nil {
+		t.Fatalf("write config: %v", err)
+	}
+
+	t.Setenv("SERVER_MAX_PARTICIPANTS_LIMIT", "not-a-number")
+	t.Setenv("AUTH_VERIFICATION_TOKEN_TTL_HOURS", "xx")
+	t.Setenv("AUTH_UNVERIFIED_ACCOUNT_TTL_HOURS", "yy")
+	t.Setenv("LIVEKIT_EXTERNAL", "notbool")
+	t.Setenv("LIVEKIT_SKIP_TLS_VERIFY", "maybe")
+
+	cfg, err := Load(path)
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if cfg.Server.MaxParticipantsLimit != 100 {
+		t.Fatalf("MaxParticipantsLimit should stay YAML 100, got %d", cfg.Server.MaxParticipantsLimit)
+	}
+	if cfg.Auth.VerificationTokenTTLHours != 24 {
+		t.Fatalf("VerificationTokenTTLHours should stay 24, got %d", cfg.Auth.VerificationTokenTTLHours)
+	}
+	if cfg.Auth.UnverifiedAccountTTLHours != 48 {
+		t.Fatalf("UnverifiedAccountTTLHours should stay 48, got %d", cfg.Auth.UnverifiedAccountTTLHours)
+	}
+	if !cfg.LiveKit.External {
+		t.Fatal("LiveKit.External should stay YAML true")
+	}
+	if !cfg.LiveKit.SkipTLSVerify {
+		t.Fatal("LiveKit.SkipTLSVerify should stay YAML true")
+	}
+}
+
+func TestLoad_LiveKitExternal_FalseOverride(t *testing.T) {
+	ResetLoadForTest()
+	t.Cleanup(ResetLoadForTest)
+
+	dir := t.TempDir()
+	path := dir + "/config.yaml"
+	yamlBody := `
+server:
+  port: "8090"
+livekit:
+  host: "ws://localhost:7880"
+  external: true
+  skipTLSVerify: true
+auth:
+  jwtSecret: "test-jwt-secret-at-least-32-chars!!"
+  sessionSecret: "test-session-secret-32chars-long!"
+database:
+  type: "sqlite"
+  path: ":memory:"
+`
+	if err := os.WriteFile(path, []byte(yamlBody), 0o600); err != nil {
+		t.Fatalf("write config: %v", err)
+	}
+
+	t.Setenv("LIVEKIT_EXTERNAL", "false")
+	t.Setenv("LIVEKIT_SKIP_TLS_VERIFY", "0")
+
+	cfg, err := Load(path)
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if cfg.LiveKit.External {
+		t.Fatal("expected LiveKit.External false from env")
+	}
+	if cfg.LiveKit.SkipTLSVerify {
+		t.Fatal("expected LiveKit.SkipTLSVerify false from env")
 	}
 }

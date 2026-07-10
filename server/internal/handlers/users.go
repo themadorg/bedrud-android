@@ -1,6 +1,12 @@
 package handlers
 
 import (
+	"context"
+	"fmt"
+	"strings"
+	"sync"
+	"time"
+
 	"bedrud/config"
 	"bedrud/internal/auth"
 	"bedrud/internal/database"
@@ -8,11 +14,6 @@ import (
 	"bedrud/internal/queue"
 	"bedrud/internal/repository"
 	"bedrud/internal/services"
-	"context"
-	"fmt"
-	"strings"
-	"sync"
-	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/rs/zerolog/log"
@@ -71,8 +72,6 @@ func NewUsersHandler(
 	}
 }
 
-
-
 // @Summary List all users
 // @Description Get a list of all users in the system (requires superadmin access)
 // @Tags admin
@@ -126,7 +125,7 @@ func (h *UsersHandler) ListUsers(c *fiber.Ctx) error {
 	// Parse verified filter
 	if v := c.Query("verified"); v != "" {
 		switch v {
-		case "true":
+		case queryTrue:
 			t := true
 			p.Verified = &t
 		case "false":
@@ -148,12 +147,12 @@ func (h *UsersHandler) ListUsers(c *fiber.Ctx) error {
 
 	// Parse sort/order
 	p.Sort = c.Query("sort", "createdAt")
-	p.Order = c.Query("order", "desc")
+	p.Order = c.Query("order", orderDesc)
 	validSorts := map[string]bool{"name": true, "email": true, "provider": true, "createdAt": true}
 	if !validSorts[p.Sort] {
 		return c.Status(400).JSON(fiber.Map{"error": "Invalid sort field"})
 	}
-	if p.Order != "asc" && p.Order != "desc" {
+	if p.Order != orderAsc && p.Order != orderDesc {
 		return c.Status(400).JSON(fiber.Map{"error": "Invalid order, must be asc or desc"})
 	}
 
@@ -167,7 +166,7 @@ func (h *UsersHandler) ListUsers(c *fiber.Ctx) error {
 		p.Page = 1
 	}
 
-	users, total, err := h.userRepo.GetAllUsersFiltered(p)
+	users, total, err := h.userRepo.GetAllUsersFiltered(&p)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": "Failed to fetch users",
@@ -327,10 +326,10 @@ func (h *UsersHandler) UpdateUserStatus(c *fiber.Ctx) error {
 			}
 		}
 
-	// When banning, atomically set is_active=false and clear the refresh token
-	// to immediately invalidate all sessions. Uses a single DB call to avoid
-	// the security gap where ban succeeds but token-clear fails independently.
-		
+		// When banning, atomically set is_active=false and clear the refresh token
+		// to immediately invalidate all sessions. Uses a single DB call to avoid
+		// the security gap where ban succeeds but token-clear fails independently.
+
 		if err := h.userRepo.UpdateUserStatusAndClearToken(userID, false); err != nil {
 			if err == gorm.ErrRecordNotFound {
 				return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": "User not found"})
@@ -454,8 +453,8 @@ func (h *UsersHandler) DeleteUser(c *fiber.Ctx) error {
 
 func roomIDsToStrings(rooms []models.Room) []string {
 	ids := make([]string, len(rooms))
-	for i, r := range rooms {
-		ids[i] = r.ID
+	for i := range rooms {
+		ids[i] = rooms[i].ID
 	}
 	return ids
 }
@@ -511,8 +510,8 @@ func (h *UsersHandler) SetUserPassword(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{"message": "Password updated successfully"})
 }
 
-// ForceLogout revokes all sessions for a user by clearing their stored refresh token.
-// The user's access token will remain valid until it naturally expires.
+// ForceLogout revokes all sessions by clearing the stored refresh token and blocking
+// existing access tokens at the shared middleware ban set (process-local).
 // @Summary Force logout a user
 // @Description Revoke all active sessions for a user by clearing their refresh token (superadmin only)
 // @Tags admin
@@ -542,6 +541,7 @@ func (h *UsersHandler) ForceLogout(c *fiber.Ctx) error {
 	if err := h.userRepo.ClearRefreshToken(userID); err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to revoke sessions"})
 	}
+	auth.BanUser(userID)
 
 	log.Info().Str("adminID", claims.UserID).Str("targetUserID", userID).Msg("Admin force-logged out user")
 	return c.JSON(fiber.Map{"message": "All sessions revoked"})
@@ -649,8 +649,8 @@ func (h *UsersHandler) BulkBanUsers(c *fiber.Ctx) error {
 	}
 
 	userByID := make(map[string]*models.User, len(users))
-	for _, u := range users {
-		userByID[u.ID] = &u
+	for i := range users {
+		userByID[users[i].ID] = &users[i]
 	}
 
 	results := make(map[string]BulkItemResult, len(req.IDs))
@@ -744,8 +744,8 @@ func (h *UsersHandler) BulkPromoteUsers(c *fiber.Ctx) error {
 	}
 
 	userByID := make(map[string]*models.User, len(users))
-	for _, u := range users {
-		userByID[u.ID] = &u
+	for i := range users {
+		userByID[users[i].ID] = &users[i]
 	}
 
 	results := make(map[string]BulkItemResult, len(req.IDs))
@@ -825,8 +825,8 @@ func (h *UsersHandler) BulkDeleteUsers(c *fiber.Ctx) error {
 	}
 
 	userByID := make(map[string]*models.User, len(users))
-	for _, u := range users {
-		userByID[u.ID] = &u
+	for i := range users {
+		userByID[users[i].ID] = &users[i]
 	}
 
 	var toDelete []string
@@ -893,6 +893,7 @@ func (h *UsersHandler) BulkDeleteUsers(c *fiber.Ctx) error {
 	return c.Status(fiber.StatusAccepted).JSON(fiber.Map{
 		"message": fmt.Sprintf("Deletion queued for %d users", len(toDelete)),
 		"count":   len(toDelete),
+		"skipped": skipped,
 	})
 }
 
@@ -987,7 +988,9 @@ func (h *UsersHandler) AdminVerifyEmail(c *fiber.Ctx) error {
 	if h.verifEventRepo != nil {
 		if claims, ok := c.Locals("user").(*auth.Claims); ok && claims != nil {
 			metadata := "admin_id: " + claims.UserID
-			h.verifEventRepo.RecordEvent(userID, user.Email, models.VerificationAdminForce, c.IP(), metadata)
+			if err := h.verifEventRepo.RecordEvent(userID, user.Email, models.VerificationAdminForce, c.IP(), metadata); err != nil {
+				log.Warn().Err(err).Str("userID", userID).Msg("AdminVerifyEmail: failed to record verification event")
+			}
 		}
 	}
 
@@ -1030,7 +1033,7 @@ func (h *UsersHandler) AdminResendVerification(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to generate verification token"})
 	}
 
-	frontendURL := strings.TrimRight(config.Get().Auth.FrontendURL, "/")
+	frontendURL := frontendBaseURL(config.Get())
 	if frontendURL == "" && config.Get().Server.Domain != "" {
 		frontendURL = fmt.Sprintf("https://%s", strings.TrimRight(config.Get().Server.Domain, "/"))
 	}
@@ -1055,7 +1058,9 @@ func (h *UsersHandler) AdminResendVerification(c *fiber.Ctx) error {
 	if h.verifEventRepo != nil {
 		if claims, ok := c.Locals("user").(*auth.Claims); ok && claims != nil {
 			metadata := "admin_id: " + claims.UserID
-			h.verifEventRepo.RecordEvent(userID, user.Email, models.VerificationResent, c.IP(), metadata)
+			if err := h.verifEventRepo.RecordEvent(userID, user.Email, models.VerificationResent, c.IP(), metadata); err != nil {
+				log.Warn().Err(err).Str("userID", userID).Msg("AdminResendVerification: failed to record verification event")
+			}
 		}
 	}
 
@@ -1120,11 +1125,11 @@ func (h *UsersHandler) ListRecentSignups(c *fiber.Ctx) error {
 
 	// Sort
 	p.Sort = c.Query("sort", "createdAt")
-	p.Order = c.Query("order", "desc")
+	p.Order = c.Query("order", orderDesc)
 	if p.Sort != "createdAt" && p.Sort != "name" {
 		return c.Status(400).JSON(fiber.Map{"error": "Invalid sort field"})
 	}
-	if p.Order != "asc" && p.Order != "desc" {
+	if p.Order != orderAsc && p.Order != orderDesc {
 		return c.Status(400).JSON(fiber.Map{"error": "Invalid order, must be asc or desc"})
 	}
 
@@ -1138,7 +1143,7 @@ func (h *UsersHandler) ListRecentSignups(c *fiber.Ctx) error {
 		p.Page = 1
 	}
 
-	users, total, err := h.userRepo.GetRecentSignupsFiltered(p)
+	users, total, err := h.userRepo.GetRecentSignupsFiltered(&p)
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to fetch recent signups"})
 	}

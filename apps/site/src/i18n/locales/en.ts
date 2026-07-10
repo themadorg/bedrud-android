@@ -132,7 +132,7 @@ export default {
       sipIntegrationJitsi: "SIP/Jibri gateway",
       sipIntegrationBbb: "SIP gateway",
       whiteboard: "Whiteboard",
-      whiteboardBedrud: "No",
+      whiteboardBedrud: "Collaborative (Yjs)",
       whiteboardJitsi: "No",
       whiteboardBbb: "Built-in whiteboard",
       maxUsers: "Max Concurrent Users",
@@ -374,6 +374,36 @@ export default {
       title: "Built-in Noise Cancellation",
       description:
         "RNNoise noise suppression included. Optional Krisp integration for premium AI cancellation. Clean audio on every call, even from noisy environments.",
+    },
+    whiteboard: {
+      pain: "Whiteboards that live in another app break meeting flow.",
+      title: "Collaborative Whiteboard",
+      description:
+        "Draw, select, and edit a shared board in the room. Yjs CRDT sync over LiveKit data channels — no separate whiteboard server. Enable under Experimental settings if gated.",
+    },
+    stageMode: {
+      pain: "Grids are fine until someone needs to present to everyone.",
+      title: "Stage Mode",
+      description:
+        "Feature a presenter layout, keep the participant strip, share the screen as a stage overlay, and land late joiners in the correct stage state.",
+    },
+    inMeetingChat: {
+      pain: "Side chats without polls and reactions force everyone into Slack mid-call.",
+      title: "Chat, Polls & Reactions",
+      description:
+        "In-room text chat with emoji reactions, live polls, and image attachments. Client-side retention limits keep memory bounded on long sessions.",
+    },
+    youtubeWatch: {
+      pain: '"What timestamp are you on?" kills watch-together meetings.',
+      title: "YouTube Watch Party",
+      description:
+        "Paste a YouTube URL and play roughly in sync for everyone in the room. Close the overlay for all participants when you are done. Optional experimental toggle.",
+    },
+    pushToTalk: {
+      pain: "Open mics turn every call into a conference-call mess.",
+      title: "Push-to-Talk",
+      description:
+        "Hold a key to transmit, release to mute. Configure the hold key in audio settings. Device switching mid-call without reconnecting.",
     },
     bots: {
       pain: "Manual meeting tasks waste time - recording, transcription, notes.",
@@ -656,6 +686,7 @@ export default {
       "Interactive OpenAPI/Swagger API reference for Bedrud backend services",
     sections: {
       gettingStarted: "Getting Started",
+      using: "Using Bedrud",
       architecture: "Architecture",
       backend: "Backend",
       api: "API",
@@ -699,6 +730,15 @@ export default {
       "getting-started/clients": "Client Installation",
       "getting-started/configuration": "Configuration",
       "getting-started/cli-reference": "CLI Reference",
+      "using/account-and-settings": "Account & Settings",
+      "using/dashboard-and-rooms": "Dashboard & Rooms",
+      "using/joining-a-meeting": "Joining a Meeting",
+      "using/stage-mode": "Stage Mode",
+      "using/whiteboard": "Collaborative Whiteboard",
+      "using/youtube-watch": "YouTube Watch",
+      "using/chat": "In-Meeting Chat",
+      "using/audio-and-push-to-talk": "Audio & Push-to-Talk",
+      "using/meeting-controls": "Meeting Controls",
       "architecture/overview": "Architecture Overview",
       "architecture/server": "Server Architecture",
       "architecture/web": "Web Frontend",

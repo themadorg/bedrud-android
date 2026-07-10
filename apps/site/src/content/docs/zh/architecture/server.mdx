@@ -4,24 +4,24 @@ description: 后端服务器设计与组件
 order: 7
 ---
 
-Bedrud 服务器是一个 Go 应用程序，提供 REST API、服务嵌入式 Web 前端，并管理 LiveKit 媒体服务器。
+The Bedrud server is a Go application that provides the REST API, serves the embedded web frontend, and manages the LiveKit media server.
 
-## 技术栈
+## Technology Stack
 
-| 技术 | 用途 |
+| Technology | Purpose |
 |-----------|---------|
-| Go 1.24 | 核心语言 |
-| Fiber v2 | Web 框架（类似 Express） |
-| GORM | 用于 SQLite 和 PostgreSQL 的 ORM |
-| LiveKit Protocol SDK | WebRTC 房间和令牌管理 |
-| Zerolog | 结构化 JSON 日志 |
-| Goth | 多提供商 OAuth2 |
-| go-passkeys | FIDO2/WebAuthn 支持 |
-| golang-jwt | JWT 令牌创建和验证 |
-| gocron | 后台任务调度 |
-| Swagger (swaggo) | API 文档生成 |
+| Go 1.24 | Core language |
+| Fiber v2 | Web framework (Express-like) |
+| GORM | ORM for SQLite and PostgreSQL |
+| LiveKit Protocol SDK | WebRTC room and token management |
+| Zerolog | Structured JSON logging |
+| Goth | Multi-provider OAuth2 |
+| go-passkeys | FIDO2/WebAuthn support |
+| golang-jwt | JWT token creation and validation |
+| gocron | Background job scheduling |
+| Swagger (swaggo) | API documentation generation |
 
-## 目录结构
+## Directory Structure
 
 ```
 server/
@@ -36,18 +36,27 @@ server/
 │   ├── database/              # Database initialization and migrations
 │   ├── handlers/              # HTTP request handlers (controller layer)
 │   │   ├── auth_handler.go    # Auth endpoints
+│   │   ├── recording_handler.go # Recording start/stop/list/get
 │   │   ├── room.go            # Room endpoints
 │   │   └── users.go           # User management endpoints
 │   ├── middleware/             # Fiber middleware
-│   │   └── auth.go            # JWT validation, permission checks
+│   │   ├── auth.go            # JWT validation, permission checks
+│   │   └── recordings_enabled.go # Recordings sys-setting gate
 │   ├── models/                # GORM models (database schemas)
 │   │   ├── user.go            # User model
+│   │   ├── webhook.go         # Webhook model
+│   │   ├── recording.go       # Recording model
 │   │   ├── room.go            # Room model
 │   │   └── passkey.go         # Passkey model
 │   ├── repository/            # Data access layer (SQL via GORM)
 │   │   ├── user_repository.go
+│   │   ├── webhook_repository.go
+│   │   ├── recording_repository.go
 │   │   ├── room_repository.go
 │   │   └── passkey_repository.go
+│   ├── services/               # Business logic layer
+│   │   ├── recording_service.go # Recording gate chain + LK egress
+│   │   └── room_cleanup.go     # Room deletion/suspend cascade
 │   ├── livekit/               # Embedded LiveKit server management
 │   ├── scheduler/             # Background job scheduling
 │   └── utils/                 # TLS and other utilities
@@ -58,9 +67,9 @@ server/
 └── go.sum
 ```
 
-## 分层架构
+## Layered Architecture
 
-服务器遵循三层架构：
+The server follows a layered architecture:
 
 ```mermaid
 flowchart TB
@@ -72,61 +81,81 @@ flowchart TB
     Database["Database<br/>SQLite (dev) or PostgreSQL (production)"]
 ```
 
-## 关键模式
+## Key Patterns
 
-### 嵌入式前端
+### Embedded Frontend
 
-Web 前端编译为静态文件，并通过 `//go:embed` 嵌入到 Go 二进制文件中：
+The web frontend is compiled to static files and embedded into the Go binary using `//go:embed`:
 
 ```go
 //go:embed frontend/*
 var frontendFS embed.FS
 ```
 
-在构建时，`bun run build:embed` SSR 预渲染 React 应用并将 `dist/client/` 复制到 `server/frontend/`。然后 Go 编译器将其打包到二进制文件中。Fiber 服务器为所有非 API 路由提供这些文件。
+At build time, `bun run build:embed` SSR pre-renders the React app and copies `dist/client/` into `server/frontend/`. The Go compiler then bundles it into the binary. The Fiber server serves these files for any non-API route.
 
-### JWT 认证
+### JWT 身份验证
 
-中间件从 `Authorization: Bearer <token>` 请求头中提取 JWT，进行验证，并将用户上下文附加到请求中。受保护的路由使用 `RequireAccess` 中间件检查用户角色。
+中间件从 `Authorization: Bearer <token>` 请求头提取 JWT（读取时也可回退 Cookie），校验后将用户上下文附加到请求。受保护路由使用 `RequireAccess` 检查角色。
 
-### LiveKit 令牌生成
+- **用途令牌**（`email_verify`、`password_reset`）与访问令牌共用签名密钥，但**不能**在 `Protected` 路由上当作访问令牌。
+- **变更请求**（已认证的 POST/PUT/PATCH/DELETE）须通过 `RequireBearerForMutations` 携带 Bearer；仅 Cookie 的跨站 POST 会被拒绝（CSRF 防护）。
+- **访问令牌吊销**（登出 / 改密）持久化到数据库，可跨进程重启与多实例部署生效。
+- **房间在线身份列表**需要身份验证；公开房间可提供 `?countOnly=1`（仅人数，无身份）。
 
-当用户加入房间时，服务器：
+### LiveKit Token Generation
 
-1. 验证房间权限
-2. 创建使用 API 密钥签名的 LiveKit 访问令牌
-3. 将令牌返回给客户端
-4. 客户端使用令牌直接连接到 LiveKit
+When a user joins a room, the server:
 
-### Swagger 文档
+1. Validates room permissions
+2. Creates a LiveKit access token signed with the API secret
+3. Returns the token to the client
+4. The client connects directly to LiveKit using the token
 
-API 文档通过 swaggo 从代码注释自动生成。在开发环境中，可通过 `/api/swagger/` 访问。
+### 录制与 LiveKit Egress
 
-## 数据库
+队列处理器 **`process_recording`** 与 **`recording_delete`** 已在 worker 上注册。LiveKit 的 `egress_ended` webhook 会入队 `process_recording`（下载 → 存储 → 标记完成 → 可选 `recording.completed` webhook）。
 
-### SQLite（默认）
+🚧 **HTTP 录制路由**（API 的 start/stop/list）在生产路由表上仍为 `// TODO oncoming feature` — 在正式提供前请勿依赖公开录制 REST 端点。`recording:` 下的 YAML 键配置处理流水线的存储。
 
-在开发和小规模部署中，Bedrud 使用 SQLite。数据库文件存储在配置的 `database.path`（默认：`data.db`）中。
+### Webhooks
+
+Webhook system allows superadmins to register HTTP callbacks for real-time events. Active events: `room.created`, `room.ended`, `participant.joined`, and `ping` (test). `recording.completed` is reserved for a planned feature. Delivery headers: `X-Bedrud-Signature`, `X-Bedrud-Event`, `X-Bedrud-Timestamp`.
+
+- **Storage:** `Webhook` model in database, CRUD via `WebhookRepository`
+- **Dispatch:** Background job (`dispatch_webhook`) sends HMAC-SHA256 signed POST requests with 10s timeout
+- **Secrets:** Per-webhook HMAC secret, rotatable via admin panel
+- See the [Webhooks API](/zh/docs/api/api-reference) for endpoint details.
+
+### Swagger Documentation
+
+API documentation is auto-generated from code annotations using swaggo. In development, it's available at `/api/swagger/`.
+
+## Database
+
+### SQLite (Default)
+
+For development and small deployments, Bedrud uses SQLite. The database file is stored at the configured `database.path` (default: `data.db`).
 
 ### PostgreSQL
 
-对于需要更高并发能力的生产环境，可配置 PostgreSQL 连接字符串。GORM 透明处理两种数据库方言。
+For production with higher concurrency requirements, configure a PostgreSQL connection string. GORM handles both dialects transparently.
 
-### 迁移
+### Migrations
 
-GORM 在启动时根据模型结构体自动迁移数据库模式。模型定义在 `internal/models/` 中。
+GORM auto-migrates the schema on startup based on the model structs. The models are defined in `internal/models/`.
 
-## 后台任务
+## Background Jobs
 
-`gocron` 调度器运行定期任务，例如：
-- 清理过期的刷新令牌
-- 移除过期的房间参与者
+The `gocron` scheduler runs periodic tasks such as:
+- Cleaning up expired refresh tokens
+- Removing stale room participants
 
 ---
 
-## 另请参阅
+## See also
 
-- [后端代码结构](/zh/docs/backend/structure) - 目录映射和编码规范
-- [API 处理器](/zh/docs/backend/api-handlers) - 路由和请求生命周期
-- [数据库和模型](/zh/docs/backend/database) - GORM 模型和仓储模式
-- [认证流程](/zh/docs/backend/authentication) - JWT、OAuth 和 Passkey 内部实现
+- [Backend Code Structure](/zh/docs/backend/structure) - directory map and coding standards
+- [API Handlers](/zh/docs/backend/api-handlers) - routing and request lifecycle
+- [Database and Models](/zh/docs/backend/database) - GORM models and repository pattern
+- [Authentication Flow](/zh/docs/backend/authentication) - JWT, OAuth, and passkey internals

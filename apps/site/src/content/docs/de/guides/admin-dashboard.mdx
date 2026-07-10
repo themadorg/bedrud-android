@@ -1,280 +1,294 @@
 ---
 title: Admin-Dashboard
-description: Benutzer, Räume, Einstellungen und Einladungstokens über die Weboberfläche verwalten
+description: Benutzer, Räume, Einstellungen und Einladungstoken in der Web-UI verwalten
 order: 35
 ---
 
-Das Admin-Dashboard bietet eine Weboberfläche zur Verwaltung Ihrer Bedrud-Instanz. Superadmins können Systemstatistiken einsehen, Benutzer und Räume verwalten, instanzweite Einstellungen konfigurieren und Einladungstokens generieren.
+The admin dashboard provides a web interface for managing your Bedrud instance. Superadmins can view system statistics, manage users and rooms, configure instance-wide settings, and generate invite tokens.
 
-## Voraussetzungen
+## Prerequisites
 
-- **Superadmin-Zugriff:** Sie müssen `superadmin` im `accesses`-Array Ihres Benutzers haben.
-- **Erste Admin-Einrichtung:** Erstellen Sie nach der Installation von Bedrud einen Benutzer und befördern Sie ihn über die CLI:
+- **Superadmin access:** You must have `superadmin` in your user's `accesses` array.
+- **First admin setup:** After installing Bedrud, create a user and promote them via the CLI:
 
 ```bash
 bedrud user create --email "admin@example.com" --password "securepassword" --name "Admin"
 bedrud user promote --email "admin@example.com"
 ```
 
-Es gibt keine Weboberfläche oder API zum Erstellen des ersten Superadmins. Dies ist aus Sicherheitsgründen beabsichtigt.
+There is no web UI or API to create the first superadmin. This is intentional for security.
 
-## Zugriff auf das Admin-Panel
+## Accessing the Admin Panel
 
-Sobald Sie Superadmin-Zugriff haben, ist das Admin-Panel unter `/dashboard/admin` in Ihrer Bedrud-Webanwendung verfügbar.
+Once you have superadmin access, the admin panel is available at `/dashboard/admin` in your Bedrud web application.
 
 **Navigation:**
-- Die **Seitenleiste** zeigt einen „Admin"-Bereich mit Links zu Übersicht, Benutzer, Räume und Einstellungen. Dieser Bereich ist nur für Superadmins sichtbar.
-- Das **Benutzermenü oben rechts** enthält einen „Admin-Panel"-Link mit einem Schild-Symbol.
-- Nicht-Admin-Benutzer, die versuchen, `/dashboard/admin/*`-URLs aufzurufen, werden automatisch zu `/dashboard` weitergeleitet.
+- The **sidebar** shows an "Admin" section with links to Overview, Users, Rooms, and Settings. This section is only visible to superadmins.
+- The **top-right user dropdown** includes an "Admin panel" link with a shield icon.
+- Non-admin users who attempt to visit `/dashboard/admin/*` URLs are automatically redirected to `/dashboard`.
 
 ---
 
-## Übersichtsseite
+## Overview Page
 
-Die Übersichtsseite unter `/dashboard/admin` bietet ein Dashboard mit wichtigen Systemkennzahlen.
+The overview page at `/dashboard/admin` provides a dashboard with key system metrics.
 
-### Systemstatistiken
+### System Stats
 
-Karten zeigen:
-- **Online-Benutzer:** Gesamtzahl der eindeutigen aktiven Teilnehmer über alle Räume
-- **Gesamträume:** Gesamtzahl der Räume auf der Instanz
-- **Gesamtbenutzer:** Gesamtzahl der registrierten Benutzer
+Cards display:
+- **Online Users:** Total distinct active participants across all rooms
+- **Total Rooms:** Total rooms on the instance
+- **Total Users:** Total registered users
 
-### TLS-Zertifikatstatus
+### TLS Certificate Status
 
-Eine farbcodierte Anzeige zeigt den Zustand des TLS-Zertifikats Ihres Servers:
+A color-coded indicator shows the state of your server's TLS certificate:
 
-| Status | Farbe | Bedeutung |
+| Status | Color | Meaning |
 |---|---|---|
-| Gültig | Grün | Zertifikat ist gültig |
-| Läuft bald ab | Gelb | Läuft innerhalb von 30 Tagen ab |
-| Abgelaufen | Rot | Zertifikat ist abgelaufen |
-| Nicht konfiguriert | Grau | TLS ist deaktiviert |
+| Valid | Green | Certificate is valid |
+| Expiring Soon | Amber | Expires within 30 days |
+| Expired | Red | Certificate has expired |
+| Not Configured | Gray | TLS is disabled |
 
-Der Zertifikatstatus wird alle 5 Minuten aktualisiert.
+The certificate status refreshes every 5 minutes.
 
-### Diagramme
+### Charts
 
-- **Raumerstellung:** Balkendiagramm der in den letzten 8 Wochen erstellten Räume
-- **Letzte Anmeldungen:** Liste der aktuellsten Benutzerregistrierungen
-
----
-
-## Benutzerverwaltung
-
-### Benutzerliste
-
-Die Benutzerliste unter `/dashboard/admin/users` zeigt alle registrierten Benutzer in einer durchsuchbaren, sortierbaren Tabelle.
-
-**Spalten:**
-- **Name:** Anzeigename des Benutzers
-- **E-Mail:** E-Mail-Adresse des Benutzers
-- **Provider:** Authentifizierungsmethode (local, google, github, guest, passkey)
-- **Rolle:** Zugriffsebenen-Badge. Zeigt „Superadmin" für Benutzer mit `superadmin`-Zugriff.
-- **Erstellt:** Registrierungsdatum
-- **Status:** Aktiv/Gesperrt-Umschalter
-
-**Aktionen:**
-- **Suche:** In die Suchleiste tippen, um Benutzer nach Name oder E-Mail zu filtern (clientseitig).
-- **Sortieren:** Auf eine beliebige Spaltenüberschrift klicken, um zu sortieren. Erneut klicken, um aufsteigend/absteigend umzuschalten.
-- **Paginierung:** Navigationssteuerung zum Durchsuchen großer Benutzerlisten.
-
-### Benutzeraktionen
-
-Jede Benutzerzeile enthält Schnellaktionsschaltflächen:
-
-- **Befördern/Herabstufen:** Zwischen `["user"]` und `["user", "superadmin"]` Zugriffsebenen umschalten. In der Zugriffsebenen-Spalte sichtbar.
-- **Aktiv/Gesperrt:** Den Kontostatus des Benutzers umschalten. Gesperrte Benutzer können sich nicht anmelden oder Tokens aktualisieren.
-- **Details anzeigen:** Auf die Benutzerzeile klicken, um die Detailansicht zu öffnen.
-
-### Benutzerdetails
-
-Die Detailseite unter `/dashboard/admin/users/:userId` zeigt ein vollständiges Benutzerprofil.
-
-**Angezeigte Informationen:**
-- Benutzername, E-Mail, Provider und Registrierungsdatum
-- Zugriffsebenen-Badge (Superadmin/Benutzer)
-- Raumaktivitätsdiagramm (8-Wochen-Verlauf)
-- Liste der vom Benutzer erstellten Räume
-
-**Aktionen:**
-- **Befördern/Herabstufen:** Eigene Schaltfläche im Detail-Header
-- **Benutzer löschen:** Entfernt den Benutzer und alle seine Daten dauerhaft. Erfordert E-Mail-Bestätigung. Die Löschschaltfläche ist für das eigene Konto ausgeblendet (Sie können sich nicht selbst löschen).
-
-> **Löschen ist dauerhaft und asynchron.** Das Löschen eines Benutzers entfernt auch alle seine Räume, Passkeys und Einstellungen. Die Anfrage wird sofort zurückgegeben, während die Bereinigung im Hintergrund läuft.
+- **Room Creation:** Bar chart of rooms created over the last 8 weeks
+- **Recent Signups:** List of the most recent user registrations
 
 ---
 
-## Raumverwaltung
+## User Management
 
-### Raumliste
+### User List
 
-Die Raumliste unter `/dashboard/admin/rooms` zeigt alle Räume der Instanz.
+The user list at `/dashboard/admin/users` shows all registered users in a searchable, sortable table.
 
-**Spalten:**
-- **Raumname:** Raumbezeichnung
-- **Sichtbarkeit:** Öffentlich, privat oder nicht gelistet
-- **Max. Teilnehmer:** Inline bearbeitbar – auf den Wert klicken, um ihn zu ändern
-- **Status:** Aktiv oder inaktiv
-- **Erstellt:** Raumerstellungsdatum
+**Columns:**
+- **Name:** User's display name
+- **Email:** User's email address
+- **Provider:** Authentication method (local, google, github, guest, passkey)
+- **Role:** Access level badge. Shows "Superadmin" for users with `superadmin` access.
+- **Created:** Registration date
+- **Status:** Active/Banned toggle
 
-**Aktionen:**
-- **Suche:** Räume nach Namen filtern (clientseitig)
-- **Sortieren:** Auf Spaltenüberschriften klicken, um zu sortieren
-- **Aussetzen:** Einen aktiven Anruf beenden, ohne den Raum zu löschen
-- **Löschen:** Einen Raum dauerhaft mit Kaskadenlöschung schließen
+**Actions:**
+- **Search:** Type in the search bar to filter users by name or email (client-side).
+- **Sort:** Click any column header to sort. Click again to toggle ascending/descending.
+- **Pagination:** Navigation controls for browsing large user lists.
 
-### Raumdetails
+### User Actions
 
-Die Detailseite unter `/dashboard/admin/rooms/:roomId` bietet tiefe Einblicke in einen Raum.
+Each user row includes quick-action buttons:
 
-**Raumeinstellungen:**
-- Raumname, Sichtbarkeitsmodus, max. Teilnehmer
-- **Persistent-Modus-Umschalter:** Aktivieren, um die automatische Bereinigung inaktiver Räume zu verhindern. Nur für Superadmins verfügbar – Raumersteller können dies nicht ändern.
+- **Promote/Demote:** Toggle between `["user"]` and `["user", "superadmin"]` access levels. Visible in the access level column.
+- **Active/Banned:** Toggle the user's account status. Banned users cannot log in or refresh tokens.
+- **View Detail:** Click the user row to open the detail view.
 
-**Live-Teilnehmer:**
-- Echtzeit-Teilnehmerliste, die alle 3 Sekunden aktualisiert wird
-- Pro Teilnehmer: Name, Beitrittszeit, Spurinformationen (Audio/Video/Bildschirmfreigabe)
-- **Bitraten-Diagramm:** Live-Bitraten-Grafik für Audio- und Videospuren
-- **Entfernen:** Beliebigen Teilnehmer aus dem Raum entfernen
-- **Stummschalten:** Audiospuren eines beliebigen Teilnehmers stummschalten
+### User Detail
+
+The detail page at `/dashboard/admin/users/:userId` shows a full user profile.
+
+**Information displayed:**
+- User name, email, provider, and registration date
+- Access level badge (superadmin/user)
+- Room creation activity chart (8-week history)
+- List of rooms created by the user
+
+**Actions:**
+- **Promote/Demote:** Dedicated button in the detail header
+- **Delete User:** Permanently removes the user and all their data. Requires email confirmation. The delete button is hidden for your own account (you cannot delete yourself).
+
+> **Delete is permanent and asynchronous.** Deleting a user also removes all their rooms, passkeys, and preferences. The request returns immediately while the cleanup runs in the background.
 
 ---
 
-## Systemeinstellungen
+## Room Management
 
-Die Einstellungsseite unter `/dashboard/admin/settings` ist in 9 Tabs unterteilt. Klicken Sie auf „Änderungen speichern", nachdem Sie einen Tab bearbeitet haben (der Allgemein-Tab speichert bei Änderungen des Registrierungsmodus automatisch).
+### Room List
 
-### Allgemein-Tab
+The room list at `/dashboard/admin/rooms` shows all rooms on the instance.
 
-- **Registrierungsmodus:**
-  - **Offen:** Jeder kann ein Konto registrieren
-  - **Nur auf Einladung:** Neue Benutzer müssen einen gültigen Einladungstoken angeben
-  - **Geschlossen:** Keine neuen Registrierungen – bestehende Benutzer können sich weiterhin anmelden
-  - Änderungen werden automatisch gespeichert, wenn Sie den Modus wechseln
+**Columns:**
+- **Room Name:** Room identifier
+- **Visibility:** Public, private, or unlisted
+- **Max Participants:** Editable inline — click the value to change it
+- **Status:** Active or inactive
+- **Created:** Room creation date
 
-**Einladungstoken-Verwaltung (im Allgemein-Tab):**
+**Actions:**
+- **Search:** Filter rooms by name (client-side)
+- **Sort:** Click column headers to sort
+- **Suspend:** End an active call without deleting the room
+- **Delete:** Permanently close a room with cascade deletion
 
-Tokens steuern, wer sich im Nur-auf-Einladung-Modus registrieren kann.
+### Room Detail
 
-- **Token generieren:** Geben Sie eine optionale E-Mail an, um den Token auf eine bestimmte Adresse zu beschränken, und wählen Sie einen Ablaufzeitraum (24 Stunden, 72 Stunden, 7 Tage oder 30 Tage).
-- **Token-Liste:** Zeigt alle Tokens mit ihrem Status. Ungenutzte Tokens haben ein grünes „Aktiv"-Badge, benutzte Tokens zeigen „Benutzt" in Grau.
-- **Token kopieren:** Klicken Sie auf die Kopierschaltfläche, um den 32-stelligen Token-Wert in die Zwischenablage zu kopieren.
-- **Widerrufen:** Löschen Sie einen Token, um seine Verwendung zu verhindern.
+The detail page at `/dashboard/admin/rooms/:roomId` provides deep visibility into a room.
 
-### Authentifizierungs-Tab
+**Room Settings:**
+- Room name, visibility mode, max participants
+- **Persistent mode toggle:** Enable to prevent automatic cleanup of idle rooms. This is available to superadmins only — room creators cannot change it.
 
-- **Passkeys:** FIDO2/WebAuthn passwortlose Authentifizierung umschalten
-- **OAuth-Provider:** Google, GitHub und Twitter OAuth konfigurieren:
-  - Client-ID
-  - Client-Secret
-  - Weiterleitungs-URL
+**Live Participants:**
+- Real-time participant list that polls every 3 seconds
+- Per participant: name, join time, track information (audio/video/screen share)
+- **Bitrate chart:** Live bitrate graph for audio and video tracks
+- **Kick:** Remove any participant from the room
+- **Mute:** Mute any participant's audio tracks
 
-Jeder Provider hat eine eigene Konfigurationskarte. Aktivieren Sie einen Provider, indem Sie alle drei Felder ausfüllen.
+---
 
-### LiveKit-Tab
+## System Settings
 
-- **Externes LiveKit:** Umschalten, um einen externen LiveKit-Server anstelle des eingebetteten zu verwenden
-- **Host:** LiveKit-Server-Host und -Port (z. B. `127.0.0.1:7880`)
-- **API-Key:** LiveKit-Server-API-Key
-- **API-Secret:** LiveKit-Server-API-Secret
+The settings page at `/dashboard/admin/settings` is organized into 7 tabs. Click "Save changes" after modifying any tab (the General tab auto-saves on registration mode changes).
 
-### Server-Tab
+### General Tab
 
-- **Port:** HTTP-Server-Port (Standard: `80`)
-- **Host:** Server-Hostname
-- **Domain:** Server-Domain
-- **E-Mail:** Administrative E-Mail (wird für ACME-Zertifikatsregistrierung verwendet)
-- **TLS:** HTTPS mit Zertifikatsdateien aktivieren
-- **ACME:** Automatische Let's-Encrypt-Zertifikatsverwaltung aktivieren
-- **Reverse-Proxy:** Angeben, dass der Server hinter einem Proxy steht (beeinflusst die Client-IP-Erkennung)
-- **Zertifikatspfade:** Zertifikats- und Schlüsseldateipfade (für manuelle TLS-Einrichtung)
-- **Zertifikatstatus:** Inline-Anzeige des aktuellen TLS-Zertifikatszustands
+- **Registration Mode:**
+  - **Open:** Anyone can register an account
+  - **Invite-only:** New users must provide a valid invite token
+  - **Closed:** No new registrations — existing users can still log in
+  - Changes save automatically when you switch modes
 
-### CORS-Tab
+**Invite Token Management (within General tab):**
 
-- **Erlaubte Origins:** Kommagetrennte Liste der CORS-Origins
-- **Erlaubte Header:** Kommagetrennte Liste der erlaubten Anfrage-Header
-- **Erlaubte Methoden:** Kommagetrennte Liste der erlaubten HTTP-Methoden
-- **Anmeldeinformationen zulassen:** Umschalter für Anmeldeinformationen in Cross-Origin-Anfragen
-- **Max-Age:** Cache-Dauer für CORS-Preflight-Antworten (Sekunden)
+Tokens control who can register when in Invite-only mode.
 
-### Raumlimits-Tab
+- **Generate Token:** Enter an optional email to lock the token to a specific address, and select an expiry period (24 hours, 72 hours, 7 days, or 30 days).
+- **Token List:** Shows all tokens with their status. Unused tokens have a green "Active" badge, used tokens show "Used" in gray.
+- **Copy Token:** Click the copy button to copy the 32-character token value to your clipboard.
+- **Revoke:** Delete a token to prevent it from being used.
+- **Recordings Toggle:** UI may expose an “allow room recordings” setting for a **planned** feature. Recording HTTP routes are not registered in production yet.
 
-Steuert, wie viele aktive Räume ein einzelner Benutzer erstellen kann:
+### Webhooks Tab
 
-- **Max. Räume pro Benutzer:** Maximale Anzahl aktiver Räume, die ein Nicht-Superadmin-Benutzer erstellen kann (Standard: 100, 0 = unbegrenzt). Superadmins umgehen dieses Limit.
+The Webhooks tab lets superadmins register HTTP callbacks for real-time room and recording events.
 
-### Upload-Kontingente-Tab
+- **Add Webhook:** Enter a URL, select event types, and optionally set a custom HMAC secret.
+- **Event Types:** `room.created`, `room.ended`, `participant.joined`, `ping` (test). `recording.completed` is reserved for a planned feature. Delivery uses `X-Bedrud-Signature` / `X-Bedrud-Event` headers — see the [Webhooks Guide](/de/docs/guides/webhooks).
+- **Test:** Send a test ping to verify connectivity.
+- **Rotate:** Generate a new HMAC signing secret (old one immediately invalidated).
+- **Status Column:** Shows last HTTP status code and timestamp of last delivery.
 
-Steuert Speicherlimits für Chat-Bild-Uploads:
+### Authentication Tab
 
-- **Max. Upload-Bytes pro Benutzer:** Speicherkontingent pro Benutzer über alle Räume hinweg (Standard: 524288000 = 500 MB, 0 = unbegrenzt). Superadmins umgehen dieses Limit.
-- **Globaler Datenträgerschwellenwert:** Gesamtspeichergrenze über alle Benutzer hinweg. Bei Überschreitung werden alle Uploads abgelehnt, bis ein Administrator Speicher freigibt (Standard: 0 = unbegrenzt). Dieses Limit gilt für alle, einschließlich Superadmins.
+- **Passkeys:** Toggle FIDO2/WebAuthn passwordless authentication
+- **OAuth Providers:** Configure Google, GitHub, and Twitter OAuth:
+  - Client ID
+  - Client Secret
+  - Redirect URL
+
+Each provider has its own configuration card. Enable a provider by filling in all three fields.
+
+### LiveKit Tab
+
+- **External LiveKit:** Toggle to use an external LiveKit server instead of the embedded one
+- **Host:** LiveKit server host and port (e.g., `127.0.0.1:7880`)
+- **API Key:** LiveKit server API key
+- **API Secret:** LiveKit server API secret
+
+### Server Tab
+
+- **Port:** HTTP server port (default: `80`)
+- **Host:** Server hostname
+- **Domain:** Server domain
+- **Email:** Administrative email (used for ACME certificate registration)
+- **TLS:** Enable HTTPS with certificate files
+- **ACME:** Enable automatic Let's Encrypt certificate management
+- **Reverse Proxy:** Indicate the server is behind a proxy (affects client IP detection)
+- **Certificate Paths:** Cert file and key file paths (for manual TLS setup)
+- **Certificate Status:** Inline indicator showing current TLS certificate health
+
+### CORS Tab
+
+- **Allowed Origins:** Comma-separated list of CORS origins
+- **Allowed Headers:** Comma-separated list of allowed request headers
+- **Allowed Methods:** Comma-separated list of allowed HTTP methods
+- **Allow Credentials:** Toggle to include credentials in cross-origin requests
+- **Max Age:** Cache duration for CORS preflight responses (seconds)
+
+### Room Limits Tab
+
+Controls how many rooms a single user can create:
+
+- **Max Rooms Per User:** Maximum number of active rooms a non-superadmin user can create (default: 100, 0 = unlimited). Superadmins bypass this limit.
+
+### Upload Quotas Tab
+
+Controls storage limits for chat image uploads:
+
+- **Max Upload Bytes Per User:** Per-user storage quota across all rooms (default: 524288000 = 500 MB, 0 = unlimited). Superadmins bypass this limit.
+- **Global Disk Threshold:** Total storage ceiling across all users. When exceeded, all uploads are rejected until an admin frees space (default: 0 = unlimited). This limit applies to everyone, including superadmins.
 
 ### Chat-Uploads-Tab
 
-Konfigurieren Sie, wie Chat-Bild-Uploads gespeichert werden:
+Konfiguriert die Speicherung von Chat-Bild-Uploads:
 
-- **Backend:** `disk` (lokales Dateisystem), `s3` (S3-kompatibler Speicher) oder `inline` (base64-eingebettet)
-- **Max. Upload-Bytes:** Maximale Dateigröße pro Upload
-- **Inline-Max:** Maximale Größe für Inline/Base64-Uploads
-- **Disk-Verzeichnis:** Lokales Verzeichnis für `disk`-Backend-Uploads
+- **Backend:** `disk` (lokales Dateisystem), `s3` (S3-kompatibler Speicher) oder `inline` (base64 eingebettet)
+- **Max Upload Bytes** (`chatUploadMaxBytes`): Maximale Dateigröße pro Upload (Standard 10 MiB, wenn nicht gesetzt). Wird von der Upload-API angewendet und dem Meeting-Client für Vorprüfungen bereitgestellt.
+- **Max Image Dimension** (`chatUploadMaxDimension`): Maximale Breite oder Höhe in Pixeln (Standard 8192, wenn nicht gesetzt / 0). Größere dekodierte Bilder werden mit HTTP 400 abgelehnt.
+- **Inline Max:** Maximale Größe für Inline-/base64-Uploads
+- **Disk Directory:** Lokales Verzeichnis für das `disk`-Backend
 
-**S3-Konfiguration (wenn Backend `s3` ist):**
+YAML-Fallbacks: `chat.uploads.maxBytes`, `chat.uploads.maxDimension` in der [Konfiguration](/de/docs/getting-started/configuration).
+
+**S3 Configuration (when backend is `s3`):**
 - Endpoint, Bucket, Region
 - Access Key, Secret Key
-- Öffentliche URL
+- Public URL
 
-### Logging-Tab
+### Logging Tab
 
-- **Log-Level:** `trace`, `debug`, `info`, `warn` oder `error`. Nützlich für die Fehlersuche – auf `debug` wechseln, um detaillierte Protokolle zu sehen, dann zurück zu `info` für die Produktion.
+- **Log Level:** `trace`, `debug`, `info`, `warn`, or `error`. Useful for debugging — switch to `debug` to see detailed logs, then back to `info` for production.
 
 ---
 
-## Fehlerbehebung
+## Troubleshooting
 
-### „Admin-Panel nicht sichtbar"
+### "Admin panel not visible"
 
-**Symptom:** Der Admin-Bereich erscheint nicht in der Seitenleiste, und der „Admin-Panel"-Link fehlt im Benutzermenü.
+**Symptom:** The Admin section does not appear in the sidebar, and the "Admin panel" link is missing from the user dropdown.
 
-**Ursache:** Der angemeldete Benutzer hat kein `superadmin` in seinem `accesses`-Array.
+**Cause:** The logged-in user does not have `superadmin` in their `accesses` array.
 
-**Lösung:** Verwenden Sie die CLI, um den Benutzer zu befördern:
+**Solution:** Use the CLI to promote the user:
 ```bash
 bedrud user promote --email "your-email@example.com"
 ```
-Melden Sie sich dann ab und wieder an, um ein neues JWT mit den aktualisierten Zugriffen zu erhalten.
+Then log out and log back in to get a new JWT with the updated accesses.
 
-### „Einstellungen werden nicht gespeichert"
+### "Settings won't save"
 
-**Symptom:** Das Speichern von Einstellungen wird erfolgreich zurückgegeben, aber geheime Werte erscheinen unverändert.
+**Symptom:** Saving settings returns successfully, but secret values appear unchanged.
 
-**Ursache:** Der Server bewahrt bestehende geheime Werte, wenn Sie `"••••••••"` oder einen leeren String in der Aktualisierungsanfrage senden. Dies ist beabsichtigt – es verhindert das versehentliche Überschreiben von Secrets, wenn Sie nur nicht-geheime Felder ändern.
+**Cause:** The server preserves existing secret values when you send `"••••••••"` or an empty string in the update request. This is by design — it prevents accidentally overwriting secrets when you're only changing non-secret fields.
 
-**Lösung:** Senden Sie den tatsächlichen geheimen Wert (nicht den maskierten Platzhalter) in der Aktualisierungsanfrage.
+**Solution:** Send the actual secret value (not the masked placeholder) in the update request.
 
-### „Eigenes Konto kann nicht gelöscht werden"
+### "Cannot delete my own account"
 
-**Symptom:** Die Löschschaltfläche ist auf Ihrer eigenen Benutzerdetailseite ausgeblendet, oder die API gibt einen 400-Fehler zurück.
+**Symptom:** The delete button is hidden on your own user detail page, or the API returns a 400 error.
 
-**Ursache:** Selbstlöschung ist aus Sicherheitsgründen blockiert. Sie können das Konto, mit dem Sie gerade angemeldet sind, nicht löschen.
+**Cause:** Self-deletion is blocked for safety. You cannot delete the account you're currently logged in as.
 
-**Lösung:** Lassen Sie einen anderen Superadmin das Konto löschen oder verwenden Sie die CLI als anderer Benutzer.
+**Solution:** Have another superadmin delete the account, or use the CLI as a different user.
 
-### „Weiterleitung zum Dashboard beim Aufrufen der Admin-URL"
+### "Redirected to dashboard when visiting admin URL"
 
-**Symptom:** Der direkte Aufruf von `/dashboard/admin` leitet zu `/dashboard` weiter.
+**Symptom:** Visiting `/dashboard/admin` directly redirects to `/dashboard`.
 
-**Ursache:** Die Admin-Guard-Route prüft das `accesses`-Array Ihres JWTs. Wenn `superadmin` fehlt, leitet der Guard weiter.
+**Cause:** The admin guard route checks your JWT's `accesses` array. If `superadmin` is missing, the guard redirects.
 
-**Lösung:** Überprüfen Sie, ob Ihr Konto Superadmin-Zugriff hat. Wenn Ihr Zugriff kürzlich geändert wurde, melden Sie sich ab und wieder an, um Ihr JWT zu aktualisieren.
+**Solution:** Verify your account has superadmin access. If your access was recently changed, log out and log back in to refresh your JWT.
 
 ---
 
-## Siehe auch
+## See Also
 
-- [Admin-API](/de/docs/api/api-reference#tag/admin) – vollständige API-Referenz für alle Admin-Endpunkte
-- [Authentifizierung](/en/docs/backend/authentication) – Zugriffsebenen und Rollensystem
-- [Konfiguration](/en/docs/getting-started/configuration) – config.yaml Einstellungsreferenz
-- [Schnellstart](/en/docs/getting-started/quickstart) – Anleitung zur ersten Admin-Einrichtung
+- [Admin API](/de/docs/api/api-reference#tag/admin) — full API reference for all admin endpoints
+- [Authentication](/de/docs/backend/authentication) — access levels and role system
+- [Configuration](/de/docs/getting-started/configuration) — config.yaml settings reference
+- [Quick Start](/de/docs/getting-started/quickstart) — first admin setup walkthrough

@@ -39,7 +39,7 @@ func TestGenerateSelfSignedCert_Success(t *testing.T) {
 	certFile := filepath.Join(tmpDir, "cert.pem")
 	keyFile := filepath.Join(tmpDir, "key.pem")
 
-	err := GenerateSelfSignedCert(certFile, keyFile, "localhost")
+	err := GenerateSelfSignedCert(certFile, keyFile, localhostName)
 	if err != nil {
 		t.Fatalf("failed to generate cert: %v", err)
 	}
@@ -69,7 +69,7 @@ func TestGenerateSelfSignedCert_CertContainsPEM(t *testing.T) {
 	certFile := filepath.Join(tmpDir, "cert.pem")
 	keyFile := filepath.Join(tmpDir, "key.pem")
 
-	_ = GenerateSelfSignedCert(certFile, keyFile, "localhost")
+	_ = GenerateSelfSignedCert(certFile, keyFile, localhostName)
 
 	certData, _ := os.ReadFile(certFile)
 	if !strings.Contains(string(certData), "BEGIN CERTIFICATE") {
@@ -85,7 +85,7 @@ func TestGenerateSelfSignedCert_KeyContainsPEM(t *testing.T) {
 	certFile := filepath.Join(tmpDir, "cert.pem")
 	keyFile := filepath.Join(tmpDir, "key.pem")
 
-	_ = GenerateSelfSignedCert(certFile, keyFile, "localhost")
+	_ = GenerateSelfSignedCert(certFile, keyFile, localhostName)
 
 	keyData, _ := os.ReadFile(keyFile)
 	if !strings.Contains(string(keyData), "BEGIN PRIVATE KEY") {
@@ -95,7 +95,7 @@ func TestGenerateSelfSignedCert_KeyContainsPEM(t *testing.T) {
 
 func TestGenerateSelfSignedCert_InvalidCertPath(t *testing.T) {
 	keyFile := filepath.Join(t.TempDir(), "key.pem")
-	err := GenerateSelfSignedCert("/nonexistent/path/cert.pem", keyFile, "localhost")
+	err := GenerateSelfSignedCert("/nonexistent/path/cert.pem", keyFile, localhostName)
 	if err == nil {
 		t.Fatal("expected error for invalid cert path")
 	}
@@ -103,7 +103,7 @@ func TestGenerateSelfSignedCert_InvalidCertPath(t *testing.T) {
 
 func TestGenerateSelfSignedCert_InvalidKeyPath(t *testing.T) {
 	certFile := filepath.Join(t.TempDir(), "cert.pem")
-	err := GenerateSelfSignedCert(certFile, "/nonexistent/path/key.pem", "localhost")
+	err := GenerateSelfSignedCert(certFile, "/nonexistent/path/key.pem", localhostName)
 	if err == nil {
 		t.Fatal("expected error for invalid key path")
 	}
@@ -116,8 +116,8 @@ func TestGenerateSelfSignedCert_MultipleGenerations(t *testing.T) {
 	cert2 := filepath.Join(tmpDir, "cert2.pem")
 	key2 := filepath.Join(tmpDir, "key2.pem")
 
-	_ = GenerateSelfSignedCert(cert1, key1, "localhost")
-	_ = GenerateSelfSignedCert(cert2, key2, "localhost")
+	_ = GenerateSelfSignedCert(cert1, key1, localhostName)
+	_ = GenerateSelfSignedCert(cert2, key2, localhostName)
 
 	data1, _ := os.ReadFile(cert1)
 	data2, _ := os.ReadFile(cert2)
@@ -133,7 +133,7 @@ func TestGenerateSelfSignedCert_WithDnsSan(t *testing.T) {
 	certFile := filepath.Join(tmpDir, "cert.pem")
 	keyFile := filepath.Join(tmpDir, "key.pem")
 
-	err := GenerateSelfSignedCert(certFile, keyFile, "localhost", "bedrud.example.com")
+	err := GenerateSelfSignedCert(certFile, keyFile, localhostName, "bedrud.example.com")
 	if err != nil {
 		t.Fatalf("failed to generate cert: %v", err)
 	}
@@ -230,7 +230,7 @@ func TestGenerateSelfSignedCert_EmptyHostsDefaultsToLocalhost(t *testing.T) {
 
 	found := false
 	for _, dns := range cert.DNSNames {
-		if dns == "localhost" {
+		if dns == localhostName {
 			found = true
 			break
 		}
@@ -261,11 +261,11 @@ func TestGenerateSelfSignedCert_EmptyHostsDefaultsToLocalhost(t *testing.T) {
 }
 
 func TestParseSanHosts(t *testing.T) {
-	dns, ips := ParseSanHosts("localhost", "bedrud.example.com", "192.168.1.100", "10.0.0.1")
+	dns, ips := ParseSanHosts(localhostName, "bedrud.example.com", "192.168.1.100", "10.0.0.1")
 	if len(dns) != 2 {
 		t.Fatalf("expected 2 DNS names, got %d: %v", len(dns), dns)
 	}
-	if dns[0] != "localhost" {
+	if dns[0] != localhostName {
 		t.Fatalf("expected dns[0]='localhost', got '%s'", dns[0])
 	}
 	if dns[1] != "bedrud.example.com" {
@@ -293,7 +293,7 @@ func TestParseSanHosts_Empty(t *testing.T) {
 }
 
 func TestParseSanHosts_Mixed(t *testing.T) {
-	dns, ips := ParseSanHosts("example.com", "192.168.1.1", "localhost", "10.0.0.1", "sub.example.org")
+	dns, ips := ParseSanHosts("example.com", "192.168.1.1", localhostName, "10.0.0.1", "sub.example.org")
 	if len(dns) != 3 {
 		t.Fatalf("expected 3 DNS names, got %d: %v", len(dns), dns)
 	}
@@ -307,7 +307,7 @@ func TestValidateTLSCertPair_ValidCert(t *testing.T) {
 	certFile := filepath.Join(tmpDir, "cert.pem")
 	keyFile := filepath.Join(tmpDir, "key.pem")
 
-	if err := GenerateSelfSignedCert(certFile, keyFile, "localhost"); err != nil {
+	if err := GenerateSelfSignedCert(certFile, keyFile, localhostName); err != nil {
 		t.Fatalf("failed to generate cert: %v", err)
 	}
 
@@ -335,7 +335,7 @@ func TestValidateTLSCertPair_ValidCert(t *testing.T) {
 func TestValidateTLSCertPair_CertNotFound(t *testing.T) {
 	tmpDir := t.TempDir()
 	keyFile := filepath.Join(tmpDir, "key.pem")
-	_ = GenerateSelfSignedCert(filepath.Join(tmpDir, "x.pem"), keyFile, "localhost")
+	_ = GenerateSelfSignedCert(filepath.Join(tmpDir, "x.pem"), keyFile, localhostName)
 
 	_, err := ValidateTLSCertPair(filepath.Join(tmpDir, "nonexistent.pem"), keyFile)
 	if err == nil {
@@ -351,7 +351,7 @@ func TestValidateTLSCertPair_KeyNotFound(t *testing.T) {
 	certFile := filepath.Join(tmpDir, "cert.pem")
 	keyFile := filepath.Join(tmpDir, "key.pem")
 
-	_ = GenerateSelfSignedCert(certFile, keyFile, "localhost")
+	_ = GenerateSelfSignedCert(certFile, keyFile, localhostName)
 
 	_, err := ValidateTLSCertPair(certFile, filepath.Join(tmpDir, "nonexistent.pem"))
 	if err == nil {
@@ -368,10 +368,10 @@ func TestValidateTLSCertPair_KeyMismatch(t *testing.T) {
 	keyFile := filepath.Join(tmpDir, "key.pem")
 	otherKeyFile := filepath.Join(tmpDir, "other_key.pem")
 
-	_ = GenerateSelfSignedCert(certFile, keyFile, "localhost")
+	_ = GenerateSelfSignedCert(certFile, keyFile, localhostName)
 
 	tmpDir2 := t.TempDir()
-	_ = GenerateSelfSignedCert(filepath.Join(tmpDir2, "x.pem"), otherKeyFile, "localhost")
+	_ = GenerateSelfSignedCert(filepath.Join(tmpDir2, "x.pem"), otherKeyFile, localhostName)
 
 	_, err := ValidateTLSCertPair(certFile, otherKeyFile)
 	if err == nil {
@@ -387,7 +387,7 @@ func TestValidateTLSCertPair_InvalidPEM(t *testing.T) {
 	certFile := filepath.Join(tmpDir, "cert.pem")
 	keyFile := filepath.Join(tmpDir, "key.pem")
 
-	_ = GenerateSelfSignedCert(certFile, keyFile, "localhost")
+	_ = GenerateSelfSignedCert(certFile, keyFile, localhostName)
 
 	_ = os.WriteFile(certFile, []byte("not a pem file"), 0o644)
 
@@ -418,7 +418,7 @@ func TestValidateTLSCertPair_ExpiredCert(t *testing.T) {
 		NotBefore:    time.Now().Add(-72 * time.Hour),
 		NotAfter:     time.Now().Add(-24 * time.Hour),
 		KeyUsage:     x509.KeyUsageDigitalSignature,
-		DNSNames:     []string{"localhost"},
+		DNSNames:     []string{localhostName},
 	}
 
 	derBytes, err := x509.CreateCertificate(rand.Reader, &template, &template, &priv.PublicKey, priv)
@@ -462,7 +462,7 @@ func TestValidateTLSCertPair_ExpiringSoon(t *testing.T) {
 		NotBefore:    time.Now().Add(-24 * time.Hour),
 		NotAfter:     time.Now().Add(10 * 24 * time.Hour),
 		KeyUsage:     x509.KeyUsageDigitalSignature,
-		DNSNames:     []string{"localhost"},
+		DNSNames:     []string{localhostName},
 	}
 
 	derBytes, err := x509.CreateCertificate(rand.Reader, &template, &template, &priv.PublicKey, priv)
@@ -496,13 +496,13 @@ func TestRenewSelfSignedCert_OverwritesExisting(t *testing.T) {
 	certFile := filepath.Join(tmpDir, "cert.pem")
 	keyFile := filepath.Join(tmpDir, "key.pem")
 
-	if err := GenerateSelfSignedCert(certFile, keyFile, "localhost"); err != nil {
+	if err := GenerateSelfSignedCert(certFile, keyFile, localhostName); err != nil {
 		t.Fatalf("initial generation failed: %v", err)
 	}
 
 	originalCert, _ := os.ReadFile(certFile)
 
-	if err := RenewSelfSignedCert(certFile, keyFile, "localhost", "example.com"); err != nil {
+	if err := RenewSelfSignedCert(certFile, keyFile, localhostName, "example.com"); err != nil {
 		t.Fatalf("renewal failed: %v", err)
 	}
 
@@ -550,7 +550,7 @@ func TestRenewSelfSignedCert_DefaultsSANsWhenEmpty(t *testing.T) {
 
 	foundLocalhost := false
 	for _, san := range info.SANs {
-		if san == "localhost" {
+		if san == localhostName {
 			foundLocalhost = true
 		}
 	}
@@ -564,12 +564,12 @@ func TestRenewSelfSignedCert_NoTempFilesLeftOnError(t *testing.T) {
 	certFile := filepath.Join(tmpDir, "cert.pem")
 	keyFile := filepath.Join(tmpDir, "key.pem")
 
-	if err := GenerateSelfSignedCert(certFile, keyFile, "localhost"); err != nil {
+	if err := GenerateSelfSignedCert(certFile, keyFile, localhostName); err != nil {
 		t.Fatalf("initial generation failed: %v", err)
 	}
 
 	keyFileBad := filepath.Join(tmpDir, "nonexistent", "key.pem")
-	err := RenewSelfSignedCert(certFile, keyFileBad, "localhost")
+	err := RenewSelfSignedCert(certFile, keyFileBad, localhostName)
 	if err == nil {
 		t.Fatal("expected error for bad key path")
 	}
@@ -587,7 +587,7 @@ func TestGenerateSelfSignedCert_CleanupOnKeyFailure(t *testing.T) {
 	certFile := filepath.Join(tmpDir, "cert.pem")
 	keyFile := filepath.Join(tmpDir, "subdir", "key.pem")
 
-	err := GenerateSelfSignedCert(certFile, keyFile, "localhost")
+	err := GenerateSelfSignedCert(certFile, keyFile, localhostName)
 	if err == nil {
 		t.Fatal("expected error for nonexistent key parent dir")
 	}
@@ -602,7 +602,7 @@ func TestGenerateSelfSignedCertWithAlgo_Ed25519(t *testing.T) {
 	certFile := filepath.Join(tmpDir, "cert.pem")
 	keyFile := filepath.Join(tmpDir, "key.pem")
 
-	err := GenerateSelfSignedCertWithAlgo(certFile, keyFile, KeyEd25519, "localhost")
+	err := GenerateSelfSignedCertWithAlgo(certFile, keyFile, KeyEd25519, localhostName)
 	if err != nil {
 		t.Fatalf("failed to generate Ed25519 cert: %v", err)
 	}
@@ -616,7 +616,7 @@ func TestGenerateSelfSignedCertWithAlgo_ECDSA256(t *testing.T) {
 	certFile := filepath.Join(tmpDir, "cert.pem")
 	keyFile := filepath.Join(tmpDir, "key.pem")
 
-	err := GenerateSelfSignedCertWithAlgo(certFile, keyFile, KeyECDSA256, "localhost")
+	err := GenerateSelfSignedCertWithAlgo(certFile, keyFile, KeyECDSA256, localhostName)
 	if err != nil {
 		t.Fatalf("failed to generate ECDSA P256 cert: %v", err)
 	}
@@ -630,7 +630,7 @@ func TestGenerateSelfSignedCertWithAlgo_RSA2048(t *testing.T) {
 	certFile := filepath.Join(tmpDir, "cert.pem")
 	keyFile := filepath.Join(tmpDir, "key.pem")
 
-	err := GenerateSelfSignedCertWithAlgo(certFile, keyFile, KeyRSA2048, "localhost")
+	err := GenerateSelfSignedCertWithAlgo(certFile, keyFile, KeyRSA2048, localhostName)
 	if err != nil {
 		t.Fatalf("failed to generate RSA 2048 cert: %v", err)
 	}
@@ -657,7 +657,7 @@ func TestGenerateSelfSignedCertDefault_IsEd25519(t *testing.T) {
 	certFile := filepath.Join(tmpDir, "cert.pem")
 	keyFile := filepath.Join(tmpDir, "key.pem")
 
-	err := GenerateSelfSignedCert(certFile, keyFile, "localhost")
+	err := GenerateSelfSignedCert(certFile, keyFile, localhostName)
 	if err != nil {
 		t.Fatalf("failed to generate default cert: %v", err)
 	}
@@ -671,11 +671,11 @@ func TestRenewSelfSignedCert_PreservesECDSAlgo(t *testing.T) {
 	certFile := filepath.Join(tmpDir, "cert.pem")
 	keyFile := filepath.Join(tmpDir, "key.pem")
 
-	if err := GenerateSelfSignedCertWithAlgo(certFile, keyFile, KeyECDSA256, "localhost"); err != nil {
+	if err := GenerateSelfSignedCertWithAlgo(certFile, keyFile, KeyECDSA256, localhostName); err != nil {
 		t.Fatalf("initial ECDSA generation failed: %v", err)
 	}
 
-	if err := RenewSelfSignedCert(certFile, keyFile, "localhost"); err != nil {
+	if err := RenewSelfSignedCert(certFile, keyFile, localhostName); err != nil {
 		t.Fatalf("renewal failed: %v", err)
 	}
 
@@ -689,11 +689,11 @@ func TestRenewSelfSignedCert_PreservesEd25519Algo(t *testing.T) {
 	certFile := filepath.Join(tmpDir, "cert.pem")
 	keyFile := filepath.Join(tmpDir, "key.pem")
 
-	if err := GenerateSelfSignedCertWithAlgo(certFile, keyFile, KeyEd25519, "localhost"); err != nil {
+	if err := GenerateSelfSignedCertWithAlgo(certFile, keyFile, KeyEd25519, localhostName); err != nil {
 		t.Fatalf("initial Ed25519 generation failed: %v", err)
 	}
 
-	if err := RenewSelfSignedCert(certFile, keyFile, "localhost"); err != nil {
+	if err := RenewSelfSignedCert(certFile, keyFile, localhostName); err != nil {
 		t.Fatalf("renewal failed: %v", err)
 	}
 
@@ -707,11 +707,11 @@ func TestRenewSelfSignedCertWithAlgo_OverridesAlgo(t *testing.T) {
 	certFile := filepath.Join(tmpDir, "cert.pem")
 	keyFile := filepath.Join(tmpDir, "key.pem")
 
-	if err := GenerateSelfSignedCertWithAlgo(certFile, keyFile, KeyECDSA256, "localhost"); err != nil {
+	if err := GenerateSelfSignedCertWithAlgo(certFile, keyFile, KeyECDSA256, localhostName); err != nil {
 		t.Fatalf("initial ECDSA generation failed: %v", err)
 	}
 
-	if err := RenewSelfSignedCertWithAlgo(certFile, keyFile, KeyEd25519, "localhost"); err != nil {
+	if err := RenewSelfSignedCertWithAlgo(certFile, keyFile, KeyEd25519, localhostName); err != nil {
 		t.Fatalf("renewal with override failed: %v", err)
 	}
 
@@ -725,7 +725,7 @@ func TestDetectCertAlgorithm_Ed25519(t *testing.T) {
 	certFile := filepath.Join(tmpDir, "cert.pem")
 	keyFile := filepath.Join(tmpDir, "key.pem")
 
-	if err := GenerateSelfSignedCertWithAlgo(certFile, keyFile, KeyEd25519, "localhost"); err != nil {
+	if err := GenerateSelfSignedCertWithAlgo(certFile, keyFile, KeyEd25519, localhostName); err != nil {
 		t.Fatalf("generation failed: %v", err)
 	}
 
@@ -743,7 +743,7 @@ func TestDetectCertAlgorithm_ECDSA256(t *testing.T) {
 	certFile := filepath.Join(tmpDir, "cert.pem")
 	keyFile := filepath.Join(tmpDir, "key.pem")
 
-	if err := GenerateSelfSignedCertWithAlgo(certFile, keyFile, KeyECDSA256, "localhost"); err != nil {
+	if err := GenerateSelfSignedCertWithAlgo(certFile, keyFile, KeyECDSA256, localhostName); err != nil {
 		t.Fatalf("generation failed: %v", err)
 	}
 
@@ -761,7 +761,7 @@ func TestDetectCertAlgorithm_RSA2048(t *testing.T) {
 	certFile := filepath.Join(tmpDir, "cert.pem")
 	keyFile := filepath.Join(tmpDir, "key.pem")
 
-	if err := GenerateSelfSignedCertWithAlgo(certFile, keyFile, KeyRSA2048, "localhost"); err != nil {
+	if err := GenerateSelfSignedCertWithAlgo(certFile, keyFile, KeyRSA2048, localhostName); err != nil {
 		t.Fatalf("generation failed: %v", err)
 	}
 

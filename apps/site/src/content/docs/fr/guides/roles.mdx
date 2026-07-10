@@ -4,33 +4,33 @@ description: Contrôle d'accès basé sur les rôles avec 5 niveaux — superadm
 order: 36
 ---
 
-Bedrud implémente un système de rôles à 5 niveaux pour le contrôle d'accès. Chaque rôle correspond à un ensemble de chaînes d'accès stockées dans l'enregistrement utilisateur et appliquées à la fois au niveau API (middleware backend) et au niveau UI (gardes frontend et rendu conditionnel).
+Bedrud implements a 5-tier role system for access control. Each role maps to a set of access strings stored on the user record and enforced at both the API layer (backend middleware) and the UI layer (frontend guards and conditional rendering).
 
-## Hiérarchie des rôles
+## Role Hierarchy
 
-| Rôle | Tableau d'accès | Poids backend | Description |
-|------|----------------|---------------|-------------|
-| Superadmin | `['superadmin', 'user']` | 4 | Accès système complet, toutes les capacités d'administration |
-| Admin | `['admin', 'user']` | 3 | Accès admin complet, identique à superadmin |
-| Modérateur | `['moderator', 'user']` | 2 | Vue admin en lecture seule, aucune mutation |
-| Utilisateur | `['user']` | 1 | Utilisateur standard enregistré |
-| Invité | `['guest']` | 0 | Participant non enregistré, accès uniquement |
+| Role | Access Array | Backend Weight | Description |
+|------|-------------|----------------|-------------|
+| Superadmin | `['superadmin', 'user']` | 4 | Full system access, all admin capabilities |
+| Admin | `['admin', 'user']` | 3 | Full admin access, same as superadmin |
+| Moderator | `['moderator', 'user']` | 2 | Read-only admin view, no mutations |
+| User | `['user']` | 1 | Standard registered user |
+| Guest | `['guest']` | 0 | Unregistered participant, join-only |
 
-## Application backend
+## Backend Enforcement
 
-Les niveaux d'accès sont appliqués via le middleware `RequireAccess` sur chaque route admin. Le middleware vérifie le tableau d'accès de l'utilisateur par rapport au niveau minimum requis :
+Access levels are enforced via the `RequireAccess` middleware on every admin route. The middleware checks the user's accesses array against the minimum required level:
 
-- Les routes nécessitant un accès `superadmin` rejettent admin, modérateur, utilisateur et invité
-- Les routes nécessitant un accès `admin` autorisent superadmin et admin
-- Les routes nécessitant un accès `moderator` autorisent superadmin, admin et modérateur
+- Routes requiring `superadmin` access reject admin, moderator, user, and guest
+- Routes requiring `admin` access allow superadmin and admin
+- Routes requiring `moderator` access allow superadmin, admin, and moderator
 
-Le backend stocke les accès sous forme de chaîne séparée par des virgules dans la base de données (colonne `accesses` de la table `users`). Le type GORM `StringArray` gère la sérialisation et la désérialisation.
+The backend stores accesses as a comma-separated string in the database (`accesses` column on the `users` table). The `StringArray` GORM type handles serialization and deserialization.
 
-## Intégration frontend
+## Frontend Integration
 
-### Type utilisateur
+### User Type
 
-L'interface `User` dans `user.store.ts` comprend deux champs booléens dérivés du tableau d'accès :
+The `User` interface in `user.store.ts` includes two boolean fields derived from the accesses array:
 
 ```ts
 interface User {
@@ -41,49 +41,49 @@ interface User {
 }
 ```
 
-### Garde admin
+### Admin Guard
 
-La disposition admin (`/dashboard/admin`) laisse passer superadmin, admin et modérateur. Les modérateurs reçoivent une variable de contexte `isReadOnly=true` :
+The admin layout (`/dashboard/admin`) lets through superadmin, admin, and moderator. Moderators receive an `isReadOnly=true` context variable:
 
 ```tsx
 // routes/dashboard/admin.tsx
 const canAccess = user?.isSuperAdmin || accesses.includes('admin') || accesses.includes('moderator')
 ```
 
-Le hook `useAdminContext()` fournit le flag `isReadOnly` à toutes les routes enfants :
+The `useAdminContext()` hook provides the `isReadOnly` flag to all child routes:
 
 ```tsx
 const { isReadOnly } = useAdminContext()
 ```
 
-### Ce que les modérateurs peuvent voir vs faire
+### What Moderators Can See vs Do
 
-| Page | Voir | Modifier |
-|------|------|----------|
-| Statistiques d'aperçu | ✅ Statistiques complètes | N/A |
-| Liste des utilisateurs | ✅ Liste complète | ❌ Pas d'actions groupées |
-| Détail utilisateur | ✅ Profil complet | ❌ Pas de statut/rôle/suppression/déconnexion |
-| Liste des salles | ✅ Liste complète | ❌ Pas de suspension/suppression/modification de limite |
-| Détail salle | ✅ Informations complètes | ❌ Pas de suspension/suppression/expulsion/mute |
-| Paramètres | ❌ Redirigé | ❌ |
+| Page | View | Mutate |
+|------|------|--------|
+| Overview stats | ✅ Full stats | N/A |
+| Users list | ✅ Full list | ❌ No bulk actions |
+| User detail | ✅ Full profile | ❌ No status/role/delete/logout |
+| Rooms list | ✅ Full list | ❌ No suspend/delete/edit cap |
+| Room detail | ✅ Full info | ❌ No suspend/delete/kick/mute |
+| Settings | ❌ Redirected | ❌ |
 
-### Sélecteur de rôle
+### Role Selector
 
-L'interface admin fournit une liste déroulante `<Select>` à la fois dans le tableau de la liste des utilisateurs et sur la page de détail de l'utilisateur, remplaçant l'ancien bouton binaire superadmin. Options disponibles :
+The admin UI provides a `<Select>` dropdown on both the users list table and the user detail page, replacing the previous binary superadmin toggle. Available options:
 
-| Option | Enregistre comme |
-|--------|-----------------|
+| Option | Saves as |
+|--------|----------|
 | Superadmin | `['superadmin', 'user']` |
 | Admin | `['admin', 'user']` |
-| Modérateur | `['moderator', 'user']` |
-| Utilisateur | `['user']` |
-| Invité | `['guest']` |
+| Moderator | `['moderator', 'user']` |
+| User | `['user']` |
+| Guest | `['guest']` |
 
-La liste déroulante envoie une requête `PUT /api/admin/users/:id/accesses` avec le tableau d'accès complet.
+The dropdown sends a `PUT /api/admin/users/:id/accesses` request with the full access array.
 
-## Gestion CLI
+## CLI Management
 
-Les commandes `bedrud user promote` et `bedrud user demote` acceptent un flag `--role` :
+The `bedrud user promote` and `bedrud user demote` commands accept a `--role` flag:
 
 ```bash
 # Promote to superadmin (default)
@@ -99,16 +99,20 @@ bedrud user promote --email user@example.com --role moderator
 bedrud user demote --email user@example.com --role admin
 ```
 
-Valeurs `--role` valides : `superadmin`, `admin`, `moderator`, `user`, `guest`.
+Valid `--role` values: `superadmin`, `admin`, `moderator`, `user`, `guest`.
 
-## Emplacements du code
+## UI de modération en réunion
 
-| Fichier | Objectif |
-|---------|----------|
-| `server/internal/models/user.go` | Constantes des niveaux d'accès backend |
-| `server/internal/middleware/` | Middleware `RequireAccess` |
-| `server/internal/usercli/usercli.go` | Fonctions de gestion des rôles CLI |
-| `apps/web/src/lib/user.store.ts` | Type utilisateur frontend |
-| `apps/web/src/routes/dashboard/admin.tsx` | Garde admin + contexte isReadOnly |
-| `apps/web/src/components/admin/UserTable.tsx` | Liste déroulante de sélection de rôle + badges |
-| `apps/web/src/components/admin/RoomTable.tsx` | Masquage du tableau des salles en lecture seule |
+Les créateurs de salle et les modérateurs promus utilisent le menu contextuel des participants et les contrôles scène/partage pendant un appel. Pour le comportement côté hôte (couper le micro, expulser, arrêter le partage d'écran, spotlight, scène), voir [Contrôles de réunion](/fr/docs/using/meeting-controls) et [Mode scène](/fr/docs/using/stage-mode).
+
+## Code Locations
+
+| File | Purpose |
+|------|---------|
+| `server/internal/models/user.go` | Backend access level constants |
+| `server/internal/middleware/` | `RequireAccess` middleware |
+| `server/internal/usercli/usercli.go` | CLI role management functions |
+| `apps/web/src/lib/user.store.ts` | Frontend User type |
+| `apps/web/src/routes/dashboard/admin.tsx` | Admin guard + isReadOnly context |
+| `apps/web/src/components/admin/UserTable.tsx` | Role selector dropdown + badges |
+| `apps/web/src/components/admin/RoomTable.tsx` | Read-only room table masking |

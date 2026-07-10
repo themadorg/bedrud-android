@@ -4,71 +4,71 @@ description: Yerel iOS uygulaması
 order: 10
 ---
 
-Bedrud iOS uygulaması SwiftUI ile oluşturulmuş olup, çoklu örnek desteği ve güvenli kimlik bilgisi depolama ile yerel bir video toplantısı deneyimi sunar.
+The Bedrud iOS app is built with SwiftUI, providing a native video meeting experience with multi-instance support and secure credential storage.
 
-## Teknoloji Yığını
+## Technology Stack
 
-| Teknoloji | Sürüm | Amaç |
-|-----------|-------|------|
-| Swift | 5.9+ | Dil |
-| SwiftUI | En son | UI çerçevesi |
-| LiveKit Swift SDK | 2.0+ | WebRTC medya |
-| KeychainAccess | 4.2.2+ | Güvenli kimlik bilgisi depolama |
+| Technology | Version | Purpose |
+|-----------|---------|---------|
+| Swift | 5.9+ | Language |
+| SwiftUI | Latest | UI framework |
+| LiveKit Swift SDK | 2.0+ | WebRTC media |
+| KeychainAccess | 4.2.2+ | Secure credential storage |
 
-**Dağıtım hedefi:** iOS 18.0
+**Deployment target:** iOS 18.0
 
-## Proje Yapılandırması
+## Project Configuration
 
-Proje `project.yml` dosyasından proje üretimi için **XCodeGen** kullanır:
+The project uses **XCodeGen** for project generation from `project.yml`:
 
 - Bundle ID: `com.bedrud.ios`
-- Üretim komutu: `xcodegen generate`
+- Generated with: `xcodegen generate`
 
-## Dizin Yapısı
+## Directory Structure
 
 ```text
 apps/ios/Bedrud/
-├── BedrudApp.swift                # Uygulama giriş noktası
+├── BedrudApp.swift                # App entry point
 ├── Core/
 │   ├── API/
-│   │   └── APIClient.swift        # URLSession tabanlı REST istemcisi
+│   │   └── APIClient.swift        # URLSession-based REST client
 │   ├── Auth/
-│   │   └── AuthManager.swift      # Token yönetimi, giriş/çıkış
+│   │   └── AuthManager.swift      # Token management, login/logout
 │   ├── Instance/
-│   │   ├── InstanceManager.swift  # Merkezi çoklu örnek düzenleyici
-│   │   └── InstanceStore.swift    # Kalıcı örnek depolama (UserDefaults)
+│   │   ├── InstanceManager.swift  # Central multi-instance orchestrator
+│   │   └── InstanceStore.swift    # Persistent instance storage (UserDefaults)
 │   └── LiveKit/
-│       └── RoomManager.swift      # LiveKit oda bağlantı yöneticisi
+│       └── RoomManager.swift      # LiveKit room connection manager
 ├── Features/
 │   ├── Auth/
-│   │   ├── LoginView.swift        # Giriş ekranı
-│   │   └── RegisterView.swift     # Kayıt ekranı
+│   │   ├── LoginView.swift        # Login screen
+│   │   └── RegisterView.swift     # Registration screen
 │   ├── Dashboard/
-│   │   └── DashboardView.swift    # Oda listesi ve yönetimi
+│   │   └── DashboardView.swift    # Room list and management
 │   ├── Meeting/
-│   │   └── MeetingView.swift      # Görüntülü arama arayüzü
+│   │   └── MeetingView.swift      # Video call interface
 │   ├── Profile/
-│   │   └── ProfileView.swift      # Kullanıcı profili
+│   │   └── ProfileView.swift      # User profile
 │   ├── Instance/
-│   │   ├── AddInstanceView.swift  # Sunucu örneği ekleme
-│   │   └── InstanceSwitcherView.swift  # Örnekler arasında geçiş
+│   │   ├── AddInstanceView.swift  # Add server instance
+│   │   └── InstanceSwitcherView.swift  # Switch between instances
 │   ├── Settings/
-│   │   └── SettingsView.swift     # Uygulama ayarları
+│   │   └── SettingsView.swift     # App settings
 │   ├── JoinByURL/
-│   │   └── JoinByURLView.swift    # Derin bağlantı işleme
+│   │   └── JoinByURLView.swift    # Deep link handling
 │   └── Main/
-│       └── MainTabView.swift      # Sekme gezintisi
+│       └── MainTabView.swift      # Tab navigation
 ├── Models/
 │   ├── User.swift
 │   ├── Room.swift
 │   └── Instance.swift
 └── Design/
-    └── Components/                # Yeniden kullanılabilir SwiftUI bileşenleri
+    └── Components/                # Reusable SwiftUI components
 ```
 
-## Çoklu Örnek Mimarisi
+## Multi-Instance Architecture
 
-iOS uygulaması çoklu örnek desteği için Android mimarisini yansıtır.
+The iOS app mirrors the Android architecture for multi-instance support.
 
 ```mermaid
 flowchart TB
@@ -90,9 +90,9 @@ flowchart TB
     style InstanceManager fill:#f0f0f0,stroke:#333
 ```
 
-### Temel Örüntü
+### Key Pattern
 
-Bağımlılıklar bir `ObservableObject` olan `InstanceManager` üzerinde `@Published` özellikleridir. Görünümler bunları `@EnvironmentObject` ile alır:
+Dependencies are `@Published` properties on `InstanceManager`, which is an `ObservableObject`. Views receive it via `@EnvironmentObject`:
 
 ```swift
 struct DashboardView: View {
@@ -106,7 +106,7 @@ struct DashboardView: View {
 }
 ```
 
-### Gezinti Akışı
+### Navigation Flow
 
 ```mermaid
 flowchart LR
@@ -116,11 +116,11 @@ flowchart LR
     DashboardView -. "toolbar sheet" .-> InstanceSwitcherView["InstanceSwitcherView"]
 ```
 
-Örnek değiştirici Dashboard araç çubuğundan tetiklenen bir `.sheet` olarak görünür.
+The instance switcher appears as a `.sheet` triggered from the Dashboard toolbar.
 
-## Uygulama Giriş Noktası
+## App Entry Point
 
-`BedrudApp.swift` çekirdek servisleri başlatır ve bunları SwiftUI ortamına enjekte eder:
+`BedrudApp.swift` initializes the core services and injects them into the SwiftUI environment:
 
 ```swift
 @main
@@ -140,38 +140,38 @@ struct BedrudApp: App {
 }
 ```
 
-## Özellikler
+## Features
 
-### Güvenli Depolama
+### Secure Storage
 
-JWT tokenları ve hassas kimlik bilgileri UserDefaults yerine **KeychainAccess** ile saklanır.
+Uses **KeychainAccess** for storing JWT tokens and sensitive credentials, rather than UserDefaults.
 
-### Derin Bağlantı
+### Deep Linking
 
-Doğrudan odaya katılma ve oda kodları için URL'leri işler.
+Handles URLs for direct room joining and room codes.
 
-### Ayarlar
+### Settings
 
-Kullanıcı tercihleri `SettingsStore` üzerinden UserDefaults kullanılarak kalıcı olarak saklanır.
+User preferences are persisted via `SettingsStore` using UserDefaults.
 
-## Derleme
+## Building
 
 ```bash
-# Xcode'da aç
+# Open in Xcode
 make dev-ios
 
-# Arşiv derle (Sürüm)
+# Build archive (Release)
 make build-ios
 
-# IPA dışa aktar (ExportOptions.plist gerektirir)
+# Export IPA (requires ExportOptions.plist)
 make export-ios
 
-# Simülatör için derle (Hata Ayıklama)
+# Build for simulator (Debug)
 make build-ios-sim
 ```
 
-### Gereksinimler
+### Requirements
 
-- Xcode (en son kararlı sürüm)
-- iOS 18.0 dağıtım hedefi
-- Cihaz derlemeleri için: Apple Developer hesabı ve sağlama profili
+- Xcode (latest stable)
+- iOS 18.0 deployment target
+- For device builds: Apple Developer account and provisioning profile

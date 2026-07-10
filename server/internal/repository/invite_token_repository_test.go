@@ -1,10 +1,11 @@
 package repository
 
 import (
-	"bedrud/internal/models"
-	"bedrud/internal/testutil"
 	"testing"
 	"time"
+
+	"bedrud/internal/models"
+	"bedrud/internal/testutil"
 
 	"github.com/google/uuid"
 )

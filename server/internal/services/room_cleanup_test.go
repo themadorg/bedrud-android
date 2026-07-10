@@ -1,15 +1,16 @@
 package services
 
 import (
+	"context"
+	"sync"
+	"testing"
+
 	"bedrud/config"
 	"bedrud/internal/lkutil"
 	"bedrud/internal/models"
 	"bedrud/internal/repository"
 	"bedrud/internal/storage"
 	"bedrud/internal/testutil"
-	"context"
-	"sync"
-	"testing"
 )
 
 type mockDeleter struct {
@@ -89,9 +90,10 @@ func TestCascadeDeleteRoom_CleansS3Uploads(t *testing.T) {
 	svc := NewRoomCleanupService(roomRepo, nil, client, nil, "test", "testsecret1234567890123456789012", tracker)
 	_ = svc.CascadeDeleteRoom(context.Background(), room, CascadeDeleteOptions{})
 
+	expected := storage.ChatObjectKey(room.ID, "cd-s3-user", "cascade-key", ".png")
 	keys := del.Keys()
-	if len(keys) != 1 || keys[0] != "cascade-key.png" {
-		t.Fatalf("expected [cascade-key.png], got %v", keys)
+	if len(keys) != 1 || keys[0] != expected {
+		t.Fatalf("expected [%s], got %v", expected, keys)
 	}
 
 	var count int64
@@ -117,9 +119,10 @@ func TestCascadeDeleteRoom_CleansMixedUploads(t *testing.T) {
 	svc := NewRoomCleanupService(roomRepo, nil, client, nil, "test", "testsecret1234567890123456789012", tracker)
 	_ = svc.CascadeDeleteRoom(context.Background(), room, CascadeDeleteOptions{})
 
+	expected := storage.ChatObjectKey(room.ID, "mix-user", "s3-h", ".jpg")
 	keys := del.Keys()
-	if len(keys) != 1 || keys[0] != "s3-h.jpg" {
-		t.Fatalf("expected only S3 key deleted, got %v", keys)
+	if len(keys) != 1 || keys[0] != expected {
+		t.Fatalf("expected only S3 key deleted [%s], got %v", expected, keys)
 	}
 
 	var count int64
@@ -143,9 +146,10 @@ func TestSuspendRoom_CleansS3Uploads(t *testing.T) {
 	svc := NewRoomCleanupService(roomRepo, nil, client, nil, "test", "testsecret1234567890123456789012", tracker)
 	_ = svc.SuspendRoom(context.Background(), room)
 
+	expected := storage.ChatObjectKey(room.ID, "s3-suspend-user", "suspend-s3-key", ".png")
 	keys := del.Keys()
-	if len(keys) != 1 || keys[0] != "suspend-s3-key.png" {
-		t.Fatalf("expected [suspend-s3-key.png], got %v", keys)
+	if len(keys) != 1 || keys[0] != expected {
+		t.Fatalf("expected [%s], got %v", expected, keys)
 	}
 
 	var count int64

@@ -1,11 +1,14 @@
 package repository
 
 import (
-	"bedrud/internal/models"
-	"bedrud/internal/testutil"
 	"testing"
 	"time"
+
+	"bedrud/internal/models"
+	"bedrud/internal/testutil"
 )
+
+const updatedName = "Updated Name"
 
 func TestUserRepository_CreateUser(t *testing.T) {
 	db := testutil.SetupTestDB(t)
@@ -141,14 +144,14 @@ func TestUserRepository_UpdateUser(t *testing.T) {
 	user := &models.User{ID: "user-1", Email: "update@example.com", Name: "Original", Provider: "local", IsActive: true}
 	_ = repo.CreateUser(user)
 
-	user.Name = "Updated Name"
+	user.Name = updatedName
 	err := repo.UpdateUser(user)
 	if err != nil {
 		t.Fatalf("failed to update user: %v", err)
 	}
 
 	found, _ := repo.GetUserByID("user-1")
-	if found.Name != "Updated Name" {
+	if found.Name != updatedName {
 		t.Fatalf("expected name 'Updated Name', got '%s'", found.Name)
 	}
 }

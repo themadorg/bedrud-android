@@ -19,7 +19,10 @@ linters:
     - gocritic
     - revive
     - misspell
-    - gofumpt
+    # gofumpt disabled: gofumpt ≥0.9 with this Go toolchain (go1.26.4-X) misclassifies
+    # stdlib imports (e.g. sorts "fmt" after "bedrud/..."), fighting golangci's embedded
+    # gofumpt and making format non-convergent. Use make fmt (goimports) instead.
+    # - gofumpt
     - thelper
     - testifylint
     - intrange
@@ -27,8 +30,6 @@ linters:
     - nolintlint
 
 linters-settings:
-  gofumpt:
-    extra-rules: true
   revive:
     rules:
       - name: exported

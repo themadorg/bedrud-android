@@ -1,8 +1,6 @@
 package install
 
 import (
-	"bedrud/internal/livekit"
-	"bedrud/internal/utils"
 	"errors"
 	"fmt"
 	"io"
@@ -15,7 +13,15 @@ import (
 	"strings"
 	"time"
 
+	"bedrud/internal/livekit"
+	"bedrud/internal/utils"
+
 	"gopkg.in/yaml.v3"
+)
+
+const (
+	loopbackIPv4 = "127.0.0.1"
+	loopbackIPv6 = "::1"
 )
 
 type installConfigYAML struct {
@@ -202,7 +208,7 @@ func LinuxInstall(cfg *InstallConfig) error {
 
 	if cfg.BehindProxy || (!cfg.EnableTLS && cfg.Domain != "") {
 		configYAML.Server.BehindProxy = true
-		configYAML.Server.TrustedProxies = []string{"127.0.0.1", "::1"}
+		configYAML.Server.TrustedProxies = []string{loopbackIPv4, loopbackIPv6}
 		configYAML.Server.ProxyHeader = "X-Forwarded-For"
 		if !cfg.BehindProxy {
 			fmt.Println("⚠ Warning: behindProxy enabled because domain is set without TLS. Defaulting trustedProxies to localhost.")
@@ -213,7 +219,7 @@ func LinuxInstall(cfg *InstallConfig) error {
 	configYAML.Database.Path = "/var/lib/bedrud/bedrud.db"
 
 	configYAML.LiveKit.Host = livekitPublicHost
-	configYAML.LiveKit.InternalHost = fmt.Sprintf("http://127.0.0.1:%s", cfg.LKPort)
+	configYAML.LiveKit.InternalHost = fmt.Sprintf("http://%s:%s", loopbackIPv4, cfg.LKPort)
 	if isExternalLK {
 		configYAML.LiveKit.InternalHost = livekitPublicHost
 	}
@@ -251,7 +257,7 @@ func LinuxInstall(cfg *InstallConfig) error {
 			turnDomain = cfg.LKDomain
 		}
 
-		lkBindAddr := "127.0.0.1"
+		lkBindAddr := loopbackIPv4
 		if hasSeparateLKDomain {
 			lkBindAddr = "0.0.0.0"
 		}
@@ -314,8 +320,8 @@ func LinuxInstall(cfg *InstallConfig) error {
 	if cfg.EnableTLS && cfg.CertPath == "" && cfg.KeyPath == "" {
 		cp, kp := "/etc/bedrud/cert.pem", "/etc/bedrud/key.pem"
 		if _, err := os.Stat(cp); os.IsNotExist(err) {
-			hosts := []string{"localhost", "127.0.0.1", "::1"}
-			if cfg.OverrideIP != "" && cfg.OverrideIP != "127.0.0.1" && cfg.OverrideIP != "localhost" {
+			hosts := []string{"localhost", loopbackIPv4, loopbackIPv6}
+			if cfg.OverrideIP != "" && cfg.OverrideIP != loopbackIPv4 && cfg.OverrideIP != "localhost" {
 				hosts = append(hosts, cfg.OverrideIP)
 			}
 			if cfg.Domain != "" {
@@ -531,7 +537,7 @@ func getLocalIP() string {
 			}
 		}
 	}
-	return "127.0.0.1"
+	return loopbackIPv4
 }
 
 func LinuxUninstall() error {

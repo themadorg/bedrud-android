@@ -1,12 +1,6 @@
 package handlers
 
 import (
-	"bedrud/config"
-	"bedrud/internal/auth"
-	"bedrud/internal/database"
-	"bedrud/internal/models"
-	"bedrud/internal/queue"
-	"bedrud/internal/repository"
 	"context"
 	"crypto/rand"
 	"crypto/sha256"
@@ -14,6 +8,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"net/mail"
 	"net/url"
@@ -21,11 +16,20 @@ import (
 	"time"
 	"unicode"
 
+	"bedrud/config"
+	"bedrud/internal/auth"
+	"bedrud/internal/database"
+	"bedrud/internal/models"
+	"bedrud/internal/queue"
+	"bedrud/internal/repository"
+	"bedrud/internal/storage"
+
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
 	"github.com/gorilla/sessions"
 	"github.com/markbates/goth/gothic"
 	"github.com/rs/zerolog/log"
+	"gorm.io/gorm"
 )
 
 type AuthHandler struct {
@@ -207,8 +211,15 @@ func (h *AuthHandler) Register(c *fiber.Ctx) error {
 
 	user, err := h.authService.Register(input.Email, input.Password, input.Name)
 	if err != nil {
+		msg := "Registration failed"
+		if err.Error() == "user already exists" {
+			msg = "Registration failed" // controlled; avoid raw internal strings
+		}
+		// Keep stable message for duplicates (same as generic fail) to limit enumeration via distinct copy.
+		// Still return 400 so clients know not to proceed.
+		_ = msg
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": err.Error(),
+			"error": "Unable to register with the provided details",
 		})
 	}
 
@@ -504,6 +515,78 @@ func (h *AuthHandler) GetMe(c *fiber.Ctx) error {
 	return c.JSON(user)
 }
 
+func profileResponse(user *models.User) fiber.Map {
+	return fiber.Map{
+		"id":        user.ID,
+		"name":      user.Name,
+		"email":     user.Email,
+		"provider":  user.Provider,
+		"accesses":  user.Accesses,
+		"avatarUrl": user.AvatarURL,
+	}
+}
+
+// @Summary Upload profile avatar
+// @Description Upload a profile photo stored on the server
+// @Tags auth
+// @Accept mpfd
+// @Produce json
+// @Success 200 {object} object
+// @Failure 400 {object} auth.ErrorResponse
+// @Failure 401 {object} auth.ErrorResponse
+// @Router /auth/me/avatar [post]
+func (h *AuthHandler) UploadAvatar(c *fiber.Ctx) error {
+	claims := c.Locals("user").(*auth.Claims)
+	file, err := c.FormFile("avatar")
+	if err != nil || file == nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Avatar file is required"})
+	}
+	if file.Size > storage.AvatarMaxBytes() {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Avatar too large (max 2 MB)"})
+	}
+
+	f, err := file.Open()
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Failed to read upload"})
+	}
+	defer f.Close()
+
+	data, err := io.ReadAll(io.LimitReader(f, storage.AvatarMaxBytes()+1))
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to read upload"})
+	}
+	if int64(len(data)) > storage.AvatarMaxBytes() {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Avatar too large (max 2 MB)"})
+	}
+
+	url, err := storage.SaveUserAvatar(claims.UserID, data)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+	}
+
+	user, err := h.authService.UpdateAvatarURL(claims.UserID, url)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+	}
+	return c.JSON(profileResponse(user))
+}
+
+// @Summary Remove profile avatar
+// @Description Remove a custom uploaded profile photo
+// @Tags auth
+// @Produce json
+// @Success 200 {object} object
+// @Failure 401 {object} auth.ErrorResponse
+// @Router /auth/me/avatar [delete]
+func (h *AuthHandler) DeleteAvatar(c *fiber.Ctx) error {
+	claims := c.Locals("user").(*auth.Claims)
+	user, err := h.authService.ClearAvatar(claims.UserID)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+	}
+	return c.JSON(profileResponse(user))
+}
+
 // @Summary Update profile
 // @Description Update user name or email. Email change triggers verification flow and issues new tokens.
 // @Tags auth
@@ -528,7 +611,7 @@ func (h *AuthHandler) UpdateProfile(c *fiber.Ctx) error {
 	var newAccessToken, newRefreshToken string
 	if input.Email != "" && auth.CanonicalizeEmail(input.Email) != auth.CanonicalizeEmail(claims.Email) {
 		// Block email change for OAuth-only users — changing email disconnects OAuth identity
-		if claims.Provider != "local" && claims.Provider != "passkey" {
+		if claims.Provider != models.ProviderLocal && claims.Provider != models.ProviderPasskey {
 			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Cannot change email for OAuth accounts"})
 		}
 		if _, err := mail.ParseAddress(input.Email); err != nil {
@@ -601,11 +684,7 @@ func (h *AuthHandler) UpdateProfile(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
 	}
 
-	res := fiber.Map{
-		"id":    user.ID,
-		"name":  user.Name,
-		"email": user.Email,
-	}
+	res := profileResponse(user)
 	if input.Email != "" && auth.CanonicalizeEmail(input.Email) != auth.CanonicalizeEmail(claims.Email) {
 		res["requiresVerification"] = true
 		res["message"] = "Verification email sent to new address"
@@ -749,7 +828,7 @@ func (h *AuthHandler) ForgotPassword(c *fiber.Ctx) error {
 
 	// Look up user by email
 	user, err := h.authService.GetUserByEmail(input.Email)
-	if err == nil && user != nil && (user.Provider == "local" || user.Provider == "passkey") {
+	if err == nil && user != nil && (user.Provider == models.ProviderLocal || user.Provider == models.ProviderPasskey) {
 		cooldownKey := "forgot:" + user.ID
 		if h.emailCooldown.Allow(cooldownKey) {
 			enqueuePasswordResetEmail(h, c, user)
@@ -837,14 +916,20 @@ func (h *AuthHandler) ResetPassword(c *fiber.Ctx) error {
 	}
 
 	// Only allow password reset for local/passkey accounts, not OAuth
-	if user.Provider != "local" && user.Provider != "passkey" {
+	if user.Provider != models.ProviderLocal && user.Provider != models.ProviderPasskey {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": "Password reset is not available for OAuth accounts",
 		})
 	}
 
-	// Reset password (clears refresh token, revokes sessions)
+	// Reset password (clears refresh token, revokes sessions).
+	// Concurrent loser of UpdatePasswordIfUnchanged gets ErrRecordNotFound → treat as used token.
 	if err := h.authService.ResetPassword(user.ID, input.NewPassword); err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+				"error": "Invalid or expired reset token",
+			})
+		}
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": "Failed to reset password",
 		})
@@ -878,7 +963,7 @@ func enqueuePasswordResetEmail(h *AuthHandler, c *fiber.Ctx, user *models.User) 
 		return
 	}
 
-	frontendURL := strings.TrimRight(h.config.Auth.FrontendURL, "/")
+	frontendURL := frontendBaseURL(h.config)
 	if frontendURL == "" && h.config.Server.Domain != "" {
 		frontendURL = fmt.Sprintf("https://%s", strings.TrimRight(h.config.Server.Domain, "/"))
 	}
@@ -923,7 +1008,7 @@ func enqueueVerificationEmail(h *AuthHandler, c *fiber.Ctx, user *models.User) {
 		return
 	}
 
-	frontendURL := strings.TrimRight(h.config.Auth.FrontendURL, "/")
+	frontendURL := frontendBaseURL(h.config)
 	if frontendURL == "" && h.config.Server.Domain != "" {
 		frontendURL = fmt.Sprintf("https://%s", strings.TrimRight(h.config.Server.Domain, "/"))
 	}
@@ -950,7 +1035,7 @@ func enqueueVerificationEmail(h *AuthHandler, c *fiber.Ctx, user *models.User) {
 
 // verifyFrontendURL returns the base frontend URL without a trailing slash,
 // defaulting to empty (for relative redirects) when not configured.
-func verifyFrontendURL(cfg *config.Config) string {
+func frontendBaseURL(cfg *config.Config) string {
 	return strings.TrimRight(cfg.Auth.FrontendURL, "/")
 }
 

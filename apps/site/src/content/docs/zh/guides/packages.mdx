@@ -4,17 +4,17 @@ description: 从包管理器安装
 order: 32
 ---
 
-本指南介绍 Bedrud 所有可用的包管理器和二进制文件安装方式--包括**服务器**和**桌面客户端**。
+This guide covers all available package manager and binary installation methods for Bedrud - both the **server** and the **desktop client**.
 
 ---
 
-## 服务器安装
+## Server Installation
 
-### apt 仓库（Ubuntu / Debian）
+### apt Repository (Ubuntu / Debian)
 
-在基于 Debian 的系统上安装 Bedrud 服务器的最简单方式是通过托管在 GitHub Pages 上的自托管 apt 仓库。
+The easiest way to install the Bedrud server on Debian-based systems is via the self-hosted apt repository hosted on GitHub Pages.
 
-**1. 添加仓库和 GPG 密钥：**
+**1. Add the repository and GPG key:**
 
 ```bash
 curl -fsSL https://bedrud.org/key.gpg \
@@ -30,23 +30,23 @@ echo "deb https://bedrud.org stable main" \
 sudo apt update && sudo apt install bedrud
 ```
 
-软件包将二进制文件安装到 `/usr/local/bin/bedrud` 并注册一个 init 服务（自动检测 systemd/OpenRC/SysV）。安装后，运行交互式安装程序：
+The package installs the binary to `/usr/local/bin/bedrud` and registers an init service (systemd/OpenRC/SysV auto-detected). After installing, run the interactive installer:
 
 ```bash
 sudo bedrud install
 ```
 
-所有配置选项请参阅[安装指南](/zh/docs/getting-started/installation)。
+See the [Installation Guide](/zh/docs/getting-started/installation) for all configuration options.
 
 ---
 
-### AUR（Arch Linux）
+### AUR (Arch Linux)
 
 ```bash
 yay -S bedrud-bin
 ```
 
-安装后运行：
+After installing, run:
 
 ```bash
 sudo bedrud install
@@ -54,9 +54,9 @@ sudo bedrud install
 
 ---
 
-### DNF / RPM 仓库（Fedora / RHEL / openSUSE）
+### DNF / RPM Repository (Fedora / RHEL / openSUSE)
 
-**1. 添加仓库：**
+**1. Add the repository:**
 
 ```bash
 sudo curl -fsSL https://bedrud.org/key.gpg \
@@ -66,7 +66,7 @@ sudo curl -fsSL https://bedrud.org/dnf/bedrud.repo \
   -o /etc/yum.repos.d/bedrud.repo
 ```
 
-**2. 安装：**
+**2. Install:**
 
 ```bash
 sudo dnf install bedrud
@@ -74,9 +74,9 @@ sudo dnf install bedrud
 
 ---
 
-### 直接下载 .deb 包
+### Direct .deb Download
 
-从 [最新 GitHub release](https://github.com/themadorg/bedrud/releases/latest) 直接下载 `.deb` 软件包：
+Download the `.deb` package directly from the [latest GitHub release](https://github.com/themadorg/bedrud/releases/latest):
 
 <Tabs>
   <TabsList>
@@ -103,9 +103,9 @@ sudo dnf install bedrud
 
 ---
 
-### 直接下载 .rpm 包
+### Direct .rpm Download
 
-从 [最新 GitHub release](https://github.com/themadorg/bedrud/releases/latest) 下载 `.rpm` 软件包：
+Download the `.rpm` package from the [latest GitHub release](https://github.com/themadorg/bedrud/releases/latest):
 
 <Tabs>
   <TabsList>
@@ -128,9 +128,9 @@ sudo dnf install bedrud
 
 ---
 
-### 手动下载二进制文件
+### Manual Binary Download
 
-下载压缩的 tar 包并解压到 `$PATH` 中的任意位置：
+Download the compressed tarball and extract it anywhere on your `$PATH`. Static binary — works on all Linux distributions (Debian, Ubuntu, Fedora, Alpine, etc).
 
 <Tabs>
   <TabsList>
@@ -157,9 +157,29 @@ sudo dnf install bedrud
 
 ---
 
+### Alpine Linux (.apk)
+
+Download the Alpine package from the [latest release](https://github.com/themadorg/bedrud/releases/latest):
+
+```bash
+# x86_64
+wget https://github.com/themadorg/bedrud/releases/latest/download/bedrud_x86_64.apk
+apk add --allow-untrusted bedrud_x86_64.apk
+
+# ARM64 (aarch64)
+wget https://github.com/themadorg/bedrud/releases/latest/download/bedrud_aarch64.apk
+apk add --allow-untrusted bedrud_aarch64.apk
+```
+
 ### Docker
 
-从 GitHub Container Registry 拉取预构建镜像：
+Three image variants are available on GitHub Container Registry:
+
+| Tag | Base | Size |
+|-----|------|------|
+| `:latest` | Debian Bookworm | ~50 MB |
+| `:latest-alpine` | Alpine 3.21 | ~30 MB |
+| `:latest-distroless` | Distroless | ~25 MB |
 
 ```bash
 # glibc (default)
@@ -171,7 +191,7 @@ docker run -d \
   -v bedrud-data:/var/lib/bedrud \
   ghcr.io/themadorg/bedrud:latest
 
-# Alpine (musl)
+# musl (Alpine)
 docker pull ghcr.io/themadorg/bedrud:latest-alpine
 docker run -d \
   --name bedrud \
@@ -180,7 +200,7 @@ docker run -d \
   -v bedrud-data:/var/lib/bedrud \
   ghcr.io/themadorg/bedrud:latest-alpine
 
-# Distroless (~25 MB)
+# Distroless (smallest, no shell)
 docker pull ghcr.io/themadorg/bedrud:latest-distroless
 docker run -d \
   --name bedrud \
@@ -190,17 +210,11 @@ docker run -d \
   ghcr.io/themadorg/bedrud:latest-distroless
 ```
 
-| 标签 | 基础镜像 | 大小 |
-|------|----------|------|
-| `:latest` | Debian | ~45 MB |
-| `:latest-alpine` | Alpine | ~15 MB |
-| `:latest-distroless` | Distroless | ~25 MB |
-
-完整详情（包括卷挂载和反向代理设置）请参阅 [Docker 指南](/zh/docs/guides/docker)。
+See the [Docker Guide](/zh/docs/guides/docker) for full details including volume mounts and reverse proxy setup.
 
 ---
 
-## 桌面客户端安装
+## Desktop Client Installation
 
 ### Linux
 
@@ -216,13 +230,13 @@ docker run -d \
   </TabsList>
 
   <TabsContent value="apt">
-    首先添加 apt 仓库（见上方[服务器 - apt 仓库](#apt-仓库ubuntu-debian)），然后：
+    Add the apt repository first (see [Server - apt Repository](#apt-repository-ubuntu-debian) above), then:
 
     ```bash
     sudo apt install bedrud-desktop
     ```
 
-    软件包会安装一个 `.desktop` 启动器并在应用菜单中注册。
+    The package installs a `.desktop` launcher and registers the app in your application menu.
   </TabsContent>
 
   <TabsContent value="aur">
@@ -232,7 +246,7 @@ docker run -d \
   </TabsContent>
 
   <TabsContent value="dnf">
-    首先添加 DNF 仓库（见上方[服务器 - DNF 仓库](#dnf-rpm-仓库fedora-rhel-opensuse)），然后：
+    Add the DNF repository first (see [Server - DNF Repository](#dnf-rpm-repository-fedora-rhel-opensuse) above), then:
 
     ```bash
     sudo dnf install bedrud-desktop
@@ -244,11 +258,11 @@ docker run -d \
     sudo snap install bedrud-desktop
     ```
 
-    Snap 可用于任何支持 Snap 守护进程（snapd）的 Linux 发行版。
+    Snap is available on any Linux distribution that supports the Snap daemon (snapd).
   </TabsContent>
 
   <TabsContent value="flatpak">
-    从 Flatpak 包安装：
+    Install from the Flatpak bundle:
 
     ```bash
     flatpak install https://github.com/themadorg/bedrud/releases/latest/download/bedrud-desktop-linux-x86_64.flatpak
@@ -257,7 +271,7 @@ docker run -d \
   </TabsContent>
 
   <TabsContent value="appimage">
-    AppImage 是自包含的，可在任何 Linux 发行版上运行而无需安装。
+    The AppImage is self-contained and works on any Linux distribution without installation.
 
     ```bash
     wget https://github.com/themadorg/bedrud/releases/latest/download/bedrud-desktop-linux-x86_64.AppImage
@@ -266,12 +280,12 @@ docker run -d \
     ```
 
     <Callout type="tip">
-      要将 AppImage 集成到应用启动器中，可以使用 [AppImageLauncher](https://github.com/TheAssassin/AppImageLauncher) 等工具。
+      To integrate AppImage into your application launcher, use a tool like [AppImageLauncher](https://github.com/TheAssassin/AppImageLauncher).
     </Callout>
   </TabsContent>
 
   <TabsContent value="tarball">
-    解压后可在任意目录运行：
+    Extract and run from any directory:
 
     ```bash
     tar xf bedrud-desktop-linux-x86_64.tar.xz
@@ -284,7 +298,7 @@ docker run -d \
 
 ### macOS
 
-为 Intel 和 Apple Silicon 提供预构建的便携 tar 包。应用**未签名** - 解压后可能需要在**系统设置 → 隐私与安全性**中允许运行。
+Pre-built portable tarballs are available for both Intel and Apple Silicon. The app is **unsigned** - after extracting you may need to allow it in **System Settings → Privacy & Security**.
 
 <Tabs>
   <TabsList>
@@ -321,11 +335,11 @@ docker run -d \
 </Tabs>
 
 <Callout type="info">
-  当在 CI 中配置了 `MACOS_CERTIFICATE` 时，macOS 发布版本会**经过代码签名和公证**（见[密钥参考](#密钥参考)）。没有这些密钥时二进制文件未签名 - 请使用上方的 `xattr` 解决方法，或在 Finder 中右键点击 → 打开。
+  macOS releases are **code-signed and notarized** when `MACOS_CERTIFICATE` is configured in CI (see [Secrets Reference](#secrets-reference)). Without those secrets the binary is unsigned - use the `xattr` workaround above or right-click → Open in Finder.
 </Callout>
 
 <Callout type="warning">
-  未签名的 macOS Gatekeeper 警告：运行上方的 `xattr` 命令，或打开**系统设置 → 隐私与安全性**并在首次启动尝试被阻止后点击**仍要打开**。
+  Unsigned macOS Gatekeeper warning: either run the `xattr` command above, or open **System Settings → Privacy & Security** and click **Open Anyway** after the first blocked launch attempt.
 </Callout>
 
 ---
@@ -341,20 +355,20 @@ docker run -d \
   </TabsList>
 
   <TabsContent value="nsis">
-    从[最新版本](https://github.com/themadorg/bedrud/releases/latest)下载并运行安装程序：
+    Download and run the installer from the [latest release](https://github.com/themadorg/bedrud/releases/latest):
 
-    | 架构 | 文件 |
+    | Architecture | File |
     |---|---|
     | x86_64 | `bedrud-desktop-windows-x86_64-setup.exe` |
     | ARM64 | `bedrud-desktop-windows-arm64-setup.exe` |
 
-    安装程序会在开始菜单和"添加或删除程序"中注册应用。
+    The installer registers the app in the Start Menu and Add/Remove Programs.
   </TabsContent>
 
   <TabsContent value="zip">
-    无需安装 - 解压后即可运行：
+    No installation required - extract and run:
 
-    | 架构 | 文件 |
+    | Architecture | File |
     |---|---|
     | x86_64 | `bedrud-desktop-windows-x86_64.zip` |
     | ARM64 | `bedrud-desktop-windows-arm64.zip` |
@@ -375,41 +389,42 @@ docker run -d \
 
 ---
 
-## 汇总表
+## Summary Table
 
-| 平台 | 服务器 | 桌面客户端 |
+| Platform | Server | Desktop Client |
 |---|---|---|
 | Ubuntu / Debian (apt) | `apt install bedrud` | `apt install bedrud-desktop` |
 | Fedora / RHEL (dnf) | `dnf install bedrud` | `dnf install bedrud-desktop` |
 | Arch Linux (AUR) | `yay -S bedrud-bin` | `yay -S bedrud-desktop-bin` |
-| 任意 Linux | AppImage / `tar.xz` 二进制文件 | AppImage / Flatpak / Snap / `tar.xz` |
-| macOS | `tar.xz` 二进制文件 | Homebrew tap / 便携 `tar.gz` |
-| Windows | - | WinGet / Chocolatey / NSIS 安装程序 / 便携 `.zip` |
-| Docker | `ghcr.io/themadorg/bedrud` | - |
+| Any Linux | AppImage / `tar.xz` binary | AppImage / Flatpak / Snap / `tar.xz` |
+| macOS | `tar.xz` binary | Homebrew tap / portable `tar.gz` |
+| Windows | - | WinGet / Chocolatey / NSIS installer / portable `.zip` |
+| Alpine Linux | `apk` / `tar.xz` (static) | - |
+| Docker | `ghcr.io/themadorg/bedrud` (`:latest` / `:latest-alpine`) | - |
 
 ---
 
-## 密钥参考
+## Secrets Reference
 
-以下 GitHub Actions 密钥用于启用可选的分发渠道：
+These GitHub Actions secrets unlock the optional distribution channels:
 
-| 密钥 | 渠道 | 说明 |
+| Secret | Channel | Description |
 |---|---|---|
-| `AUR_SSH_PRIVATE_KEY` | AUR | 用于 `aur.archlinux.org` 推送的 SSH 密钥 |
-| `APT_GPG_PRIVATE_KEY` | apt 仓库 | 用于签名 `Release` 文件的 GPG 密钥 |
-| `APT_GPG_KEY_ID` | apt 仓库 | 上述密钥的 ID |
-| `RPM_GPG_PRIVATE_KEY` | DNF 仓库 | 用于签名 RPM 软件包的 GPG 密钥 |
-| `SNAPCRAFT_STORE_CREDENTIALS` | Snap Store | 从 `snapcraft export-login` 获取的登录凭据 |
-| `CHOCOLATEY_API_KEY` | Chocolatey | 来自 chocolatey.org 的 API 密钥 |
-| `HOMEBREW_TAP_TOKEN` | Homebrew tap | 具有对 `themadorg/homebrew-bedrud` 写入权限的 GitHub PAT |
-| `WINGET_GITHUB_TOKEN` | WinGet | 用于向 `microsoft/winget-pkgs` 提交 PR 的 GitHub PAT |
-| `MACOS_CERTIFICATE` | macOS 签名 | Base64 编码的 Developer ID `.p12` 证书 |
-| `MACOS_CERTIFICATE_PWD` | macOS 签名 | `.p12` 文件的密码 |
-| `MACOS_TEAM_ID` | macOS 签名 / 公证 | Apple Developer Team ID |
-| `MACOS_APPLE_ID` | macOS 公证 | Apple ID 邮箱地址 |
-| `MACOS_APP_PWD` | macOS 公证 | 用于 notarytool 的应用专用密码 |
-| `IOS_P12_BASE64` | iOS IPA | iOS 分发证书 |
-| `TELEGRAM_BOT_TOKEN` | Telegram | 用于发布通知的机器人令牌 |
-| `TELEGRAM_CHAT_ID` | Telegram | 目标频道/群组 ID |
+| `AUR_SSH_PRIVATE_KEY` | AUR | SSH key for `aur.archlinux.org` push |
+| `APT_GPG_PRIVATE_KEY` | apt repo | GPG key for signing `Release` file |
+| `APT_GPG_KEY_ID` | apt repo | Key ID of the above |
+| `RPM_GPG_PRIVATE_KEY` | DNF repo | GPG key for signing RPM packages |
+| `SNAPCRAFT_STORE_CREDENTIALS` | Snap Store | Login from `snapcraft export-login` |
+| `CHOCOLATEY_API_KEY` | Chocolatey | API key from chocolatey.org |
+| `HOMEBREW_TAP_TOKEN` | Homebrew tap | GitHub PAT with write access to `themadorg/homebrew-bedrud` |
+| `WINGET_GITHUB_TOKEN` | WinGet | GitHub PAT for submitting PR to `microsoft/winget-pkgs` |
+| `MACOS_CERTIFICATE` | macOS signing | Base64-encoded Developer ID `.p12` certificate |
+| `MACOS_CERTIFICATE_PWD` | macOS signing | Password for the `.p12` file |
+| `MACOS_TEAM_ID` | macOS signing / notarize | Apple Developer Team ID |
+| `MACOS_APPLE_ID` | macOS notarize | Apple ID email address |
+| `MACOS_APP_PWD` | macOS notarize | App-specific password for notarytool |
+| `IOS_P12_BASE64` | iOS IPA | iOS distribution certificate |
+| `TELEGRAM_BOT_TOKEN` | Telegram | Bot token for release notifications |
+| `TELEGRAM_CHAT_ID` | Telegram | Target channel/group ID |
 
-所有密钥都是可选的 - 如果缺少某个密钥，该渠道的任务会被静默跳过。
+All secrets are optional - if absent, that channel's job is silently skipped.

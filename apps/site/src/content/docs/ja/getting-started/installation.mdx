@@ -1,33 +1,33 @@
-﻿---
-title: サーバーインストール
-description: Linux に Bedrud サーバーをインストールする
+---
+title: Server Installation
+description: Install Bedrud server on Linux
 order: 2
 ---
 
-このガイドでは、**Bedrud サーバー**（API、Web UI、WebRTC メディアサーバー）を Linux サーバーにインストールする方法について説明します。デスクトップ・モバイルクライアントアプリについては、[クライアントインストール](/ja/docs/getting-started/clients) を参照してください。
+This guide covers installing the **Bedrud server** (API, web UI, WebRTC media server) on a Linux server. For desktop and mobile client apps, see [Client Installation](/ja/docs/getting-started/clients).
 
 ---
 
-## 前提条件
+## Prerequisites
 
-| 要件 | 詳細 |
+| Requirement | Details |
 |-------------|---------|
-| **OS** | Debian 12+、Ubuntu 22.04+、Arch Linux (rolling)、Fedora 39+, Alpine 3.21+ |
-| **アーキテクチャ** | amd64 (x86_64) または arm64 (aarch64) |
-| **アクセス権限** | root または sudo |
-| **init システム** | systemd、OpenRC、SysV init（自動検出） |
-| **ハードウェア** | 最低 1 vCPU、512 MB RAM。10部屋以上の同時利用には 2 vCPU、2 GB RAM を推奨 |
-| **ポート** | `8090`（API + Web UI）、`7880`（LiveKit WebSocket）、`50000–60000/udp`（WebRTC メディア） |
-| **自動 TLS** | さらに `80` と `443` を開放。このサーバーを指す DNS A レコードを持つドメインが必要 |
-| **ツール** | `curl`、`tar`（ほとんどのディストリビューションにプリインストール済み） |
+| **Operating system** | Debian 12+, Ubuntu 22.04+, Arch Linux (rolling), Fedora 39+, Alpine 3.21+ |
+| **Architecture** | amd64 (x86_64) or arm64 (aarch64) |
+| **Access** | Root or sudo |
+| **Init system** | systemd, OpenRC, or SysV init (auto-detected) |
+| **Hardware** | 1 vCPU, 512 MB RAM minimum. 2 vCPU, 2 GB RAM recommended for 10+ concurrent rooms |
+| **Ports** | `8090` (API + web UI), `7880` (LiveKit WebSocket), `50000–60000/udp` (WebRTC media) |
+| **Auto-TLS** | Additionally open `80` and `443`. Requires a domain with DNS A record pointing to this server |
+| **Tools** | `curl`, `tar` (pre-installed on most distros) |
 
-> **ドメインをお持ちでない場合？** Bedrud は自己署名 TLS を使用した IP アドレスでも動作します。ブラウザに証明書警告が表示されますが、ビデオと音声は正常に機能します。内部ネットワークで信頼済み証明書を使用する方法については、[内部 TLS ガイド](/ja/docs/guides/internal-tls) を参照してください。
+> **No domain?** Bedrud works with an IP address using self-signed TLS. Browsers will show a certificate warning but video and audio work. For trusted certificates on internal networks, see the [Internal TLS Guide](/ja/docs/guides/internal-tls).
 
 ---
 
-## 1. ワンコマンドインストール（推奨）
+## 1. One-Command Install (Recommended)
 
-Bedrud CLI バイナリをダウンロードして PATH にインストールします。Linux、macOS、Windows で動作します。
+Downloads and installs the Bedrud CLI binary to your PATH. Works on Linux, macOS, and Windows.
 
 <Tabs>
   <TabsList>
@@ -40,10 +40,10 @@ Bedrud CLI バイナリをダウンロードして PATH にインストールし
     curl -fsSL https://bedrud.org/install.sh | bash
     ```
 
-    インストール後にシェルを再読み込み：
+    Reload your shell after install:
 
     ```bash
-    source ~/.bashrc  # または ~/.zshrc
+    source ~/.bashrc  # or ~/.zshrc
     ```
 
   </TabsContent>
@@ -56,21 +56,21 @@ Bedrud CLI バイナリをダウンロードして PATH にインストールし
   </TabsContent>
 </Tabs>
 
-確認：
+Verify:
 
 ```bash
 bedrud --version
 ```
 
 <Callout type="tip">
-    インストールをカスタマイズ？ `--version 0.12.0`、`--install-dir /opt/bedrud`、`--skip-shell` などのフラグを使用。完全なリファレンス：[CLI インストーラー](/ja/docs/getting-started/cli-installer)。
+    Want to customize the install? Use flags like `--version 0.12.0`, `--install-dir /opt/bedrud`, or `--skip-shell`. Full reference: [CLI Installer](/ja/docs/getting-started/cli-installer).
 </Callout>
 
 ---
 
-## 2. パッケージマネージャーからのインストール
+## 2. Package Manager Install
 
-ディストリビューションのパッケージマネージャーを使用してインストールします。
+Install via your distribution's package manager.
 
 <Tabs>
   <TabsList>
@@ -91,7 +91,7 @@ bedrud --version
     sudo apt update && sudo apt install bedrud
     ```
 
-    インタラクティブインストーラーを実行します：
+    Then run the interactive installer:
 
     ```bash
     sudo bedrud install
@@ -117,27 +117,40 @@ bedrud --version
     sudo bedrud install
     ```
   </TabsContent>
+  <TabsContent value="alpine-apk">
+
+    Download the `.apk` package from the [latest release](https://github.com/themadorg/bedrud/releases/latest):
+
+    ```bash
+    wget https://github.com/themadorg/bedrud/releases/latest/download/bedrud_x86_64.apk
+    apk add --allow-untrusted bedrud_x86_64.apk
+    ```
+
+    For ARM64: replace `x86_64` with `aarch64`.
+
+  </TabsContent>
 </Tabs>
 
 <Callout type="tip">
-    デスクトップクライアントのインストール（Linux、macOS、Windows）については、[クライアントインストール](/ja/docs/getting-started/clients) を参照してください。
+    For desktop client installation (Linux, macOS, Windows) see [Client Installation](/ja/docs/getting-started/clients).
 </Callout>
 
 ---
 
 ## 3. Docker
 
-コンテナで Bedrud を実行します。Linux サーバーのセットアップ、イニットシステムの設定不要、バイナリのダウンロードは不要です。
+Run Bedrud in a container - no Linux server setup, no init system setup, no binary download.
 
-### プレビルドイメージ（最速）
+### Pre-built Image (fastest)
 
 ```bash
-# glibc (Debian-based, default)
+# Debian (default, ~50 MB)
 docker pull ghcr.io/themadorg/bedrud:latest
 
-# musl (Alpine-based, smaller image)
+# Alpine (smaller, ~30 MB)
 docker pull ghcr.io/themadorg/bedrud:latest-alpine
 
+# Distroless (smallest, ~25 MB, no shell)
 docker pull ghcr.io/themadorg/bedrud:latest-distroless
 
 docker run -d --name bedrud \
@@ -153,6 +166,7 @@ docker run -d --name bedrud \
 ```yaml
 services:
   bedrud:
+    # Use :latest-alpine or :latest-distroless for smaller images
     image: ghcr.io/themadorg/bedrud:latest
     ports:
       - "8090:8090"
@@ -166,17 +180,17 @@ volumes:
   bedrud-data:
 ```
 
-### ポート
+### Ports
 
-| ポート | サービス | プロトコル |
+| Port | Service | Protocol |
 |------|---------|----------|
 | 8090 | API + Web UI | HTTP |
 | 7880 | LiveKit | WebSocket + HTTP |
-| 50000–60000 | WebRTC メディア | UDP |
+| 50000–60000 | WebRTC media | UDP |
 
-### 設定
+### Configuration
 
-設定ファイルを渡すか、環境変数を使用します：
+Pass a config file or use environment variables:
 
 ```bash
 docker run -d --name bedrud \
@@ -190,152 +204,152 @@ docker run -d --name bedrud \
 ```
 
 <Callout type="warning">
-    デフォルトの JWT と LiveKit シークレットはクイックテスト専用です。コンテナをインターネットに公開する前に変更してください。
+    The default JWT and LiveKit secrets are for quick testing only. Change them before exposing the container to the internet.
 </Callout>
 
-ボリューム、リバースプロキシ、TLS セットアップを含む完全な Docker ドキュメント：[Docker ガイド](/ja/docs/guides/docker)
+Full Docker documentation including volumes, reverse proxy, and TLS setup: [Docker Guide](/ja/docs/guides/docker).
 
 ---
 
-## 4. インタラクティブインストール
+## 4. Interactive Install
 
-サーバーに `bedrud` バイナリがある場合：
+If you already have the `bedrud` binary on the server:
 
 ```bash
 sudo ./bedrud install
 ```
 
-インストーラーはサーバーの IP を自動検出し、以下を入力として求めます：
+The installer auto-detects your server's IP and prompts for:
 
-| プロンプト | デフォルト | 備考 |
+| Prompt | Default | Notes |
 |--------|---------|-------|
-| **IP アドレス** | 自動検出（最初の非ループバック IPv4） | Enter で受け入れるか、別の IP を入力 |
-| **ドメイン** | 空（IP のみ） | メールアドレスと共に指定すると、Let's Encrypt TLS が有効化 |
-| **メールアドレス** | 空 | Let's Encrypt 登録に使用（ドメイン設定時のみ） |
-| **自己署名 TLS** | はい | ドメイン未指定時に提案。デフォルトは `Y` |
+| **IP address** | Auto-detected (first non-loopback IPv4) | Press Enter to accept, or type a different IP |
+| **Domain** | Empty (IP-only) | If provided with an email, enables Let's Encrypt TLS |
+| **Email** | Empty | Used for Let's Encrypt registration (only if domain is set) |
+| **Self-signed TLS** | Yes | Offered when no domain is provided. Default is `Y` |
 
-標準入力がパイプされている場合（非インタラクティブモード）、すべてのプロンプトはスキップされ、フラグとデフォルト値が使用されます。
+All prompts are skipped when stdin is piped (non-interactive mode) - flags and defaults are used instead.
 
 ---
 
-## 5. 非インタラクティブ（フラグベース）
+## 5. Non-Interactive (Flag-Based)
 
-フラグを渡すことですべてのプロンプトをスキップします。
+Skip all prompts by passing flags.
 
-### Let's Encrypt（ドメイン必要）
+### Let's Encrypt (domain required)
 
-**必要条件:** ドメインの DNS A レコードがこのサーバーの IP をすでに指していること。
+**Requires:** DNS A record for your domain already pointing to this server's IP.
 
 ```bash
 sudo ./bedrud install --tls --domain meet.example.com --email webmaster@example.com
 ```
 
-### 自己署名 TLS（IP ベース）
+### Self-Signed TLS (IP-based)
 
-**必要条件:** なし。すぐに動作します。
+**Requires:** Nothing extra. Works immediately.
 
 ```bash
 sudo ./bedrud install --tls --ip 1.2.3.4
 ```
 
-### プレーン HTTP（開発 / 内部ネットワークのみ）
+### Plain HTTP (dev / internal only)
 
-**必要条件:** localhost または `127.0.0.1`。ブラウザは localhost 以外の非 HTTPS ではカメラ/マイクをブロックします。
+**Requires:** localhost or `127.0.0.1`. Browsers block camera/mic on non-HTTPS except localhost.
 
 ```bash
 sudo ./bedrud install --ip 1.2.3.4
 ```
 
-### ドメインの自己署名証明書（DNS 設定前のテスト用）
+### Self-Signed for a Domain (pre-DNS testing)
 
-**必要条件:** ドメイン名（DNS はまだ解決不要）。
+**Requires:** Domain name (DNS does not need to resolve yet).
 
 ```bash
 sudo ./bedrud install --tls --domain meet.example.com
 ```
 
-### カスタムポート
+### Custom Port
 
-**必要条件:** 未使用のポート。
+**Requires:** Port not already in use.
 
 ```bash
 sudo ./bedrud install --tls --port 8443 --domain meet.example.com
 ```
 
-### 外部証明書
+### External Certificates
 
-**必要条件:** PEM 形式の fullchain と秘密鍵ファイル。
+**Requires:** PEM-formatted fullchain and private key files.
 
 ```bash
 sudo ./bedrud install --tls --cert /path/to/fullchain.pem --key /path/to/privkey.pem
 ```
 
-### カスタム LiveKit ポート
+### Custom LiveKit Ports
 
-**必要条件:** ファイアウォールで3つのポートすべてが開放されていること。
+**Requires:** All three ports open on your firewall.
 
 ```bash
 sudo ./bedrud install --lk-port 9000 --lk-tcp-port 9001 --lk-udp-port 9002
 ```
 
-### リバースプロキシの背後
+### Behind a Reverse Proxy
 
-**必要条件:** Bedrud の前に TLS 終端を行うリバースプロキシ（Nginx、Caddy、Traefik、Cloudflare）。
+**Requires:** A reverse proxy (Nginx, Caddy, Traefik, Cloudflare) terminating TLS in front of Bedrud.
 
 ```bash
 sudo ./bedrud install --behind-proxy --domain meet.example.com
 ```
 
-設定ファイルに `behindProxy: true` を設定し、信頼済みプロキシヘッダーを構成します。
+Sets `behindProxy: true` in the config and configures trusted proxy headers.
 
-### 外部 LiveKit サーバー
+### External LiveKit Server
 
-**必要条件:** このマシンからアクセス可能な、別途稼働中の LiveKit サーバー。
+**Requires:** A separate LiveKit server already running, accessible from this machine.
 
 ```bash
 sudo ./bedrud install --external-livekit https://livekit.example.com
 ```
 
-埋め込み LiveKit のインストールをスキップします。API キーとシークレットは両方の設定で一致する必要があります。
+Skips embedded LiveKit installation. API key and secret must match in both configs.
 
-### LiveKit 用別ドメイン
+### Separate LiveKit Domain
 
-**必要条件:** CDN を経由せず、このサーバーに直接解決されるドメイン。
+**Requires:** A domain that resolves directly to this server, bypassing any CDN.
 
 ```bash
 sudo ./bedrud install --livekit-domain lk.example.com --domain meet.example.com
 ```
 
-メインドメインが Cloudflare の背後にあるが、WebRTC メディアに直接接続が必要な場合に便利です。
+Useful when the main domain is behind Cloudflare but WebRTC media needs a direct connection.
 
-### 全フラグ一覧
+### All Flags Reference
 
-| フラグ | デフォルト | 説明 |
+| Flag | Default | Description |
 |------|---------|-------------|
-| `--tls` | `false` | HTTPS を有効化（自己署名または Let's Encrypt） |
-| `--self-signed` | `false` | 自己署名 TLS 証明書を生成 |
-| `--no-tls` | `false` | TLS を完全に無効化（`--tls` を上書き） |
-| `--ip` | 自動検出 | サーバーの IP アドレスを手動指定 |
-| `--domain` | `""` | Let's Encrypt または自己署名証明書用のドメイン名 |
-| `--email` | `""` | Let's Encrypt 登録用メールアドレス |
-| `--port` | `443` (TLS) / `8090` (HTTP) | リッスンポートを変更 |
-| `--cert` | `""` | 既存の証明書ファイル（PEM）のパス |
-| `--key` | `""` | 既存の秘密鍵ファイル（PEM）のパス |
-| `--lk-port` | `7880` | LiveKit API ポート |
-| `--lk-tcp-port` | `7881` | LiveKit RTC TCP ポート |
-| `--lk-udp-port` | `7882` | LiveKit RTC UDP ポート |
-| `--fresh` | `false` | インストール前に既存のインストールを削除 |
-| `--behind-proxy` | `false` | リバースプロキシ / CDN の背後にある場合 |
-| `--external-livekit` | `""` | 外部 LiveKit サーバーの URL |
-| `--livekit-domain` | `""` | LiveKit 用の別ドメイン（CDN をバイパス） |
+| `--tls` | `false` | Enable HTTPS (self-signed or Let's Encrypt) |
+| `--self-signed` | `false` | Generate a self-signed TLS certificate |
+| `--no-tls` | `false` | Disable TLS entirely (overrides `--tls`) |
+| `--ip` | auto-detected | Override the server IP address |
+| `--domain` | `""` | Domain name for Let's Encrypt or self-signed cert |
+| `--email` | `""` | Email for Let's Encrypt registration |
+| `--port` | `443` (TLS) / `8090` (HTTP) | Override the listening port |
+| `--cert` | `""` | Path to existing certificate file (PEM) |
+| `--key` | `""` | Path to existing private key file (PEM) |
+| `--lk-port` | `7880` | LiveKit API port |
+| `--lk-tcp-port` | `7881` | LiveKit RTC TCP port |
+| `--lk-udp-port` | `7882` | LiveKit RTC UDP port |
+| `--fresh` | `false` | Remove existing installation before installing |
+| `--behind-proxy` | `false` | Server is behind a reverse proxy / CDN |
+| `--external-livekit` | `""` | URL of an external LiveKit server |
+| `--livekit-domain` | `""` | Separate domain for LiveKit (bypass CDN) |
 
 ---
 
-## 6. フル自動化（Python CLI）
+## 6. Fully Automated (Python CLI)
 
-ローカルマシンからサーバーのビルド、アップロード、設定を行います。
+Build, upload, and configure your server from your local machine.
 
-**必要条件:** Python 3.12+、[uv](https://docs.astral.sh/uv/)（Python パッケージランナー）、ターゲットサーバーへの SSH 鍵アクセス、ローカルに Go 1.24+ と Bun がインストール済み。
+**Requires:** Python 3.12+, [uv](https://docs.astral.sh/uv/) (Python package runner), SSH key access to the target server, Go 1.24+ and Bun installed locally.
 
 ```bash
 cd tools/cli
@@ -347,62 +361,62 @@ uv run python bedrud.py --auto-config \
   --acme-email admin@example.com
 ```
 
-**処理内容:**
+**What it does:**
 
-1. バックエンドバイナリをビルド（`dist/bedrud`）
-2. `bedrud.tar.xz` に圧縮
-3. rsync でサーバーにアップロード
-4. 競合するサービスをクリア（Nginx、Apache、Caddy）
-5. ファイアウォール（UFW）を設定
-6. サーバー上で内部 `install` ロジックを実行
+1. Builds the backend binary (`dist/bedrud`)
+2. Compresses it into `bedrud.tar.xz`
+3. Uploads it to the server via rsync
+4. Clears conflicting services (Nginx, Apache, Caddy)
+5. Configures the firewall (UFW)
+6. Runs the internal `install` logic on the server
 
-| フラグ | 説明 |
+| Flag | Description |
 |------|-------------|
-| `--ip` | サーバーの IP アドレス |
-| `--user` | SSH ユーザー（デフォルト: root） |
-| `--auth-key` | SSH 秘密鍵のパス |
-| `--domain` | Let's Encrypt 用ドメイン名 |
-| `--acme-email` | Let's Encrypt 用メールアドレス |
-| `--uninstall` | サーバーから Bedrud を削除 |
+| `--ip` | Server IP address |
+| `--user` | SSH user (default: root) |
+| `--auth-key` | Path to SSH private key |
+| `--domain` | Domain name for Let's Encrypt |
+| `--acme-email` | Email for Let's Encrypt |
+| `--uninstall` | Remove Bedrud from server |
 
 ---
 
 <InstallerSteps />
 
-### サービスのエントリーポイント
+### Service Entrypoints
 
 ```
-bedrud --run --config /etc/bedrud/config.yaml       # API + web サーバー
-bedrud --livekit --config /etc/bedrud/livekit.yaml   # メディアサーバー
+bedrud --run --config /etc/bedrud/config.yaml       # API + web server
+bedrud --livekit --config /etc/bedrud/livekit.yaml   # Media server
 ```
 
 ---
 
-## インストール後
+## Post-Installation
 
 <CreateAdmin />
 
-### サービスの確認
+### Verify Services
 
 ```bash
 systemctl status bedrud livekit
 ```
 
-### API の確認
+### Verify the API
 
 ```bash
 curl -s -o /dev/null -w "%{http_code}" http://localhost:8090
 ```
 
-期待される結果: `200`
+Expect: `200`
 
-### ファイアウォールの確認
+### Check the Firewall
 
 ```bash
 sudo ufw status
 ```
 
-ポート `8090/tcp`、`7880/tcp`、`50000:60000/udp` が許可されていることを確認します：
+Ensure ports `8090/tcp`, `7880/tcp`, and `50000:60000/udp` are allowed:
 
 ```bash
 sudo ufw allow 8090/tcp
@@ -410,13 +424,20 @@ sudo ufw allow 7880/tcp
 sudo ufw allow 50000:60000/udp
 ```
 
-### ログの確認
+If using auto-TLS (ports 80/443) or a custom `httpPort`, allow those too:
+
+```bash
+sudo ufw allow 80/tcp
+sudo ufw allow 443/tcp
+```
+
+### View Logs
 
 ```bash
 tail -f /var/log/bedrud/bedrud.log
 ```
 
-journalctl 経由：
+Or via journalctl:
 
 ```bash
 journalctl -u bedrud -u livekit -f
@@ -424,9 +445,9 @@ journalctl -u bedrud -u livekit -f
 
 ---
 
-## アップグレード
+## Upgrading
 
-### パッケージマネージャー
+### Package Manager
 
 ```bash
 # Ubuntu / Debian
@@ -439,11 +460,11 @@ yay -Syu bedrud-bin
 sudo dnf upgrade bedrud
 ```
 
-パッケージアップグレード後、サービスは自動的に再起動します。
+Services restart automatically after package upgrade.
 
-### バイナリダウンロード
+### Binary Download
 
-最新リリースをダウンロードし、インストールを再実行します。インストーラーは再実行が安全です。バイナリと設定を上書きしつつ、データベースを保持します：
+Download the latest release and re-run install. The installer is safe to re-run - it overwrites the binary and config while preserving the database:
 
 ```bash
 curl -fsSL -o bedrud.tar.xz https://github.com/themadorg/bedrud/releases/latest/download/bedrud_linux_amd64.tar.xz
@@ -452,13 +473,15 @@ sudo ./bedrud install --fresh
 ```
 
 <Callout type="tip">
-    `--fresh` は既存のインストールを先に削除します。既存の設定とデータベースを保持する場合は省略してください。
+    `--fresh` removes the old installation first. Omit it to keep your existing config and database.
 </Callout>
 
 ### Docker
 
 ```bash
 docker pull ghcr.io/themadorg/bedrud:latest
+# or: docker pull ghcr.io/themadorg/bedrud:latest-alpine
+# or: docker pull ghcr.io/themadorg/bedrud:latest-distroless
 docker stop bedrud && docker rm bedrud
 docker run -d --name bedrud \
   -p 8090:8090 \
@@ -468,7 +491,7 @@ docker run -d --name bedrud \
   ghcr.io/themadorg/bedrud:latest
 ```
 
-Docker Compose の場合：
+With Docker Compose:
 
 ```bash
 docker compose pull
@@ -477,30 +500,32 @@ docker compose up -d
 
 ---
 
-## アンインストール
+## Uninstallation
 
-Bedrud を完全に削除するには：
+To completely remove Bedrud:
 
 ```bash
 sudo bedrud uninstall
 ```
 
-サービスの停止、すべてのイニットシステムのサービスファイルを削除、`/usr/local/bin` からのバイナリ削除、および `/etc/bedrud`、`/var/lib/bedrud`、`/var/log/bedrud` のクリーンアップを行います。
+This stops services, removes service files for all init systems, deletes the binary from `/usr/local/bin`, and cleans up `/etc/bedrud`, `/var/lib/bedrud`, and `/var/log/bedrud`.
 
 ---
 
-## トラブルシューティング
+## Troubleshooting
 
-| 問題 | 解決策 |
+| Problem | Solution |
 |---------|----------|
-| **ポート 80/443 が使用中** | 競合するウェブサーバーを停止: `systemctl stop nginx apache2 caddy` |
-| **サービスが開始しない** | ログを確認: `journalctl -u bedrud -u livekit --no-pager -n 50` |
-| **TLS 証明書の問題** | DNS を確認: `dig +short meet.example.com` - このサーバーの IP を返す必要がある |
-| **LiveKit ポートの競合** | `--lk-port`、`--lk-tcp-port`、`--lk-udp-port` フラグでポートを変更 |
-| **インストール成功だが Web UI が 404** | フロントエンドが組み込まれていません。`bedrud install` の前に `make build` でビルドしてください。バイナリのみのビルドはフロントエンドをスキップします |
-| **インストール成功だがサービスがクラッシュ** | サイレントエラーを確認: `journalctl -u bedrud --no-pager -n 100`。`/etc/bedrud/config.yaml` の設定を確認 |
-| **ポートが既に使用中（プロセス不明）** | 検索: `ss -tlnp \| grep 8090` または `ss -ulnp \| grep 7880` |
-| **ファイアウォールがメディアをブロック** | ポートを開放: `sudo ufw allow 8090/tcp && sudo ufw allow 7880/tcp && sudo ufw allow 50000:60000/udp` |
-| **自己署名証明書の警告** | 期待される動作です。プライベート CA セットアップについては [内部 TLS ガイド](/ja/docs/guides/internal-tls) を参照 |
-| **ビデオなし / WebRTC 失敗** | カメラアクセスには HTTPS が必要です。`--tls` を使用してください。UDP 50000–60000 が開放されていることを確認 |
-| **リバースプロキシ: クライアント IP が正しくない** | `--behind-proxy` フラグを使用してください。信頼済みプロキシヘッダーを構成します |
+| **Port 80/443 in use** | Stop conflicting web servers: `systemctl stop nginx apache2 caddy` |
+| **Port 80 permission denied** | Non-root can't bind ports < 1024. Set `httpPort: "8080"` in config, or `sudo setcap 'cap_net_bind_service=+ep' $(which bedrud)` (re-run after each update) |
+| **Services won't start** | Check logs: `journalctl -u bedrud -u livekit --no-pager -n 50` |
+| **TLS certificate issues** | Verify DNS: `dig +short meet.example.com` - must return this server's IP |
+| **LiveKit port conflicts** | Use `--lk-port`, `--lk-tcp-port`, `--lk-udp-port` flags to change ports |
+| **Install succeeded but 404 on web UI** | Frontend not embedded. Build with `make build` before `bedrud install`. Binary-only builds skip the frontend |
+| **Install succeeded but services crashed** | Check for silent failures: `journalctl -u bedrud --no-pager -n 100`. Verify config at `/etc/bedrud/config.yaml` |
+| **Port already in use (unknown process)** | Find it: `ss -tlnp \| grep 8090` or `ss -ulnp \| grep 7880` |
+| **Firewall blocking media** | Open ports: `sudo ufw allow 8090/tcp && sudo ufw allow 7880/tcp && sudo ufw allow 50000:60000/udp` |
+| **Self-signed cert warnings** | Expected. See [Internal TLS Guide](/ja/docs/guides/internal-tls) for private CA setup |
+| **No video / WebRTC failed** | HTTPS required for camera access. Use `--tls`. Ensure UDP 50000–60000 is open |
+| **Reverse proxy: wrong client IP** | Use `--behind-proxy` flag. Configures trusted proxy headers |
+

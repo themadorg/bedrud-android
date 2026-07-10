@@ -1,15 +1,17 @@
 package cli
 
 import (
-	"bedrud/config"
-	"bedrud/internal/auth"
-	"bedrud/internal/database"
-	"bedrud/internal/models"
-	"bedrud/internal/repository"
 	"encoding/json"
 	"fmt"
 	"reflect"
 	"strconv"
+
+	"bedrud/config"
+	"bedrud/internal/auth"
+	"bedrud/internal/clioutput"
+	"bedrud/internal/database"
+	"bedrud/internal/models"
+	"bedrud/internal/repository"
 
 	"github.com/spf13/cobra"
 )
@@ -43,6 +45,12 @@ func newSettingsShowCmd() *cobra.Command {
 					return err
 				}
 				redactSettings(s)
+				if clioutput.JSON() {
+					return clioutput.Success("", map[string]any{
+						"effective": effective,
+						"settings":  s,
+					})
+				}
 				out, err := json.MarshalIndent(s, "", "  ")
 				if err != nil {
 					return err
@@ -77,8 +85,10 @@ func newSettingsSetCmd() *cobra.Command {
 				if effective != nil {
 					auth.ReloadProviders(effective)
 				}
-				fmt.Printf("✓ Set %s = %s\n", args[0], args[1])
-				return nil
+				return clioutput.Success(
+					fmt.Sprintf("✓ Set %s = %s", args[0], args[1]),
+					map[string]string{"field": args[0], "value": args[1]},
+				)
 			})
 		},
 	}
@@ -99,8 +109,10 @@ func newSettingsResetCmd() *cobra.Command {
 				if err := repo.SaveSettings(fresh); err != nil {
 					return err
 				}
-				fmt.Println("✓ Settings reset to zero values; restart server or re-set fields as needed.")
-				return nil
+				return clioutput.Success(
+					"✓ Settings reset to zero values; restart server or re-set fields as needed.",
+					map[string]bool{"reset": true},
+				)
 			})
 		},
 	}
@@ -128,7 +140,7 @@ func withSettingsRepo(fn func(*repository.SettingsRepository) error) error {
 func setStructField(s *models.SystemSettings, jsonName, raw string) error {
 	v := reflect.ValueOf(s).Elem()
 	t := v.Type()
-	for i := 0; i < t.NumField(); i++ {
+	for i := range t.NumField() {
 		f := t.Field(i)
 		tag := f.Tag.Get("json")
 		name := tag
@@ -194,13 +206,35 @@ func redactSettings(s *models.SystemSettings) {
 	if s == nil {
 		return
 	}
-	for _, p := range []*string{
-		&s.GoogleClientSecret, &s.GithubClientSecret, &s.TwitterClientSecret,
-		&s.JWTSecret, &s.SessionSecret, &s.LiveKitAPISecret,
-		&s.ChatUploadS3AccessKey, &s.ChatUploadS3SecretKey,
-	} {
-		if *p != "" {
-			*p = "***redacted***"
-		}
+	// Direct field writes so taint analysis (and readers) see sanitization.
+	if s.GoogleClientSecret != "" {
+		s.GoogleClientSecret = "***redacted***"
+	}
+	if s.GithubClientSecret != "" {
+		s.GithubClientSecret = "***redacted***"
+	}
+	if s.TwitterClientSecret != "" {
+		s.TwitterClientSecret = "***redacted***"
+	}
+	if s.JWTSecret != "" {
+		s.JWTSecret = "***redacted***"
+	}
+	if s.SessionSecret != "" {
+		s.SessionSecret = "***redacted***"
+	}
+	if s.LiveKitAPIKey != "" {
+		s.LiveKitAPIKey = "***redacted***"
+	}
+	if s.LiveKitAPISecret != "" {
+		s.LiveKitAPISecret = "***redacted***"
+	}
+	if s.ChatUploadS3AccessKey != "" {
+		s.ChatUploadS3AccessKey = "***redacted***"
+	}
+	if s.ChatUploadS3SecretKey != "" {
+		s.ChatUploadS3SecretKey = "***redacted***"
+	}
+	if s.EmailPassword != "" {
+		s.EmailPassword = "***redacted***"
 	}
 }

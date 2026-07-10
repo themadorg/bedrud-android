@@ -1,86 +1,88 @@
-﻿---
-title: Bir Proxy/CDN Arkasında
-description: Bedrud'u Cloudflare, nginx ve diğer ters proxy'lerin arkasında çalıştırma
+---
+title: Behind a Proxy/CDN
+description: Running Bedrud behind Cloudflare, nginx, and other reverse proxies
 order: 29
 ---
 
-Sunucunuz bir ters proxy (reverse proxy) veya CDN arkasında olduğunda Bedrud'un nasıl kurulacağı. Bu yaygın bir üretim (production) kurulumudur, ancak **CDN'ler UDP medya trafiğini proxy edemediği** için WebRTC (LiveKit) özel işlem gerektirir.
+How to deploy Bedrud when your server sits behind a reverse proxy or CDN. This is a common production setup, but WebRTC (LiveKit) requires special handling because **CDNs cannot proxy UDP media traffic**.
+
+**Yapılandırma zorunluluğu:** `behindProxy: true` iken boş olmayan bir `trustedProxies` listesi (proxy IP/CIDR) **zorunludur**. Aksi halde sunucu başlamaz (`0.0.0.0/0` varsayılanı yok). Env: `SERVER_TRUSTED_PROXIES`.
 
 ---
 
-## Sorun (The Problem)
+## The Problem
 
-Bedrud'un farklı gereksinimleri olan iki ağa bakan bileşeni (component) vardır:
+Bedrud has two network-facing components with different requirements:
 
-| Bileşen | Trafik | CDN/Proxy Uyumlu mu? |
+| Component | Traffic | CDN/Proxy Compatible? |
 |-----------|---------|----------------------|
-| Bedrud Server | HTTP/WebSocket (TCP) | Evet |
-| LiveKit (WebRTC) | UDP medya + TCP sinyalleşme | **Hayır — UDP sunucuya doğrudan ulaşmalıdır** |
+| Bedrud Server | HTTP/WebSocket (TCP) | Yes |
+| LiveKit (WebRTC) | UDP media + TCP signaling | **No — UDP must reach the server directly** |
 
-Cloudflare, nginx veya Traefik gibi standart bir proxy, HTTP/HTTPS trafiğini sorunsuz bir şekilde yönetir. Ancak LiveKit'in WebRTC medyası, bu proxy'lerin sessizce düşürdüğü (drop) veya iletemediği (forward) **UDP portları** üzerinden akar.
+A standard proxy like Cloudflare, nginx, or Traefik handles HTTP/HTTPS traffic fine. But LiveKit's WebRTC media flows over **UDP ports** that these proxies silently drop or cannot forward.
 
 ```
-Browser ──HTTP/WS──► CDN ──HTTP/WS──► Bedrud Server    ✓ Çalışıyor
-Browser ──UDP────────► CDN ──X─────────► LiveKit        ✗ Paket düştü
-Browser ──UDP─────────────────────────► LiveKit         ✓ Doğrudan
+Browser ──HTTP/WS──► CDN ──HTTP/WS──► Bedrud Server    ✓ Works
+Browser ──UDP────────► CDN ──X─────────► LiveKit        ✗ Dropped
+Browser ──UDP─────────────────────────► LiveKit         ✓ Direct
 ```
 
 ---
 
-## Dağıtım Seçenekleri (Deployment Options)
+## Deployment Options
 
-### Seçenek 1: Ayrı LiveKit Alan Adı (Önerilen)
+### Option 1: Separate LiveKit Domain (Recommended)
 
-İki DNS kaydı kullanın: biri Bedrud sunucusu için (proxy'lenmiş) ve biri LiveKit için (yalnızca DNS).
+Use two DNS records: one for the Bedrud server (proxied) and one for LiveKit (DNS-only).
 
 ```
-meet.example.com     → A kaydı → CDN proxy (Turuncu Bulut) → Bedrud sunucusu
-lk.meet.example.com  → A kaydı → Yalnızca DNS (Gri Bulut)    → Aynı sunucu
+meet.example.com     → A record → CDN proxy (Orange Cloud) → Bedrud server
+lk.meet.example.com  → A record → DNS only (Grey Cloud)    → Same server
 ```
 
-Yükleyici (installer), "Behind proxy" seçeneğini seçtiğinizde ve bir LiveKit alt alanı (subdomain) sağladığınızda bunu otomatik olarak halleder.
+The installer handles this when you select "Behind proxy" and provide a LiveKit subdomain.
 
-**Adımlar:**
+**Steps:**
 
-1. Yükleyiciyi çalıştırın ve proxy/CDN sorularını yanıtlayın:
+1. Run the installer and answer the proxy/CDN questions:
    ```bash
    curl -fsSL https://bedrud.org/install.sh | bash
    ```
    - "Running behind a proxy/CDN?" → **Yes**
    - "What type?" → **cloudflare**
    - "Use a separate subdomain for LiveKit?" → **Yes**
-   - LiveKit alt alanı olarak `lk.meet.example.com` girin
-   - LiveKit için sunucunuzun **gerçek genel IP** adresini (CDN IP'sini değil) girin
+   - Enter `lk.meet.example.com` as the LiveKit subdomain
+   - Enter your server's **real public IP** (not the CDN IP) for LiveKit
 
-2. DNS sağlayıcınızda şunları oluşturun:
-   - `meet.example.com` → CDN üzerinden proxy'lenmiş
-   - `lk.meet.example.com` → **Yalnızca DNS** (Gri Bulut), sunucunuzun gerçek IP'sini gösteren
+2. In your DNS provider, create:
+   - `meet.example.com` → proxied through CDN
+   - `lk.meet.example.com` → **DNS Only** (Grey Cloud), pointing to your server's real IP
 
-3. Güvenlik duvarınızda (firewall) gerekli portları açın:
+3. Open the required ports in your firewall:
    ```bash
    sudo ufw allow 7880/tcp    # LiveKit API
-   sudo ufw allow 7881/tcp    # RTC TCP geri dönüş (fallback)
-   sudo ufw allow 50000:60000/udp  # WebRTC medya
+   sudo ufw allow 7881/tcp    # RTC TCP fallback
+   sudo ufw allow 50000:60000/udp  # WebRTC media
    sudo ufw allow 3478/udp    # TURN relay
-   sudo ufw allow 5349/tcp    # TURN TLS (eğer TLS kullanılıyorsa)
+   sudo ufw allow 5349/tcp    # TURN TLS (if using TLS)
    ```
 
-**Neden bu işe yarar:** Tarayıcı, LiveKit'e `lk.meet.example.com` üzerinden doğrudan bağlanarak CDN'yi tamamen baypas eder. WebRTC UDP trafiği doğrudan sunucunuza akar. Bedrud web arayüzü hala CDN önbelleğe alma (caching) ve DDoS korumasından yararlanır.
+**Why this works:** The browser connects to LiveKit directly via `lk.meet.example.com`, bypassing the CDN entirely. WebRTC UDP flows straight to your server. The Bedrud web UI still benefits from CDN caching and DDoS protection.
 
-### Seçenek 2: Harici LiveKit Sunucusu
+### Option 2: External LiveKit Server
 
-LiveKit'i herhangi bir proxy arkasında olmayan ayrı bir makinede çalıştırın.
+Run LiveKit on a separate machine that is not behind any proxy.
 
 ```
 Browser ──► CDN ──► Bedrud Server ──API──► LiveKit Server
 Browser ──────────────────────────────────► LiveKit Server
 ```
 
-**Adımlar:**
+**Steps:**
 
-1. Ayrı bir makinede bir LiveKit sunucusu kurun (bkz. [LiveKit belgeleri](https://docs.livekit.io/deploy/))
+1. Set up a LiveKit server on a separate machine (see [LiveKit docs](https://docs.livekit.io/deploy/))
 
-2. Bedrud yükleyicisini çalıştırın ve "external LiveKit server" seçeneğini seçin:
+2. Run the Bedrud installer and select "external LiveKit server":
    ```bash
    bedrud install \
      --domain meet.example.com \
@@ -89,87 +91,87 @@ Browser ────────────────────────
      --email admin@example.com
    ```
 
-3. LiveKit sunucusunun portlarının açık ve istemciler tarafından erişilebilir olduğundan emin olun.
+3. Ensure the LiveKit server's ports are open and reachable from clients.
 
-### Seçenek 3: Aynı IP, Farklı Yapılandırma (Açık NodeIP ile Gömülü LK)
+### Option 3: Same IP, Different Config (Embedded LK with explicit NodeIP)
 
-Ayrı bir alan adı kullanamıyorsanız, LiveKit'i gömülü (embedded) tutabilir ve WebRTC ICE adayları için gerçek sunucu IP'sini açıkça ayarlayabilirsiniz. Sinyalleşme (WebSocket) hala CDN üzerinden gider, ancak medya (UDP) onu baypas eder.
+If you cannot use a separate domain, you can keep LiveKit embedded and explicitly set the real server IP for WebRTC ICE candidates. The signaling (WebSocket) still goes through the CDN, but media (UDP) bypasses it.
 
 ```
-Browser ──WS/Sinyalleşme──► CDN ──► Bedrud Server ──► Gömülü LiveKit
-Browser ──UDP Medya─────────────────────► Sunucu IP (doğrudan)
+Browser ──WS/Signaling──► CDN ──► Bedrud Server ──► Embedded LiveKit
+Browser ──UDP Media─────────────────────► Server IP (direct)
 ```
 
-**Adımlar:**
+**Steps:**
 
-1. Yükleyiciyi çalıştırın:
+1. Run the installer:
    ```bash
    bedrud install \
      --domain meet.example.com \
      --behind-proxy \
-     --lk-ip GERÇEK_SUNUCU_IP_ADRESİNİZ \
+     --lk-ip YOUR_REAL_SERVER_IP \
      --lk-udp-range 50000-60000
    ```
 
-2. Güvenlik duvarınızda WebRTC portlarını açın:
+2. Open the WebRTC ports on your firewall:
    ```bash
    sudo ufw allow 50000:60000/udp
    sudo ufw allow 7881/tcp
    sudo ufw allow 3478/udp
    ```
 
-**Sınırlamalar:**
-- İstemciler, UDP portları üzerinden sunucunuzun gerçek IP'sine ulaşabilmelidir
-- WebSocket sinyalleşmesi CDN üzerinden geçer (boşta kalma zaman aşımlarına -idle timeouts- tabidir)
-- Seçenek 1 veya 2'den daha az güvenilirdir
+**Limitations:**
+- Clients must be able to reach your server's real IP on UDP ports
+- WebSocket signaling goes through CDN (subject to idle timeouts)
+- Less reliable than Option 1 or 2
 
 ---
 
-## Cloudflare'e Özgü Notlar
+## Cloudflare-Specific Notes
 
-### DNS Kurulumu
+### DNS Setup
 
-| Kayıt | Ad | İçerik | Proxy |
+| Record | Name | Content | Proxy |
 |--------|------|---------|-------|
-| A | `meet` | Sunucu IP'niz | **Proxy'lenmiş** (Turuncu Bulut) |
-| A | `lk` | Sunucu IP'niz | **Yalnızca DNS** (Gri Bulut) |
+| A | `meet` | Your server IP | **Proxied** (Orange Cloud) |
+| A | `lk` | Your server IP | **DNS Only** (Grey Cloud) |
 
-### WebSocket Zaman Aşımları (WebSocket Timeouts)
+### WebSocket Timeouts
 
-Cloudflare ücretsiz ve Pro katmanlarında WebSocket bağlantılarında **100 saniyelik boşta kalma zaman aşımı** vardır. Bir kullanıcı aktif sinyalleşme olmadan bir odada oturursa, bağlantı kopabilir. Bu, yeniden bağlanmaya (reconnect) neden olur — ses/video genellikle düzelir ancak kesintili olabilir.
+Cloudflare free and pro tiers have a **100-second idle timeout** on WebSocket connections. If a user sits in a room without active signaling, the connection may drop. This causes a reconnect — audio/video usually recovers, but it can be disruptive.
 
-Azaltma: `livekit.yaml` dosyasında LiveKit keep-alive aralıklarını yapılandırın:
+Mitigation: configure LiveKit keep-alive intervals in `livekit.yaml`:
 ```yaml
 rtc:
   peer_connection_configs:
     - video_codec: H264
-  # Keepalive, CDN üzerinden boşta kalma nedeniyle kopmaları önlemeye yardımcı olur
+  # Keepalive helps prevent idle disconnects through CDN
 ```
 
-### Önbellek Kuralları (Cache Rules)
+### Cache Rules
 
-Cloudflare'in LiveKit API yanıtlarını önbelleğe almadığından emin olun. Bir önbellek kuralı (cache rule) oluşturun:
+Ensure Cloudflare is not caching LiveKit API responses. Create a cache rule:
 
-- **URL deseni:** `lk.alanadiniz.com/twirp/*`
-- **Önbellek seviyesi:** **Atla (Bypass)**
+- **URL pattern:** `lk.yourdomain.com/twirp/*`
+- **Cache level:** **Bypass**
 
-### WAF İstisnaları
+### WAF Exceptions
 
-Bedrud sunucunuz CDN üzerinden LiveKit'e arka uç API çağrıları yapıyorsa (ayrı alan adlarında nadirdir), Cloudflare'in WAF'ı bu istekleri sorgulayabilir veya engelleyebilir. Sunucunuzun IP adresi için bir WAF istisnası ekleyin.
+If your Bedrud server makes backend API calls to LiveKit through the CDN (rare with separate domains), Cloudflare's WAF may challenge or block these requests. Add a WAF exception for your server's IP address.
 
-### DDoS Koruması
+### DDoS Protection
 
-LiveKit alan adı için yalnızca DNS (Gri Bulut) kullanıldığında, bu alt alan adı Cloudflare'in DDoS korumasını **almaz**. LiveKit'in yerleşik hız sınırlaması (rate limiting) ve kimlik doğrulaması (API anahtarları) bir miktar koruma sağlar. Ek güvenlik için şunları göz önünde bulundurun:
-- Ayrı bir güvenlik duvarı arkasında özel bir LiveKit makinesi ile `--external-livekit` seçeneğini kullanmak
-- Güvenlik duvarı kurallarını kullanarak LiveKit API erişimini Bedrud sunucunuzun IP'si ile kısıtlamak
+When using DNS-only (Grey Cloud) for the LiveKit domain, that subdomain does **not** get Cloudflare's DDoS protection. LiveKit's built-in rate limiting and authentication (API keys) provide some protection. For additional security, consider:
+- Using the `--external-livekit` option with a dedicated LiveKit machine behind a separate firewall
+- Restricting LiveKit API access to your Bedrud server's IP using firewall rules
 
 ---
 
-## nginx Ters Proxy (nginx Reverse Proxy)
+## nginx Reverse Proxy
 
-nginx'i CDN olarak değil, bir ters proxy olarak kullanıyorsanız, Bedrud sunucusunu proxy etmeniz ancak LiveKit trafiğini doğrudan geçirmeniz gerekir.
+If using nginx as a reverse proxy (not CDN), you need to proxy the Bedrud server but pass LiveKit traffic directly.
 
-### Yalnızca Bedrud Sunucusu için nginx Yapılandırması
+### nginx Config for Bedrud Server Only
 
 ```nginx
 server {
@@ -187,7 +189,7 @@ server {
         proxy_set_header X-Forwarded-Proto $scheme;
     }
 
-    # WebSocket desteği (eğer LiveKit sinyalleşmesini nginx üzerinden proxy ediyorsanız)
+    # WebSocket support (if proxying LiveKit signaling through nginx)
     location /livekit {
         proxy_pass http://127.0.0.1:7880;
         proxy_http_version 1.1;
@@ -199,88 +201,88 @@ server {
 }
 ```
 
-### Önemli: UDP Medyası Hala Doğrudan Erişime İhtiyaç Duyar
+### Important: UDP Media Still Needs Direct Access
 
-nginx ile bile, WebRTC UDP medyası nginx üzerinden **gitmez**. İstemciler doğrudan UDP portları üzerinden LiveKit NodeIP'ye bağlanır. Hala şunları yapmanız gerekir:
+Even with nginx, WebRTC UDP media does **not** go through nginx. Clients connect directly to the LiveKit NodeIP on UDP ports. You still need to:
 
-1. Güvenlik duvarında UDP portlarını `50000-60000` (veya yapılandırılmış aralığınızı) açın
-2. `livekit.yaml` dosyasında doğru `node_ip` değerinin sunucunuzun genel IP'sine ayarlandığından emin olun
-3. Kurulum sırasında `--behind-proxy` bayrağını kullanın, böylece sunucu proxy başlıklarına (proxy headers) güvenir
+1. Open UDP ports `50000-60000` (or your configured range) in the firewall
+2. Ensure `livekit.yaml` has the correct `node_ip` set to your server's public IP
+3. Use the `--behind-proxy` flag when installing so the server trusts proxy headers
 
 ```bash
 bedrud install \
   --domain meet.example.com \
   --behind-proxy \
-  --lk-ip GERÇEK_SUNUCU_IP_ADRESİNİZ \
+  --lk-ip YOUR_REAL_SERVER_IP \
   --lk-udp-range 50000-60000
 ```
 
 ---
 
-## Gerekli Güvenlik Duvarı Portları
+## Required Firewall Ports
 
-| Port | Protokol | Servis | Her Zaman Gerekli mi? |
+| Port | Protocol | Service | Always Required? |
 |------|----------|---------|-----------------|
-| 7880 | TCP | LiveKit API | Yalnızca LK alan adı veya harici ise |
-| 7881 | TCP | RTC TCP geri dönüş | Evet |
-| 50000-60000 | UDP | WebRTC medya | Evet |
-| 3478 | UDP | TURN relay | Önerilir |
-| 5349 | TCP | TURN TLS | TLS etkinse |
-| 80/443 | TCP | HTTP/HTTPS | Evet (CDN veya doğrudan) |
+| 7880 | TCP | LiveKit API | Only if LK domain or external |
+| 7881 | TCP | RTC TCP fallback | Yes |
+| 50000-60000 | UDP | WebRTC media | Yes |
+| 3478 | UDP | TURN relay | Recommended |
+| 5349 | TCP | TURN TLS | If TLS enabled |
+| 80/443 | TCP | HTTP/HTTPS | Yes (via CDN or direct) |
 
-**Gömülü mod (ayrı LK alan adı yok):** Yalnızca 7881/tcp, 50000-60000/udp ve 3478/udp açık olmalıdır. Port 7880, Bedrud sunucusu üzerinden proxy edilir.
+**Embedded mode (no separate LK domain):** Only 7881/tcp, 50000-60000/udp, and 3478/udp need to be open. Port 7880 is proxied through the Bedrud server.
 
 ---
 
-## Sorun Giderme (Troubleshooting)
+## Troubleshooting
 
-### Kullanıcılar odalara katılabiliyor ancak ses/video çalışmıyor
+### Users can join rooms but audio/video doesn't work
 
-**Neden:** UDP medya trafiği LiveKit sunucusuna ulaşmıyor.
+**Cause:** UDP media traffic is not reaching the LiveKit server.
 
-1. WebRTC UDP portlarının açık olduğunu kontrol edin:
+1. Check that WebRTC UDP ports are open:
    ```bash
    sudo ss -ulnp | grep -E '(7882|50000|3478)'
    ```
-2. `/etc/bedrud/livekit.yaml` içindeki `node_ip` değerinin sunucunuzun gerçek genel IP'si olduğunu doğrulayın
-3. CDN arkasındaysanız, LiveKit alan adının yalnızca DNS (Gri Bulut) kullandığından emin olun
+2. Verify `node_ip` in `/etc/bedrud/livekit.yaml` is your server's real public IP
+3. If behind CDN, ensure the LiveKit domain uses DNS-only (Grey Cloud)
 
-### WebSocket her ~100 saniyede bir kesiliyor
+### WebSocket disconnects every ~100 seconds
 
-**Neden:** Ücretsiz/Pro katmanlarda Cloudflare boşta kalma zaman aşımı.
+**Cause:** Cloudflare idle timeout on free/pro tiers.
 
-Çözümler:
-- Ayrı bir LiveKit alan adı (yalnızca DNS) kullanın — sinyalleşme doğrudan gider, zaman aşımı olmaz
-- Cloudflare Business veya Enterprise'a yükseltin (daha uzun WebSocket zaman aşımları)
+Solutions:
+- Use a separate LiveKit domain (DNS-only) — signaling goes direct, no timeout
+- Upgrade to Cloudflare Business or Enterprise (longer WebSocket timeouts)
 
-### LiveKit ICE adayları sunucu IP'si yerine CDN IP'sini gösteriyor
+### LiveKit ICE candidates show CDN IP instead of server IP
 
-**Neden:** `node_ip`, `livekit.yaml` dosyasında doğru ayarlanmamış.
+**Cause:** `node_ip` is not set correctly in `livekit.yaml`.
 
-Düzeltme:
+Fix:
 ```bash
-# Mevcut yapılandırmayı kontrol et
+# Check current config
 grep node_ip /etc/bedrud/livekit.yaml
 
-# Eğer yanlışsa, doğru IP ile yeniden kurun
-bedrud install --fresh --lk-ip GERÇEK_SUNUCU_IP_ADRESİNİZ
+# If wrong, reinstall with correct IP
+bedrud install --fresh --lk-ip YOUR_REAL_SERVER_IP
 ```
 
-### İstemciler LiveKit'e hiç bağlanamıyor
+### Clients cannot connect to LiveKit at all
 
-1. LiveKit servisinin çalıştığını kontrol edin:
+1. Check the LiveKit service is running:
    ```bash
    systemctl status livekit
    journalctl -u livekit -n 50
    ```
-2. Port bağlamayı (binding) kontrol edin:
+2. Check port binding:
    ```bash
    ss -tlnp | grep 7880
    ss -tlnp | grep 7881
    ```
-3. Ayrı bir LK alan adı kullanıyorsanız DNS çözümlemesini doğrulayın:
+3. If using a separate LK domain, verify DNS resolution:
    ```bash
    dig +short lk.meet.example.com
-   # CDN IP'si değil, sunucunuzun gerçek IP'sini döndürmelidir
+   # Should return your server's real IP, not a CDN IP
    ```
 

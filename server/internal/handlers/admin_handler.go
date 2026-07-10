@@ -1,10 +1,6 @@
 package handlers
 
 import (
-	"bedrud/internal/auth"
-	"bedrud/internal/models"
-	"bedrud/internal/repository"
-	"bedrud/internal/utils"
 	"bytes"
 	"context"
 	"crypto/hmac"
@@ -23,7 +19,12 @@ import (
 	"time"
 
 	"bedrud/config"
+	"bedrud/internal/auth"
 	"bedrud/internal/lkutil"
+	"bedrud/internal/models"
+	"bedrud/internal/repository"
+	"bedrud/internal/utils"
+
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
 	"github.com/livekit/protocol/livekit"
@@ -39,7 +40,7 @@ func validateSettings(s *models.SystemSettings) error {
 	}
 
 	// Chat upload backend
-	validBackends := map[string]bool{"disk": true, "inline": true, "s3": true, "": true}
+	validBackends := map[string]bool{uploadBackendDisk: true, uploadBackendInline: true, uploadBackendS3: true, "": true}
 	if !validBackends[s.ChatUploadBackend] {
 		return fmt.Errorf("chatUploadBackend must be disk, inline, or s3")
 	}
@@ -47,6 +48,9 @@ func validateSettings(s *models.SystemSettings) error {
 	// Chat upload sizes
 	if s.ChatUploadMaxBytes < 0 {
 		return fmt.Errorf("chatUploadMaxBytes cannot be negative")
+	}
+	if s.ChatUploadMaxDimension < 0 {
+		return fmt.Errorf("chatUploadMaxDimension cannot be negative")
 	}
 	if s.ChatUploadInlineMax < 0 {
 		return fmt.Errorf("chatUploadInlineMax cannot be negative")
@@ -101,9 +105,9 @@ func validateSettings(s *models.SystemSettings) error {
 		name string
 	}
 	urlFields := []urlCheck{
-		{s.FrontendURL, "frontendUrl"},
-		{s.LiveKitHost, "livekitHost"},
-		{s.GoogleRedirectURL, "googleRedirectUrl"},
+		{s.FrontendURL, settingFrontendURL},
+		{s.LiveKitHost, settingLiveKitHost},
+		{s.GoogleRedirectURL, settingGoogleRedirectURL},
 		{s.GithubRedirectURL, "githubRedirectUrl"},
 		{s.TwitterRedirectURL, "twitterRedirectUrl"},
 		{s.ChatUploadS3Endpoint, "chatUploadS3Endpoint"},
@@ -120,7 +124,7 @@ func validateSettings(s *models.SystemSettings) error {
 				return fmt.Errorf("%s: must be an absolute URL (scheme + host required)", f.name)
 			}
 			// Reject non-http/https/wss schemes (javascript:, file:, data:, etc.)
-			if parsed.Scheme != "http" && parsed.Scheme != "https" && parsed.Scheme != "ws" && parsed.Scheme != "wss" {
+			if parsed.Scheme != schemeHTTP && parsed.Scheme != schemeHTTPS && parsed.Scheme != schemeWS && parsed.Scheme != schemeWSS {
 				return fmt.Errorf("%s: unsupported URL scheme %q, must be http/https/ws/wss", f.name, parsed.Scheme)
 			}
 		}
@@ -196,7 +200,7 @@ func validateSettings(s *models.SystemSettings) error {
 		if err != nil || parsed.Scheme == "" || parsed.Host == "" {
 			return fmt.Errorf("emailInstanceUrl: must be a valid absolute URL")
 		}
-		if parsed.Scheme != "http" && parsed.Scheme != "https" {
+		if parsed.Scheme != schemeHTTP && parsed.Scheme != schemeHTTPS {
 			return fmt.Errorf("emailInstanceUrl: unsupported URL scheme %q, must be http/https", parsed.Scheme)
 		}
 	}
@@ -296,6 +300,14 @@ func (h *AdminHandler) GetPublicSettings(c *fiber.Ctx) error {
 	if cfg := config.GetSafe(); cfg != nil {
 		requireEmailVerify = cfg.Auth.RequireEmailVerification
 	}
+	maxBytes := s.ChatUploadMaxBytes
+	if maxBytes <= 0 {
+		maxBytes = defaultChatUploadMaxBytes
+	}
+	maxDim := s.ChatUploadMaxDimension
+	if maxDim <= 0 {
+		maxDim = defaultChatUploadMaxDimension
+	}
 	return c.JSON(fiber.Map{
 		"serverName":               s.ServerName,
 		"registrationEnabled":      s.RegistrationEnabled,
@@ -306,6 +318,8 @@ func (h *AdminHandler) GetPublicSettings(c *fiber.Ctx) error {
 		"requireEmailVerification": requireEmailVerify,
 		"chatMaxMessageCount":      s.ChatMaxMessageCount,
 		"chatMessageTTLHours":      s.ChatMessageTTLHours,
+		"chatUploadMaxBytes":       maxBytes,
+		"chatUploadMaxDimension":   maxDim,
 		"recordingsEnabled":        s.RecordingsEnabled,
 	})
 }
@@ -409,12 +423,12 @@ func applySettingsFields(existing *models.SystemSettings, raw map[string]json.Ra
 			}
 
 		// String fields
-		case "googleClientId", "googleRedirectUrl",
+		case "googleClientId", settingGoogleRedirectURL,
 			"githubClientId", "githubRedirectUrl",
 			"twitterClientId", "twitterRedirectUrl",
-			"frontendUrl", "serverPort", "serverHost", "serverDomain",
+			settingFrontendURL, "serverPort", "serverHost", "serverDomain",
 			"serverCertFile", "serverKeyFile", "serverEmail",
-			"livekitHost", "livekitApiKey",
+			settingLiveKitHost, "livekitApiKey",
 			"corsAllowedOrigins", "corsAllowedHeaders", "corsAllowedMethods",
 			"chatUploadBackend", "chatUploadDiskDir",
 			"chatUploadS3Endpoint", "chatUploadS3Bucket", "chatUploadS3Region",
@@ -434,7 +448,7 @@ func applySettingsFields(existing *models.SystemSettings, raw map[string]json.Ra
 			switch key {
 			case "googleClientId":
 				existing.GoogleClientID = s
-			case "googleRedirectUrl":
+			case settingGoogleRedirectURL:
 				existing.GoogleRedirectURL = s
 			case "githubClientId":
 				existing.GithubClientID = s
@@ -444,7 +458,7 @@ func applySettingsFields(existing *models.SystemSettings, raw map[string]json.Ra
 				existing.TwitterClientID = s
 			case "twitterRedirectUrl":
 				existing.TwitterRedirectURL = s
-			case "frontendUrl":
+			case settingFrontendURL:
 				existing.FrontendURL = s
 			case "serverPort":
 				existing.ServerPort = s
@@ -458,7 +472,7 @@ func applySettingsFields(existing *models.SystemSettings, raw map[string]json.Ra
 				existing.ServerKeyFile = s
 			case "serverEmail":
 				existing.ServerEmail = s
-			case "livekitHost":
+			case settingLiveKitHost:
 				existing.LiveKitHost = s
 			case "livekitApiKey":
 				existing.LiveKitAPIKey = s
@@ -565,6 +579,7 @@ func applySettingsFields(existing *models.SystemSettings, raw map[string]json.Ra
 		case "corsMaxAge", "tokenDuration",
 			"maxParticipantsLimit", "maxRoomsPerUser",
 			"chatMaxMessageCount", "chatMessageTTLHours",
+			"chatUploadMaxDimension",
 			"recordingMaxDurationMins", "recordingMaxFileSizeMB",
 			"emailSmtpPort":
 			var i int
@@ -584,6 +599,8 @@ func applySettingsFields(existing *models.SystemSettings, raw map[string]json.Ra
 				existing.ChatMaxMessageCount = i
 			case "chatMessageTTLHours":
 				existing.ChatMessageTTLHours = i
+			case "chatUploadMaxDimension":
+				existing.ChatUploadMaxDimension = i
 			case "recordingMaxDurationMins":
 				existing.RecordingMaxDurationMins = i
 			case "recordingMaxFileSizeMB":
@@ -916,11 +933,12 @@ func buildTestEmailHTML(instanceName, buttonBg, headerBg string) string {
 <div style="padding:32px;color:#333;line-height:1.7;">
   <p>If you see this, your SMTP configuration is working correctly.</p>
   <p style="color:#666;font-size:14px;">Sent at %s</p>
+  <p style="margin-top:24px;"><a href="#" style="display:inline-block;background:%s;color:#fff;padding:12px 24px;text-decoration:none;">Test Button</a></p>
 </div>
 <div style="background:#f5f5f5;padding:16px;text-align:center;font-size:12px;color:#666;">
   <p>This is an automated test email from %s. No action required.</p>
 </div>
-</body></html>`, headerBg, instanceName, now, instanceName)
+</body></html>`, headerBg, instanceName, now, buttonBg, instanceName)
 }
 
 // ValidateSettingsConnectivity runs runtime checks against external services
@@ -970,7 +988,7 @@ func (h *AdminHandler) ValidateSettingsConnectivity(c *fiber.Ctx) error {
 
 	// S3 connectivity check
 	if s.ChatUploadBackend == "s3" || s.ChatUploadS3Endpoint != "" || s.ChatUploadS3Bucket != "" {
-		results["s3"] = checkS3Connectivity(s)
+		results["s3"] = checkS3Connectivity(&s)
 	}
 
 	// Email connectivity check (DNS MX lookup)
@@ -991,7 +1009,7 @@ func okResult() checkResult {
 }
 
 func failResult(msg string) checkResult {
-	return checkResult{Status: "error", Message: msg}
+	return checkResult{Status: healthStatusError, Message: msg}
 }
 
 func skipResult(msg string) checkResult {
@@ -1059,7 +1077,7 @@ func checkTLSCerts(certFile, keyFile string) checkResult {
 	return okResult()
 }
 
-func checkS3Connectivity(s models.SystemSettings) checkResult {
+func checkS3Connectivity(s *models.SystemSettings) checkResult {
 	if s.ChatUploadBackend != "" && s.ChatUploadBackend != "s3" {
 		return skipResult(fmt.Sprintf("backend is %q, not \"s3\"", s.ChatUploadBackend))
 	}
@@ -1078,7 +1096,7 @@ func checkS3Connectivity(s models.SystemSettings) checkResult {
 
 	// Warn if S3 endpoint uses plain HTTP (credentials exposed)
 	parsedURL, err := url.Parse(endpoint)
-	if err == nil && parsedURL.Scheme != "https" {
+	if err == nil && parsedURL.Scheme != schemeHTTPS {
 		return checkResult{
 			Status:  "warning",
 			Message: "S3 endpoint uses non-HTTPS — credentials sent in plaintext",
@@ -1087,7 +1105,7 @@ func checkS3Connectivity(s models.SystemSettings) checkResult {
 
 	url := fmt.Sprintf("%s/%s", endpoint, s.ChatUploadS3Bucket)
 
-	req, err := http.NewRequest("HEAD", url, nil)
+	req, err := http.NewRequest(http.MethodHead, url, http.NoBody)
 	if err != nil {
 		return failResult("failed to create request: " + err.Error())
 	}
@@ -1234,7 +1252,8 @@ func (h *AdminHandler) ListWebhooks(c *fiber.Ctx) error {
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to list webhooks"})
 	}
 	result := make([]webhookDTO, len(webhooks))
-	for i, w := range webhooks {
+	for i := range webhooks {
+		w := &webhooks[i]
 		result[i] = webhookDTO{
 			ID:        w.ID,
 			Name:      w.Name,
@@ -1293,7 +1312,7 @@ func (h *AdminHandler) CreateWebhook(c *fiber.Ctx) error {
 	if err != nil || parsed.Scheme == "" || parsed.Host == "" {
 		return c.Status(400).JSON(fiber.Map{"error": "Invalid URL: must be absolute http:// or https:// URL"})
 	}
-	if parsed.Scheme != "http" && parsed.Scheme != "https" {
+	if parsed.Scheme != schemeHTTP && parsed.Scheme != schemeHTTPS {
 		return c.Status(400).JSON(fiber.Map{"error": "URL scheme must be http:// or https://"})
 	}
 
@@ -1387,7 +1406,7 @@ func (h *AdminHandler) UpdateWebhook(c *fiber.Ctx) error {
 		if err != nil || parsed.Scheme == "" || parsed.Host == "" {
 			return c.Status(400).JSON(fiber.Map{"error": "Invalid URL"})
 		}
-		if parsed.Scheme != "http" && parsed.Scheme != "https" {
+		if parsed.Scheme != schemeHTTP && parsed.Scheme != schemeHTTPS {
 			return c.Status(400).JSON(fiber.Map{"error": "URL scheme must be http:// or https://"})
 		}
 		w.URL = *req.URL

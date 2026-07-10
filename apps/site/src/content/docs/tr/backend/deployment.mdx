@@ -4,31 +4,31 @@ description: Arka uç dağıtım stratejileri
 order: 21
 ---
 
-Yerleşik kurucu, tek bir komutla yeni bir Linux sunucusunu üretim kullanımı için yapılandırır.
+The built-in installer configures a fresh Linux server for production use with a single command.
 
 <InstallerSteps />
 
 <SystemdServices />
 
-## Güvenlik ve TLS
+## Security and TLS
 
-Kurucu güvenliği otomatik olarak halleder:
+The installer handles security automatically:
 
-- **ACME (Let's Encrypt):** Bir alan adı ve e-posta sağlarsanız, otomatik sertifika yenilemeyi ayarlar.
-- **Kendi İmzalı Sertifikalar:** Alan adı sağlanmazsa, sitenin yine de HTTPS üzerinden çalışabilmesi için kendi imzalı bir sertifika üretir.
-- **Ters Vekil:** Arka uç bir ters vekil (reverse proxy) olarak çalışır. 443 portundan trafiği alır ve `/livekit` isteklerini dahili medya sunucusuna gönderir.
+- **ACME (Let's Encrypt):** If you provide a domain and email, it sets up automatic certificate renewal.
+- **Self-Signed Certs:** If no domain is provided, it generates a self-signed certificate so that the site still works over HTTPS. The server auto-renews the certificate daily when it's within 30 days of expiry. Use `bedrud cert renew` for manual renewal.
+- **Reverse Proxy:** The backend acts as a reverse proxy. It receives traffic on port 443 and sends `/livekit` requests to the internal media server.
 
-## Kaldırma
+## Uninstallation
 
-Bedrud'u kaldırmanız gerekiyorsa şu komutu çalıştırabilirsiniz:
+If you need to remove Bedrud, you can run:
 ```bash
 sudo bedrud uninstall
 ```
-Bu komut servisleri durdurur, init servis dosyalarını (systemd, OpenRC veya SysV init) siler ve yapılandırma ile veri klasörlerini kaldırır.
+This stops the services, deletes the init service files (systemd, OpenRC, or SysV init), and removes the configuration and data folders.
 
 ---
 
-## Ayrıca bakınız
+## See also
 
-- [Dağıtım Kılavuzu](/tr/docs/guides/deployment) - tam üretim dağıtım talimatları
-- [Cihaz Modu](/tr/docs/guides/appliance) - tek ikili dosya kurulum referansı
+- [Deployment Guide](/tr/docs/guides/deployment) - full production deployment instructions
+- [Appliance Mode](/tr/docs/guides/appliance) - single-binary setup reference

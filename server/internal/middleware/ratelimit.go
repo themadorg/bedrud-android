@@ -10,11 +10,11 @@ import (
 )
 
 func AuthRateLimiter(cfg config.RateLimitConfig) fiber.Handler {
-	max := 10
+	maxN := 10
 	if cfg.AuthMaxRequests != nil {
-		max = *cfg.AuthMaxRequests
+		maxN = *cfg.AuthMaxRequests
 	}
-	if max == 0 {
+	if maxN == 0 {
 		return func(c *fiber.Ctx) error { return c.Next() }
 	}
 	window := 60
@@ -22,7 +22,7 @@ func AuthRateLimiter(cfg config.RateLimitConfig) fiber.Handler {
 		window = *cfg.AuthWindowSecs
 	}
 	return limiter.New(limiter.Config{
-		Max:        max,
+		Max:        maxN,
 		Expiration: time.Duration(window) * time.Second,
 		KeyGenerator: func(c *fiber.Ctx) string {
 			return c.IP()
@@ -39,11 +39,11 @@ func AuthRateLimiter(cfg config.RateLimitConfig) fiber.Handler {
 // Uses config fields AuthResendMaxRequests / AuthResendWindowSecs when set.
 // Default: 3 requests per 60 seconds per IP.
 func ResendRateLimiter(cfg config.RateLimitConfig) fiber.Handler {
-	max := 3
+	maxN := 3
 	if cfg.AuthResendMaxRequests != nil {
-		max = *cfg.AuthResendMaxRequests
+		maxN = *cfg.AuthResendMaxRequests
 	}
-	if max == 0 {
+	if maxN == 0 {
 		return func(c *fiber.Ctx) error { return c.Next() }
 	}
 	window := 60
@@ -51,7 +51,7 @@ func ResendRateLimiter(cfg config.RateLimitConfig) fiber.Handler {
 		window = *cfg.AuthResendWindowSecs
 	}
 	return limiter.New(limiter.Config{
-		Max:        max,
+		Max:        maxN,
 		Expiration: time.Duration(window) * time.Second,
 		KeyGenerator: func(c *fiber.Ctx) string {
 			return c.IP()
@@ -65,11 +65,11 @@ func ResendRateLimiter(cfg config.RateLimitConfig) fiber.Handler {
 }
 
 func GuestRateLimiter(cfg config.RateLimitConfig) fiber.Handler {
-	max := 5
+	maxN := 5
 	if cfg.GuestMaxRequests != nil {
-		max = *cfg.GuestMaxRequests
+		maxN = *cfg.GuestMaxRequests
 	}
-	if max == 0 {
+	if maxN == 0 {
 		return func(c *fiber.Ctx) error { return c.Next() }
 	}
 	window := 60
@@ -77,7 +77,7 @@ func GuestRateLimiter(cfg config.RateLimitConfig) fiber.Handler {
 		window = *cfg.GuestWindowSecs
 	}
 	return limiter.New(limiter.Config{
-		Max:        max,
+		Max:        maxN,
 		Expiration: time.Duration(window) * time.Second,
 		KeyGenerator: func(c *fiber.Ctx) string {
 			return c.IP()
@@ -92,11 +92,11 @@ func GuestRateLimiter(cfg config.RateLimitConfig) fiber.Handler {
 
 // APIRateLimiter provides rate limiting for room creation and chat uploads.
 func APIRateLimiter(cfg config.RateLimitConfig) fiber.Handler {
-	max := 30
+	maxN := 30
 	if cfg.APIMaxRequests != nil {
-		max = *cfg.APIMaxRequests
+		maxN = *cfg.APIMaxRequests
 	}
-	if max == 0 {
+	if maxN == 0 {
 		return func(c *fiber.Ctx) error { return c.Next() }
 	}
 	window := 60
@@ -104,7 +104,7 @@ func APIRateLimiter(cfg config.RateLimitConfig) fiber.Handler {
 		window = *cfg.APIWindowSecs
 	}
 	return limiter.New(limiter.Config{
-		Max:        max,
+		Max:        maxN,
 		Expiration: time.Duration(window) * time.Second,
 		KeyGenerator: func(c *fiber.Ctx) string {
 			return c.IP()

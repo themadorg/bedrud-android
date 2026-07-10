@@ -131,7 +131,7 @@ export default {
       sipIntegrationJitsi: "Шлюз SIP/Jibri",
       sipIntegrationBbb: "Шлюз SIP",
       whiteboard: "Интерактивная доска",
-      whiteboardBedrud: "Нет",
+      whiteboardBedrud: "Совместная (Yjs)",
       whiteboardJitsi: "Нет",
       whiteboardBbb: "Встроено",
       maxUsers: "Макс. пользователей",
@@ -351,6 +351,36 @@ export default {
       pain: "Фоновый шум отвлекает.",
       title: "Встроенное шумоподавление",
       description: "Подавление шума RNNoise и опциональный Krisp AI.",
+    },
+    whiteboard: {
+      pain: "Доски в другом приложении рвут поток встречи.",
+      title: "Совместная доска",
+      description:
+        "Рисуйте, выделяйте и редактируйте общую доску в комнате. Yjs CRDT-синхронизация по LiveKit data channels — без отдельного whiteboard-сервера. Включайте в Experimental settings, если gated.",
+    },
+    stageMode: {
+      pain: "Сетка нормальна, пока кому-то не нужно презентовать всем.",
+      title: "Режим сцены",
+      description:
+        "Раскладка ведущего, полоса участников, экран как stage overlay и корректное состояние сцены для поздних входов.",
+    },
+    inMeetingChat: {
+      pain: "Боковой чат без опросов и реакций гонит всех в Slack mid-call.",
+      title: "Чат, опросы и реакции",
+      description:
+        "Текстовый чат в комнате с emoji-реакциями, live-опросами и вложениями изображений. Client-side retention limits держат память в рамках на длинных сессиях.",
+    },
+    youtubeWatch: {
+      pain: "«На какой минуте ты?» убивает watch-together встречи.",
+      title: "Совместный просмотр YouTube",
+      description:
+        "Вставьте URL YouTube и воспроизводите примерно в синхроне для всех в комнате. Закройте оверлей для всех участников, когда закончите. Опциональный экспериментальный переключатель.",
+    },
+    pushToTalk: {
+      pain: "Открытые микрофоны превращают каждый звонок в хаос конференции.",
+      title: "Push-to-Talk",
+      description:
+        "Удерживайте клавишу для передачи, отпустите для mute. Настройте hold-клавишу в audio settings. Смена устройства mid-call без reconnect.",
     },
     bots: {
       pain: "Рутинные задачи на встречах тратят время.",
@@ -616,6 +646,7 @@ export default {
     toggleMenu: "Меню",
     sections: {
       gettingStarted: "С чего начать",
+      using: "Использование Bedrud",
       architecture: "Архитектура",
       backend: "Бэкенд",
       api: "API",
@@ -658,6 +689,15 @@ export default {
       "getting-started/clients": "Установка клиентов",
       "getting-started/configuration": "Конфигурация",
       "getting-started/cli-reference": "Справочник CLI",
+      "using/account-and-settings": "Аккаунт и настройки",
+      "using/dashboard-and-rooms": "Дашборд и комнаты",
+      "using/joining-a-meeting": "Вход на встречу",
+      "using/stage-mode": "Режим сцены",
+      "using/whiteboard": "Совместная доска",
+      "using/youtube-watch": "YouTube Watch",
+      "using/chat": "Чат на встрече",
+      "using/audio-and-push-to-talk": "Аудио и Push-to-Talk",
+      "using/meeting-controls": "Управление встречей",
       "architecture/overview": "Обзор архитектуры",
       "architecture/server": "Архитектура сервера",
       "architecture/web": "Веб-фронтенд",

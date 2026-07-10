@@ -1,7 +1,7 @@
 import { useAuthStore } from './auth.store'
 
 // In dev, leave BASE_URL empty so requests go to /api/... and Vite's proxy
-// forwards them to localhost:8090 — no CORS. In production, set VITE_API_URL
+// forwards them to localhost:7071 — no CORS. In production, set VITE_API_URL
 // to the absolute server origin (e.g. https://api.bedrud.com).
 const BASE_URL = (import.meta.env['VITE_API_URL'] as string | undefined) ?? ''
 
@@ -9,9 +9,9 @@ const BASE_URL = (import.meta.env['VITE_API_URL'] as string | undefined) ?? ''
  * CSRF protection strategy:
  *
  * 1. Primary: The `Authorization: Bearer <token>` header is sent on every
- *    request that has an access token. Custom headers trigger a CORS preflight,
- *    which cross-origin attackers cannot bypass, so this provides implicit CSRF
- *    protection for Bearer-authenticated requests.
+ *    request that has an access token. Server RequireBearerForMutations rejects
+ *    cookie-only POST/PUT/PATCH/DELETE. Custom headers trigger CORS preflight,
+ *    which cross-origin attackers cannot bypass — implicit CSRF protection.
  *
  * 2. Fallback: When no access token is available (e.g., cookie-only sessions),
  *    we attach an `X-CSRF-Token` header read from either:

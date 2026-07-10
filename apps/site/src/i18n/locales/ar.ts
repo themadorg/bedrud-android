@@ -150,7 +150,7 @@ export default {
       sipIntegrationJitsi: "بوابة SIP/Jibri",
       sipIntegrationBbb: "بوابة SIP",
       whiteboard: "السبورة البيضاء",
-      whiteboardBedrud: "لا",
+      whiteboardBedrud: "تعاوني (Yjs)",
       whiteboardJitsi: "لا",
       whiteboardBbb: "سبورة بيضاء مدمجة",
       maxUsers: "الحد الأقصى للمستخدمين المتزامنين",
@@ -463,6 +463,7 @@ export default {
     notFound: "المستند غير موجود",
     sections: {
       gettingStarted: "البدء",
+      using: "استخدام بدرود",
       architecture: "البنية",
       backend: "الواجهة الخلفية",
       api: "API",
@@ -476,6 +477,15 @@ export default {
       "getting-started/clients": "تثبيت العملاء",
       "getting-started/configuration": "الإعداد",
       "getting-started/cli-reference": "مرجع سطر الأوامر",
+      "using/account-and-settings": "الحساب والإعدادات",
+      "using/dashboard-and-rooms": "لوحة التحكم والغرف",
+      "using/joining-a-meeting": "الانضمام إلى اجتماع",
+      "using/stage-mode": "وضع المسرح",
+      "using/whiteboard": "السبورة التعاونية",
+      "using/youtube-watch": "مشاهدة YouTube",
+      "using/chat": "الدردشة داخل الاجتماع",
+      "using/audio-and-push-to-talk": "الصوت واضغط للتحدث",
+      "using/meeting-controls": "عناصر تحكم الاجتماع",
       "architecture/overview": "نظرة عامة على البنية",
       "architecture/server": "بنية الخادم",
       "architecture/web": "واجهة الويب",
@@ -634,6 +644,36 @@ export default {
       title: "معالجة الصوت",
       description:
         "إلغاء ضوضاء مدمج مدعوم بـ RNNoise. تكامل Krisp اختياري لإلغاء ضوضاء بالذكاء الاصطناعي المتميز. صوت نقي في كل مكالمة.",
+    },
+    whiteboard: {
+      pain: "السبورات التي تعيش في تطبيق آخر تقطع تدفق الاجتماع.",
+      title: "السبورة التعاونية",
+      description:
+        "ارسم وحدّد وحرّر لوحة مشتركة في الغرفة. مزامنة Yjs CRDT عبر قنوات بيانات LiveKit — بدون خادم سبورة منفصل. فعّلها تحت الإعدادات التجريبية إن كانت مقيّدة.",
+    },
+    stageMode: {
+      pain: "الشبكات جيدة حتى يحتاج أحد لتقديم للجميع.",
+      title: "وضع المسرح",
+      description:
+        "أبرز تخطيط المقدّم، وأبقِ شريط المشاركين، وشارك الشاشة كتراكب مسرح، وأوصل المنضمّين المتأخرين إلى حالة المسرح الصحيحة.",
+    },
+    inMeetingChat: {
+      pain: "الدردشات الجانبية بدون استطلاعات وتفاعلات تدفع الجميع إلى Slack أثناء المكالمة.",
+      title: "الدردشة والاستطلاعات والتفاعلات",
+      description:
+        "دردشة نصية داخل الغرفة مع تفاعلات الرموز واستطلاعات حية ومرفقات صور. حدود احتفاظ من جانب العميل تُبقي الذاكرة محدودة في الجلسات الطويلة.",
+    },
+    youtubeWatch: {
+      pain: "«على أي طابع زمني أنت؟» يقتل اجتماعات المشاهدة معًا.",
+      title: "حفل مشاهدة YouTube",
+      description:
+        "الصق رابط YouTube وشغّل بتزامن تقريبي للجميع في الغرفة. أغلق التراكب لكل المشاركين عند الانتهاء. مفتاح تجريبي اختياري.",
+    },
+    pushToTalk: {
+      pain: "الميكروفونات المفتوحة تحوّل كل مكالمة إلى فوضى مؤتمر.",
+      title: "اضغط للتحدث",
+      description:
+        "اضغط مفتاحًا للبث، وأفلته للكتم. اضبط مفتاح الضغط في إعدادات الصوت. تبديل الجهاز أثناء المكالمة دون إعادة الاتصال.",
     },
     bots: {
       pain: "المهام اليدوية في الاجتماعات تضيع الوقت - تسجيل، نسخ، ملاحظات.",

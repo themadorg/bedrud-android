@@ -184,4 +184,45 @@
   <string name="profile_label_userId">用户ID</string>
   <string name="profile_label_provider">提供商</string>
   <string name="profile_button_signOut">退出登录</string>
+
+  <string name="meeting_contentDescription_stopScreenShare">停止屏幕共享</string>
+  <string name="meeting_contentDescription_maximizeScreenShare">全屏</string>
+  <string name="meeting_contentDescription_minimizeScreenShare">退出全屏</string>
+  <string name="meeting_stage_screenShareTitle">屏幕共享</string>
+  <string name="meeting_stage_screenSharePresenting"><xliff:g id="name" example="Alex">%1$s</xliff:g> 正在演示</string>
+  <string name="meeting_stage_screenShareWaiting">正在等待 <xliff:g id="name" example="Alex">%1$s</xliff:g> 的屏幕…</string>
+  <string name="meeting_contentDescription_closeImagePreview">关闭图片预览</string>
+  <string name="meeting_contentDescription_viewImage">查看图片</string>
+  <string name="call_default_room_name">会议</string>
+  <string name="screen_share_channel_name">屏幕共享</string>
+  <string name="screen_share_channel_description">共享屏幕时显示</string>
+  <string name="screen_share_notification_title">正在共享屏幕</string>
+  <string name="screen_share_notification_text">会议参与者可以看到你的屏幕</string>
+  <string name="meeting_error_permissionsRequired">加入需要摄像头和麦克风权限。</string>
+  <string name="meeting_error_screenShareFailed">无法开始屏幕共享。</string>
+  <string name="meeting_sheet_chat">聊天</string>
+  <string name="meeting_sheet_addOthers">添加其他人</string>
+  <string name="meeting_share_chooserTitle">分享会议链接</string>
+  <string name="meeting_sheet_flipCamera">翻转摄像头</string>
+  <string name="meeting_sheet_settings">设置</string>
+  <string name="meeting_sheet_tools">工具</string>
+  <string name="meeting_sheet_report">举报滥用</string>
+  <string name="meeting_contentDescription_audioSource">音频源</string>
+  <string name="meeting_audio_sheet_title">音频</string>
+  <string name="meeting_audio_sheet_microphone">麦克风</string>
+  <string name="meeting_audio_sheet_micOn">已取消静音</string>
+  <string name="meeting_audio_sheet_micOff">已静音</string>
+  <string name="meeting_audio_sheet_output">音频输出</string>
+  <string name="meeting_audio_device_speaker">扬声器</string>
+  <string name="meeting_audio_device_earpiece">听筒</string>
+  <string name="meeting_audio_device_wired_headset">有线耳机</string>
+  <string name="meeting_audio_device_bluetooth">蓝牙</string>
+  <string name="meeting_audio_sheet_noDevices">没有可用的音频设备</string>
+  <string name="dashboard_filter_recent">最近</string>
+  <string name="dashboard_dialog_deleteTitle">删除房间？</string>
+  <string name="dashboard_dialog_deleteMessage">确定要删除 <xliff:g id="roomName" example="team-standup">%1$s</xliff:g> 吗？此操作无法撤销。</string>
+  <string name="dashboard_empty_noRecent">没有最近的房间</string>
+  <string name="dashboard_empty_noRecentHint">你加入的房间会显示在这里，包括其他服务器上的房间。</string>
+  <string name="dashboard_contentDescription_removeRecent">从最近中移除</string>
+  <string name="dashboard_recent_onServer">在 <xliff:g id="serverName" example="My Server">%1$s</xliff:g></string>
 </resources>

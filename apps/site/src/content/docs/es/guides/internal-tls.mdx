@@ -4,33 +4,34 @@ description: Certificados autofirmados para redes internas
 order: 30
 ---
 
-Para redes aisladas - sin dominio público, sin internet saliente, conectividad restringida.
+For isolated networks - no public domain, no outbound internet, restricted connectivity.
 
-Los navegadores requieren HTTPS de confianza para cámara/micrófono mediante WebRTC. Los certificados autofirmados funcionan pero muestran advertencias. Para una configuración limpia, genera una CA privada y distribúyela a los clientes.
+Browsers require trusted HTTPS for camera/mic via WebRTC. Self-signed certs work but show warnings. For a clean setup, generate a private CA and distribute it to clients.
 
-## Generar CA privada y certificado de servidor
+## Generate Private CA and Server Certificate
 
-Los navegadores modernos requieren Subject Alternative Names (SANs) en los certificados. El instalador maneja esto automáticamente.
+Modern browsers require Subject Alternative Names (SANs) on certificates. The installer handles this automatically.
 
-### Opción 1: Usar el instalador (recomendado)
+### Option 1: Use the Installer (Recommended)
 
-El comando `bedrud install` genera certificados autofirmados con las SANs adecuadas para las IPs y dominios indicados:
+The `bedrud install` command generates self-signed certificates with proper SANs for the given IPs and domains:
 
 ```bash
-sudo bedrud install --tls --ip TU_IP_DEL_SERVIDOR
+sudo bedrud install --tls --ip YOUR_SERVER_IP
 ```
 
-Para incluir también un nombre de dominio:
+To also include a domain name:
 
 ```bash
-sudo bedrud install --tls --ip TU_IP_DEL_SERVIDOR --domain your.domain.com
+sudo bedrud install --tls --ip YOUR_SERVER_IP --domain your.domain.com
 ```
 
-### Opción 2: Generación manual de certificados
+### Option 2: Manual Certificate Generation
 
-Si la generación integrada del instalador no se ajusta a tu flujo de trabajo, añade las banderas `-addext` a los comandos de openssl:
+If the installer's built-in generation doesn't fit your workflow, add `-addext` flags to the openssl commands.
 
-```bash
+Bedrud generates **Ed25519** keys by default (PKCS8 format, ~128-bit security, deterministic signatures, 32-byte public keys), configurable to ECDSA P256 or RSA via the `certAlgorithm` config field or `--cert-algorithm` CLI flag. Choose the key type that matches your environment:
+
 #### Ed25519 (matches Bedrud's built-in generation, recommended)
 
 ```bash
@@ -40,13 +41,13 @@ openssl req -new -x509 -days 3650 -key ca.key -out ca.crt \
 
 openssl genpkey -algorithm ed25519 -out server.key
 openssl req -new -key server.key -out server.csr \
-  -subj "/CN=<tu-ip-o-nombre-de-host-del-servidor>" \
-  -addext "subjectAltName=IP:TU_IP_DEL_SERVIDOR"
+  -subj "/CN=<your-server-ip-or-hostname>" \
+  -addext "subjectAltName=IP:YOUR_SERVER_IP"
 openssl x509 -req -days 1825 -in server.csr \
   -CA ca.crt -CAkey ca.key -CAcreateserial -out server.crt \
-  -addext "subjectAltName=IP:TU_IP_DEL_SERVIDOR"
+  -addext "subjectAltName=IP:YOUR_SERVER_IP"
 
-sudo ./bedrud install --tls --cert server.crt --key server.key --ip TU_IP_DEL_SERVIDOR
+sudo ./bedrud install --tls --cert server.crt --key server.key --ip YOUR_SERVER_IP
 ```
 
 #### ECDSA P256 (alternative)
@@ -58,13 +59,13 @@ openssl req -new -x509 -days 3650 -key ca.key -out ca.crt \
 
 openssl ecparam -genkey -name prime256v1 -out server.key
 openssl req -new -key server.key -out server.csr \
-  -subj "/CN=<tu-ip-o-nombre-de-host-del-servidor>" \
-  -addext "subjectAltName=IP:TU_IP_DEL_SERVIDOR"
+  -subj "/CN=<your-server-ip-or-hostname>" \
+  -addext "subjectAltName=IP:YOUR_SERVER_IP"
 openssl x509 -req -days 1825 -in server.csr \
   -CA ca.crt -CAkey ca.key -CAcreateserial -out server.crt \
-  -addext "subjectAltName=IP:TU_IP_DEL_SERVIDOR"
+  -addext "subjectAltName=IP:YOUR_SERVER_IP"
 
-sudo ./bedrud install --tls --cert server.crt --key server.key --ip TU_IP_DEL_SERVIDOR
+sudo ./bedrud install --tls --cert server.crt --key server.key --ip YOUR_SERVER_IP
 ```
 
 #### RSA (legacy compatibility, larger keys)
@@ -76,23 +77,56 @@ openssl req -new -x509 -days 3650 -key ca.key -out ca.crt \
 
 openssl genrsa -out server.key 2048
 openssl req -new -key server.key -out server.csr \
-  -subj "/CN=<tu-ip-o-nombre-de-host-del-servidor>" \
-  -addext "subjectAltName=IP:TU_IP_DEL_SERVIDOR"
+  -subj "/CN=<your-server-ip-or-hostname>" \
+  -addext "subjectAltName=IP:YOUR_SERVER_IP"
 openssl x509 -req -days 365 -in server.csr \
   -CA ca.crt -CAkey ca.key -CAcreateserial -out server.crt \
-  -addext "subjectAltName=IP:TU_IP_DEL_SERVIDOR"
+  -addext "subjectAltName=IP:YOUR_SERVER_IP"
 
-sudo ./bedrud install --tls --cert server.crt --key server.key --ip TU_IP_DEL_SERVIDOR
+sudo ./bedrud install --tls --cert server.crt --key server.key --ip YOUR_SERVER_IP
 ```
 
-## Añadir la CA a los almacenes de confianza de los clientes
+## HTTP Listener Port
 
-Distribuye `ca.crt` a todas las máquinas cliente:
+When TLS is enabled, Bedrud also starts an HTTP listener (default port 80) for bots and local access. Ports below 1024 require root on Linux.
+
+### TURN/TLS Auto-Configuration
+
+When server TLS is enabled (via the installer or `server.enableTLS: true`), the embedded LiveKit process automatically generates a temporary config with TURN/TLS settings. The server's TLS certificate is reused for TURN/TLS on port 5349. The TURN `domain` is auto-set from `server.host`, UDP port 3478 is configured for TURN/STUN, and relative `certFile`/`keyFile` paths are resolved to absolute paths before being passed to LiveKit. No additional configuration is needed.
+
+For custom TURN settings (separate domain, different cert, port overrides), provide a LiveKit YAML config file via `livekit.configPath` in `config.yaml` or the `LIVEKIT_CONFIG_PATH` environment variable.
+
+**Non-root setups** — set an unprivileged port in `/etc/bedrud/config.yaml`:
+
+```yaml
+server:
+  httpPort: "8080"
+```
+
+Or via environment variable:
+
+```bash
+export SERVER_HTTP_PORT=8080
+```
+
+Alternatively, grant the binary permission to bind low ports:
+
+```bash
+sudo setcap 'cap_net_bind_service=+ep' $(which bedrud)
+```
+
+<Callout type="warning">
+    `setcap` must be re-run after each binary update (reinstall, upgrade, new build).
+</Callout>
+
+## Add CA to Client Trust Stores
+
+Distribute `ca.crt` to all client machines:
 
 ### Windows
 
 ```powershell
-certmgr.msc  # Clic derecho en ca.crt → Instalar certificado → CA raíz de confianza
+certmgr.msc  # Right-click ca.crt → Install Certificate → Trusted Root CAs
 ```
 
 ### macOS
@@ -116,20 +150,30 @@ sudo cp ca.crt /etc/pki/ca-trust/source/anchors/bedrud-ca.crt
 sudo update-ca-trust
 ```
 
-Reinicia los navegadores y luego abre `https://TU_IP_DEL_SERVIDOR` (reemplaza con la dirección IP real del servidor, por ejemplo `192.168.1.100`). Después de reiniciar, el certificado será de confianza y el acceso a la cámara y al micrófono funcionará sin advertencias.
+## Distributing the Certificate
 
-## Solución de problemas
+After enabling TLS, clients can fetch the server's PEM certificate directly via the API:
 
-| Problema | Solución |
-|----------|----------|
-| El navegador sigue advirtiendo que el certificado no es de confianza | Limpia la caché del navegador, reinícialo después de instalar la CA |
-| Cámara/micrófono bloqueado | Verifica que la CA esté en las CA raíz de confianza, no en intermedias |
-| Certificado caducado | Ejecuta `sudo bedrud cert renew` para regenerar (renovación automática cada 24h a las 09:00) |
-| Desajuste de CN | Los navegadores modernos ignoran el campo CN — SAN es la autoridad. Usa la generación integrada de certificados del instalador (recomendado) o añade `-addext 'subjectAltName=...'` al comando openssl |
-| SANs faltantes | Los navegadores modernos ignoran el campo CN. Usa la generación integrada de certificados del instalador (recomendado) o añade `-addext 'subjectAltName=...'` al comando openssl |
+```bash
+curl -o bedrud-cert.pem https://YOUR_SERVER_IP/api/cert
+```
+
+This endpoint returns the server certificate currently in use. Combine with the CA distribution steps above for a complete trusted setup.
+
+Restart browsers, then open `https://YOUR_SERVER_IP` (replace with the server's actual IP address, e.g. `192.168.1.100`). After restarting, the certificate will be trusted and camera/microphone access will work without warnings.
+
+## Troubleshooting
+
+| Problem | Fix |
+|---------|-----|
+| Browser still warns certificate untrusted | Clear browser cache, restart browser after CA install |
+| Camera/mic blocked | Verify CA is in Trusted Root CAs, not intermediate |
+| Certificate expired | Run `sudo bedrud cert renew` to regenerate (auto-renewal every 24h at 09:00) |
+| CN mismatch | Modern browsers ignore the CN field — SAN is authoritative. Use the installer's built-in cert generation (recommended) or add `-addext 'subjectAltName=...'` to the openssl command |
+| Missing SANs | Modern browsers ignore the CN field. Use the installer's built-in cert generation (recommended) or add `-addext 'subjectAltName=...'` to the openssl command |
 
 ---
 
-## Consulta también
-- [Guía de instalación](/es/docs/getting-started/installation) - métodos de instalación
-- [Referencia de configuración](/es/docs/getting-started/configuration) - opciones completas de configuración
+## See also
+- [Installation Guide](/es/docs/getting-started/installation) - install methods
+- [Configuration Reference](/es/docs/getting-started/configuration) - full config options

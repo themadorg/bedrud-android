@@ -4,28 +4,28 @@ description: Десктопное приложение на Rust
 order: 11
 ---
 
-Десктопный клиент Bedrud - это нативное приложение для Windows и Linux, построенное на **Rust** и UI-фреймворке **Slint**. Оно предоставляет такой же базовый интерфейс видеоконференций, как веб- и мобильные клиенты, компилируясь в единый бинарник без зависимостей времени выполнения.
+The Bedrud desktop client is a native Windows and Linux application built with **Rust** and the **Slint** UI toolkit. It provides the same core meeting experience as the web and mobile clients, compiled to a single binary with no runtime dependencies.
 
-## Стек технологий
+## Technology Stack
 
-| Компонент | Технология |
+| Component | Technology |
 |-----------|-----------|
-| Язык | Rust (stable) |
-| UI-фреймворк | Slint 1.x |
-| HTTP-клиент | reqwest (async, TLS) |
-| Медиа | LiveKit Rust SDK |
-| Хранилище | serde_json + OS keyring (libsecret / Windows Credential Store) |
-| Система сборки | Cargo workspace |
+| Language | Rust (stable) |
+| UI toolkit | Slint 1.x |
+| HTTP client | reqwest (async, TLS) |
+| Media | LiveKit Rust SDK |
+| Storage | serde_json + OS keyring (libsecret / Windows Credential Store) |
+| Build system | Cargo workspace |
 
-## Поддержка платформ
+## Platform Support
 
-| Платформа | Рендерер | Бинарник |
+| Platform | Renderer | Binary |
 |----------|----------|--------|
 | Windows 10/11 | Direct3D 11 | `bedrud-desktop.exe` |
-| Linux x86_64 | OpenGL / Vulkan (через EGL/Wayland/X11) | `bedrud-desktop` |
-| macOS | _(пока недоступно - используйте веб-приложение)_ | - |
+| Linux x86_64 | OpenGL / Vulkan (via EGL/Wayland/X11) | `bedrud-desktop` |
+| macOS | _(not yet - use the web app)_ | - |
 
-## Структура исходного кода
+## Source Layout
 
 ```
 apps/desktop/
@@ -63,7 +63,7 @@ apps/desktop/
     └── settings.slint       # Settings screen
 ```
 
-## Архитектура
+## Architecture
 
 ```mermaid
 flowchart TB
@@ -90,18 +90,18 @@ flowchart TB
     AUTH <*/} STORE
 ```
 
-### Ключевые архитектурные решения
+### Key design decisions
 
-- **Компиляция UI во время сборки** - файлы `.slint` компилируются в Rust на этапе сборки через `build.rs`. Движок разметки во время выполнения отсутствует; UI полностью нативный.
-- **`bridge.rs` как единая граница UI↔логика** - все callback-и Slint подключаются в одном месте, что отделяет бизнес-логику от UI-слоя и упрощает аудит моста.
-- **`Weak<AppWindow>` в callback-ах** - дескрипторы UI Slint не являются `Send`, поэтому фоновые задачи обновляют сохранённую `Weak`-ссылку в UI-потоке для установки свойств, вместо передачи дескриптора между потоками.
-- **Несколько экземпляров через `store/instance.rs`** - аналогично мобильным приложениям: экземпляры сериализуются в JSON-файл в конфигурационной директории ОС; каждый экземпляр имеет собственные `APIClient` и `AuthSession`.
+- **Slint's compile-time UI** - `.slint` files are compiled into Rust at build time via `build.rs`. There is no layout engine at runtime; the UI is fully native.
+- **`bridge.rs` as the only UI↔logic boundary** - all Slint callbacks are wired in one place, keeping business logic out of the UI layer and making the bridge easy to audit.
+- **`Weak<AppWindow>` in callbacks** - Slint UI handles are `!Send`, so background tasks upgrade a stored `Weak` reference on the UI thread to set properties, rather than sharing the handle across threads.
+- **Multi-instance via `store/instance.rs`** - identical to the mobile apps: instances are serialised to a JSON file in the OS config directory; each instance has its own `APIClient` and `AuthSession`.
 
-## Локальная сборка
+## Building Locally
 
-### Необходимые компоненты
+### Prerequisites
 
-- Стабильная версия Rust (`rustup toolchain install stable`)
+- Rust stable toolchain (`rustup toolchain install stable`)
 - **Linux:** `libfontconfig`, `libxkbcommon`, `libwayland`, `libgles2`, `libdbus`, `libsecret`
 
   ```bash
@@ -112,9 +112,9 @@ flowchart TB
     libasound2-dev
   ```
 
-- **Windows:** Visual Studio Build Tools (MSVC) с рабочей нагрузкой C++
+- **Windows:** Visual Studio Build Tools (MSVC) with the C++ workload
 
-### Сборка
+### Build
 
 ```bash
 # Debug build (fast compile, no optimisations)
@@ -125,7 +125,7 @@ make build-desktop        # → target/release/bedrud-desktop (Linux)
                            # → target/release/bedrud-desktop.exe (Windows)
 ```
 
-Или напрямую через Cargo:
+Or with Cargo directly:
 
 ```bash
 cargo build -p bedrud-desktop                          # debug
@@ -135,15 +135,15 @@ cargo run   -p bedrud-desktop                          # run immediately
 
 ## CI
 
-Десктопное приложение собирается в CI при каждом пуше в `master` и в pull-реквестах:
+The desktop app is built in CI on every push to `master` and on pull requests:
 
-| Задача | Среда выполнения | Что проверяет |
+| Job | Runner | What it checks |
 |-----|--------|----------------|
 | `Desktop – Build & Test` | `ubuntu-latest` | `cargo build`, `cargo test` |
 
-Release-сборки создают два артефакта:
+Release builds produce two artifacts:
 
-| Артефакт | Среда | Формат |
+| Artifact | Runner | Format |
 |----------|--------|--------|
 | `bedrud-desktop-linux-x86_64.tar.xz` | `ubuntu-latest` | tar.xz |
 | `bedrud-desktop-windows-x86_64.zip` | `windows-latest` | zip |

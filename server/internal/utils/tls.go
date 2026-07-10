@@ -19,8 +19,15 @@ import (
 	"time"
 )
 
-const CertWarnDays = 30
-const SelfSignedCertDays = 1825
+const (
+	localhostName   = "localhost"
+	certStatusValid = "valid"
+)
+
+const (
+	CertWarnDays       = 30
+	SelfSignedCertDays = 1825
+)
 
 type KeyAlgorithm string
 
@@ -50,7 +57,7 @@ func RenewSelfSignedCert(certFile, keyFile string, hosts ...string) error {
 func RenewSelfSignedCertWithAlgo(certFile, keyFile string, algo KeyAlgorithm, hosts ...string) error {
 	dnsNames, ipAddrs := ParseSanHosts(hosts...)
 	if len(dnsNames) == 0 && len(ipAddrs) == 0 {
-		dnsNames = []string{"localhost"}
+		dnsNames = []string{localhostName}
 		ipAddrs = []net.IP{net.ParseIP("127.0.0.1"), net.ParseIP("::1")}
 	}
 
@@ -68,7 +75,7 @@ func RenewSelfSignedCertWithAlgo(certFile, keyFile string, algo KeyAlgorithm, ho
 		return fmt.Errorf("failed to generate serial number: %w", err)
 	}
 
-	commonName := "localhost"
+	commonName := localhostName
 	if len(dnsNames) > 0 {
 		commonName = dnsNames[0]
 	}
@@ -162,11 +169,11 @@ func generateCertToFiles(certFile, keyFile string, algo KeyAlgorithm, hosts ...s
 
 	dnsNames, ipAddrs := ParseSanHosts(hosts...)
 	if len(dnsNames) == 0 && len(ipAddrs) == 0 {
-		dnsNames = []string{"localhost"}
+		dnsNames = []string{localhostName}
 		ipAddrs = []net.IP{net.ParseIP("127.0.0.1"), net.ParseIP("::1")}
 	}
 
-	commonName := "localhost"
+	commonName := localhostName
 	if len(dnsNames) > 0 {
 		commonName = dnsNames[0]
 	}
@@ -298,7 +305,7 @@ func ParseSanHosts(hosts ...string) (dnsNames []string, ipAddrs []net.IP) {
 			dnsNames = append(dnsNames, host)
 		}
 	}
-	return
+	return dnsNames, ipAddrs
 }
 
 type CertInfo struct {
@@ -372,7 +379,7 @@ func ValidateTLSCertPair(certFile, keyFile string) (*CertInfo, error) {
 		sans = append(sans, ip.String())
 	}
 
-	status := "valid"
+	status := certStatusValid
 	if daysRemaining <= CertWarnDays {
 		status = "expiring"
 	}

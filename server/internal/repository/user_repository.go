@@ -1,12 +1,14 @@
 package repository
 
 import (
-	"bedrud/internal/models"
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"slices"
 	"strings"
 	"time"
+
+	"bedrud/internal/models"
 
 	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
@@ -182,6 +184,45 @@ func (r *UserRepository) CleanupBlockedTokens() error {
 	return result.Error
 }
 
+// BlockAccessToken persists a SHA-256 hash of an access JWT until expiresAt.
+func (r *UserRepository) BlockAccessToken(rawToken string, expiresAt time.Time) error {
+	if rawToken == "" {
+		return nil
+	}
+	h := hashToken(rawToken)
+	var existing models.BlockedAccessToken
+	err := r.db.Where("token = ?", h).First(&existing).Error
+	if err == nil {
+		return nil // already blocked
+	}
+	if !errors.Is(err, gorm.ErrRecordNotFound) {
+		return err
+	}
+	return r.db.Create(&models.BlockedAccessToken{
+		ID:        uuid.New().String(),
+		Token:     h,
+		ExpiresAt: expiresAt,
+	}).Error
+}
+
+// IsAccessTokenBlocked reports whether the raw access token hash is still revoked.
+func (r *UserRepository) IsAccessTokenBlocked(rawToken string) (bool, error) {
+	var count int64
+	err := r.db.Model(&models.BlockedAccessToken{}).
+		Where("token = ? AND expires_at > ?", hashToken(rawToken), time.Now()).
+		Count(&count).Error
+	if err != nil {
+		return false, err
+	}
+	return count > 0, nil
+}
+
+// CleanupBlockedAccessTokens deletes expired access-token revocation rows.
+func (r *UserRepository) CleanupBlockedAccessTokens() error {
+	return r.db.Where("expires_at < ?", time.Now()).
+		Delete(&models.BlockedAccessToken{}).Error
+}
+
 func (r *UserRepository) UpdateUserAccesses(userID string, accesses []string) error {
 	result := r.db.Model(&models.User{}).
 		Where("id = ?", userID).
@@ -258,13 +299,38 @@ func (r *UserRepository) ActivateUser(userID string) error {
 func (r *UserRepository) UpdatePassword(userID, hashedPassword string) error {
 	now := time.Now()
 	result := r.db.Model(&models.User{}).Where("id = ?", userID).Updates(map[string]any{
-		"password":          hashedPassword,
-		"refresh_token":     "",
+		"password":            hashedPassword,
+		"refresh_token":       "",
 		"password_changed_at": now,
-		"updated_at":        now,
+		"updated_at":          now,
 	})
 	if result.Error != nil {
 		log.Error().Err(result.Error).Str("userID", userID).Msg("Failed to update password")
+		return result.Error
+	}
+	if result.RowsAffected == 0 {
+		return gorm.ErrRecordNotFound
+	}
+	return nil
+}
+
+// UpdatePasswordIfUnchanged is the concurrent-safe reset path: only one caller
+// wins when expectedChangedAt matches the row (nil means still never changed).
+func (r *UserRepository) UpdatePasswordIfUnchanged(userID, hashedPassword string, expectedChangedAt *time.Time) error {
+	now := time.Now()
+	q := r.db.Model(&models.User{}).Where("id = ?", userID)
+	if expectedChangedAt == nil {
+		q = q.Where("password_changed_at IS NULL")
+	} else {
+		q = q.Where("password_changed_at = ?", *expectedChangedAt)
+	}
+	result := q.Updates(map[string]any{
+		"password":            hashedPassword,
+		"refresh_token":       "",
+		"password_changed_at": now,
+		"updated_at":          now,
+	})
+	if result.Error != nil {
 		return result.Error
 	}
 	if result.RowsAffected == 0 {
@@ -336,7 +402,8 @@ func (r *UserRepository) DeleteUnverifiedUsers(cutoff time.Time) (int64, error) 
 	}
 
 	count := int64(len(users))
-	for _, u := range users {
+	for i := range users {
+		u := &users[i]
 		if err := r.DeleteUser(u.ID); err != nil {
 			log.Warn().Err(err).Str("userID", u.ID).Msg("Failed to delete unverified user")
 			count--
@@ -377,7 +444,7 @@ type UserFilterParams struct {
 }
 
 // GetAllUsersFiltered returns a filtered, sorted, paginated list of users and the total count.
-func (r *UserRepository) GetAllUsersFiltered(p UserFilterParams) ([]models.User, int64, error) {
+func (r *UserRepository) GetAllUsersFiltered(p *UserFilterParams) ([]models.User, int64, error) {
 	if p.Limit <= 0 || p.Limit > 100 {
 		p.Limit = 50
 	}
@@ -467,7 +534,7 @@ func (r *UserRepository) GetAllUsersFiltered(p UserFilterParams) ([]models.User,
 	// Sort
 	orderClause := "created_at DESC"
 	switch p.Sort {
-	case "name":
+	case sortFieldName:
 		orderClause = "name " + p.Order
 	case "email":
 		orderClause = "email " + p.Order
@@ -575,11 +642,12 @@ func (r *UserRepository) BatchPromote(ids []string) map[string]error {
 			}
 			continue
 		}
-		for _, u := range users {
+		for i := range users {
+			u := &users[i]
 			if !slices.Contains(u.Accesses, "superadmin") {
 				newAccesses := append(u.Accesses, "superadmin")
-				if err := r.db.Model(&u).Updates(map[string]any{
-					"accesses":      models.StringArray(newAccesses),
+				if err := r.db.Model(u).Updates(map[string]any{
+					"accesses":      newAccesses,
 					"refresh_token": "",
 					"updated_at":    time.Now(),
 				}).Error; err != nil {
@@ -670,7 +738,7 @@ type RecentSignupsFilterParams struct {
 }
 
 // GetRecentSignupsFiltered returns paginated recent signups with optional filters.
-func (r *UserRepository) GetRecentSignupsFiltered(p RecentSignupsFilterParams) ([]models.RecentUser, int64, error) {
+func (r *UserRepository) GetRecentSignupsFiltered(p *RecentSignupsFilterParams) ([]models.RecentUser, int64, error) {
 	if p.Limit <= 0 || p.Limit > 100 {
 		p.Limit = 50
 	}
@@ -708,8 +776,8 @@ func (r *UserRepository) GetRecentSignupsFiltered(p RecentSignupsFilterParams) (
 
 	// Sort
 	sortField := "created_at"
-	if p.Sort == "name" {
-		sortField = "name"
+	if p.Sort == sortFieldName {
+		sortField = sortFieldName
 	}
 	order := "DESC"
 	if p.Order == "asc" {
@@ -722,12 +790,13 @@ func (r *UserRepository) GetRecentSignupsFiltered(p RecentSignupsFilterParams) (
 	}
 
 	var users []models.User
-	if err := query.Order(sortField+" "+order).Offset(offset).Limit(p.Limit).Find(&users).Error; err != nil {
+	if err := query.Order(sortField + " " + order).Offset(offset).Limit(p.Limit).Find(&users).Error; err != nil {
 		return nil, 0, err
 	}
 
 	result := make([]models.RecentUser, 0, len(users))
-	for _, u := range users {
+	for i := range users {
+		u := &users[i]
 		result = append(result, models.RecentUser{
 			ID:        u.ID,
 			Name:      u.Name,
@@ -778,7 +847,7 @@ func (r *UserRepository) CountUsersByDay(days int) ([]models.DayCount, error) {
 		found[key] = r.Count
 	}
 	var filled []models.DayCount
-	for i := 0; i < days; i++ {
+	for i := range days {
 		day := cutoff.Add(time.Duration(i) * 24 * time.Hour)
 		key := day.Format("2006-01-02")
 		filled = append(filled, models.DayCount{

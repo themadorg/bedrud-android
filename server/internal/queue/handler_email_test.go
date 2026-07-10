@@ -16,6 +16,8 @@ import (
 	"gorm.io/gorm"
 )
 
+const headerBgDefault = "#1a1a2e"
+
 func TestSendEmailHandler_NoSMTP_LogsBody(t *testing.T) {
 	// Handler with nil config — no SMTP configured.
 	h := NewSendEmailHandler(nil)
@@ -769,7 +771,7 @@ func TestLoadBranding_Defaults(t *testing.T) {
 	if b.InstanceName != "Bedrud" {
 		t.Errorf("expected 'Bedrud', got %q", b.InstanceName)
 	}
-	if b.HeaderBg != "#1a1a2e" {
+	if b.HeaderBg != headerBgDefault {
 		t.Errorf("expected '#1a1a2e', got %q", b.HeaderBg)
 	}
 	if b.ButtonBg != "#e11d48" {
@@ -822,7 +824,7 @@ func TestLoadBranding_EmptyConfig(t *testing.T) {
 	if b.InstanceName != "Bedrud" {
 		t.Errorf("expected default 'Bedrud', got %q", b.InstanceName)
 	}
-	if b.HeaderBg != "#1a1a2e" {
+	if b.HeaderBg != headerBgDefault {
 		t.Errorf("expected default '#1a1a2e', got %q", b.HeaderBg)
 	}
 }
@@ -838,7 +840,7 @@ func TestLoadBranding_PartialConfig(t *testing.T) {
 		t.Errorf("expected 'Partial Instance', got %q", b.InstanceName)
 	}
 	// Should still get defaults for unset fields
-	if b.HeaderBg != "#1a1a2e" {
+	if b.HeaderBg != headerBgDefault {
 		t.Errorf("expected default '#1a1a2e', got %q", b.HeaderBg)
 	}
 	if b.ButtonBg != "#e11d48" {
@@ -1022,7 +1024,7 @@ func TestRenderVerifyTemplate_WithPreheader(t *testing.T) {
 		"Name":         "Bob",
 		"VerifyURL":    "https://bedrud.org/verify?token=abc",
 		"InstanceName": "Bedrud",
-		"HeaderBg":     "#1a1a2e",
+		"HeaderBg":     headerBgDefault,
 		"ButtonBg":     "#e11d48",
 		"Preheader":    "Verify your email for Bedrud",
 	}); err != nil {
@@ -1057,7 +1059,7 @@ func TestRenderVerifyTemplate_CodeBlockURL(t *testing.T) {
 		"Name":         "Charlie",
 		"VerifyURL":    "https://bedrud.org/verify?token=long-token-here",
 		"InstanceName": "Bedrud",
-		"HeaderBg":     "#1a1a2e",
+		"HeaderBg":     headerBgDefault,
 		"ButtonBg":     "#e11d48",
 	}); err != nil {
 		t.Fatalf("execute verify_email template: %v", err)
@@ -1082,7 +1084,7 @@ func TestRenderPasswordChangedTemplate_WithUserAgent(t *testing.T) {
 		"IPAddress":    "10.0.0.1",
 		"UserAgent":    "Mozilla/5.0 Chrome/120",
 		"InstanceName": "Bedrud",
-		"HeaderBg":     "#1a1a2e",
+		"HeaderBg":     headerBgDefault,
 		"ButtonBg":     "#e11d48",
 	}); err != nil {
 		t.Fatalf("execute password_changed template: %v", err)
@@ -1108,7 +1110,7 @@ func TestRenderPasswordChangedTemplate_WithoutUserAgent(t *testing.T) {
 	if err := tmpl.Execute(&buf, map[string]any{
 		"IPAddress":    "10.0.0.1",
 		"InstanceName": "Bedrud",
-		"HeaderBg":     "#1a1a2e",
+		"HeaderBg":     headerBgDefault,
 		"ButtonBg":     "#e11d48",
 	}); err != nil {
 		t.Fatalf("execute password_changed template: %v", err)
@@ -1130,7 +1132,7 @@ func TestRenderGenericTemplate_TableFormat(t *testing.T) {
 	}
 	if err := tmpl.Execute(&buf, map[string]any{
 		"InstanceName": "Bedrud",
-		"HeaderBg":     "#1a1a2e",
+		"HeaderBg":     headerBgDefault,
 		"ButtonBg":     "#e11d48",
 		"UserID":       "u-123",
 		"Room":         "test-room",

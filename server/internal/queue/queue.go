@@ -133,7 +133,7 @@ func (w *Worker) Start(ctx context.Context) {
 	// Jobs in 'active' state for >10min (no heartbeat) are reset to 'pending'.
 	w.recoverStaleJobs()
 
-	for i := 0; i < w.opts.Concurrency; i++ {
+	for range w.opts.Concurrency {
 		go w.run(ctx)
 	}
 	log.Info().Int("concurrency", w.opts.Concurrency).Dur("interval", w.opts.Interval).

@@ -76,8 +76,8 @@ func recordingToDTO(rec *models.Recording) RecordingDTO {
 // recordingsToDTOs converts a slice of models.Recording to RecordingDTOs.
 func recordingsToDTOs(recs []models.Recording) []RecordingDTO {
 	dtos := make([]RecordingDTO, len(recs))
-	for i, rec := range recs {
-		dtos[i] = recordingToDTO(&rec)
+	for i := range recs {
+		dtos[i] = recordingToDTO(&recs[i])
 	}
 	return dtos
 }
@@ -672,8 +672,8 @@ func (h *RecordingHandler) BulkDeleteRecordings(c *fiber.Ctx) error {
 	}
 
 	recByID := make(map[string]models.Recording, len(recordings))
-	for _, r := range recordings {
-		recByID[r.ID] = r
+	for i := range recordings {
+		recByID[recordings[i].ID] = recordings[i]
 	}
 
 	results := make(map[string]BulkItemResult, len(req.IDs))
@@ -765,7 +765,8 @@ func (h *RecordingHandler) ClearRoomRecordings(c *fiber.Ctx) error {
 	// Delete files from storage
 	ctx := c.Context()
 	var deleteErrors []string
-	for _, rec := range recordings {
+	for i := range recordings {
+		rec := &recordings[i]
 		if rec.FileURL == "" {
 			continue
 		}

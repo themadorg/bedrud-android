@@ -4,152 +4,158 @@ description: React web uygulaması mimarisi
 order: 8
 ---
 
-Bedrud web ön ucu; TanStack Start, TailwindCSS v4 ve shadcn/ui ile oluşturulmuş bir React uygulamasıdır. Üretimde sunucu tarafı işleme bir HTML kabuğunu ön_RENDERLER. Go ikili dosyası bu kabuğu statik istemci varlıklarıyla birlikte gömer.
+The Bedrud web frontend is a React application built with TanStack Start, TailwindCSS v4, and shadcn/ui. In production, server-side rendering pre-renders an HTML shell. The Go binary embeds this shell alongside the static client assets.
 
-## Teknoloji Yığını
+## Technology Stack
 
-| Teknoloji | Amaç |
-|-----------|------|
-| React 19 | UI çerçevesi |
-| TanStack Start | SSR çerçevesi ve dosya tabanlı yönlendirme |
-| TanStack Router | İstemci tarafı yönlendirme |
-| TanStack Query | Sunucu durumu ve veri getirme |
-| TailwindCSS 4 | Yardımcı sınıf öncelikli biçimlendirme |
-| shadcn/ui + Radix UI | Erişilebilir bileşen temelleri |
-| Zustand | İstemci tarafı auth durumu |
-| Vite 7 | Derleme aracı ve geliştirme sunucusu |
-| LiveKit React SDK | WebRTC medya işleme |
-| Zod | Şema doğrulama |
-| Lucide React | Simge kütüphanesi |
-| Bun | Paket yöneticisi |
+| Technology | Purpose |
+|-----------|---------|
+| React 19 | UI framework |
+| TanStack Start | SSR framework and file-based routing |
+| TanStack Router | Client-side routing |
+| TanStack Query | Server state and data fetching |
+| TailwindCSS 4 | Utility-first styling |
+| shadcn/ui + Radix UI | Accessible component primitives |
+| Zustand | Client-side auth state |
+| Vite 7 | Build tool and dev server |
+| LiveKit React SDK | WebRTC media handling |
+| Zod | Schema validation |
+| Lucide React | Icon library |
+| Bun | Package manager |
 
-## Dizin Yapısı
+## Directory Structure
 
 ```
 apps/web/
 ├── src/
-│   ├── routes/                    # TanStack Router dosya tabanlı yollar
-│   │   ├── index.tsx              # Ana / açılış sayfası
-│   │   ├── __root.tsx             # Kök düzen
+│   ├── routes/                    # TanStack Router file-based routes
+│   │   ├── index.tsx              # Home / landing page
+│   │   ├── __root.tsx             # Root layout
 │   │   ├── auth/
-│   │   │   ├── login.tsx          # Oturum açma sayfası
-│   │   │   └── register.tsx       # Kayıt olma sayfası
-│   │   ├── dashboard/             # Kullanıcı paneli
-│   │   ├── m.$meetId.tsx          # Toplantı odası sayfası
-│   │   ├── admin/                 # Yönetici paneli
-│   │   │   ├── index.tsx          # Genel görünüm
-│   │   │   ├── rooms.$id.tsx      # Oda detayı
-│   │   │   ├── users.$id.tsx      # Kullanıcı detayı
-│   │   │   └── settings.tsx       # Sunucu ayarları + davet tokenları
-│   │   └── settings.tsx           # Hesap ayarları sayfası
+│   │   │   ├── login.tsx          # Sign-in page
+│   │   │   └── register.tsx       # Sign-up page
+│   │   ├── dashboard/             # User dashboard
+│   │   ├── m.$meetId.tsx          # Meeting room page
+│   │   ├── admin/                 # Admin panel
+│   │   │   ├── index.tsx          # Overview
+│   │   │   ├── rooms.$id.tsx      # Room detail
+│   │   │   ├── users.$id.tsx      # User detail
+│   │   │   └── settings.tsx       # Server settings + invite tokens
+│   │   └── settings.tsx           # Account settings page
 │   ├── components/
-│   │   ├── admin/                 # Yönetici tablosu bileşenleri
+│   │   ├── admin/                 # Admin table components
 │   │   │   ├── RoomTable.tsx
 │   │   │   └── UserTable.tsx
-│   │   ├── auth/                  # Auth arayüzü (OAuth, Passkey düğmeleri)
-│   │   ├── dashboard/             # Oda kartları, oda oluşturma iletişim kutusu
-│   │   ├── meeting/               # Video karoları, kontroller, aygıt seçici
+│   │   ├── auth/                  # Auth UI (OAuth, Passkey buttons)
+│   │   ├── dashboard/             # Room cards, create room dialog
+│   │   ├── meeting/               # Video tiles, controls, device picker
 │   │   │   ├── ControlsBar.tsx
 │   │   │   ├── DeviceSelector.tsx
 │   │   │   ├── ParticipantGrid.tsx
 │   │   │   ├── ChatPanel.tsx
 │   │   │   └── SpotlightView.tsx
-│   │   ├── ui/                    # shadcn/ui bileşen kütüphanesi
-│   │   └── ThemeToggle.tsx        # Açık/koyu mod değiştirici
+│   │   ├── ui/                    # shadcn/ui component library
+│   │   └── ThemeToggle.tsx        # Light/dark mode switcher
 │   └── lib/
-│       ├── api.ts                 # authFetch sarmalayıcısı
-│       └── auth.store.ts          # Zustand auth deposu (tokenlar, kullanıcı)
+│       ├── api.ts                 # authFetch wrapper
+│       └── auth.store.ts          # Zustand auth store (tokens, user)
 ├── scripts/
-│   └── embed.mjs                  # SSR ön işleme + server/frontend/ dizinine kopyalama
-├── public/                        # Statik varlıklar
+│   └── embed.mjs                  # SSR pre-render + copy to server/frontend/
+├── public/                        # Static assets
 ├── package.json
 ├── tsconfig.json
 └── vite.config.ts
 ```
 
-## Kimlik Doğrulama Akışı
+## Authentication Flow
 
-Auth durumu `src/lib/auth.store.ts` dosyasındaki bir Zustand deposu tarafından yönetilir:
+Auth state is managed by a Zustand store in `src/lib/auth.store.ts`:
 
-1. **Giriş** - Kullanıcı kimlik bilgilerini `POST /api/auth/login` adresine gönderir
-2. **Token Depolama** - Erişim ve yenileme tokenları `localStorage`'a kaydedilir
-3. **Otomatik Ekleme** - `authFetch` her API çağrısını sararak `Authorization: Bearer` başlığını ekler
-4. **Otomatik Yenileme** - Bir istek 401 döndürdüğünde `authFetch` yenileme tokenı ile token yenilemeyi dener
-5. **Çıkış** - Tokenları temizler ve oturum açma sayfasına yönlendirir
+1. **Login** - User submits credentials to `POST /api/auth/login`
+2. **Token Storage** - Access and refresh tokens saved to `localStorage`
+3. **Otomatik enjeksiyon** – `authFetch` her API çağrısını sarmalar ve `Authorization: Bearer` başlığını ekler (durum değiştiren istekler için zorunlu; sunucu yalnızca çerezli mutasyonları reddeder)
+4. **Auto-Refresh** - When a request returns 401, `authFetch` attempts to refresh the token using the refresh token
+5. **Logout** - Clears tokens and redirects to the login page
 
 ### authFetch
 
-`src/lib/api.ts` dosyasındaki `authFetch` işlevi `fetch` yerine doğrudan kullanılabilen bir sarmalayıcıdır:
+The `authFetch` function in `src/lib/api.ts` is a drop-in replacement for `fetch` that:
 
-- Her isteğe JWT erişim tokenını ekler
-- 401 yanıtlarını yakalar ve token yenilemeyi dener
-- Yenileme başarısız olursa kullanıcıyı oturumu kapatır
+- Attaches the JWT access token to every request
+- Catches 401 responses and attempts a token refresh
+- Logs out the user if the refresh fails
 
-## Toplantı Sayfası
+## Meeting Page
 
-`/m/$meetId` adresindeki toplantı odası şunları yönetir:
+The meeting room at `/m/$meetId` handles:
 
-- **LiveKit bağlantısı** - Katılma API'sinden alınan token ile medya sunucusuna bağlanır
-- **Kanal işleme** - Diğer katılımcıların ses/video kanallarına abone olur
-- **Aygıt seçimi** - Görüntülü arama sırasında odayı terk etmeden kamera, mikrofon veya hoparlör değiştirme
-- **Yönetici kontrolleri** - Oda oluşturan kişi atma, susturma ve video kapatma düğmelerini görür
-- **Sohbet** - `ChatPanel` ile oda içi metin sohbeti
-- **Odak görünümü** - Tek bir katılımcıya odaklanma
+- **LiveKit connection** - Connects to the media server with the token from the join API
+- **Track rendering** - Subscribes to audio/video tracks from other participants
+- **Device selection** - Switch camera, microphone, or speaker mid-call without leaving the room
+- **Admin controls** - Room creator sees kick, mute, and video-off buttons
+- **Chat** - Oda içi metin sohbeti (`ChatPanel`: tepkiler, anketler, ekler)
+- **Spotlight view** - Focus a single participant
+- **Stage mode** - Sunucu odaklı düzen ve sahne ekran paylaşımı katmanı
+- **Whiteboard** - Ortak tahta (Yjs over LiveKit data channels); Deneysel ayarlar altında kapılı olabilir
+- **YouTube watch** - Senkron izleme katmanı; isteğe bağlı Deneysel anahtar
+- **Push-to-talk** - Ses tercihlerinde yapılandırılan basılı tutma tuşu ile iletim
 
-## Yönetici Paneli
+Son kullanıcı kılavuzları: [Bedrud'u Kullanma](/tr/docs/using/joining-a-meeting) (katılmadan başlayın; sahne, beyaz tahta, sohbet ve kontroller).
 
-`/admin` adresindeki yönetici paneli şunları sunar:
+## Admin Panel
 
-- **Oda yönetimi** - oda detay sayfalarına inilebilen tablo görünümü
-- **Kullanıcı yönetimi** - bireysel kullanıcı hesaplarına ve rol düzenlemeye inilebilen tablo görünümü
-- **Sunucu ayarları** - örnek genelindeki seçenekleri, erişim kontrollerini ve davet bağlantılarını yapılandırma
-- **Davet tokenları** - kimlerin katılabileceğini denetlemek için davet bağlantıları oluşturma ve iptal etme
+The admin panel at `/admin` provides:
 
-## Koyu Mod
+- **Room management** - table view with drill-down to room detail pages
+- **User management** - table view with drill-down to individual user accounts and role editing
+- **Server settings** - configure instance-wide options, access controls, and invite links
+- **Invite tokens** - generate and revoke invite links to control who can join
 
-`ThemeToggle` bileşeni kullanıcıların uygulamanın herhangi bir yerinden açık ve koyu temalar arasında geçiş yapmasına olanak tanır. Tercih `localStorage`'a kaydedilir ve yükleme sırasında uygulanır.
+## Dark Mode
 
-## Derleme
+A `ThemeToggle` component lets users switch between light and dark themes from anywhere in the app. The preference is persisted to `localStorage` and applied on load.
 
-### Geliştirme
+## Build
 
-```bash
-cd apps/web
-bun run dev      # Vite geliştirme sunucusunu HMR ile localhost:3000 adresinde başlatır
-```
-
-Geliştirme sunucusu `/api` ve `/livekit` isteklerini `localhost:8090` adresindeki Go sunucusuna vekil olarak iletir.
-
-### Üretim (bağımsız web paketi)
+### Development
 
 ```bash
 cd apps/web
-bun run build    # Statik istemci varlıklarını dist/client/'a ve SSR sunucusunu dist/server/'a çıkarır
+bun run dev      # Starts Vite dev server with HMR at localhost:3000
 ```
 
-### Üretim (Go ikili dosyasına gömülü)
+The dev server proxies `/api` and `/livekit` requests to the Go server at `localhost:8090`.
+
+### Production (standalone web bundle)
+
+```bash
+cd apps/web
+bun run build    # Outputs static client assets to dist/client/ and SSR server to dist/server/
+```
+
+### Production (embedded in Go binary)
 
 ```bash
 cd apps/web
 bun run build:embed
 ```
 
-Bu `scripts/embed.mjs` betiğini çalıştırır:
+This runs `scripts/embed.mjs` which:
 
-1. `dist/client/` ve `dist/server/` üretmek için `bun run build` çalıştırır
-2. SSR sunucusunu yerel olarak başlatır
-3. Ön_RENDERLENMIŞ HTML kabuğunu yakalamak için `/` adresine istek atar
-4. `dist/client/` klasörünü `server/frontend/` içine kopyalar
-5. İşlenen HTML'yi `server/frontend/index.html` olarak yazar
+1. Runs `bun run build` to produce `dist/client/` and `dist/server/`
+2. Starts the SSR server locally
+3. Fetches `/` to capture the pre-rendered HTML shell
+4. Copies `dist/client/` into `server/frontend/`
+5. Writes the rendered HTML as `server/frontend/index.html`
 
-### Tür Denetimi
+### Type Checking
 
 ```bash
-bun run check    # tsc --noEmit çalıştırır
+bun run check    # Runs tsc --noEmit
 ```
 
 ---
 
-## Ayrıca bakınız
+## See also
 
-- [Web Tasarım Sistemi](https://github.com/themadorg/bedrud/tree/main/apps/web/AGENTS.md) - UI bileşen örüntüleri, renk tokenları ve biçimlendirme kuralları
+- [Web Design System](https://github.com/themadorg/bedrud/tree/main/apps/web/AGENTS.md) - UI component patterns, color tokens, and styling rules

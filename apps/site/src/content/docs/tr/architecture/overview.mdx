@@ -4,9 +4,9 @@ description: Bedrud platformunun üst düzey sistem mimarisi
 order: 6
 ---
 
-Bedrud; bir Go sunucusu, üç istemci uygulaması, Python bot aracıları ve ortak paketler içeren bir monorepo'dur. Bu sayfa bileşenlerin birbiriyle nasıl ilişkili olduğunu açıklar.
+Bedrud is a monorepo containing a Go server, three client applications, Python bot agents, and shared packages. This page describes how the components relate to each other.
 
-## Üst Düzey Diyagram
+## High-Level Diagram
 
 ```mermaid
 flowchart TB
@@ -21,94 +21,97 @@ flowchart TB
         Router["Fiber HTTP Router<br/>/api/auth/* /api/room/* /api/admin/*"]
         DB["GORM / SQLite<br/>(or PostgreSQL)"]
         LKSDK["LiveKit Protocol SDK<br/>(token generation, room management)"]
+        Queue["Job Queue<br/>(async deletion, uploads)"]
         LiveKit["Embedded LiveKit<br/>Media Server (WebRTC)"]
     end
 
     Clients */}|"REST API + WebSocket"| Router
     Router */} DB
     Router */} LKSDK
+    Router -.->|"enqueue jobs"| Queue
     LKSDK */} LiveKit
 ```
 
-## Bileşenler
+## Components
 
-### Sunucu (`server/`)
+### Server (`server/`)
 
-Go arka ucu Bedrud'un çekirdeğidir. Şunları yönetir:
+The Go backend is the core of Bedrud. It handles:
 
-- **REST API** - kimlik doğrulama, oda yönetimi, yönetici işlemleri
-- **Statik dosya sunumu** - derlenmiş web ön ucu `//go:embed` ile gömülüdür
-- **LiveKit entegrasyonu** - LiveKit Protocol SDK üzerinden token üretir ve odaları yönetir
-- **Gömülü LiveKit sunucusu** - medya sunucusu ikili dosyası bir alt süreç olarak çalışır
+- **REST API** - authentication, room management, admin operations
+- **Static file serving** - the compiled web frontend is embedded via `//go:embed`
+- **LiveKit integration** - generates tokens and manages rooms via the LiveKit Protocol SDK
+- **Embedded LiveKit server** - the media server binary runs as a child process
+- **Async job queue** - background worker processes room deletion, user deletion, suspensions, and chat uploads without blocking API responses
 
-Sunucu **Fiber** web çerçevesini (Node.js'deki Express.js'e benzer) ve ORM katmanı olarak **GORM**'u kullanır. Geliştirme için SQLite, üretim için PostgreSQL destekler.
+The server uses the **Fiber** web framework (similar to Express.js in Node.js) and **GORM** as the ORM layer. It supports SQLite for development and PostgreSQL for production.
 
-Ayrıntılar için bkz. [Sunucu Mimarisi](/tr/docs/architecture/server).
+See [Server Architecture](/tr/docs/architecture/server) for details.
 
-### Web Ön Ucu (`apps/web/`)
+### Web Frontend (`apps/web/`)
 
-TanStack Start, TailwindCSS v4 ve shadcn/ui ile oluşturulmuş bir **React** uygulamasıdır. Üretimde sunucuda ön_RENDERLENİR ve istemci varlıkları Go ikili dosyasına gömülür.
+A **React** application built with TanStack Start, TailwindCSS v4, and shadcn/ui. In production, it is pre-rendered on the server and the client assets are embedded into the Go binary.
 
-Temel yetenekler:
+Key capabilities:
 
-- LiveKit Client SDK ile video toplantısı arayüzü
-- Otomatik token yenileme ile JWT tabanlı kimlik doğrulama
-- Kullanıcı ve oda yönetimi için yönetici paneli
-- Tutarlı bileşen kütüphanesi ile tasarım sistemi
+- Video meeting UI with LiveKit Client SDK
+- JWT-based authentication with automatic token refresh
+- Admin dashboard for user and room management
+- Design system with consistent component library
 
-Ayrıntılar için bkz. [Web Ön Ucu](/tr/docs/architecture/web).
+See [Web Frontend](/tr/docs/architecture/web) for details.
 
-### Android Uygulaması (`apps/android/`)
+### Android App (`apps/android/`)
 
-**Jetpack Compose** ve **Kotlin** ile oluşturulmuş yerel bir Android uygulamasıdır. Bağımlılık enjeksiyonu için Koin, HTTP için Retrofit kullanır.
+A native Android app built with **Jetpack Compose** and **Kotlin**. Uses Koin for dependency injection and Retrofit for HTTP.
 
-Temel yetenekler:
+Key capabilities:
 
-- LiveKit Android SDK ile tam video toplantısı deneyimi
-- Resim içinde resim (PiP) modu
-- Derin bağlantı işleme (`bedrud.com/m/*` ve `bedrud.com/c/*`)
-- Android ConnectionService ile arama yönetimi
-- Çoklu örnek desteği (birden fazla sunucuya bağlanma)
+- Full video meeting experience with LiveKit Android SDK
+- Picture-in-picture mode
+- Deep link handling (`bedrud.com/m/*` and `bedrud.com/c/*`)
+- Call management with Android's ConnectionService
+- Multi-instance support (connect to multiple servers)
 
-Ayrıntılar için bkz. [Android Uygulaması](/tr/docs/architecture/android).
+See [Android App](/tr/docs/architecture/android) for details.
 
-### iOS Uygulaması (`apps/ios/`)
+### iOS App (`apps/ios/`)
 
-**SwiftUI** ile oluşturulmuş yerel bir iOS uygulamasıdır. Güvenli kimlik bilgisi depolama için KeychainAccess, medya için LiveKit Swift SDK kullanır.
+A native iOS app built with **SwiftUI**. Uses KeychainAccess for secure credential storage and LiveKit Swift SDK for media.
 
-Temel yetenekler:
+Key capabilities:
 
-- Tam video toplantısı deneyimi
-- Çoklu örnek desteği
-- Derin bağlantı işleme
-- Keychain tabanlı güvenli depolama
+- Full video meeting experience
+- Multi-instance support
+- Deep link handling
+- Keychain-based secure storage
 
-Ayrıntılar için bkz. [iOS Uygulaması](/tr/docs/architecture/ios).
+See [iOS App](/tr/docs/architecture/ios) for details.
 
-### Masaüstü Uygulaması (`apps/desktop/`)
+### Desktop App (`apps/desktop/`)
 
-**Rust** ve **Slint** UI araç takımı ile oluşturulmuş yerel bir Windows ve Linux masaüstü uygulamasıdır. Herhangi bir çalışma zamanı bağımlılığı olmadan tek bir ikili dosyaya derlenir.
+A native Windows and Linux desktop application built with **Rust** and the **Slint** UI toolkit. Compiles to a single binary with no runtime dependencies.
 
-Temel yetenekler:
+Key capabilities:
 
-- LiveKit Rust SDK ile tam video toplantısı deneyimi
-- Yerel Windows (Direct3D 11) ve Linux (OpenGL/Vulkan) işleme
-- Çoklu örnek desteği (birden fazla Bedrud sunucusuna bağlanma)
-- Güvenli kimlik bilgisi depolama için OS keyring entegrasyonu
+- Full video meeting experience via LiveKit Rust SDK
+- Native Windows (Direct3D 11) and Linux (OpenGL/Vulkan) rendering
+- Multi-instance support (connect to multiple Bedrud servers)
+- OS keyring integration for secure credential storage
 
-Ayrıntılar için bkz. [Masaüstü Uygulaması](/tr/docs/architecture/desktop).
+See [Desktop App](/tr/docs/architecture/desktop) for details.
 
-### Bot Aracıları (`agents/`)
+### Bot Agents (`agents/`)
 
-Toplantı odalarına bot olarak katılan ve medya içeriği yayınlayan Python betikleri:
+Python scripts that join meeting rooms as bots and stream media content:
 
-- **Müzik Aracısı** - ses dosyalarını çalar
-- **Radyo Aracısı** - internet radyo istasyonlarını yayınlar
-- **Video Yayın Aracısı** - video içeriği paylaşır (HLS, MP4)
+- **Music Agent** - plays audio files
+- **Radio Agent** - streams internet radio stations
+- **Video Stream Agent** - shares video content (HLS, MP4)
 
-Ayrıntılar için bkz. [Bot Aracıları](/tr/docs/architecture/agents).
+See [Bot Agents](/tr/docs/architecture/agents) for details.
 
-## Kimlik Doğrulama Akışı
+## Authentication Flow
 
 ```mermaid
 sequenceDiagram
@@ -126,19 +129,19 @@ sequenceDiagram
     Server*/}>Client: room list
 ```
 
-Tüm kimlik doğrulaması yapılmış istekler `Authorization` başlığında JWT tokenları kullanır. Web ön ucundaki `authFetch` sarmalayıcısı token ekleme ve otomatik yenileme işlemlerini gerçekleştirir.
+All authenticated requests use JWT tokens in the `Authorization` header. The web frontend's `authFetch` wrapper handles token attachment and automatic refresh.
 
-Desteklenen kimlik doğrulama yöntemleri:
+Supported auth methods:
 
-| Yöntem | Uç Nokta | Açıklama |
-|--------|----------|----------|
-| E-posta/Parola | `POST /api/auth/login` | Geleneksel kimlik bilgileri |
-| Kayıt | `POST /api/auth/register` | Yeni hesap oluşturma |
-| Misafir | `POST /api/auth/guest-login` | Sadece isimle geçici erişim |
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| Email/Password | `POST /api/auth/login` | Traditional credentials |
+| Registration | `POST /api/auth/register` | New account creation |
+| Guest | `POST /api/auth/guest-login` | Temporary access with just a name |
 | OAuth | `GET /api/auth/:provider/login` | Google, GitHub, Twitter |
-| Passkey | `POST /api/auth/passkey/*` | FIDO2/WebAuthn biyometrisi |
+| Passkeys | `POST /api/auth/passkey/*` | FIDO2/WebAuthn biometrics |
 
-## Toplantı Bağlantı Akışı
+## Meeting Connection Flow
 
 ```mermaid
 sequenceDiagram
@@ -164,88 +167,88 @@ sequenceDiagram
     Note over C,LK: Audio/video tracks flow through SFU
 ```
 
-1. İstemci REST API üzerinden bir odaya katılma isteği gönderir
-2. Sunucu izinleri doğrular ve imzalı bir LiveKit tokenı üretir
-3. İstemci bu tokenı kullanarak WebSocket üzerinden doğrudan LiveKit'e bağlanır
-4. ICE adayları toplar (host, STUN, TURN) ve en iyi yolu seçer
-5. Ses/video kanalları LiveKit'in SFU'sundan geçer
+1. The client requests to join a room via the REST API
+2. The server validates permissions and generates a signed LiveKit token
+3. The client connects directly to LiveKit via WebSocket using the token
+4. ICE gathers candidates (host, STUN, TURN) and selects the best path
+5. Audio/video tracks flow through LiveKit's SFU
 
-Tam bağlantı yığını için bkz. [WebRTC Bağlantısı](/tr/docs/architecture/webrtc-connectivity).
+See [WebRTC Connectivity](/tr/docs/architecture/webrtc-connectivity) for the full connectivity stack.
 
-## Veri Modeli
+## Data Model
 
 ### User
 
-| Alan | Tür | Açıklama |
-|------|-----|----------|
-| ID | uint | Birincil anahtar |
-| Email | string | Benzersiz e-posta adresi |
-| Name | string | Görünen ad |
-| Password | string | Karmalanmış parola (OAuth/misafir için boş) |
-| Avatar | string | Avatar URL'si |
-| Provider | string | Kimlik doğrulama sağlayıcısı (`local`, `google`, `github`, `twitter`, `guest`) |
-| Role | string | `user` veya `admin` |
+| Field | Type | Description |
+|-------|------|-------------|
+| ID | uint | Primary key |
+| Email | string | Unique email address |
+| Name | string | Display name |
+| Password | string | Hashed password (empty for OAuth/guest) |
+| Avatar | string | Avatar URL |
+| Provider | string | Auth provider (`local`, `google`, `github`, `twitter`, `guest`) |
+| Role | string | `user` or `admin` |
 
 ### Room
 
-| Alan | Tür | Açıklama |
-|------|-----|----------|
-| ID | uint | Birincil anahtar |
-| AdminID | uint | Dış anahtar → User.ID (oda oluşturan) |
-| Name | string | Oda adı / URL kısa adı |
-| IsPublic | bool | Misafirlerin davetsiz katılıp katılamayacağı |
-| ChatEnabled | bool | Oda içi sohbetin aktif olup olmadığı |
-| VideoEnabled | bool | Videoya izin verilip verilmediği |
-| Participants | []User | Odada bulunan kullanıcılar |
+| Field | Type | Description |
+|-------|------|-------------|
+| ID | uint | Primary key |
+| AdminID | uint | Foreign key → User.ID (room creator) |
+| Name | string | Room name / URL slug |
+| IsPublic | bool | Whether guests can join without invite |
+| ChatEnabled | bool | Whether in-room chat is active |
+| VideoEnabled | bool | Whether video is allowed |
+| Participants | []User | Users currently in the room |
 
 ### Passkey
 
-| Alan | Tür | Açıklama |
-|------|-----|----------|
-| ID | uint | Birincil anahtar |
-| UserID | uint | Dış anahtar → User.ID |
-| CredentialID | []byte | WebAuthn kimlik bilgisi ID'si |
-| PublicKey | []byte | WebAuthn ortak anahtarı |
-| Counter | uint32 | WebAuthn imza sayacı |
+| Field | Type | Description |
+|-------|------|-------------|
+| ID | uint | Primary key |
+| UserID | uint | Foreign key → User.ID |
+| CredentialID | []byte | WebAuthn credential ID |
+| PublicKey | []byte | WebAuthn public key |
+| Counter | uint32 | WebAuthn sign count |
 
 ### RefreshToken
 
-| Alan | Tür | Açıklama |
-|------|-----|----------|
-| Token | string | Yenileme tokenı metni |
-| UserID | uint | Dış anahtar → User.ID |
-| ExpiresAt | time | Token son kullanma zaman damgası |
+| Field | Type | Description |
+|-------|------|-------------|
+| Token | string | The refresh token string |
+| UserID | uint | Foreign key → User.ID |
+| ExpiresAt | time | Token expiration timestamp |
 
-## Dağıtım Mimarisi
+## Deployment Architecture
 
-Üretimde Bedrud iki init servisi (systemd, OpenRC veya SysV init) olarak çalışır:
+In production, Bedrud runs as two init services (systemd, OpenRC, or SysV init):
 
-| Hizmet | İkili Dosya | Amaç |
-|--------|-------------|------|
-| `bedrud.service` | `bedrud --run` | API sunucusu + gömülü web ön ucu |
-| `livekit.service` | `bedrud --livekit` | WebRTC medya sunucusu |
+| Service | Binary | Purpose |
+|---------|--------|---------|
+| `bedrud.service` | `bedrud --run` | API server + embedded web frontend |
+| `livekit.service` | `bedrud --livekit` | WebRTC media server |
 
-İkisi de tek bir ikili dosya tarafından yönetilir. Traefik veya başka bir ters vekil TLS sonlandırmasını ve trafik yönlendirmeyi gerçekleştirir.
+Both are managed by a single binary. Traefik or another reverse proxy handles TLS termination and routes traffic.
 
-Kurulum talimatları için bkz. [Dağıtım Kılavuzu](/tr/docs/guides/deployment).
+See [Deployment Guide](/tr/docs/guides/deployment) for setup instructions.
 
-## Temel Terimler
+## Key Terms
 
-Bu terimler mimari belgelerinde genel olarak kullanılır:
+These terms appear throughout the architecture documentation:
 
-| Terim | Tam Adı | Anlamı |
-|-------|---------|--------|
-| **SFU** | Selective Forwarding Unit | Her katılımcıdan yayınları alıp diğerlerine ileten bir medya sunucusudur. İstemciler birbirine değil sunucuya bağlanır. |
-| **SDP** | Session Description Protocol | WebRTC bağlantı parametrelerini (kodekler, çözünürlükler, medya türleri) tanımlamak için kullanılan biçim. |
-| **ICE** | Interactive Connectivity Establishment | İstemci ve sunucu arasındaki tüm olası ağ yollarını toplayıp en iyisini seçen bir çerçeve. |
-| **STUN** | Session Traversal Utilities for NAT | İstemcinin genel IP adresini keşfetmesine yardımcı olan hafif bir protokol. Çoğu bağlantıda çalışır. |
-| **TURN** | Traversal Using Relays around NAT | Doğrudan bağlantı mümkün olmadığında tüm medyayı sunucu üzerinden aktaran bir protokol. Son çare, en yüksek bant genişliği maliyeti. |
-| **NAT** | Network Address Translation | Özel iç adresleri bir genel adrese eşleyen bir yönlendirici özelliği. Türüne göre doğrudan WebRTC bağlantılarını engelleyebilir. |
-| **srflx** | Server Reflexive | İstemcinin STUN aracılığıyla keşfedilen genel IP'sini temsil eden ICE adayı türü. |
-| **WebRTC** | Web Real-Time Communication | Gerçek zamanlı ses, video ve veri aktarımı için tarayıcı ve mobil API standardı. |
+| Term | Full Name | Meaning |
+|------|-----------|---------|
+| **SFU** | Selective Forwarding Unit | A media server that receives streams from each participant and forwards them to others. Clients connect to the server, not to each other. |
+| **SDP** | Session Description Protocol | The format used to describe WebRTC connection parameters (codecs, resolutions, media types). |
+| **ICE** | Interactive Connectivity Establishment | A framework that gathers all possible network paths between client and server, then selects the best one. |
+| **STUN** | Session Traversal Utilities for NAT | A lightweight protocol that helps a client discover its public IP address. Works for most connections. |
+| **TURN** | Traversal Using Relays around NAT | A protocol that relays all media through the server when a direct connection is not possible. Last resort, highest bandwidth cost. |
+| **NAT** | Network Address Translation | A router feature that maps private internal addresses to a public address. Can block direct WebRTC connections depending on type. |
+| **srflx** | Server Reflexive | A type of ICE candidate representing the client's public IP, discovered via STUN. |
+| **WebRTC** | Web Real-Time Communication | The browser and mobile API standard for real-time audio, video, and data transfer. |
 
-## Ayrıca Bakınız
+## See Also
 
-- [WebRTC Bağlantısı](/tr/docs/architecture/webrtc-connectivity) - tam STUN/ICE/TURN/SFU bağlantı yığını
-- [TURN Sunucusu Kılavuzu](/tr/docs/architecture/turn-server) - TURN aktarma mimarisi ve yapılandırması
-- [LiveKit Entegrasyonu](/tr/docs/backend/livekit) - Bedrud'un LiveKit'i nasıl gömdüğü
+- [WebRTC Connectivity](/tr/docs/architecture/webrtc-connectivity) - full STUN/ICE/TURN/SFU connectivity stack
+- [TURN Server Guide](/tr/docs/architecture/turn-server) - TURN relay architecture and configuration
+- [LiveKit Integration](/tr/docs/backend/livekit) - how Bedrud embeds LiveKit

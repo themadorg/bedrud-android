@@ -2,10 +2,6 @@
 package handlers
 
 import (
-	"bedrud/config"
-	"bedrud/internal/models"
-	"bedrud/internal/queue"
-	"bedrud/internal/repository"
 	"context"
 	"crypto/sha256"
 	"crypto/subtle"
@@ -14,6 +10,11 @@ import (
 	"fmt"
 	"net/http"
 	"time"
+
+	"bedrud/config"
+	"bedrud/internal/models"
+	"bedrud/internal/queue"
+	"bedrud/internal/repository"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/livekit/protocol/auth"
@@ -91,13 +92,10 @@ func (h *LiveKitWebhookHandler) Handle(c *fiber.Ctx) error {
 		h.handleParticipantDisconnected(ctx, event)
 	case "room_finished":
 		h.handleRoomFinished(ctx, event)
-	// TODO oncoming feature: egress webhook events
-	// case "egress_started":
-	// 	h.handleEgressStarted(ctx, event)
-	// case "egress_ended":
-	// 	h.handleEgressEnded(ctx, event)
-	// case "egress_updated":
-	// 	// Optional: update progress percentage
+	case "egress_started":
+		h.handleEgressStarted(ctx, event)
+	case "egress_ended":
+		h.handleEgressEnded(ctx, event)
 	default:
 		log.Debug().Str("event", event.Event).Msg("LiveKit webhook: unhandled event")
 	}
@@ -312,19 +310,15 @@ func (h *LiveKitWebhookHandler) handleEgressEnded(ctx context.Context, event *li
 		return
 	}
 
-	// Determine file size
 	var fileSize int64
 	if len(event.EgressInfo.FileResults) > 0 {
 		fileSize = event.EgressInfo.FileResults[0].Size
 	}
-
-	// Determine duration from file results (nanos → ms)
 	var durationMs int64
 	if len(event.EgressInfo.FileResults) > 0 {
 		durationMs = event.EgressInfo.FileResults[0].Duration / 1e6
 	}
 
-	// Enqueue processing
 	var startedAt string
 	if rec.StartedAt != nil {
 		startedAt = rec.StartedAt.Format(time.RFC3339)
@@ -360,9 +354,6 @@ func extractFileURL(info *livekit.EgressInfo) string {
 	}
 	if len(info.FileResults) > 0 && info.FileResults[0].Filename != "" {
 		return info.FileResults[0].Filename
-	}
-	if fi := info.GetFile(); fi != nil && fi.Filename != "" {
-		return fi.Filename
 	}
 	return ""
 }

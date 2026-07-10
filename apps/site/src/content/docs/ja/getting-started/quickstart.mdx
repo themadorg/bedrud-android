@@ -1,47 +1,47 @@
-﻿---
-title: クイックスタート
-description: 5 分以内に Bedrud をデプロイしてビデオ会議に参加する
+---
+title: Quick Start
+description: Deploy Bedrud and join a video meeting in under 5 minutes
 order: 1
 ---
 
-5 分以内に Bedrud をデプロイしてビデオ会議に参加しましょう。
+Deploy Bedrud and join a video meeting in under 5 minutes.
 
-**本ガイド:**
+**In this guide:**
 
-1. **CLI を取得** — ワンコマンドインストール（または手動ダウンロード）
-2. **サーバーをデプロイ** — `bedrud install` ですべてをセットアップ
-3. **確認** — サービスが動作しているか確認
-4. **管理者作成 & 参加** — ブラウザを開き、自分を管理者に昇格させ、会議を開始
+1. **Get the CLI** — one-command install (or manual download)
+2. **Deploy the server** — `bedrud install` sets up everything
+3. **Verify** — confirm services are running
+4. **Create admin & join** — open browser, promote yourself, start meeting
 
-**詳細情報:**
+**More info:**
 
-- [CLI インストーラー](/ja/docs/getting-started/cli-installer) — フラグ、対応プラットフォーム、オフラインインストール
-- [サーバーインストール](/ja/docs/getting-started/installation) — パッケージマネージャー、Docker、詳細オプション
-- [設定](/ja/docs/getting-started/configuration) — ポート、データベース、認証、TURN
+- [CLI Installer](/ja/docs/getting-started/cli-installer) — flags, platforms, offline installs
+- [Server Installation](/ja/docs/getting-started/installation) — package managers, Docker, advanced options
+- [Configuration](/ja/docs/getting-started/configuration) — ports, database, auth, TURN
 
-> **単一バイナリ、ダウンロード後はインターネット不要。** 組み込みメディアサーバーと SQLite を含んでいるため、孤立したネットワークでも動作します。ファイルを転送して、コマンドを1つ実行するだけ。
+> **Single binary, no internet needed after download.** It includes an embedded media server and SQLite — works on isolated networks. Transfer file, run one command, done.
 
 ---
 
-## 必要なもの
+## What You Need
 
-| 要件 | 詳細 |
+| Requirement | Details |
 |-------------|---------|
-| Linux サーバー | amd64 または arm64、`sudo` アクセスと対応イニットシステム（systemd、OpenRC、SysV init）が必要。macOS/Windows: サーバーには Docker または WSL2 を使用 |
-| 開放ポート | `8090`、`7880`、`50000–60000/udp`。自動 TLS の場合: さらに `80` と `443` |
-| ドメイン（任意） | このサーバーを指す DNS A レコード。ドメインなし？IP でも動作 - 以下の代替方法を参照 |
+| A Linux server | amd64 or arm64, with `sudo` access and a supported init system (systemd, OpenRC, or SysV init). macOS/Windows: use Docker or WSL2 for server |
+| Open ports | `8090`, `7880`, `50000–60000/udp`. For auto-TLS: also `80` and `443` (or set `httpPort` to unprivileged port — see [Configuration](/ja/docs/getting-started/configuration#privileged-ports)) |
+| A domain (optional) | With DNS A record pointing to your server. No domain? Works with IP — see alternatives below |
 
-> **仕組み:** 1つの Bedrud **サーバー** を実行します。参加者は **ブラウザ** で会議に参加（インストール不要）、または **ネイティブアプリ** 経由（Android、Windows、macOS、Linux）で参加します。
+> **How it works:** You run one Bedrud **server**. People join meetings in their **browser** (no install) or via **native apps** (Android, Windows, macOS, Linux).
 
 ---
 
-## 1. Bedrud CLI を取得
+## 1. Get the Bedrud CLI
 
 <Tabs>
   <TabsList>
     <TabsTrigger value="macos-linux">macOS / Linux</TabsTrigger>
     <TabsTrigger value="windows">Windows (PowerShell)</TabsTrigger>
-    <TabsTrigger value="manual">手動ダウンロード</TabsTrigger>
+    <TabsTrigger value="manual">Manual Download</TabsTrigger>
   </TabsList>
   <TabsContent value="macos-linux">
 
@@ -49,19 +49,19 @@ order: 1
     curl -fsSL https://bedrud.org/install.sh | bash
     ```
 
-    インストール後にシェルを再読み込み:
+    Reload your shell after install:
 
     ```bash
     source ~/.bashrc  # or ~/.zshrc
     ```
 
-    確認:
+    Verify:
 
     ```bash
     bedrud --version
     ```
 
-    フラグ（`--version`、`--install-dir`、`--skip-shell`、オフラインインストール）については、[CLI インストーラー](/ja/docs/getting-started/cli-installer) を参照。
+    For flags (`--version`, `--install-dir`, `--skip-shell`, offline installs), see [CLI Installer](/ja/docs/getting-started/cli-installer).
   </TabsContent>
   <TabsContent value="windows">
 
@@ -69,7 +69,7 @@ order: 1
     irm https://bedrud.org/install.ps1 | iex
     ```
 
-    ターミナルを閉じて再び開き、確認:
+    Close and reopen your terminal, then verify:
 
     ```powershell
     bedrud --version
@@ -77,7 +77,7 @@ order: 1
   </TabsContent>
   <TabsContent value="manual">
 
-    手動でダウンロードして展開します。`linux_amd64` をお使いのプラットフォーム（`linux_arm64`、`darwin_amd64`、`darwin_arm64`）に置き換えてください:
+    Download and extract manually. Replace `linux_amd64` with your platform (`linux_arm64`, `darwin_amd64`, `darwin_arm64`):
 
     ```bash
     curl -fsSL -o bedrud.tar.xz https://github.com/themadorg/bedrud/releases/latest/download/bedrud_linux_amd64.tar.xz
@@ -86,69 +86,68 @@ order: 1
     sudo mv bedrud /usr/local/bin/
     ```
 
+    For all platform targets, see [CLI Installer](/ja/docs/getting-started/cli-installer#platform-targets).
 
-    すべてのプラットフォームターゲットについては、[CLI インストーラー](/ja/docs/getting-started/cli-installer#platform-targets) を参照。
+    > **No internet on server?** Download on any machine, transfer via USB or `scp bedrud.tar.xz user@server:/tmp/`, then extract there. Binary is fully self-contained — zero outbound requests after transfer.
 
-    > **サーバーにインターネットがない場合？** 任意のマシンでダウンロードし、USB または `scp bedrud.tar.xz user@server:/tmp/` で転送してから展開してください。バイナリは完全に自己完結しています — 転送後の外部リクエストはゼロです。
-
-    > **ダウンロードに失敗？** インターネットアクセスを確認するか、URL を [github.com/themadorg/bedrud/releases](https://github.com/themadorg/bedrud/releases/latest) で確認してください。
+    > **Download failed?** Check internet access, or verify URL at [github.com/themadorg/bedrud/releases](https://github.com/themadorg/bedrud/releases/latest).
   </TabsContent>
 </Tabs>
 
 ---
 
-## 2. サーバーをデプロイ
+## 2. Deploy the Server
 
-> **サーバーセットアップには対応イニットシステム（systemd、OpenRC、SysV init）搭載の Linux が必要です。** macOS と Windows では `bedrud install` を直接サポートしていません — 代わりに [Docker](#docker) または [WSL2](#非-linux-システム) を使用してください。
+> **Server setup requires Linux with a supported init system (systemd, OpenRC, or SysV init).** macOS and Windows don't support `bedrud install` directly — use [Docker](#docker) or [WSL2](#non-linux-systems) instead.
 
-`meet.example.com` と `admin@example.com` を実際の値に置き換えてください:
+Replace `meet.example.com` and `admin@example.com` with your values:
 
 ```bash
 sudo bedrud install --tls --domain meet.example.com --email admin@example.com
 ```
 
-サーバーバイナリを `/usr/local/bin` にインストールし、設定を生成し、イニットサービス（systemd、OpenRC、SysV init）を作成し、TLS をプロビジョニングし、すべてを起動します。
+Installs server binary to `/usr/local/bin`, generates config, creates init services (systemd, OpenRC, or SysV init), provisions TLS, starts everything.
 
-> **ポート 80 または 443 が使用中？** 競合するサービスを停止: `sudo systemctl stop nginx apache2 caddy`、その後再実行。
+> **Port 80 or 443 busy?** Stop conflicting services: `sudo systemctl stop nginx apache2 caddy`, then re-run.
 
-> **ドメインなし？** サーバー IP を使用:
+> **No domain?** Use your server IP instead:
 > ```bash
 > sudo bedrud install --tls --ip 1.2.3.4
 > ```
-> 自己署名証明書を使用します。ブラウザに警告が表示されますがビデオは動作します。内部ネットワークで信頼済み証明書を使用する方法については、[内部 TLS ガイド](/ja/docs/guides/internal-tls) を参照。
+> This uses a self-signed certificate. Browsers will warn but video works. For trusted certs on internal networks, see [Internal TLS Guide](/ja/docs/guides/internal-tls).
 
 ---
 
-## 3. 確認
+## 3. Verify
 
 ```bash
 curl -s -o /dev/null -w "%{http_code}" http://localhost:8090
 ```
 
-期待される結果: `200`
+Expect: `200`
 
-> **200 ではない？** サービスの状態を確認: `sudo systemctl status bedrud livekit`。ログを確認: `journalctl -u bedrud -u livekit --no-pager -n 50`。
+> **Not 200?** Check service status: `sudo systemctl status bedrud livekit`. Check logs: `journalctl -u bedrud -u livekit --no-pager -n 50`.
 
 ---
 
-## 4. アカウント登録 & 管理者作成
+## 4. Register & Create Admin
 
-ブラウザで `https://meet.example.com`（または `https://<your-ip>:8090`）を開きます:
+Open `https://meet.example.com` (or `https://<your-ip>:8090`) in your browser:
 
 <CreateAdmin createOption />
 
-1. ログイン（またはリロード）— サイドバーに **管理者** セクションが表示されます（概要、ユーザー、ルーム、設定）。成功: 管理者になりました。
-2. **ルームを作成** → **参加** → **ビデオ/音声を共有** — カメラ/マイクの許可を求められたら許可
+1. Log in (or refresh) — **Admin** section appears in sidebar (Overview, Users, Rooms, Settings). Success: you're admin.
+2. **Create a room** → **Join** → **Share video/audio** — grant camera/mic permissions when prompted
 
-> **管理画面** — 昇格後、ログインして `/dashboard/admin` にアクセスできます。ユーザー、ルーム、システム設定、招待トークンを管理できます。
+> **Admin dashboard** — After promoting, log in to access admin panel at `/dashboard/admin`. Manage users, rooms, system settings, and invite tokens.
 
-> **CLI リファレンス** — 完全なユーザー管理: `bedrud user promote`、`demote`、`create`、`delete`。
+> **CLI reference** — Full user management: `bedrud user promote`, `demote`, `create`, `delete`.
 
-Android、Windows、macOS、Linux 用 **ネイティブクライアント**: [GitHub Releases](https://github.com/themadorg/bedrud/releases/latest)。または会議リンクを共有 — 参加者は任意のブラウザで参加できます。
+**Native clients** for Android, Windows, macOS, and Linux: [GitHub Releases](https://github.com/themadorg/bedrud/releases/latest). Or share the meeting link — participants join in any browser.
 
 ---
 
-## その他のインストール方法
+## Alternative Install Paths
 
 ### Docker
 
@@ -178,11 +177,11 @@ docker run -d --name bedrud \
   ghcr.io/themadorg/bedrud:latest-distroless
 ```
 
-カスタム設定、Docker Compose、環境変数については [Docker ガイド](/ja/docs/guides/docker) を参照。
+Custom config, Docker Compose, and env vars: see [Docker guide](/ja/docs/guides/docker).
 
-### ソースからビルド
+### Build from Source
 
-[Go 1.24+](https://go.dev/dl/) と [Bun](https://bun.sh/) が必要:
+Requires [Go 1.24+](https://go.dev/dl/) and [Bun](https://bun.sh/):
 
 ```bash
 git clone https://github.com/themadorg/bedrud.git
@@ -191,85 +190,85 @@ make init
 make local-run
 ```
 
-`make init` で LiveKit のインストール、設定の作成、依存関係の取得を行います。`make local-run` でビルドして `http://localhost:8090` で起動します。
+`make init` installs LiveKit, creates config, fetches deps. `make local-run` builds and starts on `http://localhost:8090`.
 
-### プレーン HTTP（開発 / localhost のみ）
+### Plain HTTP (dev / localhost only)
 
 ```bash
 sudo bedrud install --ip 127.0.0.1
 ```
 
-> **注意:** ブラウザは localhost 以外の非 HTTPS でカメラ/マイクをブロックします。HTTP は開発専用です。
+> **Warning:** Browsers block camera/mic on non-HTTPS except `localhost`. HTTP is dev-only.
 
-### 非 Linux システム
+### Non-Linux Systems
 
-`bedrud install` コマンドはイニットサービス（systemd、OpenRC、SysV init）を設定するため Linux のみ対応です。CLI インストーラー（ステップ 1）はすべてのプラットフォームで動作し、バイナリを PATH に配置します。サーバーセットアップには Docker または WSL2 を使用してください。
+The `bedrud install` command sets up init services (systemd, OpenRC, or SysV init) and is Linux-only. The CLI installer (step 1) works everywhere and puts the binary in PATH. For server setup, use Docker or WSL2.
 
-| OS      | 方法                                                     |
+| OS      | How                                                     |
 |---------|---------------------------------------------------------|
-| macOS   | CLI インストーラーが `~/bin/` に自動インストール           |
-| Windows | CLI インストーラーが `%USERPROFILE%\bin\` に自動インストール |
-| Docker  | Docker が動作するすべての OS で対応（上記参照）              |
+| macOS   | CLI installer auto-installs to `~/bin/`                 |
+| Windows | CLI installer auto-installs to `%USERPROFILE%\bin\`     |
+| Docker  | Works on any OS with Docker (see above)                 |
 
 ---
 
-## 内部ネットワーク
+## Internal Networks
 
-パブリックドメインや外部インターネットがない場合？プライベート CA セットアップとクライアントトラストストアの設定については [内部 TLS ガイド](/ja/docs/guides/internal-tls) を参照。
+No public domain or outbound internet? See [Internal TLS Guide](/ja/docs/guides/internal-tls) for private CA setup and client trust store configuration.
 
 ---
 
-## 設定
+## Configuration
 
-インストーラーは `/etc/bedrud/config.yaml` を生成します。デフォルト設定はほとんどの環境で機能します。
-本番環境では `jwtSecret` と `sessionSecret` を変更し、再起動します:
+Installer generates `/etc/bedrud/config.yaml`. Defaults work for most setups.
+Change `jwtSecret` and `sessionSecret` for production, then restart:
 
 ```bash
 sudo systemctl restart bedrud livekit
 ```
 
-ルームのキャパシティ、タイムアウト、メディアポートの調整については、[設定の LiveKit セクション](/ja/docs/getting-started/configuration#livekit-configuration) を参照。
+To adjust room capacity, timeouts, or media ports, see [LiveKit section in Configuration](/ja/docs/getting-started/configuration#livekit-configuration).
 
-完全なリファレンス: [設定](/ja/docs/getting-started/configuration)
+Full reference: [Configuration](/ja/docs/getting-started/configuration)
 
 ---
 
-## トラブルシューティング
+## Troubleshooting
 
-| 問題 | 解決策 |
+| Problem | Fix |
 |---------|-----|
-| ポート 80/443 が使用中 | `sudo systemctl stop nginx apache2 caddy` |
-| サービスが開始しない | `journalctl -u bedrud -u livekit --no-pager -n 50` |
-| TLS 証明書エラー | DNS を確認: `dig meet.example.com`。サーバー IP を指している必要がある |
-| ビデオなし / WebRTC 失敗 | カメラには HTTPS が必要。`--tls` を使用。ファイアウォールで UDP 50000–60000 を開放 |
-| LiveKit ポートの競合 | `--lk-port`、`--lk-tcp-port`、`--lk-udp-port` フラグを使用 |
-| ファイアウォールがメディアをブロック | `sudo ufw allow 8090/tcp && sudo ufw allow 7880/tcp && sudo ufw allow 50000:60000/udp` |
-| 自己署名証明書の警告 | プライベート CA セットアップについては [内部 TLS ガイド](/ja/docs/guides/internal-tls) を参照 |
+| Port 80/443 in use | `sudo systemctl stop nginx apache2 caddy` |
+| Services won't start | `journalctl -u bedrud -u livekit --no-pager -n 50` |
+| TLS cert errors | Verify DNS: `dig meet.example.com`. Must point to server IP |
+| No video / WebRTC failed | HTTPS required for camera. Use `--tls`. Open UDP 50000–60000 on firewall |
+| LiveKit port conflicts | Use `--lk-port`, `--lk-tcp-port`, `--lk-udp-port` flags |
+| Firewall blocking media | `sudo ufw allow 8090/tcp && sudo ufw allow 7880/tcp && sudo ufw allow 50000:60000/udp` |
+| Self-signed cert warnings | See [Internal TLS Guide](/ja/docs/guides/internal-tls) for private CA setup |
 
 ---
 
-## クリーンアップ
+## Teardown
 
 ```bash
-# バイナリインストール
+# Binary install
 sudo bedrud uninstall
 
 # Docker
 docker stop bedrud && docker rm bedrud && docker volume rm bedrud-data
 
-# ソースビルド
-# Ctrl+C で停止、その後: make clean
+# Source build
+# Ctrl+C to stop, then: make clean
 ```
 
 ---
 
-## 次のステップ
+## Next Steps
 
-- [CLI インストーラーリファレンス](/ja/docs/getting-started/cli-installer) — フラグ、対応プラットフォーム、オフラインインストール、トラブルシューティング
-- [設定リファレンス](/ja/docs/getting-started/configuration) — ポート、データベース、認証プロバイダー、TURN
-- [インストールガイド](/ja/docs/getting-started/installation) — パッケージマネージャー、Docker、詳細フラグ
-- [内部 TLS ガイド](/ja/docs/guides/internal-tls) — エアギャップデプロイメント、プライベート CA
-- [デプロイメントガイド](/ja/docs/guides/deployment) — 本番セットアップ、リバースプロキシ、スケーリング
-- [アーキテクチャ概要](/ja/docs/architecture/overview) — 構成要素の全体像
-- [API ドキュメント](http://localhost:8090/api/swagger) — Swagger UI（実行中のインスタンス）
+- [CLI Installer Reference](/ja/docs/getting-started/cli-installer) — flags, platform targets, offline installs, troubleshooting
+- [Configuration Reference](/ja/docs/getting-started/configuration) — ports, database, auth providers, TURN
+- [Installation Guide](/ja/docs/getting-started/installation) — package managers, Docker, advanced flags
+- [Internal TLS Guide](/ja/docs/guides/internal-tls) — air-gapped deployment, private CA
+- [Deployment Guide](/ja/docs/guides/deployment) — production setup, reverse proxy, scaling
+- [Architecture Overview](/ja/docs/architecture/overview) — how pieces fit together
+- [API Docs](http://localhost:8090/api/swagger) — Swagger UI (running instance)
 

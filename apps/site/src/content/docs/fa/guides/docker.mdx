@@ -4,15 +4,27 @@ description: اجرای Bedrud با Docker
 order: 29
 ---
 
-Bedrud یک Dockerfile چندمرحله‌ای برای ساخت و اجرا در کانتینرها فراهم می‌کند.
+Bedrud provides a multi-stage Dockerfile for building and running in containers.
 
-## شروع سریع
+## Image Variants
+
+Three image variants are published to GitHub Container Registry:
+
+| Tag | Base | Size | Best for |
+|-----|------|------|----------|
+| `:latest` | Debian Bookworm | ~50 MB | Default — compatible with most systems |
+| `:latest-alpine` | Alpine 3.21 | ~30 MB | Alpine hosts, minimal footprint |
+| `:latest-distroless` | Distroless | ~25 MB | Smallest attack surface, no shell |
+
+All images contain the same static binary — the base image only affects runtime utilities (ca-certs, timezone data).
+
+## Quick Start
 
 ```bash
-# ساخت
+# Build
 docker build -t bedrud .
 
-# اجرا
+# Run
 docker run -d --name bedrud \
   -p 8090:8090 \
   -p 7880:7880 \
@@ -20,11 +32,11 @@ docker run -d --name bedrud \
   bedrud
 ```
 
-## نمای کلی Dockerfile
+## Dockerfile Overview
 
-Dockerfile از سه مرحله برای به حداقل رساندن اندازه تصویر نهایی استفاده می‌کند:
+The Dockerfile uses three stages to minimize the final image size:
 
-### مرحله ۱: ساخت فرانت‌اند
+### Stage 1: Frontend Build
 
 ```dockerfile
 FROM node:22-alpine AS frontend
@@ -36,9 +48,9 @@ COPY apps/web/ ./
 RUN bun run build:embed
 ```
 
-Bun را نصب می‌کند، برنامه React را از پیش رندر SSR می‌کند و دارایی‌ها را به `server/frontend/` کپی می‌کند.
+Installs Bun, SSR pre-renders the React app, and copies assets to `server/frontend/`.
 
-### مرحله ۲: ساخت سرور
+### Stage 2: Server Build
 
 ```dockerfile
 FROM golang:1.25-alpine AS backend
@@ -49,12 +61,12 @@ RUN go mod download
 COPY server/ ./
 COPY --from=frontend /build/server/frontend ./frontend/
 RUN CGO_ENABLED=1 GOOS=linux go build -ldflags="-s -w" -o /bedrud ./cmd/bedrud/main.go
-# CGO برای SQLite مورد نیاز است (از پیوندهای C استفاده می‌کند)
+# CGO is required for SQLite (uses C bindings)
 ```
 
-باینری Go را با فرانت‌اند جاسازی‌شده کامپایل می‌کند. CGO برای پشتیبانی SQLite فعال است.
+Compiles the Go binary with the frontend embedded. CGO is enabled for SQLite support (`sqlite-dev` provides the C headers).
 
-### مرحله ۳: زمان اجرا
+### Stage 3: Runtime
 
 ```dockerfile
 FROM alpine:3.21
@@ -65,21 +77,21 @@ ENTRYPOINT ["bedrud"]
 CMD ["run"]
 ```
 
-تصویر Alpine حداقلی با فقط باینری، گواهی‌های CA و داده‌های منطقه زمانی.
+Minimal Alpine image with just the binary, CA certificates, and timezone data.
 
-## پورت‌ها
+## Ports
 
-| پورت | سرویس | پروتکل |
+| Port | Service | Protocol |
 |------|---------|----------|
 | 8090 | API + Web UI | HTTP |
 | 7880 | LiveKit | WebSocket + HTTP |
-| 50000-60000 | رسانه RTC | UDP |
+| 50000-60000 | RTC media | UDP |
 
-برای جریان‌های رسانه LiveKit، ممکن است نیاز به باز کردن محدوده پورت UDP RTC (پیش‌فرض: 50000-60000) نیز داشته باشید.
+For LiveKit media streams, you may also need to expose the RTC UDP port range (default: 50000-60000).
 
-## حجم‌ها
+## Volumes
 
-یک حجم برای داده‌های پایدار سوار کنید:
+Mount a volume for persistent data:
 
 ```bash
 docker run -d \
@@ -90,9 +102,9 @@ docker run -d \
   bedrud
 ```
 
-## پیکربندی
+## Configuration
 
-ارسال یک فایل پیکربندی سفارشی:
+Pass a custom configuration file:
 
 ```bash
 docker run -d \
@@ -104,7 +116,7 @@ docker run -d \
   bedrud run --config /etc/bedrud/config.yaml
 ```
 
-یا از متغیرهای محیطی استفاده کنید:
+Or use environment variables:
 
 ```bash
 docker run -d \
@@ -117,23 +129,54 @@ docker run -d \
   bedrud
 ```
 
-## تصاویر از پیش ساخته‌شده
+### TLS with Embedded LiveKit
 
-تصاویر Docker در هر نسخه به GitHub Container Registry منتشر می‌شوند:
+When server TLS is enabled, the embedded LiveKit process automatically configures TURN/TLS (port 5349) using the server's certificate. Mount your cert/key and enable TLS:
 
 ```bash
-# آخرین نسخه
-docker pull ghcr.io/themadorg/bedrud:latest
-
-# نسخه خاص
-docker pull ghcr.io/themadorg/bedrud:v1.0.0
+docker run -d \
+  --name bedrud \
+  -p 443:443 \
+  -p 5349:5349 \
+  -v /path/to/cert.pem:/etc/bedrud/cert.pem \
+  -v /path/to/key.pem:/etc/bedrud/key.pem \
+  -e SERVER_ENABLE_TLS=true \
+  -e SERVER_CERT_FILE=/etc/bedrud/cert.pem \
+  -e SERVER_KEY_FILE=/etc/bedrud/key.pem \
+  bedrud
 ```
 
-## مثال Docker Compose
+For a custom LiveKit YAML (advanced TURN/RTC config), mount it and set `LIVEKIT_CONFIG_PATH`:
+
+```bash
+docker run -d \
+  --name bedrud \
+  -p 8090:8090 \
+  -v /path/to/livekit.yaml:/etc/bedrud/livekit.yaml \
+  -e LIVEKIT_CONFIG_PATH=/etc/bedrud/livekit.yaml \
+  bedrud
+```
+
+## Pre-built Images
+
+Docker images are published to GitHub Container Registry on every release:
+
+```bash
+# Distroless (smallest, no shell)
+docker pull ghcr.io/themadorg/bedrud:latest-distroless
+
+# Specific version
+docker pull ghcr.io/themadorg/bedrud:v1.0.0
+docker pull ghcr.io/themadorg/bedrud:v1.0.0-alpine
+docker pull ghcr.io/themadorg/bedrud:v1.0.0-distroless
+```
+
+## Docker Compose Example
 
 ```yaml
 services:
   bedrud:
+    # Use :latest-alpine or :latest-distroless for smaller images
     image: ghcr.io/themadorg/bedrud:latest
     ports:
       - "8090:8090"
@@ -151,7 +194,7 @@ volumes:
 
 ---
 
-## مشاهده همچنین
+## See also
 
-- [مرجع پیکربندی](/fa/docs/getting-started/configuration) - گزینه‌های کامل پیکربندی و متغیرهای محیطی
-- [راهنمای استقرار](/fa/docs/guides/deployment) - استقرار در تولید با Docker
+- [Configuration Reference](/fa/docs/getting-started/configuration) - full config options and environment variables
+- [Deployment Guide](/fa/docs/guides/deployment) - production deployment with Docker

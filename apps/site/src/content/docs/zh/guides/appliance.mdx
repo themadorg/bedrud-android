@@ -4,38 +4,38 @@ description: 预配置设备设置
 order: 33
 ---
 
-Bedrud 被设计为一个自包含的视频会议"一体机"。单个可执行二进制文件打包了所需的一切 - 前端、后端和 LiveKit 媒体服务器。
+Bedrud is designed to run as a self-contained "appliance" for video meetings. A single executable binary packages everything needed - frontend, backend, and the LiveKit media server.
 
-## 核心特性
+## Key Features
 
-| 特性 | 说明 |
+| Feature | Description |
 |---------|-------------|
-| 零外部依赖 | 不需要 Node.js、Redis 或独立的媒体服务器 |
-| 嵌入式媒体服务器 | LiveKit 二进制文件已包含并自动管理 |
-| 嵌入式前端 | React UI 已编译并通过 SSR 预渲染到 Go 二进制文件中 |
-| SQLite 存储 | 不需要数据库服务器 |
-| 内置 TLS | 自签名证书或 Let's Encrypt |
-| 内置安装程序 | 自动配置 init 服务（systemd/OpenRC/SysV）、目录和配置文件 |
+| Zero external dependencies | No Node.js, Redis, or separate media server needed |
+| Embedded media server | LiveKit binary included and managed automatically |
+| Embedded frontend | React UI compiled and SSR pre-rendered into the Go binary |
+| SQLite storage | No database server required |
+| Built-in TLS | Self-signed certificates or Let's Encrypt. TURN/TLS is automatically configured for the embedded LiveKit when server TLS is enabled. |
+| Built-in installer | Configures init services (systemd/OpenRC/SysV), directories, and configs |
 
-## 运行二进制文件
+## Running the Binary
 
-### 启动 Bedrud 服务器
+### Start the Bedrud Server
 
 ```bash
 ./bedrud --run --config config.yaml
 ```
 
-### 启动 LiveKit 媒体服务器
+### Start the LiveKit Media Server
 
 ```bash
 ./bedrud --livekit --config livekit.yaml
 ```
 
-该二进制文件同时包含 API 服务器和媒体服务器。使用标志来选择启动哪个。
+The binary contains both the API server and the media server. Use flags to choose which to start.
 
-## 安装
+## Installation
 
-### 快速安装（Debian/Ubuntu）
+### Quick Install (Debian/Ubuntu)
 
 ```bash
 # With Let's Encrypt TLS
@@ -50,9 +50,9 @@ sudo ./bedrud install --ip 1.2.3.4
 
 <InstallerSteps />
 
-### 服务架构
+### Service Architecture
 
-安装后，会运行两个 init 服务（systemd、OpenRC 或 SysV init）：
+After installation, two init services run (systemd, OpenRC, or SysV init):
 
 ```mermaid
 flowchart LR
@@ -64,46 +64,46 @@ flowchart LR
     BS */} DB
 ```
 
-## 配置文件
+## Configuration Files
 
-| 文件 | 用途 |
+| File | Purpose |
 |------|---------|
-| `/etc/bedrud/config.yaml` | 主服务器配置 |
-| `/etc/bedrud/livekit.yaml` | 媒体服务器配置 |
-| `/var/lib/bedrud/bedrud.db` | SQLite 数据库 |
-| `/var/log/bedrud/bedrud.log` | 应用日志 |
+| `/etc/bedrud/config.yaml` | Main server configuration |
+| `/etc/bedrud/livekit.yaml` | Media server configuration |
+| `/var/lib/bedrud/bedrud.db` | SQLite database |
+| `/var/log/bedrud/bedrud.log` | Application logs |
 
-所有选项请参阅[配置参考](/zh/docs/getting-started/configuration)。
+See the [Configuration Reference](/zh/docs/getting-started/configuration) for all options.
 
-## 安装后
+## Post-Installation
 
-### 创建第一个管理员
+### Create Your First Admin
 
 <CreateAdmin />
 
-### 查看服务状态
+### Check Service Status
 
 ```bash
 systemctl status bedrud livekit
 ```
 
-### 查看日志
+### View Logs
 
 ```bash
 tail -f /var/log/bedrud/bedrud.log
 journalctl -u bedrud -f
 ```
 
-## 卸载
+## Uninstallation
 
 ```bash
 sudo ./bedrud uninstall
 ```
 
-这将完全删除：
+This completely removes:
 
-- Init 服务文件（systemd/OpenRC/SysV）
-- `/usr/local/bin/` 中的二进制文件
-- `/etc/bedrud/` 中的配置
-- `/var/lib/bedrud/` 中的数据
-- `/var/log/bedrud` 中的日志
+- Init service files (systemd/OpenRC/SysV)
+- Binary from `/usr/local/bin/`
+- Configuration in `/etc/bedrud/`
+- Data in `/var/lib/bedrud/`
+- Logs in `/var/log/bedrud`

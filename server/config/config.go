@@ -74,15 +74,21 @@ type DatabaseConfig struct {
 }
 
 type LiveKitConfig struct {
-	Host          string `yaml:"host"`
+	Host string `yaml:"host"`
+	// HostLocal is the browser signaling URL when the app is opened on localhost
+	// (e.g. ws://localhost:7070/livekit via the Vite /livekit proxy in remote debug).
+	HostLocal     string `yaml:"hostLocal"`
 	InternalHost  string `yaml:"internalHost"`
 	APIKey        string `yaml:"apiKey"`
 	APISecret     string `yaml:"apiSecret"`
 	ConfigPath    string `yaml:"configPath"`
-	SkipTLSVerify bool   `yaml:"skipTLSVerify"`
+	// SkipTLSVerify skips TLS verification for the LiveKit API client (self-signed certs).
+	// Env: LIVEKIT_SKIP_TLS_VERIFY
+	SkipTLSVerify bool `yaml:"skipTLSVerify" env:"LIVEKIT_SKIP_TLS_VERIFY"`
 	// External skips the embedded LiveKit server and /livekit proxy.
 	// Set to true when using a separate LiveKit deployment (e.g. lk.bedrud.org).
-	External bool `yaml:"external"`
+	// Env: LIVEKIT_EXTERNAL
+	External bool `yaml:"external" env:"LIVEKIT_EXTERNAL"`
 	// NodeIP is the explicit IP address for embedded LiveKit's RTC node_ip.
 	// When set, LiveKit uses this IP directly (use_external_ip=false) instead of
 	// STUN-based detection. Required for air-gapped, Docker, or firewalled environments.
@@ -167,6 +173,9 @@ type ChatUploadConfig struct {
 	Backend string `yaml:"backend"`
 	// MaxBytes is the hard upload size limit (default 10 MB).
 	MaxBytes ConfigInt `yaml:"maxBytes"`
+	// MaxDimension is the max image width/height in pixels (default 8192).
+	// 0 = use default. Overridable via admin settings chatUploadMaxDimension.
+	MaxDimension ConfigInt `yaml:"maxDimension"`
 	// InlineMaxBytes: images smaller than this are returned as data: URIs instead
 	// of stored on disk / S3. Set to 0 to disable inline encoding. Default 512000 (500 KB).
 	InlineMaxBytes ConfigInt `yaml:"inlineMaxBytes"`
@@ -286,6 +295,12 @@ var (
 )
 
 // Load reads the configuration file and returns a Config struct
+
+// envIsTruthy reports whether an environment variable value is a truthy flag ("true" or "1").
+func envIsTruthy(v string) bool {
+	return v == "true" || v == "1"
+}
+
 func Load(configPath string) (*Config, error) {
 	var loadErr error
 	once.Do(func() {
@@ -357,6 +372,11 @@ func Load(configPath string) (*Config, error) {
 				config.Server.MaxRoomsPerUser = i
 			}
 		}
+		if envMaxParticipantsLimit := os.Getenv("SERVER_MAX_PARTICIPANTS_LIMIT"); envMaxParticipantsLimit != "" {
+			if i, err := strconv.Atoi(envMaxParticipantsLimit); err == nil {
+				config.Server.MaxParticipantsLimit = i
+			}
+		}
 		if dbHost := os.Getenv("DB_HOST"); dbHost != "" {
 			config.Database.Host = dbHost
 		}
@@ -381,6 +401,9 @@ func Load(configPath string) (*Config, error) {
 		if livekitHost := os.Getenv("LIVEKIT_HOST"); livekitHost != "" {
 			config.LiveKit.Host = livekitHost
 		}
+		if livekitHostLocal := os.Getenv("LIVEKIT_HOST_LOCAL"); livekitHostLocal != "" {
+			config.LiveKit.HostLocal = livekitHostLocal
+		}
 		if livekitInternalHost := os.Getenv("LIVEKIT_INTERNAL_HOST"); livekitInternalHost != "" {
 			config.LiveKit.InternalHost = livekitInternalHost
 		}
@@ -396,6 +419,16 @@ func Load(configPath string) (*Config, error) {
 		if livekitNodeIP := os.Getenv("LIVEKIT_NODE_IP"); livekitNodeIP != "" {
 			config.LiveKit.NodeIP = livekitNodeIP
 		}
+		if v := os.Getenv("LIVEKIT_EXTERNAL"); v != "" {
+			if b, err := strconv.ParseBool(v); err == nil {
+				config.LiveKit.External = b
+			}
+		}
+		if v := os.Getenv("LIVEKIT_SKIP_TLS_VERIFY"); v != "" {
+			if b, err := strconv.ParseBool(v); err == nil {
+				config.LiveKit.SkipTLSVerify = b
+			}
+		}
 		if jwtSecret := os.Getenv("JWT_SECRET"); jwtSecret != "" {
 			config.Auth.JWTSecret = jwtSecret
 		}
@@ -407,7 +440,7 @@ func Load(configPath string) (*Config, error) {
 				config.Auth.PasskeyChallengeTTL = n
 			}
 		}
-		if v := os.Getenv("AUTH_REQUIRE_EMAIL_VERIFICATION"); v == "true" || v == "1" {
+		if v := os.Getenv("AUTH_REQUIRE_EMAIL_VERIFICATION"); envIsTruthy(v) {
 			config.Auth.RequireEmailVerification = true
 		}
 		if v := os.Getenv("AUTH_VERIFICATION_COOLDOWN_MINS"); v != "" {
@@ -418,6 +451,16 @@ func Load(configPath string) (*Config, error) {
 		if v := os.Getenv("AUTH_RESET_TOKEN_TTL_HOURS"); v != "" {
 			if n, err := strconv.Atoi(v); err == nil {
 				config.Auth.ResetTokenTTLHours = n
+			}
+		}
+		if v := os.Getenv("AUTH_VERIFICATION_TOKEN_TTL_HOURS"); v != "" {
+			if n, err := strconv.Atoi(v); err == nil {
+				config.Auth.VerificationTokenTTLHours = n
+			}
+		}
+		if v := os.Getenv("AUTH_UNVERIFIED_ACCOUNT_TTL_HOURS"); v != "" {
+			if n, err := strconv.Atoi(v); err == nil {
+				config.Auth.UnverifiedAccountTTLHours = n
 			}
 		}
 
@@ -549,10 +592,10 @@ func Load(configPath string) (*Config, error) {
 		if v := os.Getenv("EMAIL_FROM_NAME"); v != "" {
 			config.Email.FromName = v
 		}
-		if v := os.Getenv("EMAIL_TLS_SKIP_VERIFY"); v == "true" || v == "1" {
+		if v := os.Getenv("EMAIL_TLS_SKIP_VERIFY"); envIsTruthy(v) {
 			config.Email.TLSSkipVerify = true
 		}
-		if v := os.Getenv("EMAIL_SMTPS_MODE"); v == "true" || v == "1" {
+		if v := os.Getenv("EMAIL_SMTPS_MODE"); envIsTruthy(v) {
 			config.Email.SMTPSMode = true
 		}
 
@@ -590,6 +633,12 @@ func GetSafe() *Config {
 // This bypasses the sync.Once in Load and should only be used in tests.
 func SetForTest(cfg *Config) {
 	config = cfg
+}
+
+// ResetLoadForTest clears the config singleton so Load can run again (tests only).
+func ResetLoadForTest() {
+	once = sync.Once{}
+	config = nil
 }
 
 // GetDSN returns the PostgreSQL connection string

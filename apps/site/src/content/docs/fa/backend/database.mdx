@@ -1,82 +1,73 @@
 ---
 title: دیتابیس و مدل‌ها
-description: مدل‌های داده و schema دیتابیس
+description: مدل‌های داده و اسکیما
 order: 17
 ---
 
-Bedrud از **GORM** به عنوان ORM استفاده می‌کند و هم SQLite و هم PostgreSQL را پشتیبانی می‌کند.
+Bedrud uses **GORM** as its ORM, supporting both SQLite and PostgreSQL.
 
-## دیتابیس‌های پشتیبانی‌شده
+## Supported Databases
 
-- **SQLite:** به‌طور پیش‌فرض برای توسعه آسان و نصب‌های کوچک استفاده می‌شود. دیتابیس در یک فایل ذخیره می‌شود (معمولاً `bedrud.db`).
-- **PostgreSQL:** برای محیط‌های تولید با کاربران زیاد توصیه می‌شود.
+- **SQLite:** Default for development and small installs. File path via `database.path`.
+- **PostgreSQL:** Recommended for higher concurrency. Use discrete fields (`host`, `port`, `user`, `password`, `dbname`, `sslmode`) — not a URL in `path`.
 
-نوع دیتابیس و جزئیات اتصال را در `config.yaml` زیر بخش `database:` پیکربندی کنید.
+See [Configuration → Database](/fa/docs/getting-started/configuration).
 
-## ساختار فایل SQLite
+## SQLite File Layout
 
-هنگام استفاده از SQLite، Bedrud حالت **WAL (Write-Ahead Log)** را برای عملکرد بهتر خواندن هم‌زمان فعال می‌کند. این دو فایل اضافی در کنار دیتابیس اصلی ایجاد می‌کند:
+WAL mode is enabled for concurrent reads:
 
-| فایل | هدف |
-|------|------|
-| `bedrud-local.db` | فایل اصلی دیتابیس |
-| `bedrud-local.db-shm` | فایل حافظه مشترک — دسترسی بین خوانندگان و نویسندگان را هماهنگ می‌کند |
-| `bedrud-local.db-wal` | Write-Ahead Log — نوشته‌های جدید ابتدا به اینجا می‌روند، سپس به دیتابیس اصلی منتقل می‌شوند |
+| File | Purpose |
+|------|---------|
+| `*.db` | Main database file |
+| `*.db-shm` | Shared memory |
+| `*.db-wal` | Write-ahead log |
 
-**این فایل‌ها طبیعی هستند.** هنگام شروع سرور به طور خودکار ایجاد و در خاموش‌سازی تمیز پاک می‌شوند. اگر سرور خراب شود، SQLite به طور خودکار بازیابی می‌کند — بدون از دست دادن داده.
+These files are normal. SQLite recovers after crashes automatically.
 
-برای غیرفعال کردن حالت WAL (توصیه نمی‌شود)، `PRAGMA journal_mode=DELETE;` را در تنظیمات SQLite قرار دهید، اما انتظار خواندن هم‌زمان کندتر را داشته باشید.
+## Core Models
 
-## مدل‌های اصلی
+Located in `server/internal/models/`:
 
-مدل‌ها در `internal/models/` قرار دارند. مهم‌ترین آن‌ها:
+| Model | File | Purpose |
+|-------|------|---------|
+| `User` | `user.go` | Accounts, roles (`accesses`), credentials |
+| `Room` | `room.go` | Meetings; settings embedded with `settings_` prefix |
+| `RoomParticipant` | `room.go` | Join/presence records |
+| `Passkey` | `passkey.go` | WebAuthn credentials |
+| `UserPreferences` | `user_preferences.go` | Per-user UI/media prefs |
+| `InviteToken` | `invite_token.go` | Gated registration tokens |
+| `ChatUpload` | `chat_upload.go` | Chat image metadata/quotas |
+| `Job` | `job.go` | Async queue jobs |
+| `Webhook` | `webhook.go` | Outbound webhook endpoints |
+| `SystemSettings` | `settings.go` | Runtime admin overrides (singleton) |
+| `VerificationEvent` | `verification_event.go` | Email verification audit |
+| `Refresh` / refresh tokens | `refresh.go` | Refresh token storage |
+| `Recording` | `recording.go` | Planned recording records |
+| Stats DTOs | `stats.go`, `queue_stats.go` | Aggregates for admin overview |
 
-### User (`user.go`)
+### Custom Types: `StringArray`
 
-اطلاعات حساب شامل credentials و نقش‌ها را ذخیره می‌کند.
+`StringArray` in `user.go` implements `sql.Scanner` / `driver.Valuer` for cross-DB role arrays (native `text[]` on Postgres; serialized form on SQLite).
 
-### Room (`room.go`)
+### Foreign Keys
 
-یک جلسه جلسه را نشان می‌دهد. از **Embedded Struct**های GORM برای سازماندهی تنظیمات استفاده می‌کند.
+Composite keys (e.g. participants) and cascade constraints are applied in `internal/database/migrations.go` beyond plain AutoMigrate.
 
-به‌جای یک جدول جداگانه یا blob JSON، فیلدهای `RoomSettings` (مثل `allow_chat`، `allow_video`) مستقیماً در جدول `rooms` با پیشوند `settings_` ذخیره می‌شوند (مثلاً `settings_allow_chat`). این یک مدل تمیز در Go فراهم می‌کند و همزمان ساختار دیتابیس flat و کارآمد را حفظ می‌کند.
+## Repository Pattern
 
-### Passkey (`passkey.go`)
+Handlers use repositories under `internal/repository/`:
 
-کلیدهای عمومی FIDO2/WebAuthn را برای ورود بدون رمز عبور ذخیره می‌کند.
-
-### نوع سفارشی: `StringArray`
-
-دیتابیس‌های SQL استاندارد آرایه‌ها را متفاوت مدیریت می‌کنند (PostgreSQL آرایه بومی دارد، SQLite ندارد). برای حفظ سازگاری، Bedrud نوع `StringArray` را در `internal/models/user.go` تعریف کرده است.
-
-- `sql.Scanner` و `driver.Valuer` را پیاده‌سازی می‌کند.
-- در **PostgreSQL** از نوع بومی `text[]` استفاده می‌کند.
-- در **SQLite** آرایه را به string سریالایز می‌کند (مثلاً `{admin,user}`) برای ذخیره‌سازی.
-
-### مدیریت Foreign Key
-
-`AutoMigrate` در GORM کلیدهای اصلی ترکیبی (مثل `room_participants`) را مدیریت نمی‌کند.
-
-در `internal/database/migrations.go`، Bedrud با اجرای دستی `ALTER TABLE` مطمئن می‌شود که محدودیت‌های foreign key (مثل `ON DELETE CASCADE`) به‌درستی در تولید (PostgreSQL) اعمال شده‌اند.
-
-## الگوی Repository
-
-backend از **الگوی Repository** برای دسترسی به دیتابیس استفاده می‌کند. Handlerها مستقیماً با GORM صحبت نمی‌کنند — از یک repository استفاده می‌کنند.
-
-مثال:
+- `user_repository`, `room_repository`, `passkey_repository`
+- `settings_repository`, `invite_token_repository`, `webhook_repository`
+- `user_preferences_repository`, `recording_repository`, `verification_event_repository`
 
 ```go
-// در handler:
 user, err := h.userRepo.GetByEmail(email)
-
-// در repository:
-func (r *UserRepository) GetByEmail(email string) (*models.User, error) {
-    var user models.User
-    err := r.db.Where("email = ?", email).First(&user).Error
-    return &user, err
-}
 ```
 
-## Migration خودکار
+## Automatic Migrations
 
-هنگام شروع سرور، `AutoMigrate` به‌طور خودکار اجرا می‌شود. این کار جداول دیتابیس را بر اساس ساختارهای Go در `internal/models` ایجاد یا به‌روزرسانی می‌کند. برای تغییرات ساده schema نیازی به `CREATE TABLE` دستی نیست.
+On startup (unless `bedrud run --skip-migrate`), GORM AutoMigrate creates/updates tables from models. Manual SQL helpers live in `internal/database/migrations.go`.
+
+CLI: `bedrud db migrate` / `bedrud db status`.

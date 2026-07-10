@@ -38,6 +38,7 @@ export interface SystemSettings {
   corsMaxAge: number
   chatUploadBackend: string
   chatUploadMaxBytes: number
+  chatUploadMaxDimension: number
   chatUploadInlineMax: number
   chatUploadDiskDir: string
   chatUploadS3Endpoint: string

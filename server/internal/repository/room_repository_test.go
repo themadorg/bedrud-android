@@ -1,13 +1,14 @@
 package repository
 
 import (
-	"bedrud/internal/models"
-	"bedrud/internal/testutil"
 	"errors"
 	"fmt"
 	"strings"
 	"testing"
 	"time"
+
+	"bedrud/internal/models"
+	"bedrud/internal/testutil"
 )
 
 const testUserIDRoom = "user-1"
@@ -150,6 +151,39 @@ func TestRoomRepository_GetRoomByName_NotFound(t *testing.T) {
 	}
 }
 
+func TestRoomRepository_GetRoomByName_PrefersActiveOverArchived(t *testing.T) {
+	db := testutil.SetupTestDB(t)
+	repo := NewRoomRepository(db)
+
+	db.Create(&models.User{ID: testUserIDRoom, Email: "user@ex.com", Name: "Creator", Provider: "local", IsActive: true})
+	old, err := repo.CreateRoom(testUserIDRoom, "reuse-name", false, "standard", 0, &models.RoomSettings{})
+	if err != nil {
+		t.Fatalf("create old: %v", err)
+	}
+	if err := repo.SoftDeleteRoom(old.ID); err != nil {
+		t.Fatalf("archive old: %v", err)
+	}
+	// Name reuse after archive
+	neu, err := repo.CreateRoom(testUserIDRoom, "reuse-name", false, "standard", 0, &models.RoomSettings{})
+	if err != nil {
+		t.Fatalf("create new: %v", err)
+	}
+
+	found, err := repo.GetRoomByName("reuse-name")
+	if err != nil {
+		t.Fatalf("GetRoomByName: %v", err)
+	}
+	if found == nil {
+		t.Fatal("expected room")
+	}
+	if found.ID != neu.ID {
+		t.Fatalf("expected active room %s, got %s (active=%v)", neu.ID, found.ID, found.IsActive)
+	}
+	if !found.IsActive {
+		t.Fatal("expected active room")
+	}
+}
+
 func TestRoomRepository_AddParticipant(t *testing.T) {
 	db := testutil.SetupTestDB(t)
 	repo := NewRoomRepository(db)
@@ -241,7 +275,9 @@ func TestRoomRepository_AddParticipant_UpdatesLastActivityAt(t *testing.T) {
 	}
 
 	// Rejoin (reactivate) — LastActivityAt should update again
-	repo.RemoveParticipant(room.ID, "laa-u2")
+	if err := repo.RemoveParticipant(room.ID, "laa-u2"); err != nil {
+		t.Fatal(err)
+	}
 	reactivated := *updatedRoom.LastActivityAt
 	if err := repo.AddParticipant(room.ID, "laa-u2"); err != nil {
 		t.Fatalf("failed to re-add participant: %v", err)
@@ -521,7 +557,7 @@ func TestRoomRepository_GetUserParticipationsPaginated_Pagination(t *testing.T) 
 
 	db.Create(&models.User{ID: testUserIDRoom, Email: "u1@ex.com", Name: "U1", Provider: "local", IsActive: true})
 	// Create 3 rooms and join them
-	for i := 0; i < 3; i++ {
+	for i := range 3 {
 		name := fmt.Sprintf("pag-room-%d", i)
 		room, _ := repo.CreateRoom(testUserIDRoom, name, false, "standard", 0, &models.RoomSettings{})
 		_ = repo.AddParticipant(room.ID, testUserIDRoom)
@@ -555,9 +591,12 @@ func TestRoomRepository_GetUserParticipationsPaginated_Pagination(t *testing.T) 
 	}
 
 	// Page 1, limit 50 → 3 results (clamp check: limit > 100 would clamp, but 50 is fine)
-	pAll, total, err := repo.GetUserParticipationsPaginated(testUserIDRoom, UserParticipationsParams{Page: 1, Limit: 50})
+	pAll, totalAll, err := repo.GetUserParticipationsPaginated(testUserIDRoom, UserParticipationsParams{Page: 1, Limit: 50})
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
+	}
+	if totalAll != 3 {
+		t.Fatalf("expected total 3 with limit 50, got %d", totalAll)
 	}
 	if len(pAll) != 3 {
 		t.Fatalf("expected 3 participants with limit 50, got %d", len(pAll))
@@ -1652,7 +1691,7 @@ func TestRoomRepository_GetAllActiveRoomsWithLimit(t *testing.T) {
 
 	db.Create(&models.User{ID: "user-limit", Email: "limit@ex.com", Name: "Limit", Provider: "local", IsActive: true})
 
-	for i := 0; i < 5; i++ {
+	for i := range 5 {
 		_, _ = repo.CreateRoom("user-limit", fmt.Sprintf("limit-room-%d", i), false, "standard", 0, &models.RoomSettings{})
 	}
 
@@ -1942,8 +1981,12 @@ func TestRoomRepository_CountActiveRoomsWithParticipantCount(t *testing.T) {
 	repo := NewRoomRepository(db)
 
 	db.Create(&models.User{ID: "arc-u1", Email: "arc@ex.com", Name: "ARC", Provider: "local", IsActive: true})
-	repo.CreateRoom("arc-u1", "arc-active", true, "standard", 0, &models.RoomSettings{})
-	repo.CreateRoom("arc-u1", "arc-inactive", true, "standard", 0, &models.RoomSettings{})
+	if _, err := repo.CreateRoom("arc-u1", "arc-active", true, "standard", 0, &models.RoomSettings{}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := repo.CreateRoom("arc-u1", "arc-inactive", true, "standard", 0, &models.RoomSettings{}); err != nil {
+		t.Fatal(err)
+	}
 
 	// Deactivate second room
 	db.Model(&models.Room{}).Where("name = ?", "arc-inactive").Update("is_active", false)
@@ -1996,7 +2039,9 @@ func TestRoomRepository_CountPersistentRooms(t *testing.T) {
 	}
 
 	// Non-persistent room should not affect count
-	repo.CreateRoom("cpr-u1", "cpr-room-2", true, "standard", 0, &models.RoomSettings{})
+	if _, err := repo.CreateRoom("cpr-u1", "cpr-room-2", true, "standard", 0, &models.RoomSettings{}); err != nil {
+		t.Fatal(err)
+	}
 	count, err = repo.CountPersistentRooms()
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)

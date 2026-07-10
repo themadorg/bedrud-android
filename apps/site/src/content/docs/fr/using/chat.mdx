@@ -1,0 +1,61 @@
+---
+title: Chat en réunion
+description: Messages texte, réactions emoji, sondages et pièces jointes image
+order: 7
+---
+
+Le chat en salle est un panneau latéral pour le texte, les réactions, les sondages et les images sans quitter l'appel.
+
+## Ouvrir et envoyer
+
+1. Ouvrez le panneau **chat** depuis les contrôles de réunion.
+2. Envoyez un message texte — les autres participants le reçoivent.
+3. Ouvrir ou fermer le panneau ne doit **pas** couper les pistes caméra ou micro.
+
+Le regroupement des messages et les horodatages doivent rester corrects même en envoi en rafale.
+
+## Emoji
+
+- **Réaction** sur un message — les deux côtés mettent à jour les compteurs de réactions.
+- Le **sélecteur d'emoji** du compositeur insère des emoji dans le brouillon.
+
+## Sondages
+
+1. Créez un **sondage** depuis le chat.
+2. Tout le monde voit la bulle de sondage.
+3. Les participants **votent** ; les résultats se mettent à jour (modale de résultats si l'UI en fournit une).
+
+## Images et fichiers
+
+- Joignez une image dans les limites de taille et de dimensions du serveur.
+- Le client de réunion **vérifie avant l'envoi** la taille du fichier et les dimensions de l'image à partir des paramètres publics (`chatUploadMaxBytes`, `chatUploadMaxDimension`).
+- Les fichiers trop volumineux ou aux dimensions excessives sont rejetés avec un message clair (client d'abord ; le serveur fait autorité — `413` / `400` sur `POST /api/room/:roomId/chat/upload`).
+- Les destinataires peuvent ouvrir les images dans une **lightbox**.
+
+**Valeurs par défaut :** 10 MiB par fichier, dimension max 8192×8192 (si non défini).
+
+Les opérateurs configurent les limites via :
+
+- `chat.uploads.maxBytes` / `chat.uploads.maxDimension` dans la [Configuration](/fr/docs/getting-started/configuration)
+- Onglet admin **Chat Uploads** (`chatUploadMaxBytes`, `chatUploadMaxDimension`) dans le [tableau de bord admin](/fr/docs/guides/admin-dashboard)
+- Quotas de stockage par utilisateur / globaux sous `chat` (`maxUploadBytesPerUser`, backends disque/S3)
+
+
+## Rétention (côté client)
+
+LiveKit ne persiste pas le chat des data channels côté serveur comme un produit de messagerie. Bedrud applique des indices de rétention **côté client** :
+
+| Réglage | Défaut (typique) | Signification |
+|---------|------------------|---------------|
+| `chat.maxMessageCount` | 10000 | Plafond de messages en mémoire / session storage |
+| `chat.messageTTLHours` | 2160 (90 jours) | Trim basé sur l'âge |
+
+Overrides d'env : `CHAT_MAX_MESSAGE_COUNT`, `CHAT_MESSAGE_TTL_HOURS`.
+
+Après un **rechargement en pleine salle**, l'historique suit cette politique produit (restauration de session ou départ propre) sans planter.
+
+## Voir aussi
+
+- [Contrôles de réunion](/fr/docs/using/meeting-controls)
+- [Rejoindre une réunion](/fr/docs/using/joining-a-meeting)
+- [Gestionnaires d'API](/fr/docs/backend/api-handlers) — `POST /room/:roomId/chat/upload`

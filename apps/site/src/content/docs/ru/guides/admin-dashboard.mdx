@@ -1,280 +1,294 @@
 ---
-title: Панель администратора
-description: Управление пользователями, комнатами, настройками и токенами приглашения из веб-интерфейса
+title: Админ-панель
+description: Управление пользователями, комнатами, настройками и токенами приглашений в веб-UI
 order: 35
 ---
 
-Панель администратора предоставляет веб-интерфейс для управления экземпляром Bedrud. Суперадминистраторы могут просматривать системную статистику, управлять пользователями и комнатами, настраивать параметры экземпляра и генерировать токены приглашения.
+The admin dashboard provides a web interface for managing your Bedrud instance. Superadmins can view system statistics, manage users and rooms, configure instance-wide settings, and generate invite tokens.
 
-## Предварительные требования
+## Prerequisites
 
-- **Доступ суперадминистратора:** У вас должен быть `superadmin` в массиве `accesses` пользователя.
-- **Настройка первого администратора:** После установки Bedrud создайте пользователя и повысьте его через CLI:
+- **Superadmin access:** You must have `superadmin` in your user's `accesses` array.
+- **First admin setup:** After installing Bedrud, create a user and promote them via the CLI:
 
 ```bash
 bedrud user create --email "admin@example.com" --password "securepassword" --name "Admin"
 bedrud user promote --email "admin@example.com"
 ```
 
-Не существует веб-интерфейса или API для создания первого суперадминистратора. Это сделано намеренно из соображений безопасности.
+There is no web UI or API to create the first superadmin. This is intentional for security.
 
-## Доступ к панели администратора
+## Accessing the Admin Panel
 
-После получения доступа суперадминистратора панель администратора доступна по адресу `/dashboard/admin` в вашем веб-приложении Bedrud.
+Once you have superadmin access, the admin panel is available at `/dashboard/admin` in your Bedrud web application.
 
-**Навигация:**
-- В **боковой панели** отображается раздел «Admin» со ссылками на Обзор, Пользователей, Комнаты и Настройки. Этот раздел виден только суперадминистраторам.
-- В **выпадающем меню пользователя** (справа вверху) есть ссылка «Admin panel» с иконкой щита.
-- Пользователи без прав администратора, пытающиеся перейти по адресам `/dashboard/admin/*`, автоматически перенаправляются на `/dashboard`.
+**Navigation:**
+- The **sidebar** shows an "Admin" section with links to Overview, Users, Rooms, and Settings. This section is only visible to superadmins.
+- The **top-right user dropdown** includes an "Admin panel" link with a shield icon.
+- Non-admin users who attempt to visit `/dashboard/admin/*` URLs are automatically redirected to `/dashboard`.
 
 ---
 
-## Страница обзора
+## Overview Page
 
-Страница обзора по адресу `/dashboard/admin` предоставляет панель с ключевыми системными метриками.
+The overview page at `/dashboard/admin` provides a dashboard with key system metrics.
 
-### Системная статистика
+### System Stats
 
-Карточки отображают:
-- **Пользователей онлайн:** Общее количество уникальных активных участников во всех комнатах
-- **Всего комнат:** Общее количество комнат в экземпляре
-- **Всего пользователей:** Общее количество зарегистрированных пользователей
+Cards display:
+- **Online Users:** Total distinct active participants across all rooms
+- **Total Rooms:** Total rooms on the instance
+- **Total Users:** Total registered users
 
-### Статус TLS-сертификата
+### TLS Certificate Status
 
-Цветовой индикатор показывает состояние TLS-сертификата вашего сервера:
+A color-coded indicator shows the state of your server's TLS certificate:
 
-| Статус | Цвет | Значение |
+| Status | Color | Meaning |
 |---|---|---|
-| Действителен | Зелёный | Сертификат действителен |
-| Истекает скоро | Жёлтый | Истекает в течение 30 дней |
-| Истёк | Красный | Срок действия сертификата истёк |
-| Не настроен | Серый | TLS отключён |
+| Valid | Green | Certificate is valid |
+| Expiring Soon | Amber | Expires within 30 days |
+| Expired | Red | Certificate has expired |
+| Not Configured | Gray | TLS is disabled |
 
-Статус сертификата обновляется каждые 5 минут.
+The certificate status refreshes every 5 minutes.
 
-### Графики
+### Charts
 
-- **Создание комнат:** Столбчатая диаграмма комнат, созданных за последние 8 недель
-- **Последние регистрации:** Список последних регистраций пользователей
-
----
-
-## Управление пользователями
-
-### Список пользователей
-
-Список пользователей по адресу `/dashboard/admin/users` показывает всех зарегистрированных пользователей в таблице с возможностью поиска и сортировки.
-
-**Колонки:**
-- **Имя:** Отображаемое имя пользователя
-- **Email:** Адрес электронной почты пользователя
-- **Провайдер:** Метод аутентификации (local, google, github, guest, passkey)
-- **Роль:** Бейдж уровня доступа. Показывает «Superadmin» для пользователей с доступом `superadmin`.
-- **Создан:** Дата регистрации
-- **Статус:** Переключатель Активен/Заблокирован
-
-**Действия:**
-- **Поиск:** Введите текст в строку поиска для фильтрации пользователей по имени или email (на стороне клиента).
-- **Сортировка:** Нажмите на заголовок любой колонки для сортировки. Повторное нажатие переключает по возрастанию/убыванию.
-- **Пагинация:** Элементы навигации для просмотра больших списков пользователей.
-
-### Действия с пользователями
-
-Каждая строка пользователя содержит кнопки быстрых действий:
-
-- **Повысить/Понизить:** Переключение между уровнями доступа `["user"]` и `["user", "superadmin"]`. Отображается в колонке уровня доступа.
-- **Активен/Заблокирован:** Переключение статуса учётной записи. Заблокированные пользователи не могут войти или обновить токен.
-- **Просмотр деталей:** Нажмите на строку пользователя, чтобы открыть подробный просмотр.
-
-### Детали пользователя
-
-Страница деталей по адресу `/dashboard/admin/users/:userId` показывает полный профиль пользователя.
-
-**Отображаемая информация:**
-- Имя пользователя, email, провайдер и дата регистрации
-- Бейдж уровня доступа (суперадминистратор/пользователь)
-- График активности создания комнат (история за 8 недель)
-- Список комнат, созданных пользователем
-
-**Действия:**
-- **Повысить/Понизить:** Отдельная кнопка в заголовке деталей
-- **Удалить пользователя:** Безвозвратно удаляет пользователя и все его данные. Требует подтверждения по email. Кнопка удаления скрыта для вашей учётной записи (вы не можете удалить себя).
-
-> **Удаление безвозвратно и асинхронно.** При удалении пользователя также удаляются все его комнаты, passkeys и настройки. Запрос возвращается немедленно, пока очистка выполняется в фоновом режиме.
+- **Room Creation:** Bar chart of rooms created over the last 8 weeks
+- **Recent Signups:** List of the most recent user registrations
 
 ---
 
-## Управление комнатами
+## User Management
 
-### Список комнат
+### User List
 
-Список комнат по адресу `/dashboard/admin/rooms` показывает все комнаты экземпляра.
+The user list at `/dashboard/admin/users` shows all registered users in a searchable, sortable table.
 
-**Колонки:**
-- **Название комнаты:** Идентификатор комнаты
-- **Видимость:** Публичная, приватная или скрытая
-- **Макс. участников:** Редактируемое поле — нажмите на значение, чтобы изменить
-- **Статус:** Активна или неактивна
-- **Создана:** Дата создания комнаты
+**Columns:**
+- **Name:** User's display name
+- **Email:** User's email address
+- **Provider:** Authentication method (local, google, github, guest, passkey)
+- **Role:** Access level badge. Shows "Superadmin" for users with `superadmin` access.
+- **Created:** Registration date
+- **Status:** Active/Banned toggle
 
-**Действия:**
-- **Поиск:** Фильтрация комнат по названию (на стороне клиента)
-- **Сортировка:** Нажмите на заголовок колонки для сортировки
-- **Приостановить:** Завершить активный звонок без удаления комнаты
-- **Удалить:** Безвозвратно закрыть комнату с каскадным удалением
+**Actions:**
+- **Search:** Type in the search bar to filter users by name or email (client-side).
+- **Sort:** Click any column header to sort. Click again to toggle ascending/descending.
+- **Pagination:** Navigation controls for browsing large user lists.
 
-### Детали комнаты
+### User Actions
 
-Страница деталей по адресу `/dashboard/admin/rooms/:roomId` предоставляет детальную информацию о комнате.
+Each user row includes quick-action buttons:
 
-**Настройки комнаты:**
-- Название комнаты, режим видимости, макс. участников
-- **Переключатель постоянного режима:** Включите, чтобы предотвратить автоматическую очистку неактивных комнат. Доступно только суперадминистраторам — создатели комнат не могут это изменить.
+- **Promote/Demote:** Toggle between `["user"]` and `["user", "superadmin"]` access levels. Visible in the access level column.
+- **Active/Banned:** Toggle the user's account status. Banned users cannot log in or refresh tokens.
+- **View Detail:** Click the user row to open the detail view.
 
-**Активные участники:**
-- Список участников в реальном времени с опросом каждые 3 секунды
-- По каждому участнику: имя, время подключения, информация о дорожках (аудио/видео/демонстрация экрана)
-- **График битрейта:** График битрейта в реальном времени для аудио и видеодорожек
-- **Выгнать:** Удалить любого участника из комнаты
-- **Заглушить:** Отключить аудиодорожки любого участника
+### User Detail
+
+The detail page at `/dashboard/admin/users/:userId` shows a full user profile.
+
+**Information displayed:**
+- User name, email, provider, and registration date
+- Access level badge (superadmin/user)
+- Room creation activity chart (8-week history)
+- List of rooms created by the user
+
+**Actions:**
+- **Promote/Demote:** Dedicated button in the detail header
+- **Delete User:** Permanently removes the user and all their data. Requires email confirmation. The delete button is hidden for your own account (you cannot delete yourself).
+
+> **Delete is permanent and asynchronous.** Deleting a user also removes all their rooms, passkeys, and preferences. The request returns immediately while the cleanup runs in the background.
 
 ---
 
-## Системные настройки
+## Room Management
 
-Страница настроек по адресу `/dashboard/admin/settings` организована в 9 вкладок. Нажмите «Сохранить изменения» после изменения любой вкладки (вкладка Общие автосохраняется при смене режима регистрации).
+### Room List
 
-### Вкладка Общие
+The room list at `/dashboard/admin/rooms` shows all rooms on the instance.
 
-- **Режим регистрации:**
-  - **Открытая:** Любой может зарегистрировать учётную запись
-  - **По приглашениям:** Новые пользователи должны предоставить действительный токен приглашения
-  - **Закрыта:** Новые регистрации запрещены — существующие пользователи могут входить
-  - Изменения сохраняются автоматически при переключении режимов
+**Columns:**
+- **Room Name:** Room identifier
+- **Visibility:** Public, private, or unlisted
+- **Max Participants:** Editable inline — click the value to change it
+- **Status:** Active or inactive
+- **Created:** Room creation date
 
-**Управление токенами приглашения (внутри вкладки Общие):**
+**Actions:**
+- **Search:** Filter rooms by name (client-side)
+- **Sort:** Click column headers to sort
+- **Suspend:** End an active call without deleting the room
+- **Delete:** Permanently close a room with cascade deletion
 
-Токены определяют, кто может зарегистрироваться в режиме «По приглашениям».
+### Room Detail
 
-- **Сгенерировать токен:** Укажите опциональный email для привязки токена к конкретному адресу и выберите срок действия (24 часа, 72 часа, 7 дней или 30 дней).
-- **Список токенов:** Показывает все токены с их статусом. Неиспользованные токены имеют зелёный бейдж «Активен», использованные отображаются серым как «Использован».
-- **Копировать токен:** Нажмите кнопку копирования, чтобы скопировать 32-символьное значение токена в буфер обмена.
-- **Отозвать:** Удалите токен, чтобы предотвратить его использование.
+The detail page at `/dashboard/admin/rooms/:roomId` provides deep visibility into a room.
 
-### Вкладка Аутентификация
+**Room Settings:**
+- Room name, visibility mode, max participants
+- **Persistent mode toggle:** Enable to prevent automatic cleanup of idle rooms. This is available to superadmins only — room creators cannot change it.
 
-- **Passkeys:** Включить/выключить беспарольную аутентификацию FIDO2/WebAuthn
-- **Провайдеры OAuth:** Настройка OAuth для Google, GitHub и Twitter:
+**Live Participants:**
+- Real-time participant list that polls every 3 seconds
+- Per participant: name, join time, track information (audio/video/screen share)
+- **Bitrate chart:** Live bitrate graph for audio and video tracks
+- **Kick:** Remove any participant from the room
+- **Mute:** Mute any participant's audio tracks
+
+---
+
+## System Settings
+
+The settings page at `/dashboard/admin/settings` is organized into 7 tabs. Click "Save changes" after modifying any tab (the General tab auto-saves on registration mode changes).
+
+### General Tab
+
+- **Registration Mode:**
+  - **Open:** Anyone can register an account
+  - **Invite-only:** New users must provide a valid invite token
+  - **Closed:** No new registrations — existing users can still log in
+  - Changes save automatically when you switch modes
+
+**Invite Token Management (within General tab):**
+
+Tokens control who can register when in Invite-only mode.
+
+- **Generate Token:** Enter an optional email to lock the token to a specific address, and select an expiry period (24 hours, 72 hours, 7 days, or 30 days).
+- **Token List:** Shows all tokens with their status. Unused tokens have a green "Active" badge, used tokens show "Used" in gray.
+- **Copy Token:** Click the copy button to copy the 32-character token value to your clipboard.
+- **Revoke:** Delete a token to prevent it from being used.
+- **Recordings Toggle:** UI may expose an “allow room recordings” setting for a **planned** feature. Recording HTTP routes are not registered in production yet.
+
+### Webhooks Tab
+
+The Webhooks tab lets superadmins register HTTP callbacks for real-time room and recording events.
+
+- **Add Webhook:** Enter a URL, select event types, and optionally set a custom HMAC secret.
+- **Event Types:** `room.created`, `room.ended`, `participant.joined`, `ping` (test). `recording.completed` is reserved for a planned feature. Delivery uses `X-Bedrud-Signature` / `X-Bedrud-Event` headers — see the [Webhooks Guide](/ru/docs/guides/webhooks).
+- **Test:** Send a test ping to verify connectivity.
+- **Rotate:** Generate a new HMAC signing secret (old one immediately invalidated).
+- **Status Column:** Shows last HTTP status code and timestamp of last delivery.
+
+### Authentication Tab
+
+- **Passkeys:** Toggle FIDO2/WebAuthn passwordless authentication
+- **OAuth Providers:** Configure Google, GitHub, and Twitter OAuth:
   - Client ID
   - Client Secret
   - Redirect URL
 
-Каждый провайдер имеет собственную карточку настройки. Включите провайдера, заполнив все три поля.
+Each provider has its own configuration card. Enable a provider by filling in all three fields.
 
-### Вкладка LiveKit
+### LiveKit Tab
 
-- **Внешний LiveKit:** Переключатель для использования внешнего сервера LiveKit вместо встроенного
-- **Хост:** Хост и порт сервера LiveKit (например, `127.0.0.1:7880`)
-- **API Key:** Ключ API сервера LiveKit
-- **API Secret:** Секрет API сервера LiveKit
+- **External LiveKit:** Toggle to use an external LiveKit server instead of the embedded one
+- **Host:** LiveKit server host and port (e.g., `127.0.0.1:7880`)
+- **API Key:** LiveKit server API key
+- **API Secret:** LiveKit server API secret
 
-### Вкладка Сервер
+### Server Tab
 
-- **Порт:** Порт HTTP-сервера (по умолчанию: `80`)
-- **Хост:** Имя хоста сервера
-- **Домен:** Домен сервера
-- **Email:** Административный email (используется для регистрации сертификатов ACME)
-- **TLS:** Включить HTTPS с файлами сертификатов
-- **ACME:** Включить автоматическое управление сертификатами Let's Encrypt
-- **Обратный прокси:** Указать, что сервер находится за прокси (влияет на определение IP клиента)
-- **Пути сертификатов:** Пути к файлам сертификата и ключа (для ручной настройки TLS)
-- **Статус сертификата:** Встроенный индикатор состояния TLS-сертификата
+- **Port:** HTTP server port (default: `80`)
+- **Host:** Server hostname
+- **Domain:** Server domain
+- **Email:** Administrative email (used for ACME certificate registration)
+- **TLS:** Enable HTTPS with certificate files
+- **ACME:** Enable automatic Let's Encrypt certificate management
+- **Reverse Proxy:** Indicate the server is behind a proxy (affects client IP detection)
+- **Certificate Paths:** Cert file and key file paths (for manual TLS setup)
+- **Certificate Status:** Inline indicator showing current TLS certificate health
 
-### Вкладка CORS
+### CORS Tab
 
-- **Разрешённые источники:** Список CORS origins через запятую
-- **Разрешённые заголовки:** Список разрешённых заголовков запросов через запятую
-- **Разрешённые методы:** Список разрешённых HTTP-методов через запятую
-- **Allow Credentials:** Переключатель для включения учётных данных в кросс-доменных запросах
-- **Max Age:** Длительность кэширования предварительных CORS-ответов (в секундах)
+- **Allowed Origins:** Comma-separated list of CORS origins
+- **Allowed Headers:** Comma-separated list of allowed request headers
+- **Allowed Methods:** Comma-separated list of allowed HTTP methods
+- **Allow Credentials:** Toggle to include credentials in cross-origin requests
+- **Max Age:** Cache duration for CORS preflight responses (seconds)
 
-### Вкладка Лимиты комнат
+### Room Limits Tab
 
-Управляет количеством активных комнат, которые может создать один пользователь:
+Controls how many rooms a single user can create:
 
-- **Макс. комнат на пользователя:** Максимальное количество активных комнат, которое может создать пользователь без прав суперадминистратора (по умолчанию: 100, 0 = без ограничений). Суперадминистраторы обходят этот лимит.
+- **Max Rooms Per User:** Maximum number of active rooms a non-superadmin user can create (default: 100, 0 = unlimited). Superadmins bypass this limit.
 
-### Вкладка Квоты на загрузку
+### Upload Quotas Tab
 
-Управляет ограничениями хранилища для загружаемых в чат изображений:
+Controls storage limits for chat image uploads:
 
-- **Макс. байт загрузки на пользователя:** Квота хранилища на пользователя во всех комнатах (по умолчанию: 524288000 = 500 МБ, 0 = без ограничений). Суперадминистраторы обходят этот лимит.
-- **Глобальный порог диска:** Общий лимит хранилища всех пользователей. При превышении все загрузки отклоняются, пока администратор не освободит место (по умолчанию: 0 = без ограничений). Этот лимит применяется ко всем, включая суперадминистраторов.
+- **Max Upload Bytes Per User:** Per-user storage quota across all rooms (default: 524288000 = 500 MB, 0 = unlimited). Superadmins bypass this limit.
+- **Global Disk Threshold:** Total storage ceiling across all users. When exceeded, all uploads are rejected until an admin frees space (default: 0 = unlimited). This limit applies to everyone, including superadmins.
 
-### Вкладка Загрузки чата
+### Вкладка Chat Uploads
 
-Настройка хранения загруженных в чат изображений:
+Настраивает хранение загрузок изображений чата:
 
-- **Бэкенд:** `disk` (локальная файловая система), `s3` (S3-совместимое хранилище) или `inline` (base64 встраивание)
-- **Макс. размер загрузки:** Максимальный размер файла на одну загрузку
-- **Inline макс.:** Максимальный размер для inline/base64 загрузок
-- **Директория диска:** Локальная директория для загрузок с бэкендом `disk`
+- **Backend:** `disk` (локальная ФС), `s3` (S3-совместимое хранилище) или `inline` (встроенный base64)
+- **Max Upload Bytes** (`chatUploadMaxBytes`): Максимальный размер файла на загрузку (по умолчанию 10 MiB, если не задано). Применяется API загрузки и отдаётся клиенту встречи для предварительных проверок.
+- **Max Image Dimension** (`chatUploadMaxDimension`): Максимальная ширина или высота в пикселях (по умолчанию 8192, если не задано / 0). Более крупные декодированные изображения отклоняются с HTTP 400.
+- **Inline Max:** Максимальный размер для inline/base64-загрузок
+- **Disk Directory:** Локальный каталог для бэкенда `disk`
 
-**Настройки S3 (когда бэкенд `s3`):**
+YAML-запасные значения: `chat.uploads.maxBytes`, `chat.uploads.maxDimension` в [конфигурации](/ru/docs/getting-started/configuration).
+
+**S3 Configuration (when backend is `s3`):**
 - Endpoint, Bucket, Region
 - Access Key, Secret Key
 - Public URL
 
-### Вкладка Логирование
+### Logging Tab
 
-- **Уровень логирования:** `trace`, `debug`, `info`, `warn` или `error`. Полезно для отладки — переключите на `debug` для детальных логов, затем обратно на `info` для продакшена.
+- **Log Level:** `trace`, `debug`, `info`, `warn`, or `error`. Useful for debugging — switch to `debug` to see detailed logs, then back to `info` for production.
 
 ---
 
-## Устранение неполадок
+## Troubleshooting
 
-### «Панель администратора не отображается»
+### "Admin panel not visible"
 
-**Симптом:** Раздел Admin не появляется в боковой панели, и ссылка «Admin panel» отсутствует в выпадающем меню пользователя.
+**Symptom:** The Admin section does not appear in the sidebar, and the "Admin panel" link is missing from the user dropdown.
 
-**Причина:** Вошедший пользователь не имеет `superadmin` в массиве `accesses`.
+**Cause:** The logged-in user does not have `superadmin` in their `accesses` array.
 
-**Решение:** Используйте CLI для повышения пользователя:
+**Solution:** Use the CLI to promote the user:
 ```bash
 bedrud user promote --email "your-email@example.com"
 ```
-Затем выйдите и войдите снова, чтобы получить новый JWT с обновлёнными правами доступа.
+Then log out and log back in to get a new JWT with the updated accesses.
 
-### «Настройки не сохраняются»
+### "Settings won't save"
 
-**Симптом:** Сохранение настроек возвращает успех, но секретные значения не меняются.
+**Symptom:** Saving settings returns successfully, but secret values appear unchanged.
 
-**Причина:** Сервер сохраняет существующие секретные значения, когда вы отправляете `"••••••••"` или пустую строку в запросе обновления. Это сделано намеренно — предотвращает случайную перезапись секретов при изменении только несекретных полей.
+**Cause:** The server preserves existing secret values when you send `"••••••••"` or an empty string in the update request. This is by design — it prevents accidentally overwriting secrets when you're only changing non-secret fields.
 
-**Решение:** Отправьте реальное значение секрета (не замаскированный плейсхолдер) в запросе обновления.
+**Solution:** Send the actual secret value (not the masked placeholder) in the update request.
 
-### «Не могу удалить свою учётную запись»
+### "Cannot delete my own account"
 
-**Симптом:** Кнопка удаления скрыта на странице деталей вашей учётной записи, или API возвращает ошибку 400.
+**Symptom:** The delete button is hidden on your own user detail page, or the API returns a 400 error.
 
-**Причина:** Самоудаление заблокировано в целях безопасности. Вы не можете удалить учётную запись, под которой вы сейчас вошли.
+**Cause:** Self-deletion is blocked for safety. You cannot delete the account you're currently logged in as.
 
-**Решение:** Попросите другого суперадминистратора удалить учётную запись или используйте CLI под другим пользователем.
+**Solution:** Have another superadmin delete the account, or use the CLI as a different user.
 
-### «Перенаправление на dashboard при переходе по URL администратора»
+### "Redirected to dashboard when visiting admin URL"
 
-**Симптом:** Переход по адресу `/dashboard/admin` напрямую перенаправляет на `/dashboard`.
+**Symptom:** Visiting `/dashboard/admin` directly redirects to `/dashboard`.
 
-**Причина:** Защитный маршрут администратора проверяет массив `accesses` в вашем JWT. Если `superadmin` отсутствует, защита выполняет перенаправление.
+**Cause:** The admin guard route checks your JWT's `accesses` array. If `superadmin` is missing, the guard redirects.
 
-**Решение:** Убедитесь, что ваша учётная запись имеет доступ суперадминистратора. Если права были недавно изменены, выйдите и войдите снова для обновления JWT.
+**Solution:** Verify your account has superadmin access. If your access was recently changed, log out and log back in to refresh your JWT.
 
 ---
 
-## См. также
+## See Also
 
-- [API администратора](/ru/docs/api/api-reference#tag/admin) — полный справочник API для всех административных эндпоинтов
-- [Аутентификация](/ru/docs/backend/authentication) — уровни доступа и ролевая система
-- [Конфигурация](/ru/docs/getting-started/configuration) — справочник настроек config.yaml
-- [Быстрый старт](/ru/docs/getting-started/quickstart) — пошаговая настройка первого администратора
+- [Admin API](/ru/docs/api/api-reference#tag/admin) — full API reference for all admin endpoints
+- [Authentication](/ru/docs/backend/authentication) — access levels and role system
+- [Configuration](/ru/docs/getting-started/configuration) — config.yaml settings reference
+- [Quick Start](/ru/docs/getting-started/quickstart) — first admin setup walkthrough

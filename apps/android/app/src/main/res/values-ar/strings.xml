@@ -184,4 +184,45 @@
   <string name="profile_label_userId">معرف المستخدم</string>
   <string name="profile_label_provider">المزود</string>
   <string name="profile_button_signOut">تسجيل الخروج</string>
+
+  <string name="meeting_contentDescription_stopScreenShare">إيقاف مشاركة الشاشة</string>
+  <string name="meeting_contentDescription_maximizeScreenShare">ملء الشاشة</string>
+  <string name="meeting_contentDescription_minimizeScreenShare">الخروج من ملء الشاشة</string>
+  <string name="meeting_stage_screenShareTitle">مشاركة الشاشة</string>
+  <string name="meeting_stage_screenSharePresenting"><xliff:g id="name" example="Alex">%1$s</xliff:g> يعرض الآن</string>
+  <string name="meeting_stage_screenShareWaiting">في انتظار شاشة <xliff:g id="name" example="Alex">%1$s</xliff:g>…</string>
+  <string name="meeting_contentDescription_closeImagePreview">إغلاق معاينة الصورة</string>
+  <string name="meeting_contentDescription_viewImage">عرض الصورة</string>
+  <string name="call_default_room_name">اجتماع</string>
+  <string name="screen_share_channel_name">مشاركة الشاشة</string>
+  <string name="screen_share_channel_description">يظهر أثناء مشاركة شاشتك</string>
+  <string name="screen_share_notification_title">جارٍ مشاركة الشاشة</string>
+  <string name="screen_share_notification_text">شاشتك مرئية لمشاركي الاجتماع</string>
+  <string name="meeting_error_permissionsRequired">يلزم إذن الكاميرا والميكروفون للانضمام.</string>
+  <string name="meeting_error_screenShareFailed">تعذّر بدء مشاركة الشاشة.</string>
+  <string name="meeting_sheet_chat">الدردشة</string>
+  <string name="meeting_sheet_addOthers">إضافة آخرين</string>
+  <string name="meeting_share_chooserTitle">مشاركة رابط الاجتماع</string>
+  <string name="meeting_sheet_flipCamera">قلب الكاميرا</string>
+  <string name="meeting_sheet_settings">الإعدادات</string>
+  <string name="meeting_sheet_tools">الأدوات</string>
+  <string name="meeting_sheet_report">الإبلاغ عن إساءة</string>
+  <string name="meeting_contentDescription_audioSource">مصدر الصوت</string>
+  <string name="meeting_audio_sheet_title">الصوت</string>
+  <string name="meeting_audio_sheet_microphone">الميكروفون</string>
+  <string name="meeting_audio_sheet_micOn">غير مكتوم</string>
+  <string name="meeting_audio_sheet_micOff">مكتوم</string>
+  <string name="meeting_audio_sheet_output">مخرج الصوت</string>
+  <string name="meeting_audio_device_speaker">مكبر الصوت</string>
+  <string name="meeting_audio_device_earpiece">الهاتف</string>
+  <string name="meeting_audio_device_wired_headset">سماعة سلكية</string>
+  <string name="meeting_audio_device_bluetooth">بلوتوث</string>
+  <string name="meeting_audio_sheet_noDevices">لا تتوفر أجهزة صوت</string>
+  <string name="dashboard_filter_recent">الأخيرة</string>
+  <string name="dashboard_dialog_deleteTitle">حذف الغرفة؟</string>
+  <string name="dashboard_dialog_deleteMessage">هل أنت متأكد من حذف <xliff:g id="roomName" example="team-standup">%1$s</xliff:g>؟ لا يمكن التراجع عن ذلك.</string>
+  <string name="dashboard_empty_noRecent">لا توجد غرف حديثة</string>
+  <string name="dashboard_empty_noRecentHint">تظهر الغرف التي تنضم إليها هنا، بما في ذلك على خوادم أخرى.</string>
+  <string name="dashboard_contentDescription_removeRecent">إزالة من الأخيرة</string>
+  <string name="dashboard_recent_onServer">على <xliff:g id="serverName" example="My Server">%1$s</xliff:g></string>
 </resources>

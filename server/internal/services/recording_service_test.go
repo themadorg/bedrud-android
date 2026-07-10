@@ -16,6 +16,7 @@ import (
 )
 
 func recordingTestSkipped(t *testing.T) {
+	t.Helper()
 	t.Skip("TODO oncoming feature")
 }
 

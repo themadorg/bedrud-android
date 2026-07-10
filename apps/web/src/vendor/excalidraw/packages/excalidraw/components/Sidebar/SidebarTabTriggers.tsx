@@ -1,0 +1,17 @@
+// @ts-nocheck
+import { Tabs as RadixTabs } from "radix-ui";
+
+export const SidebarTabTriggers = ({
+  children,
+  ...rest
+}: { children: React.ReactNode } & Omit<
+  React.RefAttributes<HTMLDivElement>,
+  "onSelect"
+>) => {
+  return (
+    <RadixTabs.List className="sidebar-triggers" {...rest}>
+      {children}
+    </RadixTabs.List>
+  );
+};
+SidebarTabTriggers.displayName = "SidebarTabTriggers";

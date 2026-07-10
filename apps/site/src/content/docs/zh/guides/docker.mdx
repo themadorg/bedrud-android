@@ -4,9 +4,21 @@ description: 使用 Docker 运行 Bedrud
 order: 29
 ---
 
-Bedrud 提供多阶段 Dockerfile，用于在容器中构建和运行。
+Bedrud provides a multi-stage Dockerfile for building and running in containers.
 
-## 快速开始
+## Image Variants
+
+Three image variants are published to GitHub Container Registry:
+
+| Tag | Base | Size | Best for |
+|-----|------|------|----------|
+| `:latest` | Debian Bookworm | ~50 MB | Default — compatible with most systems |
+| `:latest-alpine` | Alpine 3.21 | ~30 MB | Alpine hosts, minimal footprint |
+| `:latest-distroless` | Distroless | ~25 MB | Smallest attack surface, no shell |
+
+All images contain the same static binary — the base image only affects runtime utilities (ca-certs, timezone data).
+
+## Quick Start
 
 ```bash
 # Build
@@ -20,11 +32,11 @@ docker run -d --name bedrud \
   bedrud
 ```
 
-## Dockerfile 概览
+## Dockerfile Overview
 
-Dockerfile 使用三个阶段来最小化最终镜像大小：
+The Dockerfile uses three stages to minimize the final image size:
 
-### 阶段 1：前端构建
+### Stage 1: Frontend Build
 
 ```dockerfile
 FROM node:22-alpine AS frontend
@@ -36,9 +48,9 @@ COPY apps/web/ ./
 RUN bun run build:embed
 ```
 
-安装 Bun，SSR 预渲染 React 应用，并将资源复制到 `server/frontend/`。
+Installs Bun, SSR pre-renders the React app, and copies assets to `server/frontend/`.
 
-### 阶段 2：服务器构建
+### Stage 2: Server Build
 
 ```dockerfile
 FROM golang:1.25-alpine AS backend
@@ -52,9 +64,9 @@ RUN CGO_ENABLED=1 GOOS=linux go build -ldflags="-s -w" -o /bedrud ./cmd/bedrud/m
 # CGO is required for SQLite (uses C bindings)
 ```
 
-编译嵌入前端的 Go 二进制文件。启用了 CGO 以支持 SQLite。
+Compiles the Go binary with the frontend embedded. CGO is enabled for SQLite support (`sqlite-dev` provides the C headers).
 
-### 阶段 3：运行时
+### Stage 3: Runtime
 
 ```dockerfile
 FROM alpine:3.21
@@ -65,21 +77,21 @@ ENTRYPOINT ["bedrud"]
 CMD ["run"]
 ```
 
-最小化的 Alpine 镜像，仅包含二进制文件、CA 证书和时区数据。
+Minimal Alpine image with just the binary, CA certificates, and timezone data.
 
-## 端口
+## Ports
 
-| 端口 | 服务 | 协议 |
+| Port | Service | Protocol |
 |------|---------|----------|
 | 8090 | API + Web UI | HTTP |
 | 7880 | LiveKit | WebSocket + HTTP |
-| 50000-60000 | RTC 媒体 | UDP |
+| 50000-60000 | RTC media | UDP |
 
-对于 LiveKit 媒体流，你可能还需要暴露 RTC UDP 端口范围（默认：50000-60000）。
+For LiveKit media streams, you may also need to expose the RTC UDP port range (default: 50000-60000).
 
-## 卷挂载
+## Volumes
 
-挂载卷以实现持久化数据：
+Mount a volume for persistent data:
 
 ```bash
 docker run -d \
@@ -90,9 +102,9 @@ docker run -d \
   bedrud
 ```
 
-## 配置
+## Configuration
 
-传入自定义配置文件：
+Pass a custom configuration file:
 
 ```bash
 docker run -d \
@@ -104,7 +116,7 @@ docker run -d \
   bedrud run --config /etc/bedrud/config.yaml
 ```
 
-或使用环境变量：
+Or use environment variables:
 
 ```bash
 docker run -d \
@@ -117,27 +129,54 @@ docker run -d \
   bedrud
 ```
 
-## 预构建镜像
+### TLS with Embedded LiveKit
 
-每次发布时，Docker 镜像会发布到 GitHub Container Registry：
+When server TLS is enabled, the embedded LiveKit process automatically configures TURN/TLS (port 5349) using the server's certificate. Mount your cert/key and enable TLS:
 
 ```bash
-# Latest release
-# glibc (Debian-based, default)
-docker pull ghcr.io/themadorg/bedrud:latest
+docker run -d \
+  --name bedrud \
+  -p 443:443 \
+  -p 5349:5349 \
+  -v /path/to/cert.pem:/etc/bedrud/cert.pem \
+  -v /path/to/key.pem:/etc/bedrud/key.pem \
+  -e SERVER_ENABLE_TLS=true \
+  -e SERVER_CERT_FILE=/etc/bedrud/cert.pem \
+  -e SERVER_KEY_FILE=/etc/bedrud/key.pem \
+  bedrud
+```
 
-# musl (Alpine-based)
-docker pull ghcr.io/themadorg/bedrud:latest-alpine
+For a custom LiveKit YAML (advanced TURN/RTC config), mount it and set `LIVEKIT_CONFIG_PATH`:
+
+```bash
+docker run -d \
+  --name bedrud \
+  -p 8090:8090 \
+  -v /path/to/livekit.yaml:/etc/bedrud/livekit.yaml \
+  -e LIVEKIT_CONFIG_PATH=/etc/bedrud/livekit.yaml \
+  bedrud
+```
+
+## Pre-built Images
+
+Docker images are published to GitHub Container Registry on every release:
+
+```bash
+# Distroless (smallest, no shell)
+docker pull ghcr.io/themadorg/bedrud:latest-distroless
 
 # Specific version
 docker pull ghcr.io/themadorg/bedrud:v1.0.0
+docker pull ghcr.io/themadorg/bedrud:v1.0.0-alpine
+docker pull ghcr.io/themadorg/bedrud:v1.0.0-distroless
 ```
 
-## Docker Compose 示例
+## Docker Compose Example
 
 ```yaml
 services:
   bedrud:
+    # Use :latest-alpine or :latest-distroless for smaller images
     image: ghcr.io/themadorg/bedrud:latest
     ports:
       - "8090:8090"
@@ -155,7 +194,7 @@ volumes:
 
 ---
 
-## 另请参阅
+## See also
 
-- [配置参考](/zh/docs/getting-started/configuration) - 完整配置选项和环境变量
-- [部署指南](/zh/docs/guides/deployment) - 使用 Docker 的生产部署
+- [Configuration Reference](/zh/docs/getting-started/configuration) - full config options and environment variables
+- [Deployment Guide](/zh/docs/guides/deployment) - production deployment with Docker

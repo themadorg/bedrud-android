@@ -1,9 +1,6 @@
 package storage
 
 import (
-	"bedrud/config"
-	"bedrud/internal/models"
-	"bedrud/internal/testutil"
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
@@ -11,8 +8,14 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"testing"
+	"time"
+
+	"bedrud/config"
+	"bedrud/internal/models"
+	"bedrud/internal/testutil"
 )
 
 type mockObjectDeleter struct {
@@ -102,7 +105,10 @@ func TestDeleteByRoom_Disk_CleansFile(t *testing.T) {
 	if err := tracker.Record("room1", "user1", "abc", ".png", 100, "disk"); err != nil {
 		t.Fatal(err)
 	}
-	path := filepath.Join(dir, "abc.png")
+	path := filepath.Join(dir, "room1", "user1", "abc.png")
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		t.Fatal(err)
+	}
 	if err := os.WriteFile(path, []byte("data"), 0o644); err != nil {
 		t.Fatal(err)
 	}
@@ -120,29 +126,37 @@ func TestDeleteByRoom_Disk_CleansFile(t *testing.T) {
 	}
 }
 
-func TestDeleteByRoom_Disk_CrossRoomSafety(t *testing.T) {
+func TestDeleteByRoom_Disk_ScopedKeysIndependent(t *testing.T) {
 	dir := t.TempDir()
 	db := testutil.SetupTestDB(t)
 	tracker := NewChatUploadTracker(db, dir, nil)
 
-	// Same hash in two rooms
+	// Same hash in two rooms → distinct keys room/user/hash
 	if err := tracker.Record("room1", "u1", "shared", ".png", 100, "disk"); err != nil {
 		t.Fatal(err)
 	}
 	if err := tracker.Record("room2", "u1", "shared", ".png", 100, "disk"); err != nil {
 		t.Fatal(err)
 	}
-	path := filepath.Join(dir, "shared.png")
-	if err := os.WriteFile(path, []byte("shared"), 0o644); err != nil {
-		t.Fatal(err)
+	path1 := filepath.Join(dir, "room1", "u1", "shared.png")
+	path2 := filepath.Join(dir, "room2", "u1", "shared.png")
+	for _, p := range []string{path1, path2} {
+		if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(p, []byte("shared"), 0o644); err != nil {
+			t.Fatal(err)
+		}
 	}
 
 	if err := tracker.DeleteByRoom("room1"); err != nil {
 		t.Fatal(err)
 	}
-	// File should still exist because room2 references it
-	if _, err := os.Stat(path); os.IsNotExist(err) {
-		t.Fatal("file should survive cross-room reference")
+	if _, err := os.Stat(path1); !os.IsNotExist(err) {
+		t.Fatal("room1 object should be removed")
+	}
+	if _, err := os.Stat(path2); os.IsNotExist(err) {
+		t.Fatal("room2 object should remain")
 	}
 }
 
@@ -159,12 +173,12 @@ func TestDeleteByRoom_S3_CallsDeleter(t *testing.T) {
 		t.Fatal(err)
 	}
 	keys := mockDel.Keys()
-	if len(keys) != 1 || keys[0] != "abc.png" {
-		t.Fatalf("expected [abc.png], got %v", keys)
+	if len(keys) != 1 || keys[0] != "room1/u1/abc.png" {
+		t.Fatalf("expected [room1/u1/abc.png], got %v", keys)
 	}
 }
 
-func TestDeleteByRoom_S3_CrossRoomSafety(t *testing.T) {
+func TestDeleteByRoom_S3_ScopedKeysIndependent(t *testing.T) {
 	db := testutil.SetupTestDB(t)
 	mockDel := &mockObjectDeleter{}
 	tracker := NewChatUploadTracker(db, t.TempDir(), mockDel)
@@ -179,8 +193,9 @@ func TestDeleteByRoom_S3_CrossRoomSafety(t *testing.T) {
 	if err := tracker.DeleteByRoom("room1"); err != nil {
 		t.Fatal(err)
 	}
-	if len(mockDel.Keys()) != 0 {
-		t.Fatal("S3 delete should not be called when another room references the file")
+	keys := mockDel.Keys()
+	if len(keys) != 1 || keys[0] != "room1/u1/shared.png" {
+		t.Fatalf("expected only room1 key deleted, got %v", keys)
 	}
 }
 
@@ -199,7 +214,7 @@ func TestDeleteByRoom_S3_DeleterNil(t *testing.T) {
 
 func TestDeleteByRoom_S3_DeleterError(t *testing.T) {
 	db := testutil.SetupTestDB(t)
-	mockDel := &mockObjectDeleter{failOn: "abc.png"}
+	mockDel := &mockObjectDeleter{failOn: "room1/u1/abc.png"}
 	tracker := NewChatUploadTracker(db, t.TempDir(), mockDel)
 
 	if err := tracker.Record("room1", "u1", "abc", ".png", 100, "s3"); err != nil {
@@ -245,7 +260,10 @@ func TestDeleteByRoom_MixedBackends(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	diskPath := filepath.Join(dir, "disk-f.png")
+	diskPath := filepath.Join(dir, "room1", "u1", "disk-f.png")
+	if err := os.MkdirAll(filepath.Dir(diskPath), 0o755); err != nil {
+		t.Fatal(err)
+	}
 	if err := os.WriteFile(diskPath, []byte("d"), 0o644); err != nil {
 		t.Fatal(err)
 	}
@@ -260,8 +278,8 @@ func TestDeleteByRoom_MixedBackends(t *testing.T) {
 	}
 	// S3 deleter called
 	keys := mockDel.Keys()
-	if len(keys) != 1 || keys[0] != "s3-f.jpg" {
-		t.Fatalf("expected s3-f.jpg deleted, got %v", keys)
+	if len(keys) != 1 || keys[0] != "room1/u1/s3-f.jpg" {
+		t.Fatalf("expected room1/u1/s3-f.jpg deleted, got %v", keys)
 	}
 }
 
@@ -291,7 +309,7 @@ func TestS3DeleteObject_HTTPSignature(t *testing.T) {
 		if r.Header.Get("Authorization") == "" {
 			t.Fatal("missing Authorization header")
 		}
-		w.WriteHeader(204)
+		w.WriteHeader(http.StatusNoContent)
 	}))
 	defer srv.Close()
 
@@ -310,7 +328,7 @@ func TestS3DeleteObject_HTTPSignature(t *testing.T) {
 
 func TestS3DeleteObject_ServerError(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(500)
+		w.WriteHeader(http.StatusInternalServerError)
 	}))
 	defer srv.Close()
 
@@ -332,7 +350,7 @@ func TestS3DeleteObject_Success(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		capturedMethod = r.Method
 		capturedPath = r.URL.Path
-		w.WriteHeader(204)
+		w.WriteHeader(http.StatusNoContent)
 	}))
 	defer srv.Close()
 
@@ -362,7 +380,7 @@ func TestNewS3Deleter(t *testing.T) {
 		AccessKey: "key",
 		SecretKey: "secret",
 	}
-	d := NewS3Deleter(cfg)
+	d := NewS3Deleter(&cfg)
 	if d == nil {
 		t.Fatal("NewS3Deleter returned nil")
 	}
@@ -420,7 +438,7 @@ func TestRecord_QuotaTracking(t *testing.T) {
 // records, a failure in one doesn't block others (best-effort cleanup).
 func TestDeleteByRoom_S3_OneFailsOtherSucceeds(t *testing.T) {
 	db := testutil.SetupTestDB(t)
-	mockDel := &mockObjectDeleter{failOn: "bad-key.png"}
+	mockDel := &mockObjectDeleter{failOn: "room1/u1/bad-key.png"}
 	tracker := NewChatUploadTracker(db, t.TempDir(), mockDel)
 
 	_ = tracker.Record("room1", "u1", "bad-key", ".png", 100, "s3")
@@ -436,6 +454,118 @@ func TestDeleteByRoom_S3_OneFailsOtherSucceeds(t *testing.T) {
 	db.Model(&models.ChatUpload{}).Count(&count)
 	if count != 0 {
 		t.Fatal("all DB records should be deleted regardless of S3 errors")
+	}
+}
+
+func TestS3PresignGet_Shape(t *testing.T) {
+	store := &s3Store{cfg: config.ChatUploadS3Config{
+		Endpoint:  "https://s3.example.com",
+		Bucket:    "bucket",
+		AccessKey: "AKID",
+		SecretKey: "secret",
+		Region:    "us-east-1",
+	}}
+	url, err := store.PresignGet("room1/u1/abc.png", time.Hour)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.HasPrefix(url, "https://s3.example.com/bucket/room1/u1/abc.png?") {
+		t.Fatalf("unexpected url prefix: %s", url)
+	}
+	for _, want := range []string{
+		"X-Amz-Algorithm=AWS4-HMAC-SHA256",
+		"X-Amz-Credential=",
+		"X-Amz-Date=",
+		"X-Amz-Expires=3600",
+		"X-Amz-SignedHeaders=host",
+		"X-Amz-Signature=",
+	} {
+		if !strings.Contains(url, want) {
+			t.Fatalf("missing %q in %s", want, url)
+		}
+	}
+}
+
+func TestS3Store_ReturnsProxyURL(t *testing.T) {
+	// Minimal 1x1 PNG
+	png := []byte{
+		0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0x00, 0x0d,
+		0x49, 0x48, 0x44, 0x52, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01,
+		0x08, 0x02, 0x00, 0x00, 0x00, 0x90, 0x77, 0x53, 0xde, 0x00, 0x00, 0x00,
+		0x0c, 0x49, 0x44, 0x41, 0x54, 0x08, 0xd7, 0x63, 0xf8, 0xcf, 0xc0, 0x00,
+		0x00, 0x00, 0x03, 0x00, 0x01, 0x00, 0x05, 0xfe, 0xd4, 0xef, 0x00, 0x00,
+		0x00, 0x00, 0x49, 0x45, 0x4e, 0x44, 0xae, 0x42, 0x60, 0x82,
+	}
+	var putPath string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		putPath = r.URL.Path
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer srv.Close()
+
+	store := &s3Store{
+		cfg: config.ChatUploadS3Config{
+			Endpoint:  srv.URL,
+			Bucket:    "b",
+			AccessKey: "AKID",
+			SecretKey: "secret",
+			Region:    "us-east-1",
+		},
+		inlineMaxBytes: 1, // force S3 path
+		diskFallback:   &diskStore{dir: t.TempDir()},
+	}
+	att, err := store.Store("room1", "user1", png)
+	if err != nil {
+		t.Fatal(err)
+	}
+	wantPrefix := "/uploads/chat/room1/user1/"
+	if !strings.HasPrefix(att.URL, wantPrefix) {
+		t.Fatalf("expected proxy URL under %s, got %s", wantPrefix, att.URL)
+	}
+	if att.StorageBackend != uploadBackendS3 {
+		t.Fatalf("expected s3 backend, got %s", att.StorageBackend)
+	}
+	wantPut := "/b/room1/user1/" + filepath.Base(att.URL)
+	if putPath != wantPut {
+		t.Fatalf("put path %q want %q", putPath, wantPut)
+	}
+}
+
+func TestChatUploadRoomID(t *testing.T) {
+	if room, ok := ChatUploadRoomID("r1/u1/h.png"); !ok || room != "r1" {
+		t.Fatalf("got room=%q ok=%v", room, ok)
+	}
+	for _, bad := range []string{"", "a", "a/b", "../x/y", "a/b/c/d", "a//b.png"} {
+		if _, ok := ChatUploadRoomID(bad); ok {
+			t.Fatalf("expected reject %q", bad)
+		}
+	}
+}
+
+func TestResolveChatUpload_DiskAndPresign(t *testing.T) {
+	dir := t.TempDir()
+	key := "room1/user1/deadbeef.png"
+	path := filepath.Join(dir, filepath.FromSlash(key))
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(path, []byte("img"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	file, redir, err := ResolveChatUpload(key, dir, nil)
+	if err != nil || redir != "" || file != path {
+		t.Fatalf("disk: file=%q redir=%q err=%v", file, redir, err)
+	}
+	if _, _, err := ResolveChatUpload("../etc/passwd", dir, nil); err == nil {
+		t.Fatal("expected traversal reject")
+	}
+	missing := "room1/user1/missing.png"
+	presigner := &s3Store{cfg: config.ChatUploadS3Config{
+		Endpoint: "https://s3.example.com", Bucket: "b", AccessKey: "a", SecretKey: "s", Region: "us-east-1",
+	}}
+	file, redir, err = ResolveChatUpload(missing, dir, presigner)
+	if err != nil || file != "" || !strings.Contains(redir, "X-Amz-Signature=") {
+		t.Fatalf("presign: file=%q redir=%q err=%v", file, redir, err)
 	}
 }
 

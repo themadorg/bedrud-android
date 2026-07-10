@@ -4,27 +4,27 @@ description: Native iOS-Anwendung
 order: 10
 ---
 
-Die Bedrud iOS-App ist mit SwiftUI erstellt und bietet ein natives Video-Meeting-Erlebnis mit Multi-Instance-Unterstützung und sicherer Speicherung von Anmeldeinformationen.
+The Bedrud iOS app is built with SwiftUI, providing a native video meeting experience with multi-instance support and secure credential storage.
 
-## Technologie-Stack
+## Technology Stack
 
-| Technologie | Version | Zweck |
-|------------|---------|-------|
-| Swift | 5.9+ | Sprache |
-| SwiftUI | Aktuell | UI-Framework |
-| LiveKit Swift SDK | 2.0+ | WebRTC-Medien |
-| KeychainAccess | 4.2.2+ | Sichere Speicherung von Anmeldeinformationen |
+| Technology | Version | Purpose |
+|-----------|---------|---------|
+| Swift | 5.9+ | Language |
+| SwiftUI | Latest | UI framework |
+| LiveKit Swift SDK | 2.0+ | WebRTC media |
+| KeychainAccess | 4.2.2+ | Secure credential storage |
 
-**Deployment-Ziel:** iOS 18.0
+**Deployment target:** iOS 18.0
 
-## Projektkonfiguration
+## Project Configuration
 
-Das Projekt verwendet **XCodeGen** zur Projektgenerierung aus `project.yml`:
+The project uses **XCodeGen** for project generation from `project.yml`:
 
-- Bundle-ID: `com.bedrud.ios`
-- Generierung mit: `xcodegen generate`
+- Bundle ID: `com.bedrud.ios`
+- Generated with: `xcodegen generate`
 
-## Verzeichnisstruktur
+## Directory Structure
 
 ```text
 apps/ios/Bedrud/
@@ -66,9 +66,9 @@ apps/ios/Bedrud/
     └── Components/                # Reusable SwiftUI components
 ```
 
-## Multi-Instance-Architektur
+## Multi-Instance Architecture
 
-Die iOS-App spiegelt die Android-Architektur für die Multi-Instance-Unterstützung wider.
+The iOS app mirrors the Android architecture for multi-instance support.
 
 ```mermaid
 flowchart TB
@@ -90,9 +90,9 @@ flowchart TB
     style InstanceManager fill:#f0f0f0,stroke:#333
 ```
 
-### Schlüsselmuster
+### Key Pattern
 
-Abhängigkeiten sind `@Published`-Eigenschaften auf `InstanceManager`, einem `ObservableObject`. Views empfangen ihn über `@EnvironmentObject`:
+Dependencies are `@Published` properties on `InstanceManager`, which is an `ObservableObject`. Views receive it via `@EnvironmentObject`:
 
 ```swift
 struct DashboardView: View {
@@ -106,7 +106,7 @@ struct DashboardView: View {
 }
 ```
 
-### Navigationsablauf
+### Navigation Flow
 
 ```mermaid
 flowchart LR
@@ -116,11 +116,11 @@ flowchart LR
     DashboardView -. "toolbar sheet" .-> InstanceSwitcherView["InstanceSwitcherView"]
 ```
 
-Der Instanzwechsler erscheint als `.sheet`, der aus der Dashboard-Toolbar aufgerufen wird.
+The instance switcher appears as a `.sheet` triggered from the Dashboard toolbar.
 
-## App-Einstiegspunkt
+## App Entry Point
 
-`BedrudApp.swift` initialisiert die Kerndienste und injiziert sie in die SwiftUI-Umgebung:
+`BedrudApp.swift` initializes the core services and injects them into the SwiftUI environment:
 
 ```swift
 @main
@@ -140,21 +140,21 @@ struct BedrudApp: App {
 }
 ```
 
-## Funktionen
+## Features
 
-### Sichere Speicherung
+### Secure Storage
 
-Verwendet **KeychainAccess** zur Speicherung von JWT-Token und sensiblen Anmeldeinformationen anstelle von UserDefaults.
+Uses **KeychainAccess** for storing JWT tokens and sensitive credentials, rather than UserDefaults.
 
 ### Deep Linking
 
-Verarbeitet URLs für den direkten Raumbeitritt und Raum-Codes.
+Handles URLs for direct room joining and room codes.
 
-### Einstellungen
+### Settings
 
-Benutzereinstellungen werden über `SettingsStore` mithilfe von UserDefaults gespeichert.
+User preferences are persisted via `SettingsStore` using UserDefaults.
 
-## Build
+## Building
 
 ```bash
 # Open in Xcode
@@ -170,8 +170,8 @@ make export-ios
 make build-ios-sim
 ```
 
-### Voraussetzungen
+### Requirements
 
-- Xcode (aktuellste stabile Version)
-- iOS 18.0 als Deployment-Ziel
-- Für Geräte-Builds: Apple-Entwicklerkonto und Provisioning-Profil
+- Xcode (latest stable)
+- iOS 18.0 deployment target
+- For device builds: Apple Developer account and provisioning profile

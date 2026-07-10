@@ -64,6 +64,25 @@ export function ChatTab({
             />
           </Field>
           <Field
+            label="Max image dimension (px)"
+            hint="Reject images wider or taller than this (default 8192). 0 = use default. Saved to database."
+          >
+            <TextInput
+              type="number"
+              min={0}
+              value={String(settings.chatUploadMaxDimension || 0)}
+              onChange={(v) => {
+                ce('chatUploadMaxDimension')
+                setSettings({
+                  ...settings,
+                  chatUploadMaxDimension: numOrPrev(v, settings.chatUploadMaxDimension || 0),
+                })
+              }}
+              placeholder="8192"
+              error={errors?.chatUploadMaxDimension}
+            />
+          </Field>
+          <Field
             label="Inline max bytes"
             hint="Max size for base64-embedded images. Files above this use the configured backend. Saved to database. Leave empty to use config.yaml value."
           >

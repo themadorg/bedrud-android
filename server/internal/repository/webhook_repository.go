@@ -1,9 +1,10 @@
 package repository
 
 import (
-	"bedrud/internal/models"
 	"errors"
 	"time"
+
+	"bedrud/internal/models"
 
 	"gorm.io/gorm"
 )
@@ -76,10 +77,11 @@ func (r *WebhookRepository) ListActive(event string) ([]models.Webhook, error) {
 		return all, nil
 	}
 	var filtered []models.Webhook
-	for _, w := range all {
+	for i := range all {
+		w := &all[i]
 		for _, e := range w.Events {
 			if e == event {
-				filtered = append(filtered, w)
+				filtered = append(filtered, all[i])
 				break
 			}
 		}

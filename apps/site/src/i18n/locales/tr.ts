@@ -152,7 +152,7 @@ export default {
       sipIntegrationJitsi: "SIP/Jibri ağ geçidi",
       sipIntegrationBbb: "SIP ağ geçidi",
       whiteboard: "Beyaz Tahta",
-      whiteboardBedrud: "Hayır",
+      whiteboardBedrud: "Ortak (Yjs)",
       whiteboardJitsi: "Hayır",
       whiteboardBbb: "Yerleşik beyaz tahta",
       maxUsers: "Maks. eşzamanlı kullanıcı",
@@ -464,6 +464,7 @@ export default {
     toggleMenu: "Menüyü aç/kapat",
     sections: {
       gettingStarted: "Başlarken",
+      using: "Bedrud'u Kullanma",
       architecture: "Mimari",
       backend: "Backend",
       api: "API",
@@ -509,6 +510,15 @@ export default {
       "getting-started/clients": "İstemci Kurulumu",
       "getting-started/configuration": "Yapılandırma",
       "getting-started/cli-reference": "CLI Referansı",
+      "using/account-and-settings": "Hesap ve Ayarlar",
+      "using/dashboard-and-rooms": "Pano ve Odalar",
+      "using/joining-a-meeting": "Toplantıya Katılma",
+      "using/stage-mode": "Sahne Modu",
+      "using/whiteboard": "Ortak Beyaz Tahta",
+      "using/youtube-watch": "YouTube İzleme",
+      "using/chat": "Toplantı İçi Sohbet",
+      "using/audio-and-push-to-talk": "Ses ve Bas-Konuş",
+      "using/meeting-controls": "Toplantı Kontrolleri",
       "architecture/overview": "Mimari Genel Bakış",
       "architecture/server": "Sunucu Mimarisi",
       "architecture/web": "Web Ön Uç",
@@ -639,6 +649,36 @@ export default {
       title: "Ses İşleme",
       description:
         "RNNoise ile çalışan yerleşik gürültü engelleme. Premium AI gürültü engelleme için isteğe bağlı Krisp entegrasyonu. Her aramada temiz ses.",
+    },
+    whiteboard: {
+      pain: "Başka bir uygulamadaki beyaz tahtalar toplantı akışını bozar.",
+      title: "Ortak Beyaz Tahta",
+      description:
+        "Odada paylaşılan tahtayı çizin, seçin ve düzenleyin. Yjs CRDT senkronu LiveKit veri kanalları üzerinden — ayrı beyaz tahta sunucusu yok. Kapılıysa Deneysel ayarlardan etkinleştirin.",
+    },
+    stageMode: {
+      pain: "Izgara, biri herkese sunana kadar idare eder.",
+      title: "Sahne Modu",
+      description:
+        "Sunucu düzenini öne çıkarın, katılımcı şeridini tutun, ekranı sahne katmanı olarak paylaşın ve geç katılanları doğru sahne durumuna indirin.",
+    },
+    inMeetingChat: {
+      pain: "Anket ve tepkisiz yan sohbetler herkesi arama ortasında Slack'e iter.",
+      title: "Sohbet, Anket ve Tepkiler",
+      description:
+        "Emoji tepkileri, canlı anketler ve görsel ekleriyle oda içi metin sohbeti. İstemci tarafı saklama sınırları uzun oturumlarda belleği sınırlar.",
+    },
+    youtubeWatch: {
+      pain: '"Hangi zaman damgasındasın?" birlikte izleme toplantılarını bitirir.',
+      title: "YouTube İzleme Partisi",
+      description:
+        "Bir YouTube URL'si yapıştırın ve odadaki herkes için kabaca senkron oynatın. Bitince tüm katılımcılar için katmanı kapatın. İsteğe bağlı deneysel anahtar.",
+    },
+    pushToTalk: {
+      pain: "Açık mikrofonlar her aramayı konferans telefonu karmaşasına çevirir.",
+      title: "Bas-Konuş",
+      description:
+        "İletmek için bir tuşa basılı tutun, bırakınca sessize alın. Basılı tutma tuşunu ses ayarlarından yapılandırın. Arama ortasında cihaz değişimi, yeniden bağlanmadan.",
     },
     bots: {
       pain: "Manuel toplantı görevleri zamanı boşa harcar - kayıt, transkripsiyon, notlar.",

@@ -1,47 +1,47 @@
-﻿---
-title: شروع سریع
-description: راه‌اندازی بدرود و پیوستن به جلسه ویدیویی در کمتر از ۵ دقیقه
+---
+title: Quick Start
+description: Deploy Bedrud and join a video meeting in under 5 minutes
 order: 1
 ---
 
-بدرود را راه‌اندازی کنید و در کمتر از ۵ دقیقه به جلسه ویدیویی بپیوندید.
+Deploy Bedrud and join a video meeting in under 5 minutes.
 
-**در این راهنما:**
+**In this guide:**
 
-۱. **دریافت CLI** — نصب با یک دستور (یا دانلود دستی)
-۲. **استقرار سرور** — `bedrud install` همه‌چیز را تنظیم می‌کند
-۳. **تأیید** — مطمئن شوید سرویس‌ها اجرا هستند
-۴. **ایجاد ادمین و پیوستن** — مرورگر را باز کنید، خودتان را ارتقا دهید، جلسه را شروع کنید
+1. **Get the CLI** — one-command install (or manual download)
+2. **Deploy the server** — `bedrud install` sets up everything
+3. **Verify** — confirm services are running
+4. **Create admin & join** — open browser, promote yourself, start meeting
 
-**اطلاعات بیشتر:**
+**More info:**
 
-- [نصب‌کننده CLI](/fa/docs/getting-started/cli-installer) — فلگ‌ها، پلتفرم‌ها، نصب آفلاین
-- [نصب سرور](/fa/docs/getting-started/installation) — package managerها، Docker، تنظیمات پیشرفته
-- [پیکربندی](/fa/docs/getting-started/configuration) — پورت‌ها، دیتابیس، احراز هویت، TURN
+- [CLI Installer](/fa/docs/getting-started/cli-installer) — flags, platforms, offline installs
+- [Server Installation](/fa/docs/getting-started/installation) — package managers, Docker, advanced options
+- [Configuration](/fa/docs/getting-started/configuration) — ports, database, auth, TURN
 
-> **یک باینری، بدون نیاز به اینترنت پس از دانلود.** media server و SQLite داخلی دارد — در شبکه‌های ایزوله هم کار می‌کند.
-
----
-
-## آنچه نیاز دارید
-
-| نیاز | جزئیات |
-|------|--------|
-| سرور لینوکسی | amd64 یا arm64، با دسترسی `sudo` و سیستم init پشتیبانی‌شده (systemd، OpenRC یا SysV init). macOS/Windows: از Docker یا WSL2 برای سرور استفاده کنید |
-| پورت‌های باز | `8090`، `7880`، `50000–60000/udp`. برای TLS خودکار: `80` و `443` هم باز باشد |
-| دامنه (اختیاری) | رکورد DNS A به IP سرور. بدون دامنه؟ با IP هم کار می‌کند |
-
-> **نحوه کار:** شما یک سرور **بدرود** اجرا می‌کنید. افراد در **مرورگر** خود join می‌شوند (بدون نصب) یا از **اپلیکیشن بومی** (Android، Windows، macOS، Linux) استفاده می‌کنند.
+> **Single binary, no internet needed after download.** It includes an embedded media server and SQLite — works on isolated networks. Transfer file, run one command, done.
 
 ---
 
-## ۱. دریافت CLI بِدْرود
+## What You Need
+
+| Requirement | Details |
+|-------------|---------|
+| A Linux server | amd64 or arm64, with `sudo` access and a supported init system (systemd, OpenRC, or SysV init). macOS/Windows: use Docker or WSL2 for server |
+| Open ports | `8090`, `7880`, `50000–60000/udp`. For auto-TLS: also `80` and `443` (or set `httpPort` to unprivileged port — see [Configuration](/fa/docs/getting-started/configuration#privileged-ports)) |
+| A domain (optional) | With DNS A record pointing to your server. No domain? Works with IP — see alternatives below |
+
+> **How it works:** You run one Bedrud **server**. People join meetings in their **browser** (no install) or via **native apps** (Android, Windows, macOS, Linux).
+
+---
+
+## 1. Get the Bedrud CLI
 
 <Tabs>
   <TabsList>
     <TabsTrigger value="macos-linux">macOS / Linux</TabsTrigger>
     <TabsTrigger value="windows">Windows (PowerShell)</TabsTrigger>
-    <TabsTrigger value="manual">دانلود دستی</TabsTrigger>
+    <TabsTrigger value="manual">Manual Download</TabsTrigger>
   </TabsList>
   <TabsContent value="macos-linux">
 
@@ -49,19 +49,19 @@ order: 1
     curl -fsSL https://bedrud.org/install.sh | bash
     ```
 
-    پس از نصب، شل را بارگذاری مجدد کنید:
+    Reload your shell after install:
 
     ```bash
-    source ~/.bashrc  # یا ~/.zshrc
+    source ~/.bashrc  # or ~/.zshrc
     ```
 
-    بررسی:
+    Verify:
 
     ```bash
     bedrud --version
     ```
 
-    برای فلگ‌ها (`--version`، `--install-dir`، `--skip-shell`، نصب آفلاین)، [نصب‌کننده CLI](/fa/docs/getting-started/cli-installer) را ببینید.
+    For flags (`--version`, `--install-dir`, `--skip-shell`, offline installs), see [CLI Installer](/fa/docs/getting-started/cli-installer).
   </TabsContent>
   <TabsContent value="windows">
 
@@ -69,7 +69,7 @@ order: 1
     irm https://bedrud.org/install.ps1 | iex
     ```
 
-    ترمینال را ببندید و دوباره باز کنید، سپس بررسی کنید:
+    Close and reopen your terminal, then verify:
 
     ```powershell
     bedrud --version
@@ -77,7 +77,7 @@ order: 1
   </TabsContent>
   <TabsContent value="manual">
 
-    به صورت دستی دانلود و استخراج کنید. `linux_amd64` را با پلتفرم خود جایگزین کنید (`linux_arm64`، `darwin_amd64`، `darwin_arm64`):
+    Download and extract manually. Replace `linux_amd64` with your platform (`linux_arm64`, `darwin_amd64`, `darwin_arm64`):
 
     ```bash
     curl -fsSL -o bedrud.tar.xz https://github.com/themadorg/bedrud/releases/latest/download/bedrud_linux_amd64.tar.xz
@@ -86,68 +86,68 @@ order: 1
     sudo mv bedrud /usr/local/bin/
     ```
 
-    برای تمام پلتفرم‌های هدف، به [نصب‌کننده CLI](/fa/docs/getting-started/cli-installer#platform-support) ببینید.
+    For all platform targets, see [CLI Installer](/fa/docs/getting-started/cli-installer#platform-targets).
 
-    > **اینترنت ندارید؟** در هر ماشین‌ای دانلود کنید، با USB یا `scp bedrud.tar.xz user@server:/tmp/` منتقل کنید، سپس extract کنید. باینری کاملاً self-contained است — بدون درخواست خروجی پس از انتقال.
+    > **No internet on server?** Download on any machine, transfer via USB or `scp bedrud.tar.xz user@server:/tmp/`, then extract there. Binary is fully self-contained — zero outbound requests after transfer.
 
-    > **دانلود شکست خورد؟** اتصال اینترنت را بررسی کنید، یا URL را در [GitHub Releases](https://github.com/themadorg/bedrud/releases/latest) تأیید کنید.
+    > **Download failed?** Check internet access, or verify URL at [github.com/themadorg/bedrud/releases](https://github.com/themadorg/bedrud/releases/latest).
   </TabsContent>
 </Tabs>
 
 ---
 
-## ۲. استقرار سرور
+## 2. Deploy the Server
 
-> **راه‌اندازی سرور به لینوکس با سیستم init پشتیبانی‌شده (systemd، OpenRC یا SysV init) نیاز دارد.** macOS و Windows از `bedrud install` پشتیبانی نمی‌کنند — به جای آن از [Docker](#docker) یا [WSL2](#سیستم‌های-غیر-لینوکسی) استفاده کنید.
+> **Server setup requires Linux with a supported init system (systemd, OpenRC, or SysV init).** macOS and Windows don't support `bedrud install` directly — use [Docker](#docker) or [WSL2](#non-linux-systems) instead.
 
-`meet.example.com` و `admin@example.com` را با مقادیر خود جایگزین کنید:
+Replace `meet.example.com` and `admin@example.com` with your values:
 
 ```bash
 sudo bedrud install --tls --domain meet.example.com --email admin@example.com
 ```
 
-باینری سرور را در `/usr/local/bin` نصب می‌کند، config تولید می‌کند، init سرویس‌ها (systemd، OpenRC یا SysV init) ایجاد می‌کند، TLS تأمین و همه‌چیز را شروع می‌کند.
+Installs server binary to `/usr/local/bin`, generates config, creates init services (systemd, OpenRC, or SysV init), provisions TLS, starts everything.
 
-> **پورت ۸۰ یا ۴۴۳ اشغال است؟** سرویس‌های متضاد را متوقف کنید: `sudo systemctl stop nginx apache2 caddy`، سپس دوباره اجرا کنید.
+> **Port 80 or 443 busy?** Stop conflicting services: `sudo systemctl stop nginx apache2 caddy`, then re-run.
 
-> **دامنه ندارید؟** از IP سرور استفاده کنید:
+> **No domain?** Use your server IP instead:
 > ```bash
 > sudo bedrud install --tls --ip 1.2.3.4
 > ```
-> از self-signed certificate استفاده می‌شود. مرورگر هشدار می‌دهد اما ویدیو کار می‌کند. برای certificate معتبر در شبکه داخلی [راهنمای TLS داخلی](/fa/docs/guides/internal-tls) را ببینید.
+> This uses a self-signed certificate. Browsers will warn but video works. For trusted certs on internal networks, see [Internal TLS Guide](/fa/docs/guides/internal-tls).
 
 ---
 
-## ۳. تأیید
+## 3. Verify
 
 ```bash
 curl -s -o /dev/null -w "%{http_code}" http://localhost:8090
 ```
 
-انتظار: `200`
+Expect: `200`
 
-> **۲۰۰ نیست؟** وضعیت سرویس: `sudo systemctl status bedrud livekit`. لاگ‌ها: `journalctl -u bedrud -u livekit --no-pager -n 50`.
+> **Not 200?** Check service status: `sudo systemctl status bedrud livekit`. Check logs: `journalctl -u bedrud -u livekit --no-pager -n 50`.
 
 ---
 
-## ۴. ثبت‌نام و ایجاد ادمین
+## 4. Register & Create Admin
 
-`https://meet.example.com` (یا `https://<your-ip>:8090`) را در مرورگر خود باز کنید:
+Open `https://meet.example.com` (or `https://<your-ip>:8090`) in your browser:
 
 <CreateAdmin createOption />
 
-۱. وارد شوید (یا رفرش کنید) — بخش **Admin** در نوار کناری ظاهر می‌شود (نمای کلی، کاربران، اتاق‌ها، تنظیمات). موفقیت: شما ادمین هستید.
-۲. **ایجاد اتاق** ← **پیوستن** ← **اشتراک‌گذاری ویدیو/صدا** - هنگام درخواست، اجازه دوربین/میکروفون را بدهید
+1. Log in (or refresh) — **Admin** section appears in sidebar (Overview, Users, Rooms, Settings). Success: you're admin.
+2. **Create a room** → **Join** → **Share video/audio** — grant camera/mic permissions when prompted
 
-> **داشبورد ادمین** — پس از ارتقاء، وارد شوید و به `/dashboard/admin` بروید. مدیریت کاربران، اتاق‌ها، تنظیمات سیستم و توکن‌های دعوت.
+> **Admin dashboard** — After promoting, log in to access admin panel at `/dashboard/admin`. Manage users, rooms, system settings, and invite tokens.
 
-> **مرجع CLI** — مدیریت کامل کاربران: `bedrud user promote`، `demote`، `create`، `delete`.
+> **CLI reference** — Full user management: `bedrud user promote`, `demote`, `create`, `delete`.
 
-**کلاینت‌های بومی** برای Android، Windows، macOS، و Linux: [GitHub Releases](https://github.com/themadorg/bedrud/releases/latest). یا لینک جلسه را به اشتراک بگذارید - شرکت‌کنندگان در هر مرورگری می‌پیوندند.
+**Native clients** for Android, Windows, macOS, and Linux: [GitHub Releases](https://github.com/themadorg/bedrud/releases/latest). Or share the meeting link — participants join in any browser.
 
 ---
 
-## مسیرهای نصب جایگزین
+## Alternative Install Paths
 
 ### Docker
 
@@ -177,11 +177,11 @@ docker run -d --name bedrud \
   ghcr.io/themadorg/bedrud:latest-distroless
 ```
 
-تنظیمات سفارشی، Docker Compose، و متغیرهای محیطی: به [راهنمای Docker](/fa/docs/guides/docker) ببینید.
+Custom config, Docker Compose, and env vars: see [Docker guide](/fa/docs/guides/docker).
 
-### ساخت از منبع
+### Build from Source
 
-نیاز به [Go 1.24+](https://go.dev/dl/) و [Bun](https://bun.sh/) دارد:
+Requires [Go 1.24+](https://go.dev/dl/) and [Bun](https://bun.sh/):
 
 ```bash
 git clone https://github.com/themadorg/bedrud.git
@@ -190,85 +190,85 @@ make init
 make local-run
 ```
 
-`make init` LiveKit را نصب می‌کند، تنظیمات را ایجاد می‌کند، وابستگی‌ها را دریافت می‌کند. `make local-run` می‌سازد و روی `http://localhost:8090` شروع می‌کند.
+`make init` installs LiveKit, creates config, fetches deps. `make local-run` builds and starts on `http://localhost:8090`.
 
-### HTTP ساده (فقط توسعه / localhost)
+### Plain HTTP (dev / localhost only)
 
 ```bash
 sudo bedrud install --ip 127.0.0.1
 ```
 
-> **هشدار:** مرورگرها دوربین/میکروفون را روی غیر HTTPS بجز `localhost` مسدود می‌کنند. HTTP فقط برای توسعه است.
+> **Warning:** Browsers block camera/mic on non-HTTPS except `localhost`. HTTP is dev-only.
 
-### سیستم‌های غیر لینوکسی
+### Non-Linux Systems
 
-دستور `bedrud install` init سرویس‌ها (systemd، OpenRC یا SysV init) ایجاد می‌کند و فقط برای لینوکس است. نصب‌کننده CLI (مرحله ۱) همه‌جا کار می‌کند و باینری را در PATH قرار می‌دهد. برای راه‌اندازی سرور، از Docker یا WSL2 استفاده کنید.
+The `bedrud install` command sets up init services (systemd, OpenRC, or SysV init) and is Linux-only. The CLI installer (step 1) works everywhere and puts the binary in PATH. For server setup, use Docker or WSL2.
 
-| سیستم‌عامل | نحوه انجام |
-|-------------|-------------|
-| macOS   | نصب‌کننده CLI به صورت خودکار در `~/bin/` نصب می‌کند |
-| Windows | نصب‌کننده CLI به صورت خودکار در `%USERPROFILE%\bin\` نصب می‌کند |
-| Docker  | روی هر سیستم‌عاملی با Docker کار می‌کند (بالا را ببینید) |
-
----
-
-## شبکه‌های داخلی
-
-بدون دامنه عمومی یا اینترنت خروجی؟ به [راهنمای TLS داخلی](/fa/docs/guides/internal-tls) برای تنظیم CA خصوصی و پیکربندی ذخیره‌سازی اعتماد کلاینت ببینید.
+| OS      | How                                                     |
+|---------|---------------------------------------------------------|
+| macOS   | CLI installer auto-installs to `~/bin/`                 |
+| Windows | CLI installer auto-installs to `%USERPROFILE%\bin\`     |
+| Docker  | Works on any OS with Docker (see above)                 |
 
 ---
 
-## پیکربندی
+## Internal Networks
 
-نصب‌کننده `/etc/bedrud/config.yaml` تولید می‌کند. پیش‌فرض‌ها برای اکثر موارد مناسب‌اند.
-در تولید، `jwtSecret` و `sessionSecret` را تغییر دهید و restart کنید:
+No public domain or outbound internet? See [Internal TLS Guide](/fa/docs/guides/internal-tls) for private CA setup and client trust store configuration.
+
+---
+
+## Configuration
+
+Installer generates `/etc/bedrud/config.yaml`. Defaults work for most setups.
+Change `jwtSecret` and `sessionSecret` for production, then restart:
 
 ```bash
 sudo systemctl restart bedrud livekit
 ```
 
-برای تنظیم ظرفیت اتاق، زمان‌های انقضا، یا پورت‌های مدیا، به [بخش LiveKit در پیکربندی](/fa/docs/getting-started/configuration#livekit-configuration) ببینید.
+To adjust room capacity, timeouts, or media ports, see [LiveKit section in Configuration](/fa/docs/getting-started/configuration#livekit-configuration).
 
-مرجع کامل: [پیکربندی](/fa/docs/getting-started/configuration)
-
----
-
-## عیب‌یابی
-
-| مشکل | رفع |
-|------|-----|
-| پورت ۸۰/۴۴۳ در استفاده است | `sudo systemctl stop nginx apache2 caddy` |
-| سرویس‌ها شروع نمی‌شوند | `journalctl -u bedrud -u livekit --no-pager -n 50` |
-| خطاهای گواهی TLS | DNS را تأیید کنید: `dig meet.example.com`. باید به IP سرور اشاره کند |
-| بدون ویدیو / WebRTC شکست خورد | برای دوربین HTTPS لازم است. از `--tls` استفاده کنید. UDP ۵۰۰۰۰–۶۰۰۰۰ را روی فایروال باز کنید |
-| تداخل پورت LiveKit | از فلگ‌های `--lk-port`، `--lk-tcp-port`، `--lk-udp-port` استفاده کنید |
-| فایروال مدیا را مسدود می‌کند | `sudo ufw allow 8090/tcp && sudo ufw allow 7880/tcp && sudo ufw allow 50000:60000/udp` |
-| هشدارهای self-signed certificate | به [راهنمای TLS داخلی](/fa/docs/guides/internal-tls) برای تنظیم CA خصوصی ببینید |
+Full reference: [Configuration](/fa/docs/getting-started/configuration)
 
 ---
 
-## حذف
+## Troubleshooting
+
+| Problem | Fix |
+|---------|-----|
+| Port 80/443 in use | `sudo systemctl stop nginx apache2 caddy` |
+| Services won't start | `journalctl -u bedrud -u livekit --no-pager -n 50` |
+| TLS cert errors | Verify DNS: `dig meet.example.com`. Must point to server IP |
+| No video / WebRTC failed | HTTPS required for camera. Use `--tls`. Open UDP 50000–60000 on firewall |
+| LiveKit port conflicts | Use `--lk-port`, `--lk-tcp-port`, `--lk-udp-port` flags |
+| Firewall blocking media | `sudo ufw allow 8090/tcp && sudo ufw allow 7880/tcp && sudo ufw allow 50000:60000/udp` |
+| Self-signed cert warnings | See [Internal TLS Guide](/fa/docs/guides/internal-tls) for private CA setup |
+
+---
+
+## Teardown
 
 ```bash
-# نصب باینری
+# Binary install
 sudo bedrud uninstall
 
 # Docker
 docker stop bedrud && docker rm bedrud && docker volume rm bedrud-data
 
-# ساخت از منبع
-# برای توقف Ctrl+C، سپس: make clean
+# Source build
+# Ctrl+C to stop, then: make clean
 ```
 
 ---
 
-## مراحل بعدی
+## Next Steps
 
-- [نصب‌کننده CLI](/fa/docs/getting-started/cli-installer) — فلگ‌ها، پلتفرم‌های هدف، نصب آفلاین، عیب‌یابی
-- [مرجع پیکربندی](/fa/docs/getting-started/configuration) — پورت‌ها، دیتابیس، providerهای احراز هویت، TURN
-- [راهنمای نصب](/fa/docs/getting-started/installation) — package managerها، Docker، flagهای پیشرفته
-- [راهنمای TLS داخلی](/fa/docs/guides/internal-tls) — استقرار offline، CA خصوصی
-- [راهنمای استقرار](/fa/docs/guides/deployment) — تنظیمات production، reverse proxy، مقیاس‌پذیری
-- [نمای کلی معماری](/fa/docs/architecture/overview) — نحوه اتصال اجزا
-- [مستندات API](http://localhost:8090/api/swagger) — Swagger UI (نمونه در حال اجرا)
+- [CLI Installer Reference](/fa/docs/getting-started/cli-installer) — flags, platform targets, offline installs, troubleshooting
+- [Configuration Reference](/fa/docs/getting-started/configuration) — ports, database, auth providers, TURN
+- [Installation Guide](/fa/docs/getting-started/installation) — package managers, Docker, advanced flags
+- [Internal TLS Guide](/fa/docs/guides/internal-tls) — air-gapped deployment, private CA
+- [Deployment Guide](/fa/docs/guides/deployment) — production setup, reverse proxy, scaling
+- [Architecture Overview](/fa/docs/architecture/overview) — how pieces fit together
+- [API Docs](http://localhost:8090/api/swagger) — Swagger UI (running instance)
 

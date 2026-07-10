@@ -17,6 +17,16 @@
 package main
 
 import (
+	"fmt"
+	"net/http"
+	"net/http/httputil"
+	"net/url"
+	"os"
+	"os/signal"
+	"strings"
+	"syscall"
+	"time"
+
 	"bedrud/config"
 	"bedrud/internal/auth"
 	"bedrud/internal/database"
@@ -29,16 +39,6 @@ import (
 	"bedrud/internal/services"
 	"bedrud/internal/storage"
 	"bedrud/internal/utils"
-	"fmt"
-	"net/http"
-	"net/http/httputil"
-	"net/url"
-	"os"
-	"os/signal"
-	"path/filepath"
-	"strings"
-	"syscall"
-	"time"
 
 	_ "bedrud/docs"
 
@@ -178,7 +178,11 @@ func run() error {
 	// Proxy LiveKit traffic if we are using internal host
 	if strings.Contains(strings.ToLower(cfg.LiveKit.InternalHost), "127.0.0.1") ||
 		strings.Contains(strings.ToLower(cfg.LiveKit.InternalHost), "localhost") {
-		target, _ := url.Parse("http://127.0.0.1:7880")
+		lkProxy := cfg.LiveKit.InternalHost
+		if lkProxy == "" {
+			lkProxy = "http://127.0.0.1:7880"
+		}
+		target, _ := url.Parse(lkProxy)
 		rp := httputil.NewSingleHostReverseProxy(target)
 
 		// Custom director to handle path stripping and logging
@@ -212,7 +216,7 @@ func run() error {
 	webhookRepo := repository.NewWebhookRepository(database.GetDB())
 	recordingRepo := repository.NewRecordingRepository(database.GetDB())
 	// TODO oncoming feature: recordingStore, scheduler recording cleanup
-	// recordingStore := storage.NewRecordingStore(&cfg.Recording, cfg.Chat.Uploads.S3)
+	// recordingStore := storage.NewRecordingStore(&cfg.Recording, &cfg.Chat.Uploads.S3)
 
 	scheduler.Initialize(database.GetDB(), roomRepo, userRepo, recordingRepo, &cfg.LiveKit, &cfg.Server, nil, nil)
 	defer scheduler.Stop()
@@ -291,10 +295,14 @@ func run() error {
 	api.Post("/auth/logout", middleware.Protected(), middleware.RequireEmailVerified(cfg, userRepo), authHandler.Logout)
 	api.Get("/auth/me", middleware.Protected(), middleware.RequireEmailVerified(cfg, userRepo), authHandler.GetMe)
 	api.Put("/auth/me", middleware.Protected(), middleware.RequireEmailVerified(cfg, userRepo), authHandler.UpdateProfile)
+	api.Post("/auth/me/avatar", middleware.Protected(), middleware.RequireEmailVerified(cfg, userRepo), authHandler.UploadAvatar)
+	api.Delete("/auth/me/avatar", middleware.Protected(), middleware.RequireEmailVerified(cfg, userRepo), authHandler.DeleteAvatar)
 	api.Put("/auth/password", middleware.Protected(), middleware.RequireEmailVerified(cfg, userRepo), authHandler.ChangePassword)
 	api.Get("/auth/verify", authHandler.VerifyEmail)
 	api.Get("/auth/verify/status", middleware.Protected(), authHandler.CheckVerificationStatus)
 	api.Post("/auth/verify/resend", middleware.ResendRateLimiter(cfg.RateLimit), authHandler.ResendVerification)
+	api.Post("/auth/forgot-password", middleware.AuthRateLimiter(cfg.RateLimit), authHandler.ForgotPassword)
+	api.Post("/auth/reset-password", middleware.AuthRateLimiter(cfg.RateLimit), authHandler.ResetPassword)
 	api.Get("/auth/:provider/login", middleware.AuthRateLimiter(cfg.RateLimit), handlers.BeginAuthHandler)
 	api.Get("/auth/:provider/callback", middleware.AuthRateLimiter(cfg.RateLimit), authHandler.CallbackHandler)
 
@@ -317,11 +325,16 @@ func run() error {
 		uploadDir = "./data/uploads/chat"
 	}
 	var s3Deleter storage.ObjectDeleter
+	var s3Presigner storage.ObjectPresigner
 	if cfg.Chat.Uploads.Backend == "s3" &&
 		cfg.Chat.Uploads.S3.Endpoint != "" &&
 		cfg.Chat.Uploads.S3.Bucket != "" &&
 		cfg.Chat.Uploads.S3.AccessKey != "" {
-		s3Deleter = storage.NewS3Deleter(cfg.Chat.Uploads.S3)
+		s3Client := storage.NewS3Deleter(&cfg.Chat.Uploads.S3)
+		s3Deleter = s3Client
+		if p, ok := s3Client.(storage.ObjectPresigner); ok {
+			s3Presigner = p
+		}
 	}
 	uploadTracker := storage.NewChatUploadTracker(database.GetDB(), uploadDir, s3Deleter)
 	lkClient := lkutil.NewClient(&cfg.LiveKit)
@@ -339,7 +352,9 @@ func run() error {
 	api.Post("/room/create", middleware.Protected(), middleware.RequireEmailVerified(cfg, userRepo), middleware.APIRateLimiter(cfg.RateLimit), roomHandler.CreateRoom)
 	api.Post("/room/join", middleware.Protected(), middleware.RequireEmailVerified(cfg, userRepo), roomHandler.JoinRoom)
 	api.Post("/room/guest-join", middleware.GuestRateLimiter(cfg.RateLimit), roomHandler.GuestJoinRoom)
+	api.Post("/room/refresh-token", middleware.Protected(), middleware.RequireEmailVerified(cfg, userRepo), middleware.APIRateLimiter(cfg.RateLimit), roomHandler.RefreshLiveKitToken)
 	api.Get("/room/list", middleware.Protected(), middleware.RequireEmailVerified(cfg, userRepo), roomHandler.ListRooms)
+	api.Get("/room/archived", middleware.Protected(), middleware.RequireEmailVerified(cfg, userRepo), roomHandler.ListArchivedRooms)
 	api.Post("/room/:roomId/kick/:identity", middleware.Protected(), middleware.RequireEmailVerified(cfg, userRepo), roomHandler.KickParticipant)
 	api.Post("/room/:roomId/mute/:identity", middleware.Protected(), middleware.RequireEmailVerified(cfg, userRepo), roomHandler.MuteParticipant)
 	api.Post("/room/:roomId/ban/:identity", middleware.Protected(), middleware.RequireEmailVerified(cfg, userRepo), roomHandler.BanParticipant)
@@ -352,7 +367,9 @@ func run() error {
 	api.Post("/room/:roomId/ask/:identity/:action", middleware.Protected(), middleware.RequireEmailVerified(cfg, userRepo), roomHandler.AskParticipantAction)
 	api.Post("/room/:roomId/spotlight/:identity", middleware.Protected(), middleware.RequireEmailVerified(cfg, userRepo), roomHandler.SpotlightParticipant)
 	api.Post("/room/:roomId/screenshare/:identity/stop", middleware.Protected(), middleware.RequireEmailVerified(cfg, userRepo), roomHandler.StopScreenShare)
+	api.Get("/room/:roomId/presence", middleware.APIRateLimiter(cfg.RateLimit), roomHandler.GetRoomPresence)
 	api.Get("/room/:roomId/participant/:identity/info", middleware.Protected(), middleware.RequireEmailVerified(cfg, userRepo), roomHandler.GetParticipantInfo)
+	api.Get("/room/:roomId/participant/:identity/profile", middleware.Protected(), middleware.RequireEmailVerified(cfg, userRepo), roomHandler.GetParticipantProfile)
 	api.Post("/room/:roomId/stage/:identity/bring", middleware.Protected(), middleware.RequireEmailVerified(cfg, userRepo), roomHandler.BringToStage)
 	api.Post("/room/:roomId/stage/:identity/remove", middleware.Protected(), middleware.RequireEmailVerified(cfg, userRepo), roomHandler.RemoveFromStage)
 	api.Put("/room/:roomId/settings", middleware.Protected(), middleware.RequireEmailVerified(cfg, userRepo), roomHandler.UpdateSettings)
@@ -371,10 +388,57 @@ func run() error {
 	}
 	app.Get("/uploads/chat/*", middleware.Protected(), middleware.RequireEmailVerified(cfg, userRepo), func(c *fiber.Ctx) error {
 		path := c.Params("*")
-		if strings.Contains(path, "..") {
+		roomID, ok := storage.ChatUploadRoomID(path)
+		if !ok {
 			return c.Status(400).JSON(fiber.Map{"error": "Invalid path"})
 		}
-		return c.SendFile(filepath.Join(uploadDir, path))
+		claims, _ := c.Locals("user").(*auth.Claims)
+		if claims == nil {
+			return c.Status(401).JSON(fiber.Map{"error": "Unauthorized"})
+		}
+		isSuper := false
+		for _, a := range claims.Accesses {
+			if a == string(models.AccessSuperAdmin) {
+				isSuper = true
+				break
+			}
+		}
+		if !isSuper {
+			ok, err := roomRepo.IsParticipant(roomID, claims.UserID)
+			if err != nil {
+				return c.Status(500).JSON(fiber.Map{"error": "Failed to verify access"})
+			}
+			if !ok {
+				return c.Status(403).JSON(fiber.Map{"error": "Not a participant in this room"})
+			}
+		}
+		filePath, redirect, err := storage.ResolveChatUpload(path, uploadDir, s3Presigner)
+		if err != nil {
+			if err.Error() == "not found" {
+				return c.Status(404).JSON(fiber.Map{"error": "Not found"})
+			}
+			return c.Status(400).JSON(fiber.Map{"error": "Invalid path"})
+		}
+		if redirect != "" {
+			return c.Redirect(redirect, fiber.StatusFound)
+		}
+		return c.SendFile(filePath)
+	})
+
+	avatarDir := storage.AvatarDir()
+	if err := os.MkdirAll(avatarDir, 0o755); err != nil {
+		log.Warn().Err(err).Str("dir", avatarDir).Msg("Could not create avatar upload dir")
+	}
+	app.Get("/uploads/avatars/*", func(c *fiber.Ctx) error {
+		path := c.Params("*")
+		if path == "" {
+			return c.Status(400).JSON(fiber.Map{"error": "Missing file path"})
+		}
+		resolved, err := storage.ResolveAvatarFile(path)
+		if err != nil {
+			return c.Status(400).JSON(fiber.Map{"error": "Invalid path"})
+		}
+		return c.SendFile(resolved)
 	})
 
 	// Initialize handlers

@@ -1,8 +1,9 @@
 package repository
 
 import (
-	"bedrud/internal/models"
 	"fmt"
+
+	"bedrud/internal/models"
 
 	"gorm.io/gorm"
 )

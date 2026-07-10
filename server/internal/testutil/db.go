@@ -1,9 +1,10 @@
 package testutil
 
 import (
+	"testing"
+
 	"bedrud/internal/database"
 	"bedrud/internal/models"
-	"testing"
 
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
@@ -33,6 +34,7 @@ func SetupTestDB(t *testing.T) *gorm.DB {
 		&models.SystemSettings{},
 		&models.InviteToken{},
 		&models.UserPreferences{},
+		&models.VerificationEvent{},
 		&models.ChatUpload{},
 		&models.Job{},
 		&models.Webhook{},

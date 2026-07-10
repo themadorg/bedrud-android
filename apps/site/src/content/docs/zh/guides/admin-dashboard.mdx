@@ -1,280 +1,294 @@
 ---
-title: 管理仪表板
-description: 通过 Web UI 管理用户、房间、设置和邀请令牌
+title: 管理后台
+description: 在 Web UI 中管理用户、房间、设置和邀请令牌
 order: 35
 ---
 
-管理仪表板为管理您的 Bedrud 实例提供了 Web 界面。Superadmin 可以查看系统统计数据、管理用户和房间、配置实例级设置以及生成邀请令牌。
+The admin dashboard provides a web interface for managing your Bedrud instance. Superadmins can view system statistics, manage users and rooms, configure instance-wide settings, and generate invite tokens.
 
-## 前提条件
+## Prerequisites
 
-- **Superadmin 访问：** 您的用户 `accesses` 数组中必须包含 `superadmin`。
-- **首次管理员设置：** 安装 Bedrud 后，通过 CLI 创建一个用户并将其提升：
+- **Superadmin access:** You must have `superadmin` in your user's `accesses` array.
+- **First admin setup:** After installing Bedrud, create a user and promote them via the CLI:
 
 ```bash
 bedrud user create --email "admin@example.com" --password "securepassword" --name "Admin"
 bedrud user promote --email "admin@example.com"
 ```
 
-没有用于创建首个 superadmin 的 Web UI 或 API。这是出于安全考虑的有意设计。
+There is no web UI or API to create the first superadmin. This is intentional for security.
 
-## 访问管理面板
+## Accessing the Admin Panel
 
-获得 superadmin 访问权限后，管理面板在 Bedrud Web 应用的 `/dashboard/admin` 路径下可用。
+Once you have superadmin access, the admin panel is available at `/dashboard/admin` in your Bedrud web application.
 
-**导航：**
-- **侧边栏** 显示一个"管理"部分，包含概览、用户、房间和设置的链接。此部分仅对 superadmin 可见。
-- **右上角的用户下拉菜单** 包含一个带有盾牌图标的"管理面板"链接。
-- 尝试访问 `/dashboard/admin/*` URL 的非管理员用户将被自动重定向到 `/dashboard`。
+**Navigation:**
+- The **sidebar** shows an "Admin" section with links to Overview, Users, Rooms, and Settings. This section is only visible to superadmins.
+- The **top-right user dropdown** includes an "Admin panel" link with a shield icon.
+- Non-admin users who attempt to visit `/dashboard/admin/*` URLs are automatically redirected to `/dashboard`.
 
 ---
 
-## 概览页面
+## Overview Page
 
-位于 `/dashboard/admin` 的概览页面提供了一个仪表板，展示关键系统指标。
+The overview page at `/dashboard/admin` provides a dashboard with key system metrics.
 
-### 系统统计
+### System Stats
 
-卡片显示：
-- **在线用户：** 所有房间中不重复的活跃参与者总数
-- **总房间数：** 实例上的房间总数
-- **总用户数：** 已注册用户总数
+Cards display:
+- **Online Users:** Total distinct active participants across all rooms
+- **Total Rooms:** Total rooms on the instance
+- **Total Users:** Total registered users
 
-### TLS 证书状态
+### TLS Certificate Status
 
-一个颜色编码的指示器显示服务器 TLS 证书的状态：
+A color-coded indicator shows the state of your server's TLS certificate:
 
-| 状态 | 颜色 | 含义 |
+| Status | Color | Meaning |
 |---|---|---|
-| 有效 | 绿色 | 证书有效 |
-| 即将过期 | 琥珀色 | 将在 30 天内过期 |
-| 已过期 | 红色 | 证书已过期 |
-| 未配置 | 灰色 | TLS 已禁用 |
+| Valid | Green | Certificate is valid |
+| Expiring Soon | Amber | Expires within 30 days |
+| Expired | Red | Certificate has expired |
+| Not Configured | Gray | TLS is disabled |
 
-证书状态每 5 分钟刷新一次。
+The certificate status refreshes every 5 minutes.
 
-### 图表
+### Charts
 
-- **房间创建：** 过去 8 周创建的柱状图
-- **近期注册：** 最近注册的用户列表
-
----
-
-## 用户管理
-
-### 用户列表
-
-位于 `/dashboard/admin/users` 的用户列表在一个可搜索、可排序的表格中显示所有已注册用户。
-
-**列：**
-- **姓名：** 用户显示名称
-- **邮箱：** 用户邮箱地址
-- **提供商：** 认证方式（local、google、github、guest、passkey）
-- **角色：** 访问级别徽章。对拥有 `superadmin` 访问权限的用户显示"Superadmin"。
-- **创建时间：** 注册日期
-- **状态：** 活跃/被封禁 切换开关
-
-**操作：**
-- **搜索：** 在搜索栏中输入内容以按姓名或邮箱筛选用户（客户端）。
-- **排序：** 点击任意列标题进行排序。再次点击以切换升序/降序。
-- **分页：** 用于浏览大量用户列表的导航控件。
-
-### 用户操作
-
-每行用户包含快速操作按钮：
-
-- **提升/降级：** 在 `["user"]` 和 `["user", "superadmin"]` 访问级别之间切换。在访问级别列中可见。
-- **活跃/被封禁：** 切换用户账户状态。被封禁的用户无法登录或刷新令牌。
-- **查看详情：** 点击用户行以打开详细视图。
-
-### 用户详情
-
-位于 `/dashboard/admin/users/:userId` 的详细页面显示完整的用户资料。
-
-**显示的信息：**
-- 用户名、邮箱、提供商和注册日期
-- 访问级别徽章（superadmin/user）
-- 房间创建活动图表（8 周历史记录）
-- 用户创建的房间列表
-
-**操作：**
-- **提升/降级：** 详情标题栏中的专用按钮
-- **删除用户：** 永久移除用户及其所有数据。需要邮箱确认。删除按钮对您自己的账户隐藏（您无法删除自己）。
-
-> **删除是永久且异步的。** 删除用户还会移除其所有房间、通行密钥和偏好设置。请求立即返回，而清理操作在后台运行。
+- **Room Creation:** Bar chart of rooms created over the last 8 weeks
+- **Recent Signups:** List of the most recent user registrations
 
 ---
 
-## 房间管理
+## User Management
 
-### 房间列表
+### User List
 
-位于 `/dashboard/admin/rooms` 的房间列表显示实例上的所有房间。
+The user list at `/dashboard/admin/users` shows all registered users in a searchable, sortable table.
 
-**列：**
-- **房间名称：** 房间标识符
-- **可见性：** 公开、私密或未列出
-- **最大参与者：** 可内联编辑 — 点击数值即可更改
-- **状态：** 活跃或非活跃
-- **创建时间：** 房间创建日期
+**Columns:**
+- **Name:** User's display name
+- **Email:** User's email address
+- **Provider:** Authentication method (local, google, github, guest, passkey)
+- **Role:** Access level badge. Shows "Superadmin" for users with `superadmin` access.
+- **Created:** Registration date
+- **Status:** Active/Banned toggle
 
-**操作：**
-- **搜索：** 按名称筛选房间（客户端）
-- **排序：** 点击列标题进行排序
-- **暂停：** 结束活跃通话而不删除房间
-- **删除：** 永久关闭房间并进行级联删除
+**Actions:**
+- **Search:** Type in the search bar to filter users by name or email (client-side).
+- **Sort:** Click any column header to sort. Click again to toggle ascending/descending.
+- **Pagination:** Navigation controls for browsing large user lists.
 
-### 房间详情
+### User Actions
 
-位于 `/dashboard/admin/rooms/:roomId` 的详细页面提供了对房间的深入可见性。
+Each user row includes quick-action buttons:
 
-**房间设置：**
-- 房间名称、可见性模式、最大参与者数
-- **持久模式切换：** 启用以防止自动清理空闲房间。仅对 superadmin 可用 — 房间创建者无法更改此设置。
+- **Promote/Demote:** Toggle between `["user"]` and `["user", "superadmin"]` access levels. Visible in the access level column.
+- **Active/Banned:** Toggle the user's account status. Banned users cannot log in or refresh tokens.
+- **View Detail:** Click the user row to open the detail view.
 
-**实时参与者：**
-- 每 3 秒轮询一次的实时参与者列表
-- 每个参与者：姓名、加入时间、轨道信息（音频/视频/屏幕共享）
-- **码率图表：** 音频和视频轨道的实时码率图
-- **踢出：** 将任意参与者从房间中移除
-- **静音：** 静音任意参与者的音频轨道
+### User Detail
+
+The detail page at `/dashboard/admin/users/:userId` shows a full user profile.
+
+**Information displayed:**
+- User name, email, provider, and registration date
+- Access level badge (superadmin/user)
+- Room creation activity chart (8-week history)
+- List of rooms created by the user
+
+**Actions:**
+- **Promote/Demote:** Dedicated button in the detail header
+- **Delete User:** Permanently removes the user and all their data. Requires email confirmation. The delete button is hidden for your own account (you cannot delete yourself).
+
+> **Delete is permanent and asynchronous.** Deleting a user also removes all their rooms, passkeys, and preferences. The request returns immediately while the cleanup runs in the background.
 
 ---
 
-## 系统设置
+## Room Management
 
-位于 `/dashboard/admin/settings` 的设置页面分为 9 个标签页。修改任何标签页后点击"保存更改"（通用标签页在注册模式更改时自动保存）。
+### Room List
 
-### 通用标签页
+The room list at `/dashboard/admin/rooms` shows all rooms on the instance.
 
-- **注册模式：**
-  - **开放：** 任何人都可以注册账户
-  - **仅邀请：** 新用户必须提供有效的邀请令牌
-  - **关闭：** 不允许新注册 — 现有用户仍可登录
-  - 切换模式时更改自动保存
+**Columns:**
+- **Room Name:** Room identifier
+- **Visibility:** Public, private, or unlisted
+- **Max Participants:** Editable inline — click the value to change it
+- **Status:** Active or inactive
+- **Created:** Room creation date
 
-**邀请令牌管理（在通用标签页内）：**
+**Actions:**
+- **Search:** Filter rooms by name (client-side)
+- **Sort:** Click column headers to sort
+- **Suspend:** End an active call without deleting the room
+- **Delete:** Permanently close a room with cascade deletion
 
-令牌控制在仅邀请模式下谁可以注册。
+### Room Detail
 
-- **生成令牌：** 输入一个可选的邮箱以将令牌锁定到特定地址，并选择一个过期期限（24 小时、72 小时、7 天或 30 天）。
-- **令牌列表：** 显示所有令牌及其状态。未使用的令牌带有绿色的"活跃"徽章，已使用的令牌以灰色显示"已使用"。
-- **复制令牌：** 点击复制按钮将 32 字符的令牌值复制到剪贴板。
-- **撤销：** 删除令牌以防止其被使用。
+The detail page at `/dashboard/admin/rooms/:roomId` provides deep visibility into a room.
 
-### 认证标签页
+**Room Settings:**
+- Room name, visibility mode, max participants
+- **Persistent mode toggle:** Enable to prevent automatic cleanup of idle rooms. This is available to superadmins only — room creators cannot change it.
 
-- **通行密钥：** 切换 FIDO2/WebAuthn 无密码认证
-- **OAuth 提供商：** 配置 Google、GitHub 和 Twitter OAuth：
+**Live Participants:**
+- Real-time participant list that polls every 3 seconds
+- Per participant: name, join time, track information (audio/video/screen share)
+- **Bitrate chart:** Live bitrate graph for audio and video tracks
+- **Kick:** Remove any participant from the room
+- **Mute:** Mute any participant's audio tracks
+
+---
+
+## System Settings
+
+The settings page at `/dashboard/admin/settings` is organized into 7 tabs. Click "Save changes" after modifying any tab (the General tab auto-saves on registration mode changes).
+
+### General Tab
+
+- **Registration Mode:**
+  - **Open:** Anyone can register an account
+  - **Invite-only:** New users must provide a valid invite token
+  - **Closed:** No new registrations — existing users can still log in
+  - Changes save automatically when you switch modes
+
+**Invite Token Management (within General tab):**
+
+Tokens control who can register when in Invite-only mode.
+
+- **Generate Token:** Enter an optional email to lock the token to a specific address, and select an expiry period (24 hours, 72 hours, 7 days, or 30 days).
+- **Token List:** Shows all tokens with their status. Unused tokens have a green "Active" badge, used tokens show "Used" in gray.
+- **Copy Token:** Click the copy button to copy the 32-character token value to your clipboard.
+- **Revoke:** Delete a token to prevent it from being used.
+- **Recordings Toggle:** UI may expose an “allow room recordings” setting for a **planned** feature. Recording HTTP routes are not registered in production yet.
+
+### Webhooks Tab
+
+The Webhooks tab lets superadmins register HTTP callbacks for real-time room and recording events.
+
+- **Add Webhook:** Enter a URL, select event types, and optionally set a custom HMAC secret.
+- **Event Types:** `room.created`, `room.ended`, `participant.joined`, `ping` (test). `recording.completed` is reserved for a planned feature. Delivery uses `X-Bedrud-Signature` / `X-Bedrud-Event` headers — see the [Webhooks Guide](/zh/docs/guides/webhooks).
+- **Test:** Send a test ping to verify connectivity.
+- **Rotate:** Generate a new HMAC signing secret (old one immediately invalidated).
+- **Status Column:** Shows last HTTP status code and timestamp of last delivery.
+
+### Authentication Tab
+
+- **Passkeys:** Toggle FIDO2/WebAuthn passwordless authentication
+- **OAuth Providers:** Configure Google, GitHub, and Twitter OAuth:
   - Client ID
   - Client Secret
   - Redirect URL
 
-每个提供商都有自己的配置卡片。填写全部三个字段即可启用提供商。
+Each provider has its own configuration card. Enable a provider by filling in all three fields.
 
-### LiveKit 标签页
+### LiveKit Tab
 
-- **外部 LiveKit：** 切换使用外部 LiveKit 服务器而非嵌入式服务器
-- **主机：** LiveKit 服务器地址和端口（如 `127.0.0.1:7880`）
-- **API Key：** LiveKit 服务器 API 密钥
-- **API Secret：** LiveKit 服务器 API 密钥
+- **External LiveKit:** Toggle to use an external LiveKit server instead of the embedded one
+- **Host:** LiveKit server host and port (e.g., `127.0.0.1:7880`)
+- **API Key:** LiveKit server API key
+- **API Secret:** LiveKit server API secret
 
-### 服务器标签页
+### Server Tab
 
-- **端口：** HTTP 服务器端口（默认：`80`）
-- **主机：** 服务器主机名
-- **域名：** 服务器域名
-- **邮箱：** 管理员邮箱（用于 ACME 证书注册）
-- **TLS：** 使用证书文件启用 HTTPS
-- **ACME：** 启用自动 Let's Encrypt 证书管理
-- **反向代理：** 指示服务器位于代理之后（影响客户端 IP 检测）
-- **证书路径：** 证书文件和密钥文件路径（用于手动 TLS 设置）
-- **证书状态：** 内联指示器显示当前 TLS 证书健康状况
+- **Port:** HTTP server port (default: `80`)
+- **Host:** Server hostname
+- **Domain:** Server domain
+- **Email:** Administrative email (used for ACME certificate registration)
+- **TLS:** Enable HTTPS with certificate files
+- **ACME:** Enable automatic Let's Encrypt certificate management
+- **Reverse Proxy:** Indicate the server is behind a proxy (affects client IP detection)
+- **Certificate Paths:** Cert file and key file paths (for manual TLS setup)
+- **Certificate Status:** Inline indicator showing current TLS certificate health
 
-### CORS 标签页
+### CORS Tab
 
-- **允许的来源：** 逗号分隔的 CORS 来源列表
-- **允许的请求头：** 逗号分隔的允许请求头列表
-- **允许的方法：** 逗号分隔的允许 HTTP 方法列表
-- **允许凭证：** 切换以在跨域请求中包含凭证
-- **最大缓存时间：** CORS 预检响应的缓存时间（秒）
+- **Allowed Origins:** Comma-separated list of CORS origins
+- **Allowed Headers:** Comma-separated list of allowed request headers
+- **Allowed Methods:** Comma-separated list of allowed HTTP methods
+- **Allow Credentials:** Toggle to include credentials in cross-origin requests
+- **Max Age:** Cache duration for CORS preflight responses (seconds)
 
-### 房间限制标签页
+### Room Limits Tab
 
-控制单个用户可创建的活跃房间数量：
+Controls how many rooms a single user can create:
 
-- **每用户最大房间数：** 非 superadmin 用户可创建的最大活跃房间数（默认：100，0 = 无限制）。Superadmin 用户不受此限制。
+- **Max Rooms Per User:** Maximum number of active rooms a non-superadmin user can create (default: 100, 0 = unlimited). Superadmins bypass this limit.
 
-### 上传配额标签页
+### Upload Quotas Tab
 
-控制聊天图片上传的存储限制：
+Controls storage limits for chat image uploads:
 
-- **每用户最大上传字节数：** 所有房间中每个用户的存储配额（默认：524288000 = 500 MB，0 = 无限制）。Superadmin 用户不受此限制。
-- **全局磁盘阈值：** 所有用户的总存储上限。超过后所有上传将被拒绝，直到管理员释放空间（默认：0 = 无限制）。此限制适用于所有人，包括 superadmin。
+- **Max Upload Bytes Per User:** Per-user storage quota across all rooms (default: 524288000 = 500 MB, 0 = unlimited). Superadmins bypass this limit.
+- **Global Disk Threshold:** Total storage ceiling across all users. When exceeded, all uploads are rejected until an admin frees space (default: 0 = unlimited). This limit applies to everyone, including superadmins.
 
-### 聊天上传标签页
+### Chat Uploads 选项卡
 
 配置聊天图片上传的存储方式：
 
-- **后端：** `disk`（本地文件系统）、`s3`（S3 兼容存储）或 `inline`（base64 嵌入）
-- **最大上传字节：** 每次上传的最大文件大小
-- **内联最大值：** 内联/base64 上传的最大大小
-- **磁盘目录：** `disk` 后端上传的本地目录
+- **Backend：** `disk`（本地文件系统）、`s3`（S3 兼容存储）或 `inline`（base64 内嵌）
+- **Max Upload Bytes**（`chatUploadMaxBytes`）：每次上传的最大文件大小（未设置时默认 10 MiB）。由上传 API 强制执行，并向会议客户端公开以供预检。
+- **Max Image Dimension**（`chatUploadMaxDimension`）：最大宽或高（像素；未设置 / 0 时默认 8192）。解码后更大的图片以 HTTP 400 拒绝。
+- **Inline Max：** inline/base64 上传的最大大小
+- **Disk Directory：** `disk` 后端的本地目录
 
-**S3 配置（当后端为 `s3` 时）：**
-- Endpoint、Bucket、Region
-- Access Key、Secret Key
+YAML 回退：`chat.uploads.maxBytes`、`chat.uploads.maxDimension`，见[配置](/zh/docs/getting-started/configuration)。
+
+**S3 Configuration (when backend is `s3`):**
+- Endpoint, Bucket, Region
+- Access Key, Secret Key
 - Public URL
 
-### 日志标签页
+### Logging Tab
 
-- **日志级别：** `trace`、`debug`、`info`、`warn` 或 `error`。调试时有用 — 切换到 `debug` 查看详细日志，然后切回 `info` 用于生产环境。
+- **Log Level:** `trace`, `debug`, `info`, `warn`, or `error`. Useful for debugging — switch to `debug` to see detailed logs, then back to `info` for production.
 
 ---
 
-## 故障排除
+## Troubleshooting
 
-### "管理面板不可见"
+### "Admin panel not visible"
 
-**症状：** 侧边栏中不显示管理部分，用户下拉菜单中缺少"管理面板"链接。
+**Symptom:** The Admin section does not appear in the sidebar, and the "Admin panel" link is missing from the user dropdown.
 
-**原因：** 登录用户的 `accesses` 数组中没有 `superadmin`。
+**Cause:** The logged-in user does not have `superadmin` in their `accesses` array.
 
-**解决方案：** 使用 CLI 提升用户：
+**Solution:** Use the CLI to promote the user:
 ```bash
 bedrud user promote --email "your-email@example.com"
 ```
-然后注销并重新登录以获取包含更新后访问权限的新 JWT。
+Then log out and log back in to get a new JWT with the updated accesses.
 
-### "设置无法保存"
+### "Settings won't save"
 
-**症状：** 保存设置成功返回，但密钥值显示为未更改。
+**Symptom:** Saving settings returns successfully, but secret values appear unchanged.
 
-**原因：** 当您在更新请求中发送 `"••••••••"` 或空字符串时，服务器会保留现有的密钥值。这是有意设计的 — 防止在仅更改非密钥字段时意外覆盖密钥。
+**Cause:** The server preserves existing secret values when you send `"••••••••"` or an empty string in the update request. This is by design — it prevents accidentally overwriting secrets when you're only changing non-secret fields.
 
-**解决方案：** 在更新请求中发送实际的密钥值（而非隐藏占位符）。
+**Solution:** Send the actual secret value (not the masked placeholder) in the update request.
 
-### "无法删除自己的账户"
+### "Cannot delete my own account"
 
-**症状：** 您自己的用户详情页面上隐藏了删除按钮，或 API 返回 400 错误。
+**Symptom:** The delete button is hidden on your own user detail page, or the API returns a 400 error.
 
-**原因：** 出于安全考虑，禁止自我删除。您无法删除当前登录的账户。
+**Cause:** Self-deletion is blocked for safety. You cannot delete the account you're currently logged in as.
 
-**解决方案：** 由另一个 superadmin 删除该账户，或使用 CLI 以其他用户身份删除。
+**Solution:** Have another superadmin delete the account, or use the CLI as a different user.
 
-### "访问管理员 URL 时被重定向到仪表板"
+### "Redirected to dashboard when visiting admin URL"
 
-**症状：** 直接访问 `/dashboard/admin` 时被重定向到 `/dashboard`。
+**Symptom:** Visiting `/dashboard/admin` directly redirects to `/dashboard`.
 
-**原因：** 管理员守卫路由检查您 JWT 中的 `accesses` 数组。如果缺少 `superadmin`，守卫将进行重定向。
+**Cause:** The admin guard route checks your JWT's `accesses` array. If `superadmin` is missing, the guard redirects.
 
-**解决方案：** 验证您的账户具有 superadmin 访问权限。如果您的访问权限最近被修改，请注销并重新登录以刷新您的 JWT。
+**Solution:** Verify your account has superadmin access. If your access was recently changed, log out and log back in to refresh your JWT.
 
 ---
 
-## 另请参阅
+## See Also
 
-- [管理 API](/zh/docs/api/api-reference#tag/admin) — 所有管理员 endpoint 的完整 API 参考
-- [身份认证](/zh/docs/backend/authentication) — 访问级别与角色系统
-- [配置](/zh/docs/getting-started/configuration) — config.yaml 设置参考
-- [快速入门](/zh/docs/getting-started/quickstart) — 首次管理员设置指南
+- [Admin API](/zh/docs/api/api-reference#tag/admin) — full API reference for all admin endpoints
+- [Authentication](/zh/docs/backend/authentication) — access levels and role system
+- [Configuration](/zh/docs/getting-started/configuration) — config.yaml settings reference
+- [Quick Start](/zh/docs/getting-started/quickstart) — first admin setup walkthrough

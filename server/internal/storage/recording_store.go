@@ -33,7 +33,7 @@ type RecordingStore interface {
 
 // NewRecordingStore creates the appropriate backend from config.
 // Falls back to disk if S3 is not fully configured.
-func NewRecordingStore(cfg *config.RecordingConfig, s3Cfg config.ChatUploadS3Config) RecordingStore {
+func NewRecordingStore(cfg *config.RecordingConfig, s3Cfg *config.ChatUploadS3Config) RecordingStore {
 	storageDir := cfg.StorageDir
 	if storageDir == "" {
 		storageDir = "./data/recordings"
@@ -44,7 +44,7 @@ func NewRecordingStore(cfg *config.RecordingConfig, s3Cfg config.ChatUploadS3Con
 		maxBytes = 0 // unlimited
 	}
 
-	if s3Cfg.Endpoint != "" && s3Cfg.Bucket != "" && s3Cfg.AccessKey != "" {
+	if s3Cfg != nil && s3Cfg.Endpoint != "" && s3Cfg.Bucket != "" && s3Cfg.AccessKey != "" {
 		log.Info().Str("endpoint", s3Cfg.Endpoint).Str("bucket", s3Cfg.Bucket).
 			Int64("maxBytes", maxBytes).Msg("recording: using S3 storage")
 		return &s3RecordingStore{
@@ -77,14 +77,9 @@ type diskRecordingStore struct {
 }
 
 func (s *diskRecordingStore) Store(ctx context.Context, key string, src io.Reader, size int64) (*RecordingAttachment, error) {
-	// Max file size check
-	if s.maxBytes > 0 {
-		if size > s.maxBytes {
-			return nil, fmt.Errorf("recording file size %d exceeds max %d", size, s.maxBytes)
-		}
-		if size <= 0 {
-			// Unknown size — we can't check upfront. Will enforce during copy.
-		}
+	// Max file size check (size <= 0 unknown — enforce during copy via LimitReader)
+	if s.maxBytes > 0 && size > s.maxBytes {
+		return nil, fmt.Errorf("recording file size %d exceeds max %d", size, s.maxBytes)
 	}
 
 	if err := os.MkdirAll(s.dir, 0o755); err != nil {
@@ -138,10 +133,10 @@ func (s *diskRecordingStore) Store(ctx context.Context, key string, src io.Reade
 		os.Remove(tmpName) // cleanup temp on rename failure
 		return nil, fmt.Errorf("rename recording: %w", err)
 	}
-	// fsync directory to persist rename
+	// fsync directory to persist rename (best-effort; file is already renamed)
 	if dirF, err := os.Open(filepath.Dir(dst)); err == nil {
-		dirF.Sync()
-		dirF.Close()
+		_ = dirF.Sync()
+		_ = dirF.Close()
 	}
 
 	url := "/recordings/" + cleanKey

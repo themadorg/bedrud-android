@@ -4,66 +4,66 @@ description: اپلیکیشن دسکتاپ مبتنی بر Rust
 order: 11
 ---
 
-کلاینت دسکتاپ بدرود یک اپلیکیشن بومی Windows و Linux ساخته شده با **Rust** و جعبه ابزار UI **Slint** است. همان تجربه جلسه اصلی فرانت‌اند وب و موبایل را فراهم می‌کند، به یک باینری تکی کامپیل شده بدون وابستگی‌های زمان اجرا.
+The Bedrud desktop client is a native Windows and Linux application built with **Rust** and the **Slint** UI toolkit. It provides the same core meeting experience as the web and mobile clients, compiled to a single binary with no runtime dependencies.
 
-## پشته فناوری
+## Technology Stack
 
-| کامپوننت | فناوری |
+| Component | Technology |
 |-----------|-----------|
-| زبان | Rust (پایدار) |
-| جعبه ابزار UI | Slint 1.x |
-| کلاینت HTTP | reqwest (async، TLS) |
-| مدیا | LiveKit Rust SDK |
-| ذخیره‌سازی | serde_json + keyring سیستم‌عامل (libsecret / Windows Credential Store) |
-| سیستم ساخت | فضای کار Cargo |
+| Language | Rust (stable) |
+| UI toolkit | Slint 1.x |
+| HTTP client | reqwest (async, TLS) |
+| Media | LiveKit Rust SDK |
+| Storage | serde_json + OS keyring (libsecret / Windows Credential Store) |
+| Build system | Cargo workspace |
 
-## پشتیبانی پلتفرم
+## Platform Support
 
-| پلتفرم | رندر | باینری |
-|----------|-------|--------|
+| Platform | Renderer | Binary |
+|----------|----------|--------|
 | Windows 10/11 | Direct3D 11 | `bedrud-desktop.exe` |
-| Linux x86_64 | OpenGL / Vulkan (از طریق EGL/Wayland/X11) | `bedrud-desktop` |
-| macOS | _(هنوز نه - از اپلیکیشن وب استفاده کنید)_ | - |
+| Linux x86_64 | OpenGL / Vulkan (via EGL/Wayland/X11) | `bedrud-desktop` |
+| macOS | _(not yet - use the web app)_ | - |
 
-## طرح منبع
+## Source Layout
 
 ```
 apps/desktop/
-├── Cargo.toml              # تعریف crate
-├── build.rs                # مرحله کامپایل Slint
+├── Cargo.toml              # Crate definition
+├── build.rs                # Slint compile step
 ├── src/
-│   ├── main.rs             # نقطه ورودی - مقداردهی اولیه اپ + حلقه رویداد
-│   ├── app.rs              # AppState سطح بالا و منطق راه‌اندازی
+│   ├── main.rs             # Entry point - initialises app + event loop
+│   ├── app.rs              # Top-level AppState and startup logic
 │   ├── api/
-│   │   ├── client.rs       # کلاینت HTTP مشترک (URL پایه، تزریق JWT)
-│   │   ├── auth.rs         # ورود، ثبت‌نام، تازه‌سازی
-│   │   ├── rooms.rs        # لیست اتاق، پیوستن، ایجاد
-│   │   └── admin.rs        # نقاط پایانی ادمین
+│   │   ├── client.rs       # Shared HTTP client (base URL, JWT injection)
+│   │   ├── auth.rs         # Login, register, refresh
+│   │   ├── rooms.rs        # Room list, join, create
+│   │   └── admin.rs        # Admin endpoints
 │   ├── auth/
-│   │   ├── session.rs      # ذخیره JWT و حلقه تازه‌سازی
-│   │   └── passkey.rs      # stub کلید عبور FIDO2
+│   │   ├── session.rs      # JWT storage and refresh loop
+│   │   └── passkey.rs      # FIDO2 passkey stub
 │   ├── livekit/
-│   │   ├── room.rs         # چرخه عمر اتصال اتاق
-│   │   ├── tracks.rs       # مدیریت ترک صوتی/ویدیویی
-│   │   └── devices.rs      # شمارش میکروفون / دوربین
+│   │   ├── room.rs         # Room connection lifecycle
+│   │   ├── tracks.rs       # Audio/video track management
+│   │   └── devices.rs      # Microphone / camera enumeration
 │   ├── store/
-│   │   ├── instance.rs     # پایداری چند نمونه
-│   │   └── settings.rs     # ترجیحات کاربر
+│   │   ├── instance.rs     # Multi-instance persistence
+│   │   └── settings.rs     # User preferences
 │   └── ui/
 │       ├── mod.rs
-│       └── bridge.rs       # سیم‌کشی callback Slint ↔ Rust
+│       └── bridge.rs       # Slint ↔ Rust callback wiring
 └── ui/
-    ├── app.slint            # کامپوننت ریشه، مسیریاب صفحه
-    ├── theme.slint          # رنگ‌ها، تایپوگرافی، توکن‌های فاصله
+    ├── app.slint            # Root component, page router
+    ├── theme.slint          # Colours, typography, spacing tokens
     ├── components/          # Button, Input, Card, Avatar
-    ├── auth/                # صفحات ورود و ثبت‌نام
-    ├── dashboard/           # لیست اتاق، دیالوگ ایجاد اتاق
-    ├── meeting/             # نوار کنترل‌ها، کاشی شرکت‌کننده، چت
-    ├── admin/               # پنل ادمین، جدول کاربر
-    └── settings.slint       # صفحه تنظیمات
+    ├── auth/                # Login and Register screens
+    ├── dashboard/           # Room list, Create-room dialog
+    ├── meeting/             # Controls bar, participant tiles, chat
+    ├── admin/               # Admin panel, user table
+    └── settings.slint       # Settings screen
 ```
 
-## معماری
+## Architecture
 
 ```mermaid
 flowchart TB
@@ -90,19 +90,19 @@ flowchart TB
     AUTH <*/} STORE
 ```
 
-### تصمیمات طراحی کلیدی
+### Key design decisions
 
-- **UI زمان کامپایل Slint** - فایل‌های `.slint` در زمان ساخت از طریق `build.rs` به Rust کامپایل می‌شوند. هیچ موتور طرح‌بندی در زمان اجرا وجود ندارد؛ UI کاملاً بومی است.
-- **`bridge.rs` به عنوان تنها مرز UI↔logic** - تمام callbackهای Slint در یک مکان سیم‌کشی می‌شوند، منطق کسب و کار را خارج از لایه UI نگه می‌دارد و بررسی پل را آسان می‌کند.
-- **`Weak<AppWindow>` در callbackها** - هندل‌های UI Slint `!Send` هستند، بنابراین وظایفان پس‌زمینه یک مرجع `Weak` ذخیره شده را در نخ UI ارتقا می‌دهند تا ویژگی‌ها را تنظیم کنند، به جای اشتراک‌گذاری هندل در سراسر نخ‌ها.
-- **چند نمونه از طریق `store/instance.rs`** - مشابه اپلیکیشن‌های موبایل: نمونه‌ها به یک فایل JSON در دایرکتوری پیکربندی سیستم‌عامل سریالی می‌شوند؛ هر نمونه `APIClient` و `AuthSession` خود را دارد.
+- **Slint's compile-time UI** - `.slint` files are compiled into Rust at build time via `build.rs`. There is no layout engine at runtime; the UI is fully native.
+- **`bridge.rs` as the only UI↔logic boundary** - all Slint callbacks are wired in one place, keeping business logic out of the UI layer and making the bridge easy to audit.
+- **`Weak<AppWindow>` in callbacks** - Slint UI handles are `!Send`, so background tasks upgrade a stored `Weak` reference on the UI thread to set properties, rather than sharing the handle across threads.
+- **Multi-instance via `store/instance.rs`** - identical to the mobile apps: instances are serialised to a JSON file in the OS config directory; each instance has its own `APIClient` and `AuthSession`.
 
-## ساخت محلی
+## Building Locally
 
-### پیش‌نیازها
+### Prerequisites
 
-- زنجیره ابزار Rust پایدار (`rustup toolchain install stable`)
-- **Linux:** `libfontconfig`، `libxkbcommon`، `libwayland`، `libgles2`، `libdbus`، `libsecret`
+- Rust stable toolchain (`rustup toolchain install stable`)
+- **Linux:** `libfontconfig`, `libxkbcommon`, `libwayland`, `libgles2`, `libdbus`, `libsecret`
 
   ```bash
   sudo apt-get install -y \
@@ -112,38 +112,38 @@ flowchart TB
     libasound2-dev
   ```
 
-- **Windows:** ابزارهای ساخت Visual Studio (MSVC) با بار کاری C++
+- **Windows:** Visual Studio Build Tools (MSVC) with the C++ workload
 
-### ساخت
+### Build
 
 ```bash
-# ساخت Debug (کامپایل سریع، بدون بهینه‌سازی)
-make dev-desktop          # بلافاصله پس از ساخت اپ را اجرا می‌کند
+# Debug build (fast compile, no optimisations)
+make dev-desktop          # runs the app immediately after build
 
-# ساخت Release
+# Release build
 make build-desktop        # → target/release/bedrud-desktop (Linux)
                            # → target/release/bedrud-desktop.exe (Windows)
 ```
 
-یا مستقیماً با Cargo:
+Or with Cargo directly:
 
 ```bash
 cargo build -p bedrud-desktop                          # debug
-cargo build -p bedrud-desktop --release                # بهینه‌سازی شده
-cargo run   -p bedrud-desktop                          # اجرای فوری
+cargo build -p bedrud-desktop --release                # optimised
+cargo run   -p bedrud-desktop                          # run immediately
 ```
 
 ## CI
 
-اپلیکیشن دسکتاپ در CI روی هر push به `master` و در pull requests ساخته می‌شود:
+The desktop app is built in CI on every push to `master` and on pull requests:
 
-| Job | Runner | چه چیزی را بررسی می‌کند |
-|-----|--------|---------------------------|
-| `Desktop – Build & Test` | `ubuntu-latest` | `cargo build`، `cargo test` |
+| Job | Runner | What it checks |
+|-----|--------|----------------|
+| `Desktop – Build & Test` | `ubuntu-latest` | `cargo build`, `cargo test` |
 
-ساخت‌های Release دو artifact تولید می‌کنند:
+Release builds produce two artifacts:
 
-| Artifact | Runner | فرمت |
-|----------|--------|-------|
+| Artifact | Runner | Format |
+|----------|--------|--------|
 | `bedrud-desktop-linux-x86_64.tar.xz` | `ubuntu-latest` | tar.xz |
 | `bedrud-desktop-windows-x86_64.zip` | `windows-latest` | zip |

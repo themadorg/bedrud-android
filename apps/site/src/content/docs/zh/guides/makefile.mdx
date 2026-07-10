@@ -4,189 +4,189 @@ description: 构建自动化命令
 order: 31
 ---
 
-根目录的 `Makefile` 是 Bedrud monorepo 的中央构建编排工具。它提供了跨所有平台的开发、构建和部署命令。
+The root `Makefile` is the central build orchestration tool for the Bedrud monorepo. It provides commands for development, building, and deployment across all platforms.
 
-## 用法
+## Usage
 
 ```bash
 make <target>
 make help       # Show all available targets
 ```
 
-## 开发目标
+## Development Targets
 
-| 目标 | 说明 |
+| Target | Description |
 |--------|-------------|
-| `make init` | 安装所有依赖（LiveKit + 配置 + bun + Go） |
-| `make dev` | 同时运行 LiveKit + 服务器（热重载） + Web |
-| `make dev-web` | 仅运行前端开发服务器 |
-| `make dev-server` | 运行后端服务器 + LiveKit |
-| `make dev-server-hot` | 使用 Air 热重载运行后端 |
-| `make dev-api` | 仅运行后端，不启动 LiveKit |
-| `make dev-livekit` | 运行本地 LiveKit 服务器 |
-| `make dev-site` | 运行 Astro 站点开发服务器 |
-| `make dev-ios` | 在 Xcode 中打开 iOS 项目 |
-| `make dev-android` | 在 Android Studio 中打开 Android 项目 |
-| `make livekit-download` | 下载适用于当前操作系统/架构的 LiveKit 服务器 |
+| `make init` | Install all dependencies (LiveKit + config + bun + Go) |
+| `make dev` | Run LiveKit + server (hot reload) + web concurrently |
+| `make dev-web` | Run frontend dev server only |
+| `make dev-server` | Run backend server + LiveKit |
+| `make dev-server-hot` | Run backend with Air hot reload |
+| `make dev-api` | Run backend only, no LiveKit |
+| `make dev-livekit` | Run local LiveKit server |
+| `make dev-site` | Run Astro site dev server |
+| `make dev-ios` | Open iOS project in Xcode |
+| `make dev-android` | Open Android project in Android Studio |
+| `make livekit-download` | Download LiveKit server for current OS/arch |
 
 ### `make init`
 
-全新开发环境的完整设置：
+Full setup for a new development environment:
 
-1. 下载 LiveKit 服务器二进制文件到 `~/.local/bin/`（如果不在 PATH 中）
-2. 从 `config.local.yaml` 模板创建 `server/config.yaml`（如果不存在）
-3. 在 `server/internal/livekit/bin/livekit-server` 创建 LiveKit 嵌入占位符
-4. 安装 `air` 用于 Go 热重载（如果未安装）
-5. 安装依赖：`apps/web`（bun）、`apps/site`（bun）、`server`（go mod）
+1. Downloads LiveKit server binary to `~/.local/bin/` (if not in PATH)
+2. Creates `server/config.yaml` from `config.local.yaml` template (if missing)
+3. Creates LiveKit embed placeholder at `server/internal/livekit/bin/livekit-server`
+4. Installs `air` for Go hot reload (if not present)
+5. Installs dependencies: `apps/web` (bun), `apps/site` (bun), `server` (go mod)
 
 ### `make dev`
 
-同时启动三个开发服务。按 `Ctrl+C` 停止所有：
+Starts all three development services concurrently. Press `Ctrl+C` to stop all:
 
-- **LiveKit** 在 `localhost:7880`
-- **服务器** 在 `localhost:8090`
-- **Web** 在 `localhost:3000`
+- **LiveKit** at `localhost:7880`
+- **Server** at `localhost:8090`
+- **Web** at `localhost:3000`
 
-## 构建目标
+## Build Targets
 
-| 目标 | 说明 |
+| Target | Description |
 |--------|-------------|
-| `make build` | 构建前端 + 后端（嵌入） |
-| `make build-front` | 仅构建前端 |
-| `make build-back` | 仅构建后端 |
-| `make build-dist` | 构建生产版 linux/amd64 tar 包 |
-| `make build-back-win` | 为 Windows 构建后端 |
-| `make build-dist-win` | 构建生产版 Windows 分发包 |
-| `make prep-livekit-win` | 确保 LiveKit Windows 二进制文件可用于嵌入 |
-| `make build-site` | 构建 Astro 站点（SSG） |
+| `make build` | Build frontend + backend (embedded) |
+| `make build-front` | Build frontend only |
+| `make build-back` | Build backend only |
+| `make build-dist` | Build production linux/amd64 tarball |
+| `make build-back-win` | Build backend for Windows |
+| `make build-dist-win` | Build production Windows distribution |
+| `make prep-livekit-win` | Ensure LiveKit Windows binary is available for embedding |
+| `make build-site` | Build Astro site (SSG) |
 
 ### `make build`
 
-完整的生产构建：
+Full production build:
 
-1. 在 `apps/web` 中运行 `bun run build` — 构建 React 应用
-2. 将 `apps/web/dist/client/*` 复制到 `server/frontend/`
-3. 构建嵌入了前端的 Go 二进制文件
+1. Runs `bun run build` in `apps/web` — builds the React app
+2. Copies `apps/web/dist/client/*` → `server/frontend/`
+3. Builds the Go binary with the embedded frontend
 
-输出：`server/dist/bedrud`
+Output: `server/dist/bedrud`
 
 ### `make build-dist`
 
-创建压缩的、生产就绪的分发包：
+Creates a compressed, production-ready distribution:
 
-1. 运行 `make build`
-2. 交叉编译 `linux/amd64`，去除调试符号
-3. 创建 `dist/bedrud_linux_amd64.tar.xz`
+1. Runs `make build`
+2. Cross-compiles for `linux/amd64` with stripped debug symbols
+3. Creates `dist/bedrud_linux_amd64.tar.xz`
 
-## 桌面端目标
+## Desktop Targets
 
-| 目标 | 说明 |
+| Target | Description |
 |--------|-------------|
-| `make dev-desktop` | 构建并运行桌面应用（debug） |
-| `make build-desktop` | 构建优化后的 release 二进制文件 |
+| `make dev-desktop` | Build and run desktop app (debug) |
+| `make build-desktop` | Build optimized release binary |
 
-## 本地单二进制文件
+## Local Single Binary
 
-| 目标 | 说明 |
+| Target | Description |
 |--------|-------------|
-| `make local-build` | 将前端 + 后端构建为一个二进制文件 |
-| `make local-run` | 构建 + 本地运行（SQLite，嵌入 LiveKit） |
+| `make local-build` | Build frontend + backend into one binary |
+| `make local-run` | Build + run locally (SQLite, embedded LiveKit) |
 
 ### `make local-run`
 
-使用本地配置构建并启动单二进制文件：
+Builds and starts the single binary with local config:
 
 ```bash
 CONFIG_PATH=server/config.local.yaml server/dist/bedrud run
 ```
 
-启动后打开 `http://localhost:8090`。
+Open `http://localhost:8090` when ready.
 
-## API 文档
+## API Docs
 
-| 目标 | 说明 |
+| Target | Description |
 |--------|-------------|
-| `make swagger-gen` | 从注释重新生成 Swagger 文档 |
-| `make swagger-open` | 在浏览器中打开 Swagger UI |
-| `make scalar-open` | 在浏览器中打开 Scalar UI |
+| `make swagger-gen` | Regenerate Swagger docs from annotations |
+| `make swagger-open` | Open Swagger UI in browser |
+| `make scalar-open` | Open Scalar UI in browser |
 
-需要 `swag` CLI（`go install github.com/swaggo/swag/cmd/swag@latest`）。使用 `swagger-open` 和 `scalar-open` 需先启动服务器。
+Requires `swag` CLI (`go install github.com/swaggo/swag/cmd/swag@latest`). Server must be running for `swagger-open` and `scalar-open`.
 
-## Android 目标
+## Android Targets
 
-| 目标 | 说明 |
+| Target | Description |
 |--------|-------------|
-| `make build-android-debug` | 构建 debug APK |
-| `make build-android` | 构建 release APK（需要 keystore） |
-| `make install-android` | 在已连接的设备上安装 release APK |
-| `make release-android` | 构建 + 安装 release APK |
+| `make build-android-debug` | Build debug APK |
+| `make build-android` | Build release APK (requires keystore) |
+| `make install-android` | Install release APK on connected device |
+| `make release-android` | Build + install release APK |
 
-### APK 输出路径
+### APK Output Paths
 
-- Debug：`apps/android/app/build/outputs/apk/debug/app-debug.apk`
-- Release：`apps/android/app/build/outputs/apk/release/app-release.apk`
+- Debug: `apps/android/app/build/outputs/apk/debug/app-debug.apk`
+- Release: `apps/android/app/build/outputs/apk/release/app-release.apk`
 
-## iOS 目标
+## iOS Targets
 
-| 目标 | 说明 |
+| Target | Description |
 |--------|-------------|
-| `make build-ios` | 构建 iOS 归档（Release） |
-| `make export-ios` | 从归档导出 IPA |
-| `make build-ios-sim` | 为 iOS 模拟器构建（Debug） |
+| `make build-ios` | Build iOS archive (Release) |
+| `make export-ios` | Export IPA from archive |
+| `make build-ios-sim` | Build for iOS Simulator (Debug) |
 
-### 输出路径
+### Output Paths
 
-- 归档：`apps/ios/build/Bedrud.xcarchive`
-- IPA：`apps/ios/build/export/Bedrud.ipa`
+- Archive: `apps/ios/build/Bedrud.xcarchive`
+- IPA: `apps/ios/build/export/Bedrud.ipa`
 
-## 部署目标
+## Deploy Target
 
-| 目标 | 说明 |
+| Target | Description |
 |--------|-------------|
-| `make deploy ARGS=...` | 运行部署 CLI 工具 |
+| `make deploy ARGS=...` | Run the deployment CLI tool |
 
-### 示例
+### Example
 
 ```bash
 make deploy ARGS="--auto-config --ip 1.2.3.4 --user root --domain meet.example.com"
 ```
 
-使用提供的参数运行 `tools/cli/bedrud.py` Python CLI。
+This runs the Python CLI at `tools/cli/bedrud.py` with the provided arguments.
 
-## 测试
+## Test
 
-| 目标 | 说明 |
+| Target | Description |
 |--------|-------------|
-| `make test-back` | 运行后端测试（`go test -v -count=1 ./...`） |
+| `make test-back` | Run backend tests (`go test -v -count=1 ./...`) |
 
-## 清理目标
+## Clean Targets
 
-| 目标 | 说明 |
+| Target | Description |
 |--------|-------------|
-| `make clean` | 删除构建产物和编译后的二进制文件 |
-| `make full-clean` | 删除产物 + 所有已安装的依赖 |
+| `make clean` | Remove build artifacts and compiled binaries |
+| `make full-clean` | Remove artifacts + all installed dependencies |
 
 ### `make clean`
 
-删除：
+Removes:
 
-- `dist/` — 分发包
-- `server/dist/` — 编译后的服务器二进制文件
-- `apps/web/dist/` — React 构建输出
-- `server/frontend/` 内容 — 嵌入的前端资源
-- `apps/android/app/build/` — Android 构建输出
-- `apps/ios/build/` — iOS 构建输出
-- `apps/site/dist/` — Astro 站点构建输出
-- `target/` — Rust/Cargo 构建输出
+- `dist/` — distribution tarballs
+- `server/dist/` — compiled server binary
+- `apps/web/dist/` — React build output
+- `server/frontend/` contents — embedded frontend assets
+- `apps/android/app/build/` — Android build outputs
+- `apps/ios/build/` — iOS build outputs
+- `apps/site/dist/` — Astro site build output
+- `target/` — Rust/Cargo build output
 
 ### `make full-clean`
 
-执行 `clean` 的所有操作，另外还包括：
+Everything `clean` does, plus:
 
 - `apps/web/node_modules/`
 - `apps/site/node_modules/`
 - `apps/android/.gradle/`
 - `apps/android/build/`
-- Go 模块缓存（`go clean -modcache`）
+- Go module cache (`go clean -modcache`)
 
-之后运行 `make init` 以重新安装依赖。
+Run `make init` afterwards to reinstall dependencies.

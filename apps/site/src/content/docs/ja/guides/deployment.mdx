@@ -4,25 +4,25 @@ description: Bedrud を本番環境にデプロイする
 order: 28
 ---
 
-本番サーバーに Bedrud をデプロイする方法について説明します。
+This guide explains how to deploy Bedrud to a production server.
 
-## デプロイ方法
+## Deployment Options
 
-| 方法 | 適しているケース |
+| Method | Best For |
 |--------|----------|
-| [パッケージマネージャー (apt/AUR)](#package-manager) | 対応 Linux ディストリビューションでのマネージドインストール |
-| [自動化 CLI](#automated-cli-deployment) | クイックリモートセットアップ |
-| [手動インストール](#manual-installation) | 設定を完全に制御したい場合 |
-| [Docker](#docker-deployment) | コンテナ環境 |
-| [アプライアンスモード](/ja/docs/guides/appliance) | シングルバイナリのオールインワンセットアップ |
+| [Package Manager (apt/AUR)](#package-manager) | Managed install on supported Linux distros |
+| [Automated CLI](#automated-cli-deployment) | Quick remote setup |
+| [Manual Install](#manual-installation) | Full control over configuration |
+| [Docker](#docker-deployment) | Containerized environments |
+| [Appliance Mode](/ja/docs/guides/appliance) | Single-binary all-in-one setup |
 
 ---
 
-## パッケージマネージャー
+## Package Manager
 
-Debian/Ubuntu または Arch Linux でネイティブパッケージマネージャーを使用して Bedrud をインストールします。`apt upgrade` や AUR による自動更新を行いたい永続的なサーバーデプロイにおすすめの方法です。
+Install Bedrud on Debian/Ubuntu or Arch Linux using the native package manager. This is the recommended method for persistent server deployments where you want automatic updates via `apt upgrade` or the AUR.
 
-apt GPG キーとリポジトリの追加を含む詳しい手順は、[パッケージインストールガイド](/ja/docs/guides/packages)を参照してください。
+See the [Package Installation guide](/ja/docs/guides/packages) for full instructions, including adding the apt GPG key and repository.
 
 ```bash
 # Ubuntu / Debian
@@ -32,7 +32,7 @@ sudo apt install bedrud
 yay -S bedrud-bin
 ```
 
-インストール後、インタラクティブインストーラーを実行して TLS、イニットサービス（systemd/OpenRC/SysV）、データベースを設定します：
+After installation, run the interactive installer to configure TLS, init services (systemd/OpenRC/SysV), and the database:
 
 ```bash
 sudo bedrud install
@@ -40,11 +40,11 @@ sudo bedrud install
 
 ---
 
-## 自動化 CLI デプロイ
+## Automated CLI Deployment
 
-最も速いデプロイ方法です。ローカルマシンから実行します：
+The fastest way to deploy. Run from your local machine:
 
-**前提条件：** Python 3.10+、[uv](https://github.com/astral-sh/uv)、およびターゲットサーバーへの SSH アクセス。
+**Prerequisites:** Python 3.10+, [uv](https://github.com/astral-sh/uv), and SSH access to the target server.
 
 ```bash
 cd tools/cli
@@ -56,79 +56,81 @@ uv run python bedrud.py --auto-config \
   --acme-email admin@example.com
 ```
 
-以下の処理が行われます：
+This will:
 
-1. バックエンドバイナリをローカルでビルド
-2. rsync で圧縮・アップロード
-3. 競合する Web サーバーをクリア
-4. ファイアウォールを設定
-5. サーバーにサービスをインストール・起動
+1. Build the backend binary locally
+2. Compress and upload it via rsync
+3. Clear conflicting web servers
+4. Configure the firewall
+5. Install and start services on the server
 
-### CLI オプション
+### CLI Options
 
-| フラグ | 説明 |
+| Flag | Description |
 |------|-------------|
-| `--ip` | サーバーの IP アドレス |
-| `--user` | SSH ユーザー（デフォルト：root） |
-| `--auth-key` | SSH 秘密鍵のパス |
-| `--domain` | Let's Encrypt 用のドメイン名 |
-| `--acme-email` | Let's Encrypt 用のメールアドレス |
-| `--uninstall` | サーバーから Bedrud を削除 |
+| `--ip` | Server IP address |
+| `--user` | SSH user (default: root) |
+| `--auth-key` | Path to SSH private key |
+| `--domain` | Domain name for Let's Encrypt |
+| `--acme-email` | Email for Let's Encrypt |
+| `--uninstall` | Remove Bedrud from server |
 
 ---
 
-## 手動インストール
+## Manual Installation
 
-### 1. バイナリのビルド
+### 1. Build the Binary
 
 ```bash
 make build-dist
 ```
 
-`dist/bedrud_linux_amd64.tar.xz` が生成されます。
+This produces `dist/bedrud_linux_amd64.tar.xz`.
 
-### 2. サーバーにアップロード
+### 2. Upload to Server
 
 ```bash
 scp dist/bedrud_linux_amd64.tar.xz root@server:/tmp/
 ssh root@server "cd /tmp && tar xf bedrud_linux_amd64.tar.xz"
 ```
 
-### 3. インストール
+### 3. Install
 
 ```bash
 ssh root@server
 sudo /tmp/bedrud install --tls --domain meet.example.com --email admin@example.com
 ```
 
-すべてのインストールシナリオについては、[インストールガイド](/ja/docs/getting-started/installation)を参照してください。
+See the [Installation Guide](/ja/docs/getting-started/installation) for all installation scenarios.
 
-### 4. 管理者ユーザーの作成
+### 4. Create Admin User
 
 <CreateAdmin />
 
 ---
 
-## Docker デプロイ
+## Docker Deployment
 
-Docker でビルド・実行します：
+Build and run with Docker:
 
 ```bash
 docker build -t bedrud .
 docker run -d --name bedrud -p 8090:8090 -p 7880:7880 -v bedrud-data:/var/lib/bedrud bedrud
 ```
 
-ビルド済みイメージも利用可能です：
+When server TLS is enabled in Docker (via `SERVER_ENABLE_TLS=true` with mounted certs), the embedded LiveKit process automatically configures TURN/TLS using the server's certificate. For custom LiveKit configuration, mount a LiveKit YAML and set `LIVEKIT_CONFIG_PATH`.
+
+A pre-built image is also available:
 
 ```bash
 docker pull ghcr.io/themadorg/bedrud:latest
 ```
 
-ボリューム、設定、Docker Compose を含む詳細は、[Docker ガイド](/ja/docs/guides/docker)を参照してください。
+See the [Docker Guide](/ja/docs/guides/docker) for full details including volumes, configuration, and Docker Compose.
 
 ---
 
-## 本番アーキテクチャ
+## Production Architecture
 
 ```mermaid
 flowchart TB
@@ -138,29 +140,29 @@ flowchart TB
     BEDRUD */} DB["SQLite<br/>(or PostgreSQL)"]
 ```
 
-WebRTC 接続のため、ファイアウォールで以下のポートも開放してください：
+For WebRTC connectivity, also open these ports on the firewall:
 
-| ポート | プロトコル | 用途 |
+| Port | Protocol | Purpose |
 |------|----------|---------|
 | 3478 | UDP | TURN/UDP + STUN |
-| 5349 | TCP | TURN/TLS（または 443 を使用） |
-| 7881 | TCP | ICE/TCP フォールバック |
-| 50000-60000 | UDP | RTC メディアストリーム |
+| 5349 | TCP | TURN/TLS (or use 443) |
+| 7881 | TCP | ICE/TCP fallback |
+| 50000-60000 | UDP | RTC media streams |
 
-接続スタックの詳細は、[WebRTC 接続性](/ja/docs/architecture/webrtc-connectivity)を参照してください。
+See [WebRTC Connectivity](/ja/docs/architecture/webrtc-connectivity) for the full connectivity stack.
 
 <SystemdServices />
 
-### サービスの管理
+### Managing Services
 
 ```bash
-# ステータス確認
+# Check status
 systemctl status bedrud livekit
 
-# 再起動
+# Restart
 systemctl restart bedrud
 
-# ログの表示
+# View logs
 journalctl -u bedrud -f
 tail -f /var/log/bedrud/bedrud.log
 ```
@@ -178,51 +180,51 @@ Root-level redirects (`/health` → `/api/health`, `/ready` → `/api/ready`) ex
 
 ---
 
-## ファイルの場所（本番環境）
+## File Locations (Production)
 
-| パス | 内容 |
+| Path | Content |
 |------|---------|
-| `/usr/local/bin/bedrud` | バイナリ |
-| `/etc/bedrud/config.yaml` | サーバー設定 |
-| `/etc/bedrud/livekit.yaml` | LiveKit 設定 |
-| `/var/lib/bedrud/bedrud.db` | SQLite データベース |
-| `/var/log/bedrud/bedrud.log` | アプリケーションログ |
+| `/usr/local/bin/bedrud` | Binary |
+| `/etc/bedrud/config.yaml` | Server configuration |
+| `/etc/bedrud/livekit.yaml` | LiveKit configuration |
+| `/var/lib/bedrud/bedrud.db` | SQLite database |
+| `/var/log/bedrud/bedrud.log` | Application logs |
 
 ---
 
 ## CI/CD
 
-### リリースパイプライン
+### Release Pipeline
 
-`release.yml` ワークフローはバージョンタグ（`v*`）でトリガーされ、以下を生成します：
+The `release.yml` workflow triggers on version tags (`v*`) and produces:
 
-| 成果物 | 説明 |
+| Artifact | Description |
 |---|---|
-| `bedrud_linux_amd64.tar.xz` / `bedrud_linux_arm64.tar.xz` | サーバーバイナリ（Linux x86_64 / ARM64） |
-| `bedrud_amd64.deb` / `bedrud_arm64.deb` | Debian/Ubuntu パッケージ（サーバー） |
-| Docker イメージ (`ghcr.io/themadorg/bedrud`) | GHCR にプッシュされるマルチアーキテクチャコンテナイメージ |
-| `bedrud-desktop-linux-x86_64.AppImage` | デスクトップ - 汎用 Linux AppImage |
-| `bedrud-desktop-linux-x86_64.deb` | デスクトップ - Debian/Ubuntu パッケージ |
-| `bedrud-desktop-linux-x86_64.tar.xz` | デスクトップ - Linux ポータブル tarball |
-| `bedrud-desktop-windows-x86_64-setup.exe` / `-arm64-setup.exe` | デスクトップ - Windows NSIS インストーラー |
-| `bedrud-desktop-windows-x86_64.zip` / `-arm64.zip` | デスクトップ - Windows ポータブル |
-| `bedrud-desktop-macos-x86_64.tar.gz` / `-arm64.tar.gz` | デスクトップ - macOS ポータブル（未署名） |
-| Android APK（デバッグ + リリース、アーキテクチャ別） | Android クライアントビルド |
-| iOS IPA（オプション、署名が必要） | iOS クライアントアーカイブ |
+| `bedrud_linux_amd64.tar.xz` / `bedrud_linux_arm64.tar.xz` | Server binaries (Linux x86_64 / ARM64) |
+| `bedrud_amd64.deb` / `bedrud_arm64.deb` | Debian/Ubuntu packages (server) |
+| Docker image (`ghcr.io/themadorg/bedrud`) | Multi-arch container image pushed to GHCR |
+| `bedrud-desktop-linux-x86_64.AppImage` | Desktop - universal Linux AppImage |
+| `bedrud-desktop-linux-x86_64.deb` | Desktop - Debian/Ubuntu package |
+| `bedrud-desktop-linux-x86_64.tar.xz` | Desktop - Linux portable tarball |
+| `bedrud-desktop-windows-x86_64-setup.exe` / `-arm64-setup.exe` | Desktop - Windows NSIS installer |
+| `bedrud-desktop-windows-x86_64.zip` / `-arm64.zip` | Desktop - Windows portable |
+| `bedrud-desktop-macos-x86_64.tar.gz` / `-arm64.tar.gz` | Desktop - macOS portable (unsigned) |
+| Android APK (debug + release, per-arch) | Android client builds |
+| iOS IPA (optional, requires signing) | iOS client archive |
 
-すべての成果物は GitHub リリースに添付されます。
+All artifacts are attached to the GitHub release.
 
-### ナイトリービルド
+### Nightly Builds
 
-`dev-nightly.yml` ワークフローが定期的に開発ビルドを生成します。
+The `dev-nightly.yml` workflow produces development builds on a schedule.
 
-### CI チェック
+### CI Checks
 
-`master` へのプッシュおよびすべてのプルリクエストで以下が実行されます：
+Every push to `master` and every pull request runs:
 
-| チェック | プラットフォーム |
+| Check | Platform |
 |-------|----------|
-| `go vet` + ビルド + テスト | ubuntu-latest (Go 1.24) |
-| 型チェック + ビルド | ubuntu-latest (Bun) |
-| リント + ユニットテスト | ubuntu-latest (JDK 17) |
-| ビルド + テスト | macos-15 (Xcode) |
+| `go vet` + build + tests | ubuntu-latest (Go 1.24) |
+| Type check + build | ubuntu-latest (Bun) |
+| Lint + unit tests | ubuntu-latest (JDK 17) |
+| Build + test | macos-15 (Xcode) |

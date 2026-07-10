@@ -4,33 +4,33 @@ description: Управление доступом на основе ролей 
 order: 36
 ---
 
-Bedrud реализует 5-уровневую систему ролей для управления доступом. Каждая роль сопоставляется с набором строк доступа, хранящихся в записи пользователя, и применяется как на уровне API (промежуточное ПО бэкенда), так и на уровне UI (гварды фронтенда и условный рендеринг).
+Bedrud implements a 5-tier role system for access control. Each role maps to a set of access strings stored on the user record and enforced at both the API layer (backend middleware) and the UI layer (frontend guards and conditional rendering).
 
-## Иерархия ролей
+## Role Hierarchy
 
-| Роль | Массив доступа | Вес бэкенда | Описание |
-|------|---------------|-------------|----------|
-| Суперадмин | `['superadmin', 'user']` | 4 | Полный доступ к системе, все возможности администрирования |
-| Админ | `['admin', 'user']` | 3 | Полный административный доступ, как суперадмин |
-| Модератор | `['moderator', 'user']` | 2 | Просмотр админки только для чтения, без изменений |
-| Пользователь | `['user']` | 1 | Стандартный зарегистрированный пользователь |
-| Гость | `['guest']` | 0 | Незарегистрированный участник, только присоединение |
+| Role | Access Array | Backend Weight | Description |
+|------|-------------|----------------|-------------|
+| Superadmin | `['superadmin', 'user']` | 4 | Full system access, all admin capabilities |
+| Admin | `['admin', 'user']` | 3 | Full admin access, same as superadmin |
+| Moderator | `['moderator', 'user']` | 2 | Read-only admin view, no mutations |
+| User | `['user']` | 1 | Standard registered user |
+| Guest | `['guest']` | 0 | Unregistered participant, join-only |
 
-## Применение на бэкенде
+## Backend Enforcement
 
-Уровни доступа применяются через промежуточное ПО `RequireAccess` на каждом административном маршруте. Промежуточное ПО проверяет массив доступа пользователя на соответствие минимально необходимому уровню:
+Access levels are enforced via the `RequireAccess` middleware on every admin route. The middleware checks the user's accesses array against the minimum required level:
 
-- Маршруты, требующие доступа `superadmin`, отклоняют админа, модератора, пользователя и гостя
-- Маршруты, требующие доступа `admin`, разрешают суперадмина и админа
-- Маршруты, требующие доступа `moderator`, разрешают суперадмина, админа и модератора
+- Routes requiring `superadmin` access reject admin, moderator, user, and guest
+- Routes requiring `admin` access allow superadmin and admin
+- Routes requiring `moderator` access allow superadmin, admin, and moderator
 
-Бэкенд хранит доступы в виде строки, разделенной запятыми, в базе данных (столбец `accesses` в таблице `users`). Тип GORM `StringArray` обрабатывает сериализацию и десериализацию.
+The backend stores accesses as a comma-separated string in the database (`accesses` column on the `users` table). The `StringArray` GORM type handles serialization and deserialization.
 
-## Интеграция с фронтендом
+## Frontend Integration
 
-### Тип пользователя
+### User Type
 
-Интерфейс `User` в `user.store.ts` включает два булевых поля, производных от массива доступа:
+The `User` interface in `user.store.ts` includes two boolean fields derived from the accesses array:
 
 ```ts
 interface User {
@@ -41,49 +41,49 @@ interface User {
 }
 ```
 
-### Гвард администратора
+### Admin Guard
 
-Макет администратора (`/dashboard/admin`) пропускает суперадмина, админа и модератора. Модераторы получают контекстную переменную `isReadOnly=true`:
+The admin layout (`/dashboard/admin`) lets through superadmin, admin, and moderator. Moderators receive an `isReadOnly=true` context variable:
 
 ```tsx
 // routes/dashboard/admin.tsx
 const canAccess = user?.isSuperAdmin || accesses.includes('admin') || accesses.includes('moderator')
 ```
 
-Хук `useAdminContext()` предоставляет флаг `isReadOnly` всем дочерним маршрутам:
+The `useAdminContext()` hook provides the `isReadOnly` flag to all child routes:
 
 ```tsx
 const { isReadOnly } = useAdminContext()
 ```
 
-### Что модераторы могут видеть vs делать
+### What Moderators Can See vs Do
 
-| Страница | Просмотр | Изменение |
-|----------|---------|-----------|
-| Статистика обзора | ✅ Полная статистика | Н/Д |
-| Список пользователей | ✅ Полный список | ❌ Нет массовых действий |
-| Детали пользователя | ✅ Полный профиль | ❌ Нет статуса/роли/удаления/выхода |
-| Список комнат | ✅ Полный список | ❌ Нет приостановки/удаления/редактирования лимита |
-| Детали комнаты | ✅ Полная информация | ❌ Нет приостановки/удаления/кика/мута |
-| Настройки | ❌ Перенаправление | ❌ |
+| Page | View | Mutate |
+|------|------|--------|
+| Overview stats | ✅ Full stats | N/A |
+| Users list | ✅ Full list | ❌ No bulk actions |
+| User detail | ✅ Full profile | ❌ No status/role/delete/logout |
+| Rooms list | ✅ Full list | ❌ No suspend/delete/edit cap |
+| Room detail | ✅ Full info | ❌ No suspend/delete/kick/mute |
+| Settings | ❌ Redirected | ❌ |
 
-### Селектор ролей
+### Role Selector
 
-Административный интерфейс предоставляет выпадающий список `<Select>` как в таблице списка пользователей, так и на странице деталей пользователя, заменяя предыдущий бинарный переключатель суперадмина. Доступные опции:
+The admin UI provides a `<Select>` dropdown on both the users list table and the user detail page, replacing the previous binary superadmin toggle. Available options:
 
-| Опция | Сохраняет как |
-|-------|--------------|
-| Суперадмин | `['superadmin', 'user']` |
-| Админ | `['admin', 'user']` |
-| Модератор | `['moderator', 'user']` |
-| Пользователь | `['user']` |
-| Гость | `['guest']` |
+| Option | Saves as |
+|--------|----------|
+| Superadmin | `['superadmin', 'user']` |
+| Admin | `['admin', 'user']` |
+| Moderator | `['moderator', 'user']` |
+| User | `['user']` |
+| Guest | `['guest']` |
 
-Выпадающий список отправляет запрос `PUT /api/admin/users/:id/accesses` с полным массивом доступа.
+The dropdown sends a `PUT /api/admin/users/:id/accesses` request with the full access array.
 
-## Управление через CLI
+## CLI Management
 
-Команды `bedrud user promote` и `bedrud user demote` принимают флаг `--role`:
+The `bedrud user promote` and `bedrud user demote` commands accept a `--role` flag:
 
 ```bash
 # Promote to superadmin (default)
@@ -99,16 +99,20 @@ bedrud user promote --email user@example.com --role moderator
 bedrud user demote --email user@example.com --role admin
 ```
 
-Допустимые значения `--role`: `superadmin`, `admin`, `moderator`, `user`, `guest`.
+Valid `--role` values: `superadmin`, `admin`, `moderator`, `user`, `guest`.
 
-## Расположение кода
+## In-meeting moderation UI
 
-| Файл | Назначение |
-|------|------------|
-| `server/internal/models/user.go` | Константы уровней доступа бэкенда |
-| `server/internal/middleware/` | Промежуточное ПО `RequireAccess` |
-| `server/internal/usercli/usercli.go` | Функции управления ролями CLI |
-| `apps/web/src/lib/user.store.ts` | Тип пользователя фронтенда |
-| `apps/web/src/routes/dashboard/admin.tsx` | Гвард администратора + контекст isReadOnly |
-| `apps/web/src/components/admin/UserTable.tsx` | Выпадающий список селектора ролей + значки |
-| `apps/web/src/components/admin/RoomTable.tsx` | Маскировка таблицы комнат только для чтения |
+Room creators and promoted moderators use the participant context menu and stage/share controls during a call. For host-facing behavior (mute, kick, screen share stop, spotlight, stage), see [Meeting Controls](/ru/docs/using/meeting-controls) and [Stage Mode](/ru/docs/using/stage-mode).
+
+## Code Locations
+
+| File | Purpose |
+|------|---------|
+| `server/internal/models/user.go` | Backend access level constants |
+| `server/internal/middleware/` | `RequireAccess` middleware |
+| `server/internal/usercli/usercli.go` | CLI role management functions |
+| `apps/web/src/lib/user.store.ts` | Frontend User type |
+| `apps/web/src/routes/dashboard/admin.tsx` | Admin guard + isReadOnly context |
+| `apps/web/src/components/admin/UserTable.tsx` | Role selector dropdown + badges |
+| `apps/web/src/components/admin/RoomTable.tsx` | Read-only room table masking |

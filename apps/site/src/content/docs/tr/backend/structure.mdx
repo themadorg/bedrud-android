@@ -1,129 +1,128 @@
 ---
 title: Kod Yapısı
-description: Arka uç kod organizasyonu
+description: Backend kod organizasyonu
 order: 16
 ---
 
-`server/` dizini ve içeriğinin haritası.
+Map of the `server/` directory and its contents.
 
-## Proje Yol Haritası ve Ağacı
-
-`server/` dizini Go arka ucunu ve gömülü LiveKit medya sunucusunu içerir. `apps/` dizini ise istemci uygulamalarını barındırır.
+## Project Tree
 
 ```text
 bedrud/
-├── apps/                # İstemci Uygulamaları
-│   ├── web/             # React Ön Ucu (TanStack Start)
-│   ├── android/         # Yerel Android Uygulaması
-│   └── ios/             # Yerel iOS Uygulaması
-├── server/              # Go Arka Ucu ("Cihaz")
-│   ├── cmd/             # CLI Giriş noktaları (run, install)
-│   ├── internal/        # Özel uygulama kodu
-│   │   ├── auth/        # JWT, Passkey, OAuth mantığı
-│   │   ├── handlers/    # HTTP Denetleyicileri
-│   │   ├── models/      # Veritabanı Şemaları
-│   │   ├── repository/  # GORM Veri Erişim Katmanı
-│   │   └── livekit/     # Medya Sunucusu Yönetimi
-│   ├── frontend/        # (Üretilen) Derlenmiş web dosyaları
-│   ├── config.yaml      # Yapılandırma şablonu
-│   └── Makefile         # Derleme ve Dağıtım otomasyonu
-└── docs/                # Sistem Dokümantasyonu (MkDocs)
+├── apps/
+│   ├── web/             # React frontend (TanStack Start)
+│   ├── site/            # Astro marketing/docs site
+│   ├── desktop/         # Rust + Slint desktop app
+│   ├── android/         # Native Android
+│   └── ios/             # Native iOS
+├── agents/              # Python LiveKit bots
+├── packages/api-types/  # Shared TypeScript types
+├── server/              # Go backend (module: bedrud)
+│   ├── cmd/
+│   │   ├── bedrud/      # Production CLI entrypoint
+│   │   └── server/      # Dev API-only entrypoint (Air hot-reload)
+│   ├── config/          # Config structs + Load() + livekit example
+│   ├── internal/
+│   │   ├── auth/        # JWT, passkeys, OAuth, sessions
+│   │   ├── cli/         # Cobra commands (run, install, user, room, …)
+│   │   ├── database/    # GORM init + migrations
+│   │   ├── handlers/    # Fiber HTTP handlers
+│   │   ├── install/     # bedrud install (systemd/OpenRC/SysV)
+│   │   ├── livekit/     # Embedded LiveKit binary lifecycle
+│   │   ├── lkutil/      # LiveKit client helpers
+│   │   ├── middleware/  # Auth, RBAC, rate limits
+│   │   ├── models/      # GORM models
+│   │   ├── queue/       # Async jobs + email templates
+│   │   ├── repository/  # Data access layer
+│   │   ├── scheduler/   # Background cleanup (gocron)
+│   │   ├── server/      # Bootstrap: Run() wires everything
+│   │   ├── services/    # Room cleanup, recording service
+│   │   ├── storage/     # Chat/avatar/recording storage
+│   │   └── utils/       # TLS certs, net helpers, …
+│   ├── frontend/        # Embedded built web assets (//go:embed)
+│   └── docs/            # Generated Swagger (swag)
+├── docs/server/         # Engineer-facing backend docs (repo)
+└── Makefile             # Build & dev automation (repo root)
 ```
 
-## Dizin Haritası
+## Directory Map
 
 ### `/cmd/bedrud`
-- **`main.go`**: Uygulamanın giriş noktası. `run`, `install` ve `livekit` gibi CLI komutlarını işler.
+Production entrypoint: Cobra CLI (`run`, `install`, `user`, `room`, `config`, …).
+
+### `/cmd/server`
+Dev API process (Air). No full CLI surface; may differ slightly from prod route registration.
 
 ### `/config`
-- **`config.go`**: `Config` yapısını tanımlar ve `config.yaml` veya Ortam Değişkenlerinden ayarları yükler.
-- **`livekit.yaml`**: Gömülü LiveKit sunucusu için varsayılan yapılandırma.
+- **`config.go`**: `Config` struct, `Load()`, env overrides
+- **`livekit.yaml.example`**: External LiveKit sample
 
 ### `/internal`
 
-- **`/auth`**: JWT üretimi, OAuth sağlayıcıları ve Passkey (WebAuthn) kaydı/girişi mantığını içerir.
-- **`/database`**: SQLite veya PostgreSQL bağlantısını yönetir ve göçleri (migration) çalıştırır.
-- **`/handlers`**: Fiber HTTP işleyicileri. Her API uç noktasının mantığını burada bulabilirsiniz (ör. `auth_handler.go`, `room_handler.go`).
-- **`/models`**: GORM veritabanı modelleri. Bu dosyalar veritabanınızdaki tabloları tanımlar.
-- **`/repository`**: "Veri Erişim Katmanı". İşleyiciler, doğrudan veritabanı sorgusu yazmak yerine depoları çağırır; böylece işleyici mantığı temiz kalır.
-- **`/livekit`**: LiveKit Go SDK ile entegrasyon. Oda oluşturmayı yönetir ve katılımcılar için "Katılım Jetonları" üretir.
-- **`/middleware`**: Kimlik doğrulama kontrolleri, günlükleme ve CORS için özel Fiber ara katmanı.
-- **`/server`**: Her şeyi bir araya getiren yapıştırıcı kod. Veritabanını, depoları başlatır ve Fiber sunucusunu çalıştırır.
-- **`/install`**: Linux üzerinde init servisi (systemd/OpenRC/SysV) ve TLS kurulumunu otomatikleştiren `bedrud install` komutunun mantığı.
-- **`/scheduler`**: Arka plan görevleri (varsa).
-- **`/utils`**: Küçük yardımcı fonksiyonlar (ör. parola hashleme, rastgele dizeler).
+| Package | Role |
+|---------|------|
+| `auth` | JWT, OAuth (Goth), passkeys, session store, email verification tokens |
+| `cli` | All management subcommands |
+| `database` | SQLite/Postgres connection, AutoMigrate |
+| `handlers` | HTTP: auth, rooms, admin, webhooks, LiveKit webhook, certs |
+| `install` | Linux installer |
+| `livekit` | Extract/run embedded `livekit-server` |
+| `lkutil` | Shared LiveKit API helpers |
+| `middleware` | `Protected`, `RequireAccess`, rate limiters, email-verified gate |
+| `models` | GORM schemas |
+| `queue` | Job worker + handlers (delete, suspend, webhook, email, …) |
+| `repository` | Data access |
+| `scheduler` | Idle rooms, job cleanup, cert renewal, recording retention |
+| `server` | `Run()` bootstrap and route table (**production** routes) |
+| `services` | Room cascade cleanup; recording service (planned routes) |
+| `storage` | Disk/S3/inline chat uploads, avatars |
+| `utils` | Self-signed TLS, safe IO, keys |
 
-### `/migrations`
+### `/docs` (within server)
 
-- Veritabanı şema güncellemeleri için SQL veya Go dosyalarını içerir.
+Swagger/OpenAPI generated by `swag` → UI at `/api/swagger` and Scalar at `/api/scalar`.
 
-### `/docs` (server içinde)
+## Technical Deep Dive
 
-- `swag` tarafından üretilen Swagger/OpenAPI dokümantasyon dosyalarını içerir.
+### 1. Binary Embedding
 
-## Teknik Derinlemesine İnceleme
+- **Frontend:** Built assets embedded via `server/ui.go` (`//go:embed all:frontend`)
+- **LiveKit:** Binary under `internal/livekit/bin/`; extracted at runtime and launched as a subprocess
 
-### 1. İkili Dosya Gömme ("Hile")
+### 2. LiveKit Reverse Proxy
 
-Bedrud, `//go:embed` yönergesini kullanarak dosyaları derlenmiş ikili dosyaya paketler.
+When not `livekit.external`, requests under `/livekit` are reverse-proxied to the internal LiveKit host (install default often `127.0.0.1:7880`; local multi-process dev often `7072`).
 
-- **Ön Uç:** React `dist/client/` klasörü (ve ön renderlı bir `index.html`) `server/ui.go` dosyasına gömülür. Statik dosyalar Fiber'ın `filesystem` ara katmanı kullanılarak doğrudan bellekten sunulur.
-- **LiveKit Sunucusu:** Önceden derlenmiş `livekit-server` çalıştırılabilir dosyası `internal/livekit/bin/` içine gömülür. Çalışma zamanında Bedrud bunu `/tmp/bedrud-livekit-server` konumuna çıkarır ve arka plan süreci olarak başlatır (`internal/livekit/server.go`).
+### 3. Middleware Locals
 
-### 2. LiveKit Ters Vekil
+Auth middleware stores claims in `c.Locals("user")`. Handlers read `*auth.Claims`.
 
-Birden fazla port (sinyalleşme, API vb.) açmaktan kaçınmak için Bedrud, tüm LiveKit sinyalleşme trafiğini ana HTTP(S) portu üzerinden yönlendirir.
+### 4. Configuration Overrides
 
-- `/livekit` ile başlayan her istek `internal/server/server.go` dosyasında yakalanır.
-- Bir **Ters Vekil** (`httputil.NewSingleHostReverseProxy` kullanılarak), bu istekleri dahili LiveKit örneğine (genellikle `127.0.0.1:7880` üzerinde çalışan) iletir.
-- Vekil, iletimden önce `/livekit` önekini kaldırır; böylece LiveKit kök uygulama gibi çalışabilir.
+File + env (see [Configuration](/tr/docs/getting-started/configuration)). Runtime admin overrides live in `SystemSettings` (DB).
 
-### 3. Ara Katman Bağlamı ve Yerel Değişkenler
-Arka uç, ara katman ile işleyiciler arasında veri geçirmek için Fiber'ın `.Locals` özelliğini kullanır.
-- **Kimlik Doğrulama Ara Katmanı (`internal/middleware/auth.go`):** JWT'yi doğrular ve `Claims` nesnesini `c.Locals("user")` içinde saklar.
-- **İşleyiciler:** Geçerli kullanıcının kimliğini ve izinlerine şu şekilde erişebilir:
-  ```go
-  claims := c.Locals("user").(*auth.Claims)
-  userID := claims.UserID
-  ```
+| Variable | Description |
+|----------|-------------|
+| `SERVER_PORT` | Main listener port |
+| `SERVER_ENABLE_TLS` | HTTPS |
+| `SERVER_DOMAIN` | Domain (ACME / passkey) |
+| `DB_TYPE` / `DB_PATH` | Database type / SQLite path |
+| `LIVEKIT_HOST` | Public LiveKit URL |
+| `LIVEKIT_API_KEY` | LiveKit key |
+| `JWT_SECRET` | Access token secret |
+| `CONFIG_PATH` / `BEDRUD_CONFIG` | Config file path |
 
-### 4. Yapılandırma Geçersiz Kılmaları
+## Coding Standards
 
-Bedrud bir `config.yaml` dosyası kullansa da, neredeyse her ayar **Ortam Değişkenleri** kullanılarak geçersiz kılınabilir. Bu, Docker ve CI/CD ortamları için gereklidir.
+1. **Repository pattern** — handlers call repos, not GORM directly
+2. **Structured errors** — Fiber status + JSON
+3. **Zerolog** — `log.Info` / `Error` / `Debug` (not `fmt.Println`)
+4. **Naming** — files `snake_case.go`, exported types PascalCase
 
-| Değişken | Açıklama |
-|----------|----------|
-| `SERVER_PORT` | Arka ucun dinlediği port (varsayılan: `8090`). |
-| `SERVER_ENABLE_TLS` | HTTPS'yi etkinleştirmek için boolean (`true/false`). |
-| `SERVER_DOMAIN` | Üretim alan adınız (ACME ve Passkey RP ID için kullanılır). |
-| `DB_TYPE` | `sqlite` veya `postgres`. |
-| `DB_PATH` | `.db` dosyasının yolu (SQLite kullanılıyorsa). |
-| `LIVEKIT_HOST` | LiveKit için genel URL (ör. `https://meet.example.com/livekit`). |
-| `LIVEKIT_API_KEY` | LiveKit kimlik doğrulama anahtarı. |
-| `JWT_SECRET` | Erişim Jetonlarını imzalamak için kullanılan gizli anahtar. |
+## See also
 
-## Kodlama Standartları ve Örüntüleri
-
-Arka uç şu örüntüleri izler:
-
-### 1. Depo Örüntüsü (Repository Pattern)
-İşleyiciler doğrudan veritabanıyla konuşmamalıdır. Bir Depo kullanın. Bu, kodun test edilmesini kolaylaştırır ve API işleyicilerine dokunmadan veritabanı mantığı değişikliklerine olanak tanır.
-
-### 2. Standartlaştırılmış Hata İşleme
-API işleyicileri net hata mesajları döndürmelidir.
-- Doğrulama hataları için `c.Status(fiber.StatusBadRequest).JSON(...)` kullanın.
-- Kimlik doğrulama hataları için `c.Status(fiber.StatusUnauthorized).JSON(...)` kullanın.
-- Veritabanı veya sunucu hataları için `c.Status(fiber.StatusInternalServerError).JSON(...)` kullanın.
-
-### 3. Yapılandırılmış Günlükleme
-Arka uç günlükleme için **Zerolog** kullanır.
-- `log.Info()`: Önemli olaylar için (ör. sunucu başlatıldı).
-- `log.Error()`: Hatalar için.
-- `log.Debug()`: Ayrıntılı geliştirme bilgisi için.
-
-Çekirdek mantıkta günlükleme için `fmt.Println` kullanmaktan kaçının.
-
-### 4. İsimlendirme Kuralları
-- **Dosyalar:** snake_case (ör. `user_handler.go`).
-- **Yapılar/Fonksiyonlar:** PascalCase (ör. `GetUserByEmail`).
-- **Değişkenler:** camelCase (ör. `hashedPassword`).
+- [Configuration](/tr/docs/getting-started/configuration)
+- [CLI Reference](/tr/docs/getting-started/cli-reference)
+- [API Handlers](/tr/docs/backend/api-handlers)
+- Repo engineer docs: `docs/server/` (not published to the site)

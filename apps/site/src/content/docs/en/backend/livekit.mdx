@@ -179,29 +179,13 @@ Bedrud uses LiveKit's [RoomCompositeEgress API](https://docs.livekit.io/egress/o
 
 #### Recording Lifecycle
 
-1. **Start:** Handler calls `StartRoomCompositeEgress` with a room-scoped JWT (requires `RoomRecord: true` **and** `Room: <roomName>`).
-2. **Stop:** Handler calls `StopEgress`, transitions recording to `processing`.
-3. **Process:** Background job (`process_recording`) downloads the file from LiveKit's file server or S3 and stores it via `ChatUploadStore`.
-4. **Complete:** Webhook dispatched (`recording.completed`) to registered webhooks.
+🚧 **Planned feature.** Production routes for start/stop/list/delete recordings are commented out (`// TODO oncoming feature` in `internal/server/server.go`). Implementation code (handlers, egress client, `process_recording` job, `recording.completed` webhook) exists for the upcoming release but is **not active** yet.
 
-**Egress Client:** Created at startup via `lkutil.NewEgressClient()`. If unavailable, recording is disabled but the server starts normally.
+When enabled, the intended flow is:
 
-**Egress API Auth:** The JWT used to call `StartRoomCompositeEgress` / `StopEgress` must include **both** `RoomRecord: true` and `Room: <roomName>`. LiveKit's Egress service requires room-scoped permission — bare `RoomRecord` without a room name returns `twirp error unauthenticated: permissions denied`.
-
-**Download Auth:** Recording file URLs get a short-lived (5 min) LiveKit JWT scoped to the specific room for download.
-
-**Webhook Event:** When a recording completes, a `recording.completed` event is dispatched to all webhooks subscribed to that event.
-
-See the [Recordings API](/en/docs/api/api-reference) for endpoint details.
-
-#### Troubleshooting: Recording
-
-| Symptom | Cause | Fix |
-|---------|-------|-----|
-| `twirp error unauthenticated: permissions denied` when starting recording | Egress JWT missing `Room` field in grant | Update `egressAuthContext` to include `Room: roomName` in the `VideoGrant` |
-| `twirp error unauthenticated: permissions denied` even with valid API key | Redis not configured for LiveKit, or egress workers unavailable | Add `redis:` section to LiveKit YAML; ensure Redis is healthy |
-| Recording starts but `FileURL` is a local path (e.g., `/tmp/...`) | No `egress:` S3 config — LiveKit writes to worker temp dir | Add `egress.s3:` block to LiveKit YAML pointing to S3-compatible storage |
-| `process_recording` job fails to download | External LK's file URL points to inaccessible local path | Configure egress S3 so LiveKit produces S3 URLs; OR ensure Bedrud can reach LK's file server port |
+1. **Start:** `StartRoomCompositeEgress` with room-scoped JWT (`RoomRecord: true` and `Room: <roomName>`).
+2. **Stop:** `StopEgress`, then background `process_recording` stores the file.
+3. **Complete:** Optional `recording.completed` outbound webhook.
 
 <Callout type="info">
   See also the [TURN Server Guide](/en/docs/architecture/turn-server) for TURN-specific troubleshooting, [WebRTC Connectivity](/en/docs/architecture/webrtc-connectivity) for STUN/ICE/firewall debugging, and [Installation Troubleshooting](/en/docs/getting-started/installation#troubleshooting) for port/perm/setup issues.

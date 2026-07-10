@@ -1,220 +1,231 @@
 ---
 title: CLI Referansı
-description: Komut satırı arayüzü belgeleri
+description: Komut satırı arayüzü belgelendirmesi
 order: 5
 ---
 
-`bedrud` komut satırı arayüzü için tam referans.
+Complete reference for the `bedrud` command-line interface.
 
-## Özet
+## Synopsis
 
 ```bash
-# Alt komut stili
-bedrud <komut> [bayraklar]
+# Subcommand style
+bedrud <command> [flags]
 
-# Bayrak stili
-bedrud --livekit --config <yol>
-bedrud --run --config <yol>
+# Legacy flag style (systemd units)
+bedrud --livekit --config <path>
+bedrud --run --config <path>
 ```
 
-## Komutlar
+## Global Flags
+
+| Flag | Env | Description |
+|------|-----|-------------|
+| `--config <path>` | `BEDRUD_CONFIG`, `CONFIG_PATH` | Path to Bedrud YAML config |
+| `--json` | — | Machine-readable JSON output for management commands |
+| `--version` | — | Print version (also `bedrud version`) |
+
+Default config path for `run` is `config.yaml`. Management commands (`user`, `room`, `config`, …) default to `/etc/bedrud/config.yaml` when installed.
+
+## Commands
 
 ### `run` / `server`
 
-API, gömülü web önyüzü ve (yapılandırılmışsa) gömülü LiveKit ile Bedrud toplantı sunucusunu başlatır.
+Start the Bedrud meeting server with API, embedded web frontend, and embedded LiveKit (if configured).
 
 ```bash
-bedrud run    [--config <yol>]
-bedrud server [--config <yol>]
+bedrud run    [--config <path>] [--skip-migrate]
+bedrud server [--config <path>] [--skip-migrate]
 ```
 
-| Bayrak       | Varsayılan                                  | Açıklama                     |
-|------------|------------------------------------------|---------------------------------|
-| `--config` | `$CONFIG_PATH` ortam değişkeni → `"config.yaml"` | Bedrud YAML yapılandırma dosyasının yolu |
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--config` | `BEDRUD_CONFIG` / `CONFIG_PATH` / `config.yaml` | Path to Bedrud YAML config |
+| `--skip-migrate` | `false` | Skip database migrations on startup |
 
-**Davranış:**
-- Yapılandırmayı belirtilen yoldan veya varsayılanlardan yükler
-- Dahili mod için yapılandırılmışsa gömülü LiveKit'i başlatır
-- SQLite/PostgreSQL veritabanını başlatır ve göçleri çalıştırır
-- Tüm API yollarıyla Fiber HTTP sunucusu oluşturur
-- Gömülü React önyüzünü sunar
-- ACME (Let's Encrypt), kendi imzalı TLS, manuel TLS veya düz HTTP destekler
-- SIGTERM/SIGINT sinyalinde düzgün kapanma
+**Behavior:**
+- Loads config from specified path or defaults
+- Starts embedded LiveKit if not `livekit.external`
+- Initializes SQLite/PostgreSQL and runs migrations (unless skipped)
+- Fiber HTTP server with API routes + embedded React frontend
+- ACME, self-signed TLS, manual TLS, or plain HTTP
+- Graceful shutdown on SIGTERM/SIGINT
 
-**Uygulama:** `server/internal/server/server.go`
+**Implementation:** `server/internal/server/server.go`, `server/internal/cli/run.go`
 
 ---
 
 ### `--livekit`
 
-Yalnızca gömülü LiveKit medya sunucusunu başlatır. İkili dosyayı Go embed'dan geçici bir dizine çıkarır.
+Start the embedded LiveKit media server only. Extracts binary from Go embed to a temporary directory.
 
 ```bash
-bedrud --livekit --config <yol>
+bedrud --livekit --config <path>
 ```
 
-| Bayrak       | Varsayılan    | Açıklama                      |
+| Flag       | Default    | Description                      |
 |------------|------------|----------------------------------|
-| `--config` | (gerekli) | LiveKit YAML yapılandırma dosyasının yolu |
+| `--config` | (required) | Path to LiveKit YAML config file |
 
-**Kullanan:** `bedrud install` tarafından oluşturulan init `livekit` servisi
+**Used by:** init `livekit` service created by `bedrud install`
 
-**Uygulama:** `server/internal/livekit/server.go`
+**Implementation:** `server/internal/livekit/server.go`
 
 ---
 
 ### `--run`
 
-Aynı `--config` bayrak davranışıyla `bedrud run` için takma ad. init `bedrud` servisi tarafından kullanılır.
+Alias for `bedrud run` with same `--config` flag behavior. Used by init `bedrud` service.
 
 ```bash
-bedrud --run --config <yol>
+bedrud --run --config <path>
 ```
 
 ---
 
 ### `install`
 
-Bedrud'u bir Debian/Linux sistemine kurar. init servisleri (systemd, OpenRC veya SysV init — otomatik algılanır), yapılandırma dosyaları, dizinler ve TLS sertifikaları oluşturur.
+Install Bedrud on a Debian/Linux system. Creates init services (systemd, OpenRC, or SysV init — auto-detected), config files, directories, and TLS certificates.
 
 ```bash
-bedrud install [bayraklar]
+bedrud install [flags]
 ```
 
-| Bayrak                 | Varsayılan                         | Açıklama                                                              |
+| Flag                 | Default                         | Description                                                              |
 |----------------------|---------------------------------|--------------------------------------------------------------------------|
-| `--tls`              | `false`                         | HTTPS'yi etkinleştir (`--self-signed` ile aynı)                                   |
-| `--self-signed`      | `false`                         | Kendi imzalı TLS sertifikası oluştur                                     |
-| `--no-tls`           | `false`                         | TLS'yi tamamen devre dışı bırak (düz HTTP). `--tls` ve `--self-signed`'i geçersiz kılar |
-| `--ip`               | otomatik algılandı                   | Otomatik algılanan sunucu IP adresini geçersiz kıl                                 |
-| `--domain`           | `""`                            | Let's Encrypt veya kendi imzalı sertifika için alan adı                        |
-| `--email`            | `""`                            | Let's Encrypt kaydı için e-posta                                     |
-| `--port`             | `"443"` (TLS) / `"8090"` (HTTP) | Dinleme bağlantı noktasını geçersiz kıl                                                  |
-| `--cert`             | `""`                            | Mevcut PEM sertifika dosyasının yolu                                    |
-| `--key`              | `""`                            | Mevcut PEM özel anahtar dosyasının yolu                                    |
-| `--lk-port`          | `"7880"`                        | LiveKit API/WebSocket bağlantı noktasını geçersiz kıl                                      |
-| `--lk-tcp-port`      | `"7881"`                        | LiveKit RTC TCP bağlantı noktasını geçersiz kıl                                            |
-| `--lk-udp-port`      | `"7882"`                        | LiveKit RTC UDP bağlantı noktasını geçersiz kıl                                            |
-| `--fresh`            | `false`                         | Kurulumdan önce mevcut kurulumu kaldır                           |
-| `--behind-proxy`     | `false`                         | Sunucu CDN/ters vekil arkasında (Cloudflare, nginx)                   |
-| `--external-livekit` | `""`                            | Tamamen harici LiveKit sunucusunun URL'si (farklı makine)                 |
-| `--livekit-domain`   | `""`                            | Yerel LiveKit sunucusu için ayrı alan adı (CDN'yi atlar)                  |
+| `--tls`              | `false`                         | Enable HTTPS (same as `--self-signed`)                                   |
+| `--self-signed`      | `false`                         | Generate self-signed TLS certificate                                     |
+| `--no-tls`           | `false`                         | Disable TLS entirely (plain HTTP). Overrides `--tls` and `--self-signed` |
+| `--ip`               | auto-detected                   | Override auto-detected server IP address                                 |
+| `--domain`           | `""`                            | Domain name for Let's Encrypt or self-signed cert                        |
+| `--email`            | `""`                            | Email for Let's Encrypt registration                                     |
+| `--port`             | `"443"` (TLS) / `"8090"` (HTTP) | Override listening port                                                  |
+| `--cert`             | `""`                            | Path to existing PEM certificate file                                    |
+| `--key`              | `""`                            | Path to existing PEM private key file                                    |
+| `--lk-port`          | `"7880"`                        | Override LiveKit API/WebSocket port                                      |
+| `--lk-tcp-port`      | `"7881"`                        | Override LiveKit RTC TCP port                                            |
+| `--lk-udp-port`      | `"7882"`                        | Override LiveKit RTC UDP port                                            |
+| `--fresh`            | `false`                         | Remove existing installation before installing                           |
+| `--behind-proxy`     | `false`                         | Server is behind CDN/reverse-proxy (Cloudflare, nginx)                   |
+| `--external-livekit` | `""`                            | URL of fully external LiveKit server (different machine)                 |
+| `--livekit-domain`   | `""`                            | Separate domain for local LiveKit server (bypasses CDN)                  |
+| `--lk-ip`            | `""`                            | Explicit LiveKit NodeIP when server is behind CDN                        |
 
-**Yaptığı işler:**
-1. `--fresh` ise önceki kurulumu durdurur ve kaldırır
-2. IP, alan adı, e-posta, TLS modu için sorar (etkileşimli olmayan ve bayraklar sağlanmamışsa)
-3. Dizinleri oluşturur: `/etc/bedrud`, `/var/lib/bedrud`, `/var/lib/bedrud/certs`, `/var/log/bedrud`
-4. İkili dosyayı `/usr/local/bin/bedrud` konumuna kopyalar
-5. `/etc/bedrud/config.yaml` konumunda Bedrud sunucu yapılandırması oluşturur
-6. `/etc/bedrud/livekit.yaml` konumunda LiveKit medya sunucusu yapılandırması oluşturur
-7. `/etc/bedrud/cert.pem` + `/etc/bedrud/key.pem` konumunda kendi imzalı sertifikalar oluşturur (TLS etkinse ve özel sertifikalar yoksa)
-8. LiveKit init servisi oluşturur (harici LiveKit kullanılmıyorsa)
-9. Bedrud init servisi oluşturur
-10. Algılanan init sistemi üzerinden servisleri etkinleştirir ve başlatır
-11. Erişim URL'lerini yazdırır
+**What it does:**
+1. Stops and removes prior installation if `--fresh`
+2. Prompts for IP, domain, email, TLS mode (if non-interactive and flags not provided)
+3. Creates directories: `/etc/bedrud`, `/var/lib/bedrud`, `/var/lib/bedrud/certs`, `/var/log/bedrud`
+4. Copies binary to `/usr/local/bin/bedrud`
+5. Generates Bedrud server config at `/etc/bedrud/config.yaml`
+6. Generates LiveKit media server config at `/etc/bedrud/livekit.yaml`
+7. Generates self-signed certs at `/etc/bedrud/cert.pem` + `/etc/bedrud/key.pem` (if TLS enabled and no custom certs)
+8. Creates LiveKit init service (unless using external LiveKit)
+9. Creates Bedrud init service
+10. Enables and starts services via detected init system
+11. Prints access URLs
 
-**TLS seçenekleri:**
+**TLS options:**
 - `--domain` + `--email` → ACME (Let's Encrypt)
-- `--self-signed` veya `--tls` → kendi imzalı sertifika
-- `--cert` + `--key` → özel sertifikalar
-- `--no-tls` → yalnızca düz HTTP
+- `--self-signed` or `--tls` → self-signed certificate
+- `--cert` + `--key` → custom certificates
+- `--no-tls` → plain HTTP only
 
-**LiveKit topolojisi:**
-- Varsayılan (gömülü): LiveKit yerel olarak çalışır, Bedrud üzerinden `/livekit` adresine vekil yapılır
-- `--livekit-domain`: LiveKit yerel olarak çalışır ama istemciler kendi alan adı üzerinden doğrudan bağlanır
-- `--external-livekit`: Yerel LiveKit yok; uzak sunucuya bağlanır
+**LiveKit topology:**
+- Default (embedded): LiveKit runs locally, proxied through Bedrud at `/livekit`
+- `--livekit-domain`: LiveKit runs locally but clients connect directly via its own domain
+- `--external-livekit`: No local LiveKit; connects to remote server
 
-**Uygulama:** `server/internal/install/linux.go`
+**Implementation:** `server/internal/install/linux.go`
 
-**İlgili belgeler:** [Kurulum Kılavuzu](/tr/docs/getting-started/installation) • [Dağıtım Kılavuzu](/tr/docs/guides/deployment) • [Arka Uç Dağıtım Mantığı](/tr/docs/backend/deployment)
+**Related docs:** [Installation Guide](/tr/docs/getting-started/installation) • [Deployment Guide](/tr/docs/guides/deployment) • [Backend Deployment Logic](/tr/docs/backend/deployment)
 
 ---
 
 ### `uninstall`
 
-Bedrud'u sistemden kaldırır.
+Remove Bedrud from the system.
 
 ```bash
 bedrud uninstall
 ```
 
-**Kaldırdıkları:**
-- tüm init sistemlerinde servisleri durdurur ve devre dışı bırakır: `bedrud`, `livekit`
-- systemd, OpenRC ve SysV init servis dosyalarını kaldırır
-- İkili dosyaları kaldırır: `/usr/local/bin/bedrud`, `/tmp/bedrud`, `/tmp/bedrud-livekit-server`
-- Dizinleri kaldırır: `/etc/bedrud`, `/var/lib/bedrud`, `/var/log/bedrud`
-- Sistem kullanıcısını siler: bedrud
+**Removes:**
+- Stops and disables services across all init systems: `bedrud`, `livekit`
+- Removes service files for systemd, OpenRC, and SysV init
+- Removes binary: `/usr/local/bin/bedrud`, `/tmp/bedrud`, `/tmp/bedrud-livekit-server`
+- Removes directories: `/etc/bedrud`, `/var/lib/bedrud`, `/var/log/bedrud`
+- Removes system user: `bedrud`
 
-**Uygulama:** `server/internal/install/` (linux.go, init.go, sysv.go, openrc.go)
+**Implementation:** `server/internal/install/` (linux.go, init.go, sysv.go, openrc.go)
 
-**İlgili belgeler:** [Kurulum Kılavuzu - Kaldırma](/tr/docs/getting-started/installation#uninstallation)
+**Related docs:** [Installation Guide - Uninstalling](/tr/docs/getting-started/installation#uninstallation)
 
 ---
 
 ### `user`
 
-Bedrud veritabanındaki kullanıcıları yönetir.
+Manage users in the Bedrud database.
 
 ```bash
-bedrud user [--config <yol>] <alt-komut> [bayraklar]
+bedrud user [--config <path>] <subcommand> [flags]
 ```
 
-| Genel Bayrak | Varsayılan                   | Açıklama                                     |
+| Global Flag | Default                   | Description                                     |
 |-------------|---------------------------|-------------------------------------------------|
-| `--config`  | `/etc/bedrud/config.yaml` | Bedrud yapılandırma dosyasının yolu (veritabanını bulmak için) |
+| `--config`  | `/etc/bedrud/config.yaml` | Path to Bedrud config file (to locate database) |
 
 #### `create`
 
-Yerel kimlik doğrulama ile yeni bir kullanıcı oluşturur (bcrypt ile hashlenmiş parola).
+Create a new user with local authentication (bcrypt hashed password).
 
 ```bash
-bedrud user [--config <yol>] create --email <e-posta> --password <parola> --name <ad> [--admin]
+bedrud user [--config <path>] create --email <email> --password <password> --name <name> [--admin]
 ```
 
-**Gerekli bayraklar:**
-- `--email`: Kullanıcı e-posta adresi
-- `--password`: Kullanıcı parolası, depolanmadan önce bcrypt ile hashlenir
-- `--name`: Kullanıcı görünen adı
+**Required flags:**
+- `--email`: User email address
+- `--password`: User password, hashed with bcrypt before storage
+- `--name`: User display name
 
-**İsteğe bağlı bayraklar:**
-- `--admin`: Kullanıcıyı süper yönetici olarak oluştur
+**Optional flags:**
+- `--admin`: Create user as superadmin
 
-**Erişim seviyesi:** Varsayılan olarak `user`. Tek komutta süper yönetici oluşturmak için `--admin` kullanın.
+**Access level:** `user` by default. Use `--admin` to create a superadmin in one command.
 
 #### `delete`
 
-Bir kullanıcıyı e-posta adresine göre siler.
+Delete a user by email address.
 
 ```bash
-bedrud user [--config <yol>] delete --email <e-posta>
+bedrud user [--config <path>] delete --email <email>
 ```
 
 #### `promote`
 
-Bir kullanıcının rolünü erişim dizisini değiştirerek ayarlar. Varsayılan: `superadmin`.
+Set a user's role by replacing their access array. Defaults to `superadmin`.
 
 ```bash
-bedrud user [--config <yol>] promote --email <e-posta> [--role <rol>]
+bedrud user [--config <path>] promote --email <email> [--role <role>]
 ```
 
-| Bayrak  | Varsayılan   | Açıklama                                                     |
-|---------|--------------|--------------------------------------------------------------|
-| `--role` | `superadmin` | Hedef rol: `superadmin`, `admin`, `moderator`, `user`, `guest` |
+| Flag   | Default      | Description                                        |
+|--------|--------------|----------------------------------------------------|
+| `--role` | `superadmin` | Target role: `superadmin`, `admin`, `moderator`, `user`, `guest` |
 
-Örnekler:
+Examples:
 
 ```bash
-# Superadmin yetkisi ver (varsayılan)
+# Grant superadmin (default)
 bedrud user promote --email admin@example.com
 
-# Admin yetkisi ver
+# Grant admin
 bedrud user promote --email admin@example.com --role admin
 
-# Moderator yetkisi ver
+# Grant moderator
 bedrud user promote --email mod@example.com --role moderator
 ```
 
-Her rol belirli bir erişim dizisine eşlenir:
+Each role maps to a specific access array:
 - `superadmin` → `['superadmin', 'user']`
 - `admin` → `['admin', 'user']`
 - `moderator` → `['moderator', 'user']`
@@ -223,146 +234,292 @@ Her rol belirli bir erişim dizisine eşlenir:
 
 #### `demote`
 
-Bir kullanıcıdan belirli bir rolü kaldırır. Varsayılan: `superadmin`.
+Remove a specific role from a user. Defaults to removing `superadmin`.
 
 ```bash
-bedrud user [--config <yol>] demote --email <e-posta> [--role <rol>]
+bedrud user [--config <path>] demote --email <email> [--role <role>]
 ```
 
-| Bayrak  | Varsayılan   | Açıklama                                           |
-|---------|--------------|----------------------------------------------------|
-| `--role` | `superadmin` | Kaldırılacak rol: `superadmin`, `admin`, `moderator` |
+| Flag   | Default      | Description                                        |
+|--------|--------------|----------------------------------------------------|
+| `--role` | `superadmin` | Role to remove: `superadmin`, `admin`, `moderator` |
 
-Kaldırma işleminden sonra kullanıcının hiçbir rolü kalmazsa, otomatik olarak `user` erişimi eklenir.
+If the user has no remaining roles after removal, `user` access is added automatically.
 
-**Uygulama:** `server/internal/usercli/usercli.go`
+**Implementation:** `server/internal/usercli/usercli.go`
 
 ---
 
 ### `cert`
 
-TLS sertifikalarını yönetin. Yalnızca kendi imzalı sertifikalar kullanılırken geçerlidir (`bedrud install --self-signed` tarafından oluşturulur).
+Manage TLS certificates. Relevant when using self-signed certificates (generated by `bedrud install --self-signed`).
 
 ```bash
 bedrud cert [--config <path>] <subcommand>
 ```
 
-| Genel Bayrak | Varsayılan                  | Açıklama                               |
-|--------------|-----------------------------|----------------------------------------|
-| `--config`   | `/etc/bedrud/config.yaml`   | Bedrud yapılandırma dosyasının yolu    |
-| `--algo`     | `""`                         | Anahtar algoritması: ed25519, ecdsa256, rsa2048, rsa4096 (varsayılan: mevcut sertifikadan algıla) |
+| Global Flag | Default                   | Description                                     |
+|-------------|---------------------------|-------------------------------------------------|
+| `--config`  | `/etc/bedrud/config.yaml` | Path to Bedrud config file                      |
+| `--algo`    | `""`                       | Key algorithm: ed25519, ecdsa256, rsa2048, rsa4096 (default: detect from existing cert) |
 
 #### `renew`
 
-Kendi imzalı TLS sertifikasını elle yenileyin. Mevcut sertifikanın anahtar algoritmasını algılar ve aynı türle yeniden oluşturur (varsayılan: Ed25519). Yeni sertifika 1825 gün (~5 yıl) geçerlidir.
+Force-renew the self-signed TLS certificate. Detects the existing certificate's key algorithm and regenerates with the same type (default: Ed25519). The new certificate is valid for 1825 days (~5 years).
 
 ```bash
 bedrud cert renew [--config <path>]
 ```
 
-Sunucu ayrıca, sürenin dolmasına 30 günden az kaldığında, yerleşik zamanlayıcısı aracılığıyla sertifikayı günlük olarak otomatik yeniler. Bu komut, manuel veya olağan dışı yenileme içindir.
+The server also auto-renews the certificate daily via its built-in scheduler when it's within 30 days of expiry. This command is for manual or out-of-band renewal.
 
-**SAN'ler:** Sunucu yapılandırmasından türetilir — `domain` (ayarlanmışsa), artı `localhost`, `127.0.0.1` ve `::1`.
+**SANs:** Derived from the server config — `domain` (if set), plus `localhost`, `127.0.0.1`, and `::1`.
 
-**Uygulama:** `server/internal/utils/tls.go` (`RenewSelfSignedCert`)
+**Implementation:** `server/internal/utils/tls.go` (`RenewSelfSignedCert`)
 
 #### `info`
 
-TLS sertifika meta verilerini stdout'a yazdırın.
+Print TLS certificate metadata to stdout.
 
 ```bash
 bedrud cert info [--config <path>]
 ```
 
-**Çıktı alanları:** subject, issuer, notBefore, notAfter, daysRemaining, status (valid/expiring/error), SAN'ler.
+**Output fields:** subject, issuer, notBefore, notAfter, daysRemaining, status (valid/expiring/error), SANs.
 
-**Uygulama:** `server/internal/utils/tls.go` (`ValidateTLSCertPair`)
+**Implementation:** `server/internal/utils/tls.go` (`ValidateTLSCertPair`)
+
+---
+
+### `config`
+
+Inspect and edit the Bedrud config file on disk.
+
+```bash
+bedrud config [--config <path>] <subcommand>
+```
+
+| Subcommand | Description |
+|------------|-------------|
+| `path` | Print resolved config file path |
+| `show` | Print loaded config as YAML (secrets redacted; includes env overrides) |
+| `get <key>` | Read dotted key (e.g. `server.port`) |
+| `set <key> <value>` | Write dotted key and save file |
+| `validate` | Parse YAML and check required fields (`jwtSecret`, `sessionSecret`, DB, port) |
+
+**Implementation:** `server/internal/cli/config.go`
+
+---
+
+### `settings`
+
+Inspect/modify runtime `SystemSettings` stored in the database (admin panel overrides).
+
+```bash
+bedrud settings [--config <path>] <subcommand>
+```
+
+| Subcommand | Description |
+|------------|-------------|
+| `show` | Print settings as JSON (`--effective` merges config defaults) |
+| `set <jsonField> <value>` | Set one JSON field by name |
+| `reset --yes` | Reset settings to zero values (requires confirm) |
+
+**Implementation:** `server/internal/cli/settings.go`
+
+---
+
+### `invite-token` (`invite`)
+
+Manage registration invite tokens.
+
+```bash
+bedrud invite-token [--config <path>] <subcommand>
+# alias: bedrud invite ...
+```
+
+| Subcommand | Flags | Description |
+|------------|-------|-------------|
+| `list` | `--page`, `--page-size` | List tokens |
+| `create` | `--email`, `--created-by`, `--ttl-hours` (default 168) | Create token |
+| `delete <id>` | | Delete by ID |
+
+**Implementation:** `server/internal/cli/invite.go`
+
+---
+
+### `db`
+
+Database utilities.
+
+```bash
+bedrud db [--config <path>] <subcommand>
+```
+
+| Subcommand | Description |
+|------------|-------------|
+| `migrate` | Run pending database migrations |
+| `status` | Check database connectivity |
+
+**Implementation:** `server/internal/cli/db.go`
+
+---
+
+### `room`
+
+Manage meetings/rooms from the CLI.
+
+```bash
+bedrud room [--config <path>] <subcommand>
+```
+
+| Subcommand | Flags | Description |
+|------------|-------|-------------|
+| `list` | `--page`, `--page-size`, `--active` | List rooms |
+| `info <id-or-name>` | | Show room details |
+| `close <id-or-name>` | `--yes` (required) | Cascade delete (LiveKit, uploads, DB) |
+| `suspend <id-or-name>` | | Disconnect participants; keep DB row |
+| `reactivate <id-or-name>` | | Reactivate suspended room |
+| `kick <id-or-name>` | `--identity` (required) | Kick participant |
+
+**Implementation:** `server/internal/cli/room.go`, `server/internal/roomcli/`
+
+---
+
+### `version`
+
+```bash
+bedrud version
+```
+
+Prints `bedrud <version>` (version injected at build time).
 
 ---
 
 ### `help`
 
-Tüm komutlar ve bayraklarla kullanım mesajını gösterir.
-
 ```bash
 bedrud help
+bedrud <command> --help
 ```
-
-Hiçbir argüman sağlanmadığında da tetiklenir. `printUsage()` çıktısını görüntüler.
 
 ---
 
-## Örnekler
+## Examples
 
-### Temel geliştirme sunucusu başlatma
+### Basic dev server start
 
 ```bash
-# Geçerli dizindeki varsayılan config.yaml ile çalıştır
+# Run with default config.yaml in current directory
 bedrud run
 
-# Özel yapılandırma ile çalıştır
+# Run with custom config
 bedrud run --config /path/to/config.yaml
 
-# Ortam değişkeni ile (geri dönüş)
+# Via env var (fallback)
 export CONFIG_PATH=/etc/bedrud/config.yaml
 bedrud run
 ```
 
-### Etkileşimli kurulum (girişler için sorar)
+### Interactive installation (prompts for inputs)
 
 ```bash
 bedrud install
 ```
 
-### Let's Encrypt ile etkileşimli olmayan kurulum
+### Non-interactive installation with Let's Encrypt
 
 ```bash
 bedrud install --domain example.com --email admin@example.com
 ```
 
-### Özel bağlantı noktalarıyla kendi imzalı TLS
+### Self-signed TLS with custom ports
 
 ```bash
 bedrud install --self-signed --port 8443 --lk-port 7880 --lk-tcp-port 7881 --lk-udp-port 7882
 ```
 
-### CDN arkasında ayrı LiveKit alan adı ile
+### Behind CDN with separate LiveKit domain
 
 ```bash
 bedrud install --domain bedrud.example.com --email admin@example.com --livekit-domain lk.example.com --behind-proxy
 ```
 
-### Temiz yeniden kurulum
+### Fresh reinstall
 
 ```bash
 bedrud install --fresh --domain example.com --email admin@example.com
 ```
 
-### Kullanıcı yönetimi
+### User management
 
 ```bash
-# İlk yönetici kullanıcısını oluştur (tek komut)
-bedrud user [--config <yol>] create --email admin@example.com --password secret123 --name "Admin User" --admin
+# Create first admin user (single command)
+bedrud user [--config <path>] create --email admin@example.com --password secret123 --name "Admin User" --admin
 
-# Veya normal kullanıcı oluşturup yükselt
-bedrud user [--config <yol>] create --email admin@example.com --password secret123 --name "Admin User"
-bedrud user [--config <yol>] promote --email admin@example.com
+# Or create a regular user, then promote
+bedrud user [--config <path>] create --email admin@example.com --password secret123 --name "Admin User"
+bedrud user [--config <path>] promote --email admin@example.com
 
-# Normal kullanıcı oluştur
-bedrud user [--config <yol>] create --email user@example.com --password pass456 --name "Regular User"
+# Grant admin access (not superadmin)
+bedrud user [--config <path>] promote --email admin@example.com --role admin
 
-# Bir kullanıcıyı kaldır
-bedrud user [--config <yol>] delete --email user@example.com
+# Grant moderator access
+bedrud user [--config <path>] promote --email mod@example.com --role moderator
 
-# Yönetici erişimini kaldır
-bedrud user [--config <yol>] demote --email admin@example.com
+# Create regular user
+bedrud user [--config <path>] create --email user@example.com --password pass456 --name "Regular User"
+
+# Remove a user
+bedrud user [--config <path>] delete --email user@example.com
+
+# Remove admin access
+bedrud user [--config <path>] demote --email admin@example.com
+
+# Remove moderator access, reverts to user
+bedrud user [--config <path>] demote --email mod@example.com --role moderator
+```
+
+### Certificate management
+
+```bash
+# Check certificate status
+bedrud cert info --config /etc/bedrud/config.yaml
+
+# Force-renew self-signed certificate
+bedrud cert renew --config /etc/bedrud/config.yaml
+```
+
+### Config and settings
+
+```bash
+bedrud config path
+bedrud config show --json
+bedrud config get server.port
+bedrud config set logger.level info
+bedrud config validate
+
+bedrud settings show --effective
+bedrud settings set InstanceName "My Meet"
+```
+
+### Rooms and invite tokens
+
+```bash
+bedrud room list --active
+bedrud room info my-meeting
+bedrud room kick my-meeting --identity user-id-here
+bedrud room close my-meeting --yes
+
+bedrud invite-token create --email newuser@example.com --ttl-hours 72
+bedrud invite-token list
 ```
 
 ---
 
-## İlgili Belgeler
+## Related Documentation
 
-- [Kurulum Kılavuzu](/tr/docs/getting-started/installation) - Ayrıntılı `bedrud install` kılavuzu, TLS topolojileri, kurulum sonrası adımlar
-- [Yapılandırma Referansı](/tr/docs/getting-started/configuration) - Sunucu ve LiveKit yapılandırma dosyası yapısı
-- [Arka Uç Dağıtım Mantığı](/tr/docs/backend/deployment) - `install` ve `uninstall` dahili olarak nasıl çalışır
-- [Dağıtım Kılavuzu](/tr/docs/guides/deployment) - init sistemi servisleri dahil tam dağıtım seçenekleri
+- [Installation Guide](/tr/docs/getting-started/installation) - Detailed `bedrud install` walkthrough, TLS topologies, post-install steps
+- [Configuration Reference](/tr/docs/getting-started/configuration) - Server and LiveKit config file structure
+- [Backend Deployment Logic](/tr/docs/backend/deployment) - How `install` and `uninstall` work internally
+- [Deployment Guide](/tr/docs/guides/deployment) - Full deployment options including init system services

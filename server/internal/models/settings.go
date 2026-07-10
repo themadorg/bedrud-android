@@ -52,10 +52,11 @@ type SystemSettings struct {
 	CORSMaxAge           int    `json:"corsMaxAge"`
 
 	// Chat uploads
-	ChatUploadBackend     string `gorm:"size:20" json:"chatUploadBackend"`
-	ChatUploadMaxBytes    int64  `json:"chatUploadMaxBytes"`
-	ChatUploadInlineMax   int64  `json:"chatUploadInlineMax"`
-	ChatUploadDiskDir     string `gorm:"size:512" json:"chatUploadDiskDir"`
+	ChatUploadBackend      string `gorm:"size:20" json:"chatUploadBackend"`
+	ChatUploadMaxBytes     int64  `json:"chatUploadMaxBytes"`
+	ChatUploadMaxDimension int    `json:"chatUploadMaxDimension"`
+	ChatUploadInlineMax    int64  `json:"chatUploadInlineMax"`
+	ChatUploadDiskDir      string `gorm:"size:512" json:"chatUploadDiskDir"`
 	ChatUploadS3Endpoint  string `gorm:"size:255" json:"chatUploadS3Endpoint"`
 	ChatUploadS3Bucket    string `gorm:"size:255" json:"chatUploadS3Bucket"`
 	ChatUploadS3Region    string `gorm:"size:50" json:"chatUploadS3Region"`

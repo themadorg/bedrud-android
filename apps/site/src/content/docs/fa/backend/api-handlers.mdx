@@ -1,101 +1,89 @@
 ---
 title: هندلرهای API
-description: پیاده‌سازی endpointهای REST API
+description: پیاده‌سازی endpointهای REST
 order: 19
 ---
 
-Bedrud از فریم‌ورک **Fiber** (مشابه Express برای Go) استفاده می‌کند.
+Bedrud uses the **Fiber** web framework. Production routes are registered in `server/internal/server/server.go` (used by `bedrud run`). Interactive OpenAPI: [API Reference](/fa/docs/api/api-reference).
 
-## منطق مسیریابی
+## Route Groups
 
-مسیرها در `internal/server/server.go` تعریف شده‌اند. مسیرها به صورت گروهی سازماندهی شده‌اند تا middleware و prefixها به‌راحتی اعمال شوند.
+| Prefix | Auth | Purpose |
+|--------|------|---------|
+| `/api/auth/*` | Mixed | Register, login, OAuth, passkeys, profile, preferences, verify, password reset |
+| `/api/room/*` | Mostly protected | Create/join/list/moderate rooms, chat upload |
+| `/api/admin/*` | Superadmin | Users, rooms, settings, invite tokens, webhooks, queue, overview |
+| `/api/livekit/webhook` | LiveKit JWT | Inbound media disconnect events |
+| `/api/cert` | Public | Cert metadata for clients (when applicable) |
+| `/livekit/*` | Proxied | Embedded LiveKit signaling (unless `livekit.external`) |
+| `/uploads/chat/*` | Protected | Chat image files |
+| `/uploads/avatars/*` | Public | Avatar files |
+| `/*` | SPA | Embedded frontend |
 
-### گروه‌های اصلی:
+Admin group middleware: `Protected` → `RequireEmailVerified` → `RequireAccess(superadmin)`.
 
-- **`/api/auth`**: مسیرهای عمومی و محافظت‌شده برای احراز هویت.
-- **`/api/room`**: مسیرهای محافظت‌شده برای مدیریت اتاق.
-- **`/api/admin`**: مسیرهایی که فقط کاربران با نقش `superadmin` دسترسی دارند.
-- **`/livekit`**: گروه proxy ویژه که درخواست‌ها را به media server داخلی LiveKit ارسال می‌کند.
+## Auth Highlights
 
-## منطق تخصصی هندلرها
+- Local register/login/refresh, OAuth (`/auth/:provider/login|callback`)
+- Passkey register/login/signup begin/finish
+- Profile + avatar: `GET/PUT /auth/me`, avatar upload/delete
+- Preferences: `GET/PUT /auth/preferences`
+- Email verify + resend; forgot/reset password
+- Public settings: `GET /auth/settings`
 
-### مدیریت اتاق (`internal/handlers/room.go`)
+## Room Highlights
 
-`RoomHandler` بین متادیتای اتاق Bedrud و موتور media LiveKit ترجمه انجام می‌دهد.
+- `POST /room/create`, `/room/join`, `/room/guest-join`, `/room/refresh-token`
+- `GET /room/list`, `/room/archived`
+- Moderation: kick, mute, ban, video off, promote/demote, chat block, deafen, ask, spotlight, screenshare stop, stage bring/remove
+- `PUT /room/:roomId/settings`, `DELETE /room/:roomId` (async job → **202**)
+- `POST /room/:roomId/chat/upload`
+- Presence: `GET /room/:roomId/presence`
 
-#### ۱. ایجاد اتاق
+## Admin Highlights
 
-وقتی اتاقی از طریق `POST /api/room/create` ایجاد می‌شود:
+- Users: list, detail, status, accesses, force-logout, set password, verify, sessions, **delete** (async), bulk ban/promote/delete
+- Rooms: list, events, token, close, suspend, reactivate, update, participants, bulk suspend/close
+- Settings: get/put, send-test-email, validate connectivity
+- Invite tokens CRUD; webhooks CRUD + rotate-secret + test
+- Overview, online-count, LiveKit stats, cert-info, queue stats
 
-- **نرمال‌سازی:** نام اتاق trim و lowercase می‌شود.
-- **تولید خودکار:** اگر نامی ارائه نشود، Bedrud یک نام تصادفی امن برای URL تولید می‌کند (مثلاً `fancy-blue-whale`).
-- **ایجاد هماهنگ:** ابتدا از طریق API داخلی LiveKit جلسه media ایجاد می‌شود، سپس متادیتا در دیتابیس محلی ذخیره می‌شود.
+Recording admin/user routes are **not registered** in production (planned feature).
 
-#### ۲. پیوستن و توکن‌ها
+## Async Operations (Job Queue)
 
-وقتی کاربری از طریق `POST /api/room/join` وارد می‌شود:
+Destructive work and some side effects return **202 Accepted** and enqueue jobs:
 
-- **کنترل دسترسی:** بررسی می‌شود که اتاق وجود داشته باشد و کاربر مجاز باشد.
-- **تولید توکن:** یک JWT امضا‌شده (Join Token) تولید می‌شود شامل:
-  - `Identity`: شناسه کاربر از Bedrud.
-  - `Name`: نام نمایشی کاربر.
-  - `Grants`: دسترسی‌های خاص مثل `CanJoin`، `CanPublish`، `CanSubscribe`.
-- **Handshake کلاینت:** frontend هم متادیتای اتاق محلی و هم توکن LiveKit را دریافت می‌کند تا اتصال WebRTC را آغاز کند.
+| Endpoint | Job type (approx.) |
+|----------|--------------------|
+| `DELETE /api/room/:roomId` | `room_delete` |
+| `DELETE /api/admin/rooms/:roomId` | `room_delete` |
+| `POST /api/admin/rooms/:roomId/suspend` | `room_suspend` |
+| `POST /api/admin/rooms/bulk/suspend` | bulk suspend |
+| `POST /api/admin/rooms/bulk/close` | bulk close |
+| `DELETE /api/admin/users/:id` | `user_delete` |
+| `POST /api/admin/users/bulk/delete` | bulk `user_delete` |
 
-## مدیریت کاربران و ادمین (`internal/handlers/users.go`)
+Other job types: `dispatch_webhook`, email sends, chat upload processing. Worker polls ~500ms (configurable); retries with exponential backoff `2^attempts * 5s` (cap 1h).
 
-مسیرهای `/api/admin` توسط middleware `RequireAccess("superadmin")` محافظت می‌شوند.
+## Room Creation & Join (summary)
 
-### ۱. کنترل کاربران
+**Create** (`POST /api/room/create`): normalize/generate name → LiveKit room → DB metadata → optional `room.created` webhook.
 
-`UsersHandler` به مدیران اجازه می‌دهد:
+**Join** (`POST /api/room/join`): authorize → LiveKit JWT (identity, name, grants) → client connects via WebRTC.
 
-- **لیست همه کاربران:** دریافت دایرکتوری کامل کاربران ثبت‌نام‌شده شامل provider احراز هویت و متادیتای آخرین ورود.
-- **به‌روزرسانی وضعیت:** فعال یا غیرفعال کردن فوری حساب کاربری. غیرفعال کردن کاربر بلافاصله او را از ورود و refresh کردن توکن‌ها مسدود می‌کند.
+## Request Lifecycle
 
-### ۲. نمای کلی اتاق‌ها
+1. Fiber receives request
+2. Middleware: recover, CORS, rate limit, optional JWT + email-verified
+3. Handler parses body, calls repo/service, returns JSON
 
-مسیرهای ادمین اجازه مشاهده همه اتاق‌های فعال و تاریخی در کل پلتفرم را می‌دهند، فارغ از اینکه چه کسی آن‌ها را ایجاد کرده. این قابلیت برای نظارت بر پلتفرم در نظر گرفته شده است.
+## Static Frontend
 
-## چرخه عمر درخواست
+Built React assets are embedded and served from the binary. Non-`/api` routes fall through to the SPA shell.
 
-۱. **رسیدن درخواست:** Fiber درخواست HTTP را دریافت می‌کند.
-۲. **Middleware:**
+## See also
 
-    - `recover`: از crash شدن سرور در صورت بروز خطا جلوگیری می‌کند.
-    - `cors`: Cross-Origin Resource Sharing را مدیریت می‌کند.
-    - `Protected`: (اختیاری) بررسی JWT معتبر در هدر `Authorization`.
-۳. **Handler:** تابع مربوطه در `internal/handlers` فراخوانی می‌شود.
-
-    - بدنه JSON را با `c.BodyParser` parse می‌کند.
-    - Service یا Repository لازم را فراخوانی می‌کند.
-    - پاسخ JSON را با `c.JSON` برمی‌گرداند.
-
-## مثال: هندلر ایجاد اتاق
-
-```go
-func (h *RoomHandler) CreateRoom(c *fiber.Ctx) error {
-    var input struct {
-        Name string `json:"name"`
-    }
-    // 1. Parse Input
-    if err := c.BodyParser(&input); err != nil {
-        return c.Status(400).JSON(fiber.Map{"error": "Invalid input"})
-    }
-
-    // 2. Business Logic (via Repository)
-    room := &models.Room{Name: input.Name}
-    if err := h.roomRepo.Create(room); err != nil {
-        return c.Status(500).JSON(fiber.Map{"error": "Failed to create room"})
-    }
-
-    // 3. Response
-    return c.Status(201).JSON(room)
-}
-```
-
-## فایل‌های استاتیک (Frontend)
-
-frontend وب در زمان ساخت در باینری Go **embedded** شده است. Fiber فایل‌های React را از دایرکتوری `frontend/` با استفاده از `filesystem.New` سرو می‌کند.
-
-هر مسیری که با `/api` شروع نشود، به `index.html` اپلیکیشن React هدایت می‌شود. این کار client-side routing را بدون خطای 404 هنگام refresh صفحه فعال می‌کند.
+- [Authentication](/fa/docs/backend/authentication)
+- [Webhooks Guide](/fa/docs/guides/webhooks)
+- [Configuration](/fa/docs/getting-started/configuration)

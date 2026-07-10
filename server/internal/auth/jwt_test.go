@@ -1,12 +1,15 @@
 package auth
 
 import (
-	"bedrud/config"
 	"testing"
 	"time"
 
+	"bedrud/config"
+
 	"github.com/golang-jwt/jwt/v5"
 )
+
+const testUserID = "user-123"
 
 func testConfig() *config.Config {
 	return &config.Config{
@@ -21,7 +24,7 @@ func testConfig() *config.Config {
 
 func TestGenerateToken_Success(t *testing.T) {
 	cfg := testConfig()
-	token, err := GenerateToken("user-123", "test@example.com", "Test User", "local", []string{"user"}, cfg, nil)
+	token, err := GenerateToken(testUserID, testEmail, "Test User", "local", []string{"user"}, cfg, nil)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -32,7 +35,7 @@ func TestGenerateToken_Success(t *testing.T) {
 
 func TestGenerateToken_WithMultipleAccesses(t *testing.T) {
 	cfg := testConfig()
-	token, err := GenerateToken("user-123", "admin@example.com", "Admin", "local", []string{"admin", "user"}, cfg, nil)
+	token, err := GenerateToken(testUserID, "admin@example.com", "Admin", "local", []string{"admin", "user"}, cfg, nil)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -49,7 +52,7 @@ func TestGenerateToken_EmptySecret(t *testing.T) {
 		},
 	}
 	// Should still generate (empty secret is valid for HS256, just insecure)
-	token, err := GenerateToken("user-123", "test@example.com", "Test", "local", []string{"user"}, cfg, nil)
+	token, err := GenerateToken(testUserID, testEmail, "Test", "local", []string{"user"}, cfg, nil)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -62,16 +65,16 @@ func TestGenerateToken_EmptySecret(t *testing.T) {
 
 func TestValidateToken_Valid(t *testing.T) {
 	cfg := testConfig()
-	token, _ := GenerateToken("user-123", "test@example.com", "Test User", "local", []string{"user", "admin"}, cfg, nil)
+	token, _ := GenerateToken(testUserID, testEmail, "Test User", "local", []string{"user", "admin"}, cfg, nil)
 
 	claims, err := ValidateToken(token, cfg)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if claims.UserID != "user-123" {
+	if claims.UserID != testUserID {
 		t.Fatalf("expected UserID 'user-123', got '%s'", claims.UserID)
 	}
-	if claims.Email != "test@example.com" {
+	if claims.Email != testEmail {
 		t.Fatalf("expected Email 'test@example.com', got '%s'", claims.Email)
 	}
 	if claims.Name != "Test User" {
@@ -87,7 +90,7 @@ func TestValidateToken_Valid(t *testing.T) {
 
 func TestValidateToken_InvalidSignature(t *testing.T) {
 	cfg := testConfig()
-	token, _ := GenerateToken("user-123", "test@example.com", "Test User", "local", []string{"user"}, cfg, nil)
+	token, _ := GenerateToken(testUserID, testEmail, "Test User", "local", []string{"user"}, cfg, nil)
 
 	// Use a different secret for validation
 	wrongCfg := &config.Config{
@@ -107,8 +110,8 @@ func TestValidateToken_ExpiredToken(t *testing.T) {
 
 	// Create a token that expired 1 hour ago
 	claims := &Claims{
-		UserID:   "user-123",
-		Email:    "test@example.com",
+		UserID:   testUserID,
+		Email:    testEmail,
 		Name:     "Test",
 		Provider: "local",
 		Accesses: []string{"user"},
@@ -148,7 +151,7 @@ func TestValidateToken_WrongSigningMethod(t *testing.T) {
 
 	// Create a token with "none" signing method (unsigned)
 	claims := &Claims{
-		UserID: "user-123",
+		UserID: testUserID,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Hour)),
 		},
@@ -166,7 +169,7 @@ func TestValidateToken_WrongSigningMethod(t *testing.T) {
 
 func TestGenerateTokenPair_Success(t *testing.T) {
 	cfg := testConfig()
-	accessToken, refreshToken, err := GenerateTokenPair("user-123", "test@example.com", "Test", "local", []string{"user"}, cfg, nil)
+	accessToken, refreshToken, err := GenerateTokenPair(testUserID, testEmail, "Test", "local", []string{"user"}, cfg, nil)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -183,7 +186,7 @@ func TestGenerateTokenPair_Success(t *testing.T) {
 
 func TestGenerateTokenPair_RefreshTokenHasJTI(t *testing.T) {
 	cfg := testConfig()
-	_, refreshToken, _ := GenerateTokenPair("user-123", "test@example.com", "Test", "local", []string{"user"}, cfg, nil)
+	_, refreshToken, _ := GenerateTokenPair(testUserID, testEmail, "Test", "local", []string{"user"}, cfg, nil)
 
 	// Validate the refresh token and check it has a JTI
 	claims, err := ValidateToken(refreshToken, cfg)
@@ -197,7 +200,7 @@ func TestGenerateTokenPair_RefreshTokenHasJTI(t *testing.T) {
 
 func TestGenerateTokenPair_RefreshTokenLongerExpiration(t *testing.T) {
 	cfg := testConfig()
-	accessToken, refreshToken, _ := GenerateTokenPair("user-123", "test@example.com", "Test", "local", []string{"user"}, cfg, nil)
+	accessToken, refreshToken, _ := GenerateTokenPair(testUserID, testEmail, "Test", "local", []string{"user"}, cfg, nil)
 
 	accessClaims, _ := ValidateToken(accessToken, cfg)
 	refreshClaims, _ := ValidateToken(refreshToken, cfg)
@@ -210,7 +213,7 @@ func TestGenerateTokenPair_RefreshTokenLongerExpiration(t *testing.T) {
 
 func TestGenerateTokenPair_AccessTokenContainsAccesses(t *testing.T) {
 	cfg := testConfig()
-	accessToken, _, _ := GenerateTokenPair("user-123", "test@example.com", "Test", "local", []string{"user", "admin"}, cfg, nil)
+	accessToken, _, _ := GenerateTokenPair(testUserID, testEmail, "Test", "local", []string{"user", "admin"}, cfg, nil)
 
 	claims, err := ValidateToken(accessToken, cfg)
 	if err != nil {
@@ -226,7 +229,7 @@ func TestGenerateTokenPair_AccessTokenContainsAccesses(t *testing.T) {
 func TestAccessTokenRevocation(t *testing.T) {
 	cfg := testConfig()
 
-	token, err := GenerateToken("user-123", "test@example.com", "Test User", "local", []string{"user"}, cfg, nil)
+	token, err := GenerateToken(testUserID, testEmail, "Test User", "local", []string{"user"}, cfg, nil)
 	if err != nil {
 		t.Fatalf("unexpected error generating token: %v", err)
 	}
@@ -236,7 +239,7 @@ func TestAccessTokenRevocation(t *testing.T) {
 	if err != nil {
 		t.Fatalf("expected valid token before revocation, got error: %v", err)
 	}
-	if claims.UserID != "user-123" {
+	if claims.UserID != testUserID {
 		t.Fatalf("expected UserID 'user-123', got '%s'", claims.UserID)
 	}
 
@@ -259,7 +262,7 @@ func TestAccessTokenRevocation(t *testing.T) {
 
 func TestGenerateResetToken_Success(t *testing.T) {
 	cfg := testConfig()
-	token, err := GenerateResetToken("user-123", "test@example.com", nil, cfg)
+	token, err := GenerateResetToken(testUserID, testEmail, nil, cfg)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -270,21 +273,48 @@ func TestGenerateResetToken_Success(t *testing.T) {
 
 func TestGenerateResetToken_PurposeClaim(t *testing.T) {
 	cfg := testConfig()
-	token, _ := GenerateResetToken("user-123", "test@example.com", nil, cfg)
+	token, _ := GenerateResetToken(testUserID, testEmail, nil, cfg)
 
 	claims := &Claims{}
-	jwt.ParseWithClaims(token, claims, func(token *jwt.Token) (any, error) {
+	if _, err := jwt.ParseWithClaims(token, claims, func(token *jwt.Token) (any, error) {
 		return []byte(cfg.Auth.JWTSecret), nil
-	})
+	}); err != nil {
+		t.Fatal(err)
+	}
 	if claims.Purpose != "password_reset" {
 		t.Fatalf("expected purpose 'password_reset', got '%s'", claims.Purpose)
+	}
+}
+
+func TestValidateToken_RejectsPurposeTokens(t *testing.T) {
+	cfg := testConfig()
+	verifyTok, err := GenerateVerificationToken(testUserID, testEmail, cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := ValidateToken(verifyTok, cfg); err == nil {
+		t.Fatal("expected verification token rejected as access")
+	}
+	resetTok, err := GenerateResetToken(testUserID, testEmail, nil, cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := ValidateToken(resetTok, cfg); err == nil {
+		t.Fatal("expected reset token rejected as access")
+	}
+	// Dedicated validators still accept purpose tokens
+	if _, _, err := ValidateVerificationToken(verifyTok, cfg); err != nil {
+		t.Fatalf("ValidateVerificationToken: %v", err)
+	}
+	if _, _, _, err := ValidateResetToken(resetTok, cfg); err != nil {
+		t.Fatalf("ValidateResetToken: %v", err)
 	}
 }
 
 func TestGenerateResetToken_CustomTTL(t *testing.T) {
 	cfg := testConfig()
 	cfg.Auth.ResetTokenTTLHours = 2
-	token, err := GenerateResetToken("user-123", "test@example.com", nil, cfg)
+	token, err := GenerateResetToken(testUserID, testEmail, nil, cfg)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -297,16 +327,16 @@ func TestGenerateResetToken_CustomTTL(t *testing.T) {
 
 func TestValidateResetToken_Valid(t *testing.T) {
 	cfg := testConfig()
-	token, _ := GenerateResetToken("user-123", "test@example.com", nil, cfg)
+	token, _ := GenerateResetToken(testUserID, testEmail, nil, cfg)
 
 	userID, email, pca, err := ValidateResetToken(token, cfg)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if userID != "user-123" {
+	if userID != testUserID {
 		t.Fatalf("expected userID 'user-123', got '%s'", userID)
 	}
-	if email != "test@example.com" {
+	if email != testEmail {
 		t.Fatalf("expected email 'test@example.com', got '%s'", email)
 	}
 	if pca != nil {
@@ -317,16 +347,16 @@ func TestValidateResetToken_Valid(t *testing.T) {
 func TestValidateResetToken_WithPasswordChanged(t *testing.T) {
 	cfg := testConfig()
 	now := time.Now()
-	token, _ := GenerateResetToken("user-123", "test@example.com", &now, cfg)
+	token, _ := GenerateResetToken(testUserID, testEmail, &now, cfg)
 
 	userID, email, pca, err := ValidateResetToken(token, cfg)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if userID != "user-123" {
+	if userID != testUserID {
 		t.Fatalf("expected userID 'user-123', got '%s'", userID)
 	}
-	if email != "test@example.com" {
+	if email != testEmail {
 		t.Fatalf("expected email 'test@example.com', got '%s'", email)
 	}
 	if pca == nil {
@@ -339,7 +369,7 @@ func TestValidateResetToken_WithPasswordChanged(t *testing.T) {
 
 func TestValidateResetToken_InvalidSignature(t *testing.T) {
 	cfg := testConfig()
-	token, _ := GenerateResetToken("user-123", "test@example.com", nil, cfg)
+	token, _ := GenerateResetToken(testUserID, testEmail, nil, cfg)
 
 	wrongCfg := &config.Config{
 		Auth: config.AuthConfig{
@@ -356,8 +386,8 @@ func TestValidateResetToken_InvalidSignature(t *testing.T) {
 func TestValidateResetToken_Expired(t *testing.T) {
 	cfg := testConfig()
 	claims := &Claims{
-		UserID:  "user-123",
-		Email:   "test@example.com",
+		UserID:  testUserID,
+		Email:   testEmail,
 		Purpose: "password_reset",
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(-1 * time.Hour)),
@@ -376,7 +406,7 @@ func TestValidateResetToken_Expired(t *testing.T) {
 func TestValidateResetToken_WrongPurpose(t *testing.T) {
 	cfg := testConfig()
 	// Generate a verification token (purpose=email_verify), not a reset token
-	token, _ := GenerateVerificationToken("user-123", "test@example.com", cfg)
+	token, _ := GenerateVerificationToken(testUserID, testEmail, cfg)
 
 	_, _, _, err := ValidateResetToken(token, cfg)
 	if err == nil {

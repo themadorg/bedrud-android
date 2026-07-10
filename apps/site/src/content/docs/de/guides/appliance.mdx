@@ -4,38 +4,38 @@ description: Vorkonfiguriertes Appliance-Setup
 order: 33
 ---
 
-Bedrud ist als eigenständige „Appliance" für Videokonferenzen konzipiert. Ein einzelnes ausführbares Binary enthält alles Notwendige - Frontend, Backend und den LiveKit-Medienserver.
+Bedrud is designed to run as a self-contained "appliance" for video meetings. A single executable binary packages everything needed - frontend, backend, and the LiveKit media server.
 
-## Wichtige Funktionen
+## Key Features
 
-| Funktion | Beschreibung |
-|----------|-------------|
-| Keine externen Abhängigkeiten | Kein Node.js, Redis oder separater Medienserver erforderlich |
-| Eingebetteter Medienserver | LiveKit-Binary automatisch eingebunden und verwaltet |
-| Eingebettetes Frontend | React-UI kompiliert und SSR-prerendert im Go-Binary |
-| SQLite-Speicher | Kein Datenbankserver erforderlich |
-| Integriertes TLS | Selbstsignierte Zertifikate oder Let's Encrypt |
-| Integriertes Installationsprogramm | Konfiguriert Init-Services (systemd/OpenRC/SysV), Verzeichnisse und Konfigurationen |
+| Feature | Description |
+|---------|-------------|
+| Zero external dependencies | No Node.js, Redis, or separate media server needed |
+| Embedded media server | LiveKit binary included and managed automatically |
+| Embedded frontend | React UI compiled and SSR pre-rendered into the Go binary |
+| SQLite storage | No database server required |
+| Built-in TLS | Self-signed certificates or Let's Encrypt. TURN/TLS is automatically configured for the embedded LiveKit when server TLS is enabled. |
+| Built-in installer | Configures init services (systemd/OpenRC/SysV), directories, and configs |
 
-## Binary ausführen
+## Running the Binary
 
-### Bedrud-Server starten
+### Start the Bedrud Server
 
 ```bash
 ./bedrud --run --config config.yaml
 ```
 
-### LiveKit-Medienserver starten
+### Start the LiveKit Media Server
 
 ```bash
 ./bedrud --livekit --config livekit.yaml
 ```
 
-Das Binary enthält sowohl den API-Server als auch den Medienserver. Verwenden Sie Flags, um auszuwählen, welcher gestartet werden soll.
+The binary contains both the API server and the media server. Use flags to choose which to start.
 
 ## Installation
 
-### Schnellinstallation (Debian/Ubuntu)
+### Quick Install (Debian/Ubuntu)
 
 ```bash
 # With Let's Encrypt TLS
@@ -50,9 +50,9 @@ sudo ./bedrud install --ip 1.2.3.4
 
 <InstallerSteps />
 
-### Dienstarchitektur
+### Service Architecture
 
-Nach der Installation laufen zwei Init-Services (systemd, OpenRC oder SysV init):
+After installation, two init services run (systemd, OpenRC, or SysV init):
 
 ```mermaid
 flowchart LR
@@ -64,46 +64,46 @@ flowchart LR
     BS */} DB
 ```
 
-## Konfigurationsdateien
+## Configuration Files
 
-| Datei | Zweck |
-|-------|-------|
-| `/etc/bedrud/config.yaml` | Haupt-Serverkonfiguration |
-| `/etc/bedrud/livekit.yaml` | Medienserver-Konfiguration |
-| `/var/lib/bedrud/bedrud.db` | SQLite-Datenbank |
-| `/var/log/bedrud/bedrud.log` | Anwendungsprotokolle |
+| File | Purpose |
+|------|---------|
+| `/etc/bedrud/config.yaml` | Main server configuration |
+| `/etc/bedrud/livekit.yaml` | Media server configuration |
+| `/var/lib/bedrud/bedrud.db` | SQLite database |
+| `/var/log/bedrud/bedrud.log` | Application logs |
 
-Siehe die [Konfigurationsreferenz](/de/docs/getting-started/configuration) für alle Optionen.
+See the [Configuration Reference](/de/docs/getting-started/configuration) for all options.
 
-## Nach der Installation
+## Post-Installation
 
-### Ersten Administrator erstellen
+### Create Your First Admin
 
 <CreateAdmin />
 
-### Dienststatus prüfen
+### Check Service Status
 
 ```bash
 systemctl status bedrud livekit
 ```
 
-### Protokolle anzeigen
+### View Logs
 
 ```bash
 tail -f /var/log/bedrud/bedrud.log
 journalctl -u bedrud -f
 ```
 
-## Deinstallation
+## Uninstallation
 
 ```bash
 sudo ./bedrud uninstall
 ```
 
-Dies entfernt vollständig:
+This completely removes:
 
-- Init-Service-Dateien (systemd/OpenRC/SysV)
-- Binary aus `/usr/local/bin/`
-- Konfiguration in `/etc/bedrud/`
-- Daten in `/var/lib/bedrud/`
-- Protokolle in `/var/log/bedrud`
+- Init service files (systemd/OpenRC/SysV)
+- Binary from `/usr/local/bin/`
+- Configuration in `/etc/bedrud/`
+- Data in `/var/lib/bedrud/`
+- Logs in `/var/log/bedrud`

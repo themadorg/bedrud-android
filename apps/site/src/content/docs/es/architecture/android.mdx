@@ -4,79 +4,79 @@ description: Aplicación nativa Android
 order: 9
 ---
 
-La aplicación Android de Bedrud está construida con Jetpack Compose y Kotlin, proporcionando una experiencia nativa de reunión de video con picture-in-picture, enlaces profundos y soporte multiinstancia.
+The Bedrud Android app is built with Jetpack Compose and Kotlin, providing a native video meeting experience with picture-in-picture, deep linking, and multi-instance support.
 
-## Stack Tecnológico
+## Technology Stack
 
-| Tecnología | Versión | Propósito |
+| Technology | Version | Purpose |
 |-----------|---------|---------|
-| Kotlin | 2.1.0 | Lenguaje |
-| Jetpack Compose | Material 3 | Toolkit de UI |
-| Koin | 4.0.0 | Inyección de dependencias |
-| Retrofit + OkHttp | Último | Cliente HTTP |
-| LiveKit Android SDK | 2.23.3 | Medios WebRTC |
-| Credentials API | Último | Soporte de passkey |
-| Encrypted SharedPreferences | Último | Almacenamiento seguro |
-| Coil | Último | Carga de imágenes |
+| Kotlin | 2.1.0 | Language |
+| Jetpack Compose | Material 3 | UI toolkit |
+| Koin | 4.0.0 | Dependency injection |
+| Retrofit + OkHttp | Latest | HTTP client |
+| LiveKit Android SDK | 2.23.3 | WebRTC media |
+| Credentials API | Latest | Passkey support |
+| Encrypted SharedPreferences | Latest | Secure storage |
+| Coil | Latest | Image loading |
 
-**Destino:** SDK Mín 28, SDK Objetivo 35, JDK 17
+**Target:** Min SDK 28, Target SDK 35, JDK 17
 
-## Estructura de Directorios
+## Directory Structure
 
 ```
 apps/android/app/src/main/java/com/bedrud/app/
-├── BedrudApplication.kt           # Clase de aplicación (inicialización de Koin)
-├── MainActivity.kt                # Punto de entrada de actividad única
+├── BedrudApplication.kt           # Application class (Koin init)
+├── MainActivity.kt                # Single-activity entry point
 ├── core/
-│   ├── api/                       # Cliente API de Retrofit
-│   │   ├── ApiClient.kt           # Cliente HTTP base con interceptor de autenticación
-│   │   ├── AuthApi.kt             # Definiciones de endpoints de autenticación
-│   │   └── RoomApi.kt             # Definiciones de endpoints de salas
+│   ├── api/                       # Retrofit API client
+│   │   ├── ApiClient.kt           # Base HTTP client with auth interceptor
+│   │   ├── AuthApi.kt             # Auth endpoint definitions
+│   │   └── RoomApi.kt             # Room endpoint definitions
 │   ├── auth/
-│   │   └── AuthManager.kt         # Gestión de tokens, login/logout
+│   │   └── AuthManager.kt         # Token management, login/logout
 │   ├── call/
-│   │   ├── CallService.kt         # Servicio en primer plano para llamadas
+│   │   ├── CallService.kt         # Foreground service for calls
 │   │   └── CallConnectionService.kt  # Android ConnectionService
 │   ├── deeplink/
-│   │   └── DeepLinkHandler.kt     # Maneja enlaces profundos de bedrud.com
+│   │   └── DeepLinkHandler.kt     # Handle bedrud.com deep links
 │   ├── di/
-│   │   └── AppModule.kt           # Definiciones de módulos de Koin
+│   │   └── AppModule.kt           # Koin module definitions
 │   ├── instance/
-│   │   ├── InstanceManager.kt     # Orquestador central multiinstancia
-│   │   ├── InstanceStore.kt       # Almacenamiento persistente de instancias
-│   │   └── InstanceDeps.kt        # Contenedor de dependencias por instancia
+│   │   ├── InstanceManager.kt     # Central multi-instance orchestrator
+│   │   ├── InstanceStore.kt       # Persistent instance storage
+│   │   └── InstanceDeps.kt        # Per-instance dependency container
 │   ├── livekit/
-│   │   └── RoomManager.kt         # Gestor de conexión de sala LiveKit
+│   │   └── RoomManager.kt         # LiveKit room connection manager
 │   └── pip/
-│       └── PipManager.kt          # Controlador de Picture-in-Picture
+│       └── PipManager.kt          # Picture-in-Picture controller
 ├── models/
-│   ├── User.kt                    # Modelo de datos de usuario
-│   ├── Room.kt                    # Modelo de datos de sala
-│   ├── Instance.kt                # Modelo de instancia de servidor
-│   └── ApiResponse.kt             # Envoltorios de respuesta API
+│   ├── User.kt                    # User data model
+│   ├── Room.kt                    # Room data model
+│   ├── Instance.kt                # Server instance model
+│   └── ApiResponse.kt             # API response wrappers
 └── ui/
     ├── screens/
     │   ├── auth/
-    │   │   ├── LoginScreen.kt     # Login de correo/contraseña + passkey
-    │   │   └── RegisterScreen.kt  # Registro de cuenta
+    │   │   ├── LoginScreen.kt     # Email/password + passkey login
+    │   │   └── RegisterScreen.kt  # Account registration
     │   ├── dashboard/
-    │   │   └── DashboardScreen.kt # Lista y gestión de salas
+    │   │   └── DashboardScreen.kt # Room list and management
     │   ├── meeting/
-    │   │   └── MeetingScreen.kt   # Interfaz de videollamada
+    │   │   └── MeetingScreen.kt   # Video call interface
     │   ├── instance/
-    │   │   ├── AddInstanceScreen.kt    # Añadir instancia de servidor
-    │   │   └── InstanceSwitcher.kt     # Cambiar entre instancias
+    │   │   ├── AddInstanceScreen.kt    # Add server instance
+    │   │   └── InstanceSwitcher.kt     # Switch between instances
     │   ├── profile/
-    │   │   └── ProfileScreen.kt   # Perfil de usuario
+    │   │   └── ProfileScreen.kt   # User profile
     │   └── settings/
-    │       └── SettingsScreen.kt  # Configuración de la aplicación
-    ├── components/                 # Componentes Compose reutilizables
-    └── theme/                      # Definición de tema Material 3
+    │       └── SettingsScreen.kt  # App settings
+    ├── components/                 # Reusable Compose components
+    └── theme/                      # Material 3 theme definition
 ```
 
-## Arquitectura Multiinstancia
+## Multi-Instance Architecture
 
-La aplicación Android admite la conexión simultánea a múltiples servidores Bedrud.
+The Android app supports connecting to multiple Bedrud servers simultaneously.
 
 ```mermaid
 flowchart TB
@@ -98,18 +98,18 @@ flowchart TB
     AI */} DEPS
 ```
 
-### Patrón Clave
+### Key Pattern
 
-Todas las dependencias por instancia se exponen como `StateFlow<T?>` en `InstanceManager`. Los composables las recopilan:
+All per-instance dependencies are exposed as `StateFlow<T?>` on `InstanceManager`. Composables collect them:
 
 ```kotlin
 val authManager = instanceManager.authManager.collectAsState().value ?: return
 val roomApi = instanceManager.roomApi.collectAsState().value ?: return
 ```
 
-El patrón `?: return` asegura que el composable no se renderice hasta que la instancia esté completamente inicializada.
+The `?: return` pattern ensures the composable doesn't render until the instance is fully initialized.
 
-### Flujo de Navegación
+### Navigation Flow
 
 ```mermaid
 flowchart LR
@@ -118,49 +118,63 @@ flowchart LR
     E["Has instances, logged in"] */} F[DashboardScreen]
 ```
 
-El conmutador de instancias aparece como un `ModalBottomSheet` activado desde la barra de herramientas del Dashboard.
+The instance switcher appears as a `ModalBottomSheet` triggered from the Dashboard toolbar.
 
-## Características
+## Features
 
-### Enlaces Profundos
+### Superficie de producto (lo que obtienen los usuarios)
 
-La aplicación maneja URLs que coinciden con:
+| Área | Comportamiento |
+|------|----------------|
+| Auth | Login / registro (y passkeys donde se admitan) |
+| Panel | Lista de salas; **salas recientes** tras unirse |
+| Deep links | Las URL de sala pegadas / abiertas resuelven la sala correcta |
+| Reunión | Unirse, silenciar, salir; chrome de controles usable |
+| Escenario / compartir | Superposición de escenario y camino de compartir pantalla cuando el dispositivo lo permite |
+| Telecom | Conexión de llamada autogestionada; desconectar termina la reunión de forma limpia |
+| RTL | Locales `fa` / `ar` con Shabnam — el chrome no debería recortarse |
 
-- `https://bedrud.com/m/*` - Unión directa a sala
-- `https://bedrud.com/c/*` - Unión a sala por código
+Los conceptos de producto compartidos (escenario, chat, pizarra en web) están documentados en [Usar Bedrud](/es/docs/using/joining-a-meeting). La paridad de funciones con web puede diferir por release.
 
-Configurado mediante filtros de intención en `AndroidManifest.xml`.
+### Deep Linking
 
-### Gestión de Llamadas
+The app handles URLs matching:
 
-- **CallService** - Servicio en primer plano que mantiene la conexión activa durante las llamadas
-- **CallConnectionService** - Se integra con el marco de telefonía de Android para una UI de llamada adecuada
-- Permisos requeridos: `MANAGE_OWN_CALLS`, `FOREGROUND_SERVICE_PHONE_CALL`, `FOREGROUND_SERVICE_CAMERA`, `FOREGROUND_SERVICE_MICROPHONE`
+- `https://bedrud.com/m/*` - Direct room join
+- `https://bedrud.com/c/*` - Room join by code
+
+Configured via intent filters in `AndroidManifest.xml`. Room URL parsing (`BedrudURLParser` and related) should open the correct room from a paste or external link.
+
+### Call Management
+
+- **CallService** - Foreground service that keeps the connection alive during calls
+- **CallConnectionService** - Integrates with Android's telephony framework for proper call UI
+- Required permissions: `MANAGE_OWN_CALLS`, `FOREGROUND_SERVICE_PHONE_CALL`, `FOREGROUND_SERVICE_CAMERA`, `FOREGROUND_SERVICE_MICROPHONE`
 
 ### Picture-in-Picture
 
-La pantalla de reunión admite el modo PiP, permitiendo a los usuarios ver la transmisión de video mientras usan otras aplicaciones.
+The meeting screen supports PiP mode, allowing users to see the video feed while using other apps.
 
 ### Passkeys
 
-Usa la API de Credentials de Android para el registro y el inicio de sesión de passkeys FIDO2/WebAuthn.
+Uses Android's Credentials API for FIDO2/WebAuthn passkey registration and login.
 
-## Construcción
+## Building
 
 ```bash
-# APK de depuración
+# Debug APK
 make build-android-debug
 
-# APK de release (requiere keystore.properties)
+# Release APK (requires keystore.properties)
 make build-android
 
-# Construir + instalar en dispositivo conectado
+# Build + install on connected device
 make release-android
 
-# Abrir en Android Studio
+# Open in Android Studio
 make dev-android
 ```
 
-### Firma de Release
+### Release Signing
 
-Las construcciones de release requieren un archivo `keystore.properties` en la raíz del proyecto Android con su configuración de firma.
+Release builds require a `keystore.properties` file in the android project root with your signing configuration.

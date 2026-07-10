@@ -4,7 +4,7 @@ description: Application Android native
 order: 9
 ---
 
-L'application Android Bedrud est construite avec Jetpack Compose et Kotlin, offrant une expérience native de réunion vidéo avec picture-in-picture, deep linking et multi-instance support.
+The Bedrud Android app is built with Jetpack Compose and Kotlin, providing a native video meeting experience with picture-in-picture, deep linking, and multi-instance support.
 
 ## Technology Stack
 
@@ -19,7 +19,7 @@ L'application Android Bedrud est construite avec Jetpack Compose et Kotlin, offr
 | Encrypted SharedPreferences | Latest | Secure storage |
 | Coil | Latest | Image loading |
 
-**Target :** Min SDK 28, Target SDK 35, JDK 17
+**Target:** Min SDK 28, Target SDK 35, JDK 17
 
 ## Directory Structure
 
@@ -29,13 +29,13 @@ apps/android/app/src/main/java/com/bedrud/app/
 ├── MainActivity.kt                # Single-activity entry point
 ├── core/
 │   ├── api/                       # Retrofit API client
-│   │   ├── ApiClient.kt           # Base HTTP client avec auth interceptor
+│   │   ├── ApiClient.kt           # Base HTTP client with auth interceptor
 │   │   ├── AuthApi.kt             # Auth endpoint definitions
 │   │   └── RoomApi.kt             # Room endpoint definitions
 │   ├── auth/
 │   │   └── AuthManager.kt         # Token management, login/logout
 │   ├── call/
-│   │   ├── CallService.kt         # Foreground service pour les appels
+│   │   ├── CallService.kt         # Foreground service for calls
 │   │   └── CallConnectionService.kt  # Android ConnectionService
 │   ├── deeplink/
 │   │   └── DeepLinkHandler.kt     # Handle bedrud.com deep links
@@ -60,7 +60,7 @@ apps/android/app/src/main/java/com/bedrud/app/
     │   │   ├── LoginScreen.kt     # Email/password + passkey login
     │   │   └── RegisterScreen.kt  # Account registration
     │   ├── dashboard/
-    │   │   └── DashboardScreen.kt # Room list et management
+    │   │   └── DashboardScreen.kt # Room list and management
     │   ├── meeting/
     │   │   └── MeetingScreen.kt   # Video call interface
     │   ├── instance/
@@ -76,7 +76,7 @@ apps/android/app/src/main/java/com/bedrud/app/
 
 ## Multi-Instance Architecture
 
-L'application Android prend en charge la connexion simultanée à plusieurs Bedrud servers.
+The Android app supports connecting to multiple Bedrud servers simultaneously.
 
 ```mermaid
 flowchart TB
@@ -100,14 +100,14 @@ flowchart TB
 
 ### Key Pattern
 
-Toutes les per-instance dependencies sont exposées comme `StateFlow<T?>` sur `InstanceManager`. Les composables les collectent :
+All per-instance dependencies are exposed as `StateFlow<T?>` on `InstanceManager`. Composables collect them:
 
 ```kotlin
 val authManager = instanceManager.authManager.collectAsState().value ?: return
 val roomApi = instanceManager.roomApi.collectAsState().value ?: return
 ```
 
-Le motif `?: return` garantit que le composable ne render pas tant que l'instance n'est pas fully initialized.
+The `?: return` pattern ensures the composable doesn't render until the instance is fully initialized.
 
 ### Navigation Flow
 
@@ -118,32 +118,46 @@ flowchart LR
     E["Has instances, logged in"] */} F[DashboardScreen]
 ```
 
-L'instance switcher apparaît comme un `ModalBottomSheet` déclenché depuis le Dashboard toolbar.
+The instance switcher appears as a `ModalBottomSheet` triggered from the Dashboard toolbar.
 
 ## Features
 
+### Surface produit (ce que les utilisateurs obtiennent)
+
+| Zone | Comportement |
+|------|--------------|
+| Auth | Connexion / inscription (et passkeys si pris en charge) |
+| Tableau de bord | Liste des salles ; **salles récentes** après une jointure |
+| Deep links | Les URL de salle collées / ouvertes résolvent la bonne salle |
+| Réunion | Rejoindre, couper le micro, quitter ; chrome de contrôles utilisable |
+| Scène / partage | Overlay de scène et chemin de partage d'écran quand l'appareil le permet |
+| Telecom | Connexion d'appel gérée en propre ; la déconnexion termine la réunion proprement |
+| RTL | Locales `fa` / `ar` avec Shabnam — le chrome ne doit pas être rogné |
+
+Les concepts produit partagés (scène, chat, tableau blanc sur le web) sont documentés sous [Utiliser Bedrud](/fr/docs/using/joining-a-meeting). La parité de fonctions avec le web peut varier selon la version.
+
 ### Deep Linking
 
-L'app gère les URLs correspondant à :
+The app handles URLs matching:
 
 - `https://bedrud.com/m/*` - Direct room join
 - `https://bedrud.com/c/*` - Room join by code
 
-Configuré via les intent filters dans `AndroidManifest.xml`.
+Configured via intent filters in `AndroidManifest.xml`. Room URL parsing (`BedrudURLParser` and related) should open the correct room from a paste or external link.
 
 ### Call Management
 
-- **CallService** - Foreground service qui maintient la connexion active pendant les appels
-- **CallConnectionService** - S'intègre au Android's telephony framework pour une proper call UI
-- Permissions requises : `MANAGE_OWN_CALLS`, `FOREGROUND_SERVICE_PHONE_CALL`, `FOREGROUND_SERVICE_CAMERA`, `FOREGROUND_SERVICE_MICROPHONE`
+- **CallService** - Foreground service that keeps the connection alive during calls
+- **CallConnectionService** - Integrates with Android's telephony framework for proper call UI
+- Required permissions: `MANAGE_OWN_CALLS`, `FOREGROUND_SERVICE_PHONE_CALL`, `FOREGROUND_SERVICE_CAMERA`, `FOREGROUND_SERVICE_MICROPHONE`
 
 ### Picture-in-Picture
 
-L'écran de réunion prend en charge le PiP mode, permettant aux utilisateurs de voir la video feed tout en utilisant d'autres apps.
+The meeting screen supports PiP mode, allowing users to see the video feed while using other apps.
 
 ### Passkeys
 
-Utilise l'Android's Credentials API pour le FIDO2/WebAuthn passkey registration et login.
+Uses Android's Credentials API for FIDO2/WebAuthn passkey registration and login.
 
 ## Building
 
@@ -151,16 +165,16 @@ Utilise l'Android's Credentials API pour le FIDO2/WebAuthn passkey registration 
 # Debug APK
 make build-android-debug
 
-# Release APK (requiert keystore.properties)
+# Release APK (requires keystore.properties)
 make build-android
 
-# Build + install sur le connected device
+# Build + install on connected device
 make release-android
 
-# Ouvrir dans Android Studio
+# Open in Android Studio
 make dev-android
 ```
 
 ### Release Signing
 
-Les release builds nécessitent un `keystore.properties` file dans le android project root avec votre signing configuration.
+Release builds require a `keystore.properties` file in the android project root with your signing configuration.

@@ -151,7 +151,7 @@ export default {
       sipIntegrationJitsi: "SIP/Jibri-Gateway",
       sipIntegrationBbb: "SIP-Gateway",
       whiteboard: "Whiteboard",
-      whiteboardBedrud: "Nein",
+      whiteboardBedrud: "Kollaborativ (Yjs)",
       whiteboardJitsi: "Nein",
       whiteboardBbb: "Integriertes Whiteboard",
       maxUsers: "Max. gleichzeitige Nutzer",
@@ -494,6 +494,7 @@ export default {
     },
     sections: {
       gettingStarted: "Erste Schritte",
+      using: "Bedrud nutzen",
       architecture: "Architektur",
       backend: "Backend",
       api: "API",
@@ -507,6 +508,15 @@ export default {
       "getting-started/clients": "Client-Installation",
       "getting-started/configuration": "Konfiguration",
       "getting-started/cli-reference": "CLI-Referenz",
+      "using/account-and-settings": "Konto & Einstellungen",
+      "using/dashboard-and-rooms": "Dashboard & Räume",
+      "using/joining-a-meeting": "Einem Meeting beitreten",
+      "using/stage-mode": "Stage-Modus",
+      "using/whiteboard": "Kollaboratives Whiteboard",
+      "using/youtube-watch": "YouTube Watch",
+      "using/chat": "Meeting-Chat",
+      "using/audio-and-push-to-talk": "Audio & Push-to-Talk",
+      "using/meeting-controls": "Meeting-Steuerung",
       "architecture/overview": "Architekturübersicht",
       "architecture/server": "Server-Architektur",
       "architecture/web": "Web-Frontend",
@@ -741,6 +751,36 @@ export default {
       title: "Audioverarbeitung",
       description:
         "Integrierte Geräuschunterdrückung durch RNNoise. Optionale Krisp-Integration für Premium-KI-Geräuschunterdrückung. Sauberes Audio, jeder Anruf.",
+    },
+    whiteboard: {
+      pain: "Whiteboards in einer anderen App unterbrechen den Meeting-Fluss.",
+      title: "Kollaboratives Whiteboard",
+      description:
+        "Zeichnen, auswählen und bearbeiten Sie ein geteiltes Board im Raum. Yjs-CRDT-Sync über LiveKit-Datenkanäle — kein separater Whiteboard-Server. Unter Experimentelle Einstellungen freischaltbar.",
+    },
+    stageMode: {
+      pain: "Grids sind gut, bis jemand vor allen präsentieren muss.",
+      title: "Stage-Modus",
+      description:
+        "Präsentations-Layout hervorheben, Teilnehmerleiste behalten, Bildschirm als Stage-Overlay teilen und späte Beitretende im korrekten Stage-Zustand landen lassen.",
+    },
+    inMeetingChat: {
+      pain: "Nebenchats ohne Umfragen und Reaktionen zwingen alle mitten im Anruf in Slack.",
+      title: "Chat, Umfragen & Reaktionen",
+      description:
+        "Textchat im Raum mit Emoji-Reaktionen, Live-Umfragen und Bildanhängen. Clientseitige Aufbewahrungsgrenzen halten den Speicher bei langen Sitzungen im Zaum.",
+    },
+    youtubeWatch: {
+      pain: "„Bei welcher Zeitmarke bist du?“ killt gemeinsame Watch-Meetings.",
+      title: "YouTube-Watch-Party",
+      description:
+        "YouTube-URL einfügen und ungefähr synchron für alle im Raum abspielen. Overlay für alle schließen, wenn Sie fertig sind. Optionaler experimenteller Schalter.",
+    },
+    pushToTalk: {
+      pain: "Offene Mikros verwandeln jeden Anruf in Konferenzchaos.",
+      title: "Push-to-Talk",
+      description:
+        "Taste halten zum Senden, loslassen zum Stummschalten. Hold-Taste in den Audio-Einstellungen konfigurieren. Gerätewechsel mitten im Anruf ohne Reconnect.",
     },
     bots: {
       pain: "Manuelle Besprechungsaufgaben verschwenden Zeit - Aufzeichnung, Transkription, Notizen.",

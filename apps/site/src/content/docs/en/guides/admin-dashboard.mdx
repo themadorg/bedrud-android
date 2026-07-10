@@ -161,14 +161,14 @@ Tokens control who can register when in Invite-only mode.
 - **Token List:** Shows all tokens with their status. Unused tokens have a green "Active" badge, used tokens show "Used" in gray.
 - **Copy Token:** Click the copy button to copy the 32-character token value to your clipboard.
 - **Revoke:** Delete a token to prevent it from being used.
-- **Recordings Toggle:** Under the token list, toggle **Allow room recordings** on/off. When disabled, all recording API endpoints return 403 system-wide.
+- **Recordings Toggle:** UI may expose an “allow room recordings” setting for a **planned** feature. Recording HTTP routes are not registered in production yet.
 
 ### Webhooks Tab
 
 The Webhooks tab lets superadmins register HTTP callbacks for real-time room and recording events.
 
 - **Add Webhook:** Enter a URL, select event types, and optionally set a custom HMAC secret.
-- **Event Types:** `room.ended`, `participant.joined`, `participant.left`, `recording.completed`.
+- **Event Types:** `room.created`, `room.ended`, `participant.joined`, `ping` (test). `recording.completed` is reserved for a planned feature. Delivery uses `X-Bedrud-Signature` / `X-Bedrud-Event` headers — see the [Webhooks Guide](/en/docs/guides/webhooks).
 - **Test:** Send a test ping to verify connectivity.
 - **Rotate:** Generate a new HMAC signing secret (old one immediately invalidated).
 - **Status Column:** Shows last HTTP status code and timestamp of last delivery.
@@ -228,9 +228,12 @@ Controls storage limits for chat image uploads:
 Configure how chat image uploads are stored:
 
 - **Backend:** `disk` (local filesystem), `s3` (S3-compatible storage), or `inline` (base64 embedded)
-- **Max Upload Bytes:** Maximum file size per upload
+- **Max Upload Bytes** (`chatUploadMaxBytes`): Maximum file size per upload (default 10 MiB when unset). Applied by the upload API and exposed to the meeting client for pre-checks.
+- **Max Image Dimension** (`chatUploadMaxDimension`): Maximum width or height in pixels (default 8192 when unset / 0). Images that decode larger are rejected with HTTP 400.
 - **Inline Max:** Maximum size for inline/base64 uploads
 - **Disk Directory:** Local directory for `disk` backend uploads
+
+YAML fallbacks: `chat.uploads.maxBytes`, `chat.uploads.maxDimension` in [Configuration](/en/docs/getting-started/configuration).
 
 **S3 Configuration (when backend is `s3`):**
 - Endpoint, Bucket, Region

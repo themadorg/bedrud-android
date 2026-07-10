@@ -1,9 +1,11 @@
 package cli
 
 import (
-	"bedrud/internal/server"
 	"fmt"
 	"os"
+
+	"bedrud/internal/clioutput"
+	"bedrud/internal/server"
 
 	"github.com/spf13/cobra"
 )
@@ -20,6 +22,15 @@ func newRunCmd() *cobra.Command {
 				os.Setenv("BEDRUD_SKIP_MIGRATE", "1")
 			}
 			path := resolveConfigPath(defaultConfigPath)
+			if clioutput.JSON() {
+				if err := clioutput.Success("starting server", map[string]any{
+					"configPath":  path,
+					"version":     Version,
+					"skipMigrate": skipMigrate,
+				}); err != nil {
+					return err
+				}
+			}
 			if err := server.Run(path, Version); err != nil {
 				return fmt.Errorf("server: %w", err)
 			}

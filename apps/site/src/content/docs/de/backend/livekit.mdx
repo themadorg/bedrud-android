@@ -1,21 +1,21 @@
 ---
 title: LiveKit-Integration
-description: Integration des WebRTC-Medienservers
+description: WebRTC-Medienserver-Integration
 order: 20
 ---
 
-Bedrud verwendet **LiveKit** für die Echtzeit-Video- und Audiokommunikation. LiveKit stellt den SFU-Medienserver (Selective Forwarding Unit) bereit, während Bedrud die Authentifizierung, Raumverwaltung und Admin-Kontrollen übernimmt.
+Bedrud uses **LiveKit** to handle real-time video and audio communication. LiveKit provides the SFU (Selective Forwarding Unit) media server, and Bedrud handles authentication, room management, and admin controls.
 
-## Eingebettet vs. Extern
+## Embedded vs. External
 
-Bedrud unterstützt zwei LiveKit-Bereitstellungsmodi:
+Bedrud supports two LiveKit deployment modes:
 
-1.  **Eingebetteter Modus (Standard):** Das Backend startet und verwaltet einen LiveKit-Server-Prozess intern. Es ist keine zusätzliche Infrastruktur erforderlich – das Backend verwaltet den gesamten LiveKit-Prozess-Lebenszyklus.
-2.  **Externer Modus:** Bedrud verbindet sich mit einem separaten LiveKit-Server oder -Cluster. Dies ist nützlich für horizontale Skalierung oder bei Verwendung einer verwalteten LiveKit Cloud-Instanz.
+1.  **Embedded Mode (Default):** The backend starts and manages a LiveKit server process internally. No additional infrastructure is required - the backend handles the LiveKit process lifecycle. When server TLS is enabled, TURN/TLS is automatically configured using the server's certificate.
+2.  **External Mode:** Bedrud connects to a separate LiveKit server or cluster. This is useful for horizontal scaling or when using a managed LiveKit Cloud instance.
 
-### Konfiguration des externen Modus
+### Configuring External Mode
 
-Um einen externen LiveKit-Server zu verwenden, setzen Sie die folgenden Schlüssel in `config.yaml`:
+To use an external LiveKit server, set the following keys in `config.yaml`:
 
 ```yaml
 livekit:
@@ -27,21 +27,21 @@ livekit:
   skipTLSVerify: false    # Set true if LiveKit uses self-signed certs
 ```
 
-Wenn `embedded` auf `false` gesetzt ist, überspringt Bedrud das Starten des eingebetteten LiveKit-Binaries. Der API-Schlüssel und das Secret müssen mit den Anmeldeinformationen des externen Servers übereinstimmen.
+When `external` is `true`, Bedrud skips starting the embedded LiveKit binary. The `internalHost` (for server-to-server API calls) and `host` (for client WebSocket connections) may differ if your LiveKit server is behind a reverse proxy.
 
-Für die Einrichtung und Konfiguration eines LiveKit-Clusters lesen Sie bitte die [LiveKit-Dokumentation](https://docs.livekit.io).
+The API key and secret must match the external server's credentials.
 
-### Webhook-Konfiguration (nur extern)
+### Webhook Configuration (External Only)
 
-Bei Verwendung eines externen LiveKit-Servers **müssen** Sie Webhooks konfigurieren, damit LiveKit Bedrud über Teilnehmer-Trennungen und Raumschließungen informieren kann. Ohne Webhooks wird der Datenbankstatus veralten.
+When using an external LiveKit server, you **must** configure webhooks so LiveKit can notify Bedrud of participant disconnects and room closures. Without webhooks, the database state will go stale.
 
-**Endpunkt:** `https://<your-domain>/api/livekit/webhook`
+**Endpoint:** `https://<your-domain>/api/livekit/webhook`
 
-**Authentifizierung:** Verwendet die JWT-Signierung von LiveKit — denselben `apiKey`/`apiSecret`, den Sie oben konfiguriert haben. Kein separates Geheimnis erforderlich.
+**Authentication:** Uses LiveKit's JWT signing — the same `apiKey`/`apiSecret` you configured above. No separate secret needed.
 
-**LiveKit Cloud:** Einstellungen → Webhooks → Neuen Webhook erstellen. Geben Sie die Endpunkt-URL ein und wählen Sie Ihren API-Schlüssel aus.
+**LiveKit Cloud:** Settings → Webhooks → Create new webhook. Enter the endpoint URL and select your API key.
 
-**Selbst gehostetes LiveKit:** Fügen Sie zu Ihrer LiveKit-YAML-Konfiguration (z. B. `livekit.yaml`) hinzu:
+**Self-hosted LiveKit:** Add to your LiveKit YAML config (e.g., `livekit.yaml`):
 
 ```yaml
 webhook:
@@ -50,62 +50,62 @@ webhook:
 ```
 
 <Callout type="warning">
-  Ohne einen ordnungsgemäß konfigurierten Webhook werden `participant_disconnected`- und `room_finished`-Ereignisse nicht an Bedrud übermittelt. Das Admin-Dashboard zeigt möglicherweise veraltete Teilnehmerdaten an, und Räume werden nicht automatisch bereinigt.
+  Without a properly configured webhook, `participant_disconnected` and `room_finished` events are not delivered to Bedrud. The admin dashboard may show stale participant data, and rooms won't be cleaned up automatically.
 </Callout>
 
-### LiveKit-Versionskompatibilität
+### LiveKit Version Compatibility
 
-Der eingebettete LiveKit-Modus von Bedrud generiert automatisch eine kompatible Konfiguration. Wenn Sie jedoch **einen externen LiveKit-Server selbst hosten**, beachten Sie die bahnbrechenden Änderungen in verschiedenen LiveKit-Versionen:
+Bedrud's embedded LiveKit mode auto-generates a compatible config. However, if you **self-host an external LiveKit server**, be aware of breaking changes across LiveKit versions:
 
-- **LiveKit v1.12+** hat das `tls`-Feld auf oberster Ebene aus seiner Konfiguration entfernt. Wenn Sie `tls:` in Ihrer LiveKit-YAML verwendet haben, entfernen Sie es. Konfigurieren Sie `http://` für `internalHost` und `ws://` für `host` in der Bedrud-Konfiguration. TURN TLS wird weiterhin unter dem Abschnitt `turn:` unterstützt.
-- **LiveKit v1.11 und früher** unterstützen `tls:` auf oberster Ebene. Verwenden Sie `https://` für `internalHost` und `wss://` für `host`.
+- **LiveKit v1.12+** removed the top-level `tls` field from its config. If you were using `tls:` in your LiveKit YAML, remove it. Configure `http://` for `internalHost` and `ws://` for `host` in Bedrud's config. TURN TLS is still supported under the `turn:` section.
+- **LiveKit v1.11 and earlier** support `tls:` at the top level. Use `https://` for `internalHost` and `wss://` for `host`.
 
-Überprüfen Sie im Zweifelsfall Ihre LiveKit-Serverversion mit `livekit-server --version` und konsultieren Sie die [LiveKit-Versionshinweise](https://github.com/livekit/livekit/releases).
+When in doubt, check your LiveKit server version with `livekit-server --version` and consult the [LiveKit release notes](https://github.com/livekit/livekit/releases).
 
-### Eingebettete Konfigurationserzeugung (Embedded Config Generation)
+### Embedded Config Generation
 
-Wenn TLS im eingebetteten Modus aktiviert ist, generiert Bedrud eine temporäre LiveKit-YAML-Konfiguration (`/tmp/bedrud-livekit-*.yaml`) mit:
-- TURN aktiviert, `domain` automatisch aus `server.host` gesetzt, `udp_port: 3478`, `tls_port: 5349`, und das Server-TLS-Zertifikat wird für TURN/TLS wiederverwendet
-- `node_ip` wird aufgelöst via `livekit.nodeIP` → `server.host` → automatische Ausgangs-IP-Erkennung
-- `bind_addresses` ausgelassen (LiveKit bindet standardmäßig alle Schnittstellen)
+When TLS is enabled in embedded mode, Bedrud generates a temporary LiveKit YAML config (`/tmp/bedrud-livekit-*.yaml`) with:
+- TURN enabled, `domain` auto-set from `server.host`, `udp_port: 3478`, `tls_port: 5349`, and the server's TLS certificate reused for TURN/TLS
+- `node_ip` resolved via `livekit.nodeIP` → `server.host` → outbound IP auto-detection
+- `bind_addresses` omitted (LiveKit binds all interfaces by default)
 
-Die temporäre Datei wird beim Beenden des LiveKit-Prozesses gelöscht. Zur Umgehung der automatischen Generierung mit einer statischen Konfiguration setzen Sie `livekit.configPath` oder `LIVEKIT_CONFIG_PATH`.
+The temp file is cleaned up when the LiveKit process exits. To bypass auto-generation with a static config, set `livekit.configPath` or `LIVEKIT_CONFIG_PATH`.
 
-## Funktionsweise
+## How It Works
 
-### 1. Raumerstellung
+### 1. Room Creation
 
-Wenn ein Benutzer einen Raum in Bedrud erstellt, erstellt der Server nicht sofort einen LiveKit-Raum. LiveKit-Räume werden bei Bedarf erstellt, wenn der erste Teilnehmer beitritt.
+When a user creates a room in Bedrud, the server does not create a LiveKit room immediately. LiveKit rooms are created on demand when the first participant joins.
 
 ### 2. Join Tokens
 
-Wenn ein Benutzer einem Meeting beitritt:
+When a user joins a meeting:
 
-1.  Das Frontend sendet eine Anfrage an `/api/room/join`.
-2.  Das Backend verifiziert, dass der Benutzer die Berechtigung hat, diesem Raum beizutreten.
-3.  Das Backend verwendet seinen API Key und Secret, um ein signiertes JWT (Join Token) zu generieren.
-4.  Das Token enthält:
+1.  The frontend sends a request to `/api/room/join`.
+2.  The backend verifies the user has permission to join that room.
+3.  The backend uses its API Key and Secret to generate a signed JWT (Join Token).
+4.  The token contains:
 
-    - Den Raumnamen.
-    - Die Identität des Benutzers (Anzeigename).
-    - Berechtigungen – beispielsweise, ob der Benutzer Audio veröffentlichen oder seinen Bildschirm freigeben darf.
-5.  Das Frontend erhält dieses Token und verbindet sich direkt mit dem LiveKit-Medienport (Standard `7880`).
+    - The room name.
+    - The user's identity (display name).
+    - Permissions - for example, whether the user can publish audio or share their screen.
+5.  The frontend receives this token and connects directly to the LiveKit media port (default `7880`).
 
-### 3. Raumsteuerung (Admin)
+### 3. Room Controls (Admin)
 
-Das Backend verwendet das LiveKit Go SDK, um administrative Aktionen durchzuführen:
+The backend uses the LiveKit Go SDK to perform administrative actions:
 
-- **Kick:** Trennt einen Teilnehmer.
-- **Mute:** Schaltet das Mikrofon eines Teilnehmers stumm.
-- **Berechtigungen:** Ändert in Echtzeit, was ein Teilnehmer tun kann.
+- **Kick:** Disconnects a participant.
+- **Mute:** Force-mutes a participant's microphone.
+- **Permissions:** Changes what a participant can do in real-time.
 
-## Netzwerkarchitektur
+## Network Architecture
 
-- **API-Port (8090/443):** Verwaltet HTTP-Anfragen und WebSocket-Signalisierung für den Verbindungsaufbau.
-- **Medienport (7880):** Verwaltet Video- und Audiodaten über WebRTC-Protokolle. ICE/TCP-Fallback verwendet Port 7881, wenn UDP blockiert ist.
-- **TURN-Port (3478 UDP / 5349 TLS):** Leitet Medien für Clients hinter restriktiven NATs oder Firewalls weiter. Siehe [TURN-Server-Leitfaden](/de/docs/architecture/turn-server).
+- **API Port (8090/443):** Handles HTTP requests and WebSocket signaling for call setup.
+- **Media Port (7880):** Handles video and audio data using WebRTC protocols. ICE/TCP fallback uses port 7881 when UDP is blocked.
+- **TURN Port (3478 UDP / 5349 TLS):** Relays media for clients behind restrictive NATs or firewalls. See [TURN Server Guide](/de/docs/architecture/turn-server).
 
- Für Firewall- und Port-Anforderungen siehe [WebRTC-Konnektivität](/de/docs/architecture/webrtc-connectivity).
+For firewall and port requirements, see [WebRTC Connectivity](/de/docs/architecture/webrtc-connectivity).
 
 ## Troubleshooting
 
@@ -155,39 +155,44 @@ Das Backend verwendet das LiveKit Go SDK, um administrative Aktionen durchzufüh
 {/* TODO oncoming feature */}
 ### Recording (Egress)
 
+> 🚧 **Recording is a planned feature.** This guide describes functionality that will be available in a future release.
+
 Bedrud uses LiveKit's [RoomCompositeEgress API](https://docs.livekit.io/egress/overview/) to record rooms as MP4 files.
 
 #### Prerequisites
 
 - **Redis** — LiveKit egress requires Redis for coordinating egress workers. Without Redis, `StartRoomCompositeEgress` returns permission errors.
-- **Egress S3 storage (external mode only)** — For external LiveKit, you **must** configure an `egress:` section in your LiveKit YAML so recordings are stored to durable S3-compatible storage. Otherwise the `FileURL` is a local path unreachable from Bedrud.
+- **Egress S3 storage (external mode only)** — For embedded mode, the file lives on the LiveKit file server and Bedrud downloads it directly. For external LiveKit, you **must** configure an `egress:` section in your LiveKit YAML so recordings are stored to durable S3-compatible storage. Otherwise the produced `FileURL` is a local path unreachable from Bedrud.
+
+  Example LiveKit YAML:
 
   ```yaml
   egress:
     s3:
       access_key: "your-s3-access-key"
       secret_key: "your-s3-secret-key"
-      endpoint: "http://minio:9000"
+      endpoint: "http://minio:9000"          # S3-compatible endpoint
       bucket: "bedrud-recordings"
       region: "us-east-1"
-      force_path_style: true
+      force_path_style: true                 # Required for MinIO/RustFS/etc.
   ```
 
-#### Troubleshooting: Recording
+#### Recording Lifecycle
 
-| Symptom | Cause | Fix |
-|---------|-------|-----|
-| `twirp error unauthenticated: permissions denied` when starting recording | Egress JWT missing `Room` field in grant | Update `egressAuthContext` to include `Room: roomName` in the `VideoGrant` |
-| `twirp error unauthenticated: permissions denied` even with valid API key | Redis not configured for LiveKit, or egress workers unavailable | Add `redis:` section to LiveKit YAML; ensure Redis is healthy |
-| Recording starts but `FileURL` is a local path (e.g., `/tmp/...`) | No `egress:` S3 config — LiveKit writes to worker temp dir | Add `egress.s3:` block to LiveKit YAML pointing to S3-compatible storage |
-| `process_recording` job fails to download | External LK's file URL points to inaccessible local path | Configure egress S3 so LiveKit produces S3 URLs |
+🚧 **Planned feature.** Production routes for start/stop/list/delete recordings are commented out (`// TODO oncoming feature` in `internal/server/server.go`). Implementation code (handlers, egress client, `process_recording` job, `recording.completed` webhook) exists for the upcoming release but is **not active** yet.
+
+When enabled, the intended flow is:
+
+1. **Start:** `StartRoomCompositeEgress` with room-scoped JWT (`RoomRecord: true` and `Room: <roomName>`).
+2. **Stop:** `StopEgress`, then background `process_recording` stores the file.
+3. **Complete:** Optional `recording.completed` outbound webhook.
 
 <Callout type="info">
   See also the [TURN Server Guide](/de/docs/architecture/turn-server) for TURN-specific troubleshooting, [WebRTC Connectivity](/de/docs/architecture/webrtc-connectivity) for STUN/ICE/firewall debugging, and [Installation Troubleshooting](/de/docs/getting-started/installation#troubleshooting) for port/perm/setup issues.
 </Callout>
 
-## Siehe auch
+## See also
 
-- [TURN-Server-Leitfaden](/de/docs/architecture/turn-server) – TURN-Architektur, Konfiguration, TLS und Fehlerbehebung
-- [WebRTC-Konnektivität](/de/docs/architecture/webrtc-connectivity) – vollständiger STUN/ICE/TURN/SFU-Konnektivitäts-Stack
-- [Architekturübersicht](/de/docs/architecture/overview) – vollständige Systemarchitektur
+- [TURN Server Guide](/de/docs/architecture/turn-server) - TURN architecture, configuration, TLS, and troubleshooting
+- [WebRTC Connectivity](/de/docs/architecture/webrtc-connectivity) - full STUN/ICE/TURN/SFU connectivity stack
+- [Architecture Overview](/de/docs/architecture/overview) - full system architecture

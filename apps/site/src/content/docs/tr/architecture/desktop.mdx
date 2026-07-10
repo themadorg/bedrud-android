@@ -4,66 +4,66 @@ description: Rust tabanlı masaüstü uygulaması
 order: 11
 ---
 
-Bedrud masaüstü istemcisi; **Rust** ve **Slint** UI araç takımı ile oluşturulmuş yerel bir Windows ve Linux uygulamasıdır. Web ve mobil istemcilerle aynı temel toplantı deneyimini sunar, herhangi bir çalışma zamanı bağımlılığı olmadan tek bir ikili dosyaya derlenir.
+The Bedrud desktop client is a native Windows and Linux application built with **Rust** and the **Slint** UI toolkit. It provides the same core meeting experience as the web and mobile clients, compiled to a single binary with no runtime dependencies.
 
-## Teknoloji Yığını
+## Technology Stack
 
-| Bileşen | Teknoloji |
-|---------|-----------|
-| Dil | Rust (stable) |
-| UI araç takımı | Slint 1.x |
-| HTTP istemcisi | reqwest (async, TLS) |
-| Medya | LiveKit Rust SDK |
-| Depolama | serde_json + OS keyring (libsecret / Windows Credential Store) |
-| Derleme sistemi | Cargo workspace |
+| Component | Technology |
+|-----------|-----------|
+| Language | Rust (stable) |
+| UI toolkit | Slint 1.x |
+| HTTP client | reqwest (async, TLS) |
+| Media | LiveKit Rust SDK |
+| Storage | serde_json + OS keyring (libsecret / Windows Credential Store) |
+| Build system | Cargo workspace |
 
-## Platform Desteği
+## Platform Support
 
-| Platform | İşleyici | İkili Dosya |
-|----------|----------|-------------|
+| Platform | Renderer | Binary |
+|----------|----------|--------|
 | Windows 10/11 | Direct3D 11 | `bedrud-desktop.exe` |
-| Linux x86_64 | OpenGL / Vulkan (EGL/Wayland/X11 ile) | `bedrud-desktop` |
-| macOS | _(henüz yok - web uygulamasını kullanın)_ | - |
+| Linux x86_64 | OpenGL / Vulkan (via EGL/Wayland/X11) | `bedrud-desktop` |
+| macOS | _(not yet - use the web app)_ | - |
 
-## Kaynak Düzeni
+## Source Layout
 
 ```
 apps/desktop/
-├── Cargo.toml              # Crate tanımı
-├── build.rs                # Slint derleme adımı
+├── Cargo.toml              # Crate definition
+├── build.rs                # Slint compile step
 ├── src/
-│   ├── main.rs             # Giriş noktası - uygulamayı başlatır + olay döngüsü
-│   ├── app.rs              # Üst düzey AppState ve başlangıç mantığı
+│   ├── main.rs             # Entry point - initialises app + event loop
+│   ├── app.rs              # Top-level AppState and startup logic
 │   ├── api/
-│   │   ├── client.rs       # Paylaşılan HTTP istemcisi (temel URL, JWT ekleme)
-│   │   ├── auth.rs         # Giriş, kayıt, yenileme
-│   │   ├── rooms.rs        # Oda listesi, katılma, oluşturma
-│   │   └── admin.rs        # Yönetici uç noktaları
+│   │   ├── client.rs       # Shared HTTP client (base URL, JWT injection)
+│   │   ├── auth.rs         # Login, register, refresh
+│   │   ├── rooms.rs        # Room list, join, create
+│   │   └── admin.rs        # Admin endpoints
 │   ├── auth/
-│   │   ├── session.rs      # JWT depolama ve yenileme döngüsü
-│   │   └── passkey.rs      # FIDO2 passkey taslağı
+│   │   ├── session.rs      # JWT storage and refresh loop
+│   │   └── passkey.rs      # FIDO2 passkey stub
 │   ├── livekit/
-│   │   ├── room.rs         # Oda bağlantı yaşam döngüsü
-│   │   ├── tracks.rs       # Ses/video kanalı yönetimi
-│   │   └── devices.rs      # Mikrofon / kamera numaralandırma
+│   │   ├── room.rs         # Room connection lifecycle
+│   │   ├── tracks.rs       # Audio/video track management
+│   │   └── devices.rs      # Microphone / camera enumeration
 │   ├── store/
-│   │   ├── instance.rs     # Çoklu örnek kalıcılığı
-│   │   └── settings.rs     # Kullanıcı tercihleri
+│   │   ├── instance.rs     # Multi-instance persistence
+│   │   └── settings.rs     # User preferences
 │   └── ui/
 │       ├── mod.rs
-│       └── bridge.rs       # Slint ↔ Rust geri çağrı bağlantısı
+│       └── bridge.rs       # Slint ↔ Rust callback wiring
 └── ui/
-    ├── app.slint            # Kök bileşen, sayfa yönlendirici
-    ├── theme.slint          # Renkler, tipografi, boşluk tokenları
+    ├── app.slint            # Root component, page router
+    ├── theme.slint          # Colours, typography, spacing tokens
     ├── components/          # Button, Input, Card, Avatar
-    ├── auth/                # Giriş ve Kayıt ekranları
-    ├── dashboard/           # Oda listesi, Oda oluşturma iletişim kutusu
-    ├── meeting/             # Kontroller çubuğu, katılımcı karoları, sohbet
-    ├── admin/               # Yönetici paneli, kullanıcı tablosu
-    └── settings.slint       # Ayarlar ekranı
+    ├── auth/                # Login and Register screens
+    ├── dashboard/           # Room list, Create-room dialog
+    ├── meeting/             # Controls bar, participant tiles, chat
+    ├── admin/               # Admin panel, user table
+    └── settings.slint       # Settings screen
 ```
 
-## Mimari
+## Architecture
 
 ```mermaid
 flowchart TB
@@ -90,18 +90,18 @@ flowchart TB
     AUTH <*/} STORE
 ```
 
-### Temel tasarım kararları
+### Key design decisions
 
-- **Slint'in derleme zamanı UI'sı** - `.slint` dosyaları `build.rs` aracılığıyla derleme zamanında Rust'a derlenir. Çalışma zamanında bir düzen motoru yoktur; UI tamamen yereldir.
-- **`bridge.rs` tek UI↔mantık sınırı olarak** - tüm Slint geri çağrıları tek bir yerde bağlanır, iş mantığını UI katmanının dışında tutar ve köprüyü denetlemeyi kolaylaştırır.
-- **Geri çağrılarda `Weak<AppWindow>`** - Slint UI tanıtıcıları `!Send` olduğundan, arka plan görevleri özellikleri ayarlamak için tanıtıcıyı iş parçacıkları arasında paylaşmak yerine UI iş parçacığında saklanan bir `Weak` referansını yükseltir.
-- **`store/instance.rs` ile çoklu örnek** - mobil uygulamalarla aynı şekilde: örnekler OS yapılandırma dizinindeki bir JSON dosyasına serileştirilir; her örneğin kendi `APIClient` ve `AuthSession`'ı vardır.
+- **Slint's compile-time UI** - `.slint` files are compiled into Rust at build time via `build.rs`. There is no layout engine at runtime; the UI is fully native.
+- **`bridge.rs` as the only UI↔logic boundary** - all Slint callbacks are wired in one place, keeping business logic out of the UI layer and making the bridge easy to audit.
+- **`Weak<AppWindow>` in callbacks** - Slint UI handles are `!Send`, so background tasks upgrade a stored `Weak` reference on the UI thread to set properties, rather than sharing the handle across threads.
+- **Multi-instance via `store/instance.rs`** - identical to the mobile apps: instances are serialised to a JSON file in the OS config directory; each instance has its own `APIClient` and `AuthSession`.
 
-## Yerel Olarak Derleme
+## Building Locally
 
-### Ön Koşullar
+### Prerequisites
 
-- Rust stable araç zinciri (`rustup toolchain install stable`)
+- Rust stable toolchain (`rustup toolchain install stable`)
 - **Linux:** `libfontconfig`, `libxkbcommon`, `libwayland`, `libgles2`, `libdbus`, `libsecret`
 
   ```bash
@@ -112,38 +112,38 @@ flowchart TB
     libasound2-dev
   ```
 
-- **Windows:** C++ iş yükü ile Visual Studio Build Tools (MSVC)
+- **Windows:** Visual Studio Build Tools (MSVC) with the C++ workload
 
-### Derleme
+### Build
 
 ```bash
-# Hata ayıklama derlemesi (hızlı derleme, iyileştirmesiz)
-make dev-desktop          # derlemeden hemen sonra uygulamayı çalıştırır
+# Debug build (fast compile, no optimisations)
+make dev-desktop          # runs the app immediately after build
 
-# Sürüm derlemesi
+# Release build
 make build-desktop        # → target/release/bedrud-desktop (Linux)
                            # → target/release/bedrud-desktop.exe (Windows)
 ```
 
-Veya doğrudan Cargo ile:
+Or with Cargo directly:
 
 ```bash
-cargo build -p bedrud-desktop                          # hata ayıklama
-cargo build -p bedrud-desktop --release                # iyileştirilmiş
-cargo run   -p bedrud-desktop                          # hemen çalıştır
+cargo build -p bedrud-desktop                          # debug
+cargo build -p bedrud-desktop --release                # optimised
+cargo run   -p bedrud-desktop                          # run immediately
 ```
 
 ## CI
 
-Masaüstü uygulaması `master` dalına her gönderimde ve pull request'lerde CI'da derlenir:
+The desktop app is built in CI on every push to `master` and on pull requests:
 
-| İş | Çalıştırıcı | Ne denetler |
-|-----|-------------|-------------|
+| Job | Runner | What it checks |
+|-----|--------|----------------|
 | `Desktop – Build & Test` | `ubuntu-latest` | `cargo build`, `cargo test` |
 
-Sürüm derlemeleri iki artefakt üretir:
+Release builds produce two artifacts:
 
-| Artefakt | Çalıştırıcı | Biçim |
-|----------|-------------|-------|
+| Artifact | Runner | Format |
+|----------|--------|--------|
 | `bedrud-desktop-linux-x86_64.tar.xz` | `ubuntu-latest` | tar.xz |
 | `bedrud-desktop-windows-x86_64.zip` | `windows-latest` | zip |

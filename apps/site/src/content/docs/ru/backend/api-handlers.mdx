@@ -1,95 +1,89 @@
 ---
 title: API-обработчики
-description: Реализация конечных точек REST API
+description: Реализации REST-эндпоинтов
 order: 19
 ---
 
-Bedrud использует веб-фреймворк **Fiber** (API в стиле Express для Go).
+Bedrud uses the **Fiber** web framework. Production routes are registered in `server/internal/server/server.go` (used by `bedrud run`). Interactive OpenAPI: [API Reference](/ru/docs/api/api-reference).
 
-## Логика маршрутизации
+## Route Groups
 
-Маршруты определены в `internal/server/server.go`. Мы группируем маршруты для удобного применения middleware или префиксов.
+| Prefix | Auth | Purpose |
+|--------|------|---------|
+| `/api/auth/*` | Mixed | Register, login, OAuth, passkeys, profile, preferences, verify, password reset |
+| `/api/room/*` | Mostly protected | Create/join/list/moderate rooms, chat upload |
+| `/api/admin/*` | Superadmin | Users, rooms, settings, invite tokens, webhooks, queue, overview |
+| `/api/livekit/webhook` | LiveKit JWT | Inbound media disconnect events |
+| `/api/cert` | Public | Cert metadata for clients (when applicable) |
+| `/livekit/*` | Proxied | Embedded LiveKit signaling (unless `livekit.external`) |
+| `/uploads/chat/*` | Protected | Chat image files |
+| `/uploads/avatars/*` | Public | Avatar files |
+| `/*` | SPA | Embedded frontend |
 
-### Основные группы:
+Admin group middleware: `Protected` → `RequireEmailVerified` → `RequireAccess(superadmin)`.
 
-- **`/api/auth`**: Публичные и защищённые маршруты для аутентификации.
-- **`/api/room`**: Защищённые маршруты для управления комнатами.
-- **`/api/admin`**: Маршруты, доступные только пользователям с ролью `superadmin`.
-- **`/livekit`**: Специальная группа прокси, отправляющая запросы на встроенный аудио/видео сервер LiveKit.
+## Auth Highlights
 
-## Специализированная логика обработчиков
+- Local register/login/refresh, OAuth (`/auth/:provider/login|callback`)
+- Passkey register/login/signup begin/finish
+- Profile + avatar: `GET/PUT /auth/me`, avatar upload/delete
+- Preferences: `GET/PUT /auth/preferences`
+- Email verify + resend; forgot/reset password
+- Public settings: `GET /auth/settings`
 
-### Управление комнатами (`internal/handlers/room.go`)
-`RoomHandler` осуществляет перевод между метаданными комнат Bedrud и медиадвижком LiveKit.
+## Room Highlights
 
-#### 1. Создание комнаты
-При создании комнаты через `POST /api/room/create`:
+- `POST /room/create`, `/room/join`, `/room/guest-join`, `/room/refresh-token`
+- `GET /room/list`, `/room/archived`
+- Moderation: kick, mute, ban, video off, promote/demote, chat block, deafen, ask, spotlight, screenshare stop, stage bring/remove
+- `PUT /room/:roomId/settings`, `DELETE /room/:roomId` (async job → **202**)
+- `POST /room/:roomId/chat/upload`
+- Presence: `GET /room/:roomId/presence`
 
-- **Нормализация:** Имена комнат обрезаются и переводятся в нижний регистр.
-- **Автогенерация:** Если имя не указано, Bedrud генерирует случайное URL-безопасное имя (например, `fancy-blue-whale`).
-- **Синхронизированное создание:** Бэкенд сначала вызывает внутренний API LiveKit для создания медиасеанса, затем сохраняет метаданные в локальной базе данных.
+## Admin Highlights
 
-#### 2. Присоединение и токены
-Когда пользователь присоединяется через `POST /api/room/join`:
+- Users: list, detail, status, accesses, force-logout, set password, verify, sessions, **delete** (async), bulk ban/promote/delete
+- Rooms: list, events, token, close, suspend, reactivate, update, participants, bulk suspend/close
+- Settings: get/put, send-test-email, validate connectivity
+- Invite tokens CRUD; webhooks CRUD + rotate-secret + test
+- Overview, online-count, LiveKit stats, cert-info, queue stats
 
-- **Управление доступом:** Бэкенд проверяет существование комнаты и права пользователя.
-- **Генерация токена:** Подписанный JWT (Join Token) генерируется с:
-  - `Identity`: ID пользователя из Bedrud.
-  - `Name`: Отображаемое имя пользователя.
-  - `Grants`: Определённые разрешения, такие как `CanJoin`, `CanPublish`, `CanSubscribe`.
-- **Клиентский рукопожатие:** Фронтенд получает как локальные метаданные комнаты, так и токен LiveKit для начала WebRTC-соединения.
+Recording admin/user routes are **not registered** in production (planned feature).
 
-## Администрирование и управление пользователями (`internal/handlers/users.go`)
-Маршруты в `/api/admin` строго охраняются middleware `RequireAccess("superadmin")`.
+## Async Operations (Job Queue)
 
-### 1. Управление пользователями
-`UsersHandler` позволяет администраторам:
+Destructive work and some side effects return **202 Accepted** and enqueue jobs:
 
-- **Список всех пользователей:** Получить полный каталог зарегистрированных пользователей, включая их провайдера аутентификации и метаданные последнего входа.
-- **Обновление статуса:** Мгновенно активировать или деактивировать доступ к аккаунту. Деактивация пользователя немедленно блокирует его возможность входа или обновления токенов.
+| Endpoint | Job type (approx.) |
+|----------|--------------------|
+| `DELETE /api/room/:roomId` | `room_delete` |
+| `DELETE /api/admin/rooms/:roomId` | `room_delete` |
+| `POST /api/admin/rooms/:roomId/suspend` | `room_suspend` |
+| `POST /api/admin/rooms/bulk/suspend` | bulk suspend |
+| `POST /api/admin/rooms/bulk/close` | bulk close |
+| `DELETE /api/admin/users/:id` | `user_delete` |
+| `POST /api/admin/users/bulk/delete` | bulk `user_delete` |
 
-### 2. Обзор комнат
-Маршруты администратора позволяют просматривать все активные и исторические комнаты на всей платформе, независимо от того, кто их создал. Это предназначено для модерации платформы.
+Other job types: `dispatch_webhook`, email sends, chat upload processing. Worker polls ~500ms (configurable); retries with exponential backoff `2^attempts * 5s` (cap 1h).
 
-## Жизненный цикл запроса
+## Room Creation & Join (summary)
 
-1.  **Запрос поступает**: Fiber получает HTTP-запрос.
-2.  **Middleware**:
+**Create** (`POST /api/room/create`): normalize/generate name → LiveKit room → DB metadata → optional `room.created` webhook.
 
-    - `recover`: Предотвращает сбой сервера при возникновении ошибки.
-    - `cors`: Обрабатывает совместное использование ресурсов между источниками (CORS).
-    - `Protected`: (Опционально) Проверяет наличие действительного JWT в заголовке `Authorization`.
-3.  **Обработчик**: Вызывается функция из `internal/handlers`.
+**Join** (`POST /api/room/join`): authorize → LiveKit JWT (identity, name, grants) → client connects via WebRTC.
 
-    - Она разбирает тело JSON (если есть) с использованием `c.BodyParser`.
-    - Она вызывает необходимый Service или Repository.
-    - Она возвращает JSON-ответ с использованием `c.JSON`.
+## Request Lifecycle
 
-## Пример: обработчик создания комнаты
+1. Fiber receives request
+2. Middleware: recover, CORS, rate limit, optional JWT + email-verified
+3. Handler parses body, calls repo/service, returns JSON
 
-```go
-func (h *RoomHandler) CreateRoom(c *fiber.Ctx) error {
-    var input struct {
-        Name string `json:"name"`
-    }
-    // 1. Parse Input
-    if err := c.BodyParser(&input); err != nil {
-        return c.Status(400).JSON(fiber.Map{"error": "Invalid input"})
-    }
+## Static Frontend
 
-    // 2. Business Logic (via Repository)
-    room := &models.Room{Name: input.Name}
-    if err := h.roomRepo.Create(room); err != nil {
-        return c.Status(500).JSON(fiber.Map{"error": "Failed to create room"})
-    }
+Built React assets are embedded and served from the binary. Non-`/api` routes fall through to the SPA shell.
 
-    // 3. Response
-    return c.Status(201).JSON(room)
-}
-```
+## See also
 
-## Статические файлы (фронтенд)
-
-Веб-фронтенд **встроен** в бинарный файл Go во время сборки. Fiber отдаёт файлы React из директории `frontend/` с использованием `filesystem.New`.
-
-Любой маршрут, не начинающийся с `/api`, перенаправляется на `index.html` React-приложения. Это обеспечивает клиентскую маршрутизацию без 404-ошибок при обновлении страницы.
+- [Authentication](/ru/docs/backend/authentication)
+- [Webhooks Guide](/ru/docs/guides/webhooks)
+- [Configuration](/ru/docs/getting-started/configuration)

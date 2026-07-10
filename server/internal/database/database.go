@@ -1,9 +1,10 @@
 package database
 
 import (
-	"bedrud/config"
 	"fmt"
 	"time"
+
+	"bedrud/config"
 
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -138,6 +139,14 @@ func gormLogLevelFromZerolog(level zerolog.Level) logger.LogLevel {
 // This bypasses Initialize and should only be used in tests.
 func SetForTest(testDB *gorm.DB) {
 	db = testDB
+}
+
+// ResetForTest closes and clears the global DB handle (tests only).
+func ResetForTest() {
+	if db != nil {
+		_ = Close()
+	}
+	db = nil
 }
 
 // Close closes the database connection

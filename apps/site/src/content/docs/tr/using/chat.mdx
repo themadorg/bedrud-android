@@ -1,0 +1,61 @@
+---
+title: Toplantı İçi Sohbet
+description: Metin mesajları, emoji tepkileri, anketler ve görsel ekleri
+order: 7
+---
+
+Oda içi sohbet; aramadan ayrılmadan metin, tepkiler, anketler ve görseller için bir yan paneldir.
+
+## Açma ve gönderme
+
+1. Toplantı kontrollerinden **sohbet** panelini açın.
+2. Metin mesajı gönderin — diğer katılımcılar alır.
+3. Paneli açmak veya kapatmak kamera veya mikrofon izlerini **öldürmemelidir**.
+
+Patlama halinde gönderimlerde bile mesaj gruplama ve zaman damgaları doğru görünmelidir.
+
+## Emoji
+
+- Bir mesaja **tepki** — her iki tarafta tepki sayıları güncellenir.
+- Bestecideki **emoji seçici** taslak metne emoji ekler.
+
+## Anketler
+
+1. Sohbetten bir **anket** oluşturun.
+2. Herkes anket balonunu görür.
+3. Katılımcılar **oy verir**; sonuçlar güncellenir (UI sonuç modalı sunuyorsa).
+
+## Görseller ve dosyalar
+
+- Sunucu boyut ve boyut (piksel) sınırları içinde bir görsel ekleyin.
+- Toplantı istemcisi, genel ayarlardan (`chatUploadMaxBytes`, `chatUploadMaxDimension`) yararlanarak yüklemeden önce dosya boyutunu ve görsel boyutlarını **önceden kontrol eder**.
+- Aşırı büyük dosyalar veya boyutlar net bir hatayla reddedilir (önce istemci; yetkili sunucudur — `POST /api/room/:roomId/chat/upload` için `413` / `400`).
+- Alıcılar görselleri bir **lightbox** içinde açabilir.
+
+**Varsayılanlar:** dosya başına 10 MiB, en fazla 8192×8192 boyut (ayarlanmamışsa).
+
+İşletmeciler limitleri şunlarla ayarlar:
+
+- [Yapılandırma](/tr/docs/getting-started/configuration) içinde `chat.uploads.maxBytes` / `chat.uploads.maxDimension`
+- [Yönetici paneli](/tr/docs/guides/admin-dashboard) **Chat Uploads** sekmesi (`chatUploadMaxBytes`, `chatUploadMaxDimension`)
+- `chat` altındaki kullanıcı / genel depolama kotaları (`maxUploadBytesPerUser`, disk/S3 arka uçları)
+
+
+## Saklama (istemci tarafı)
+
+LiveKit, sohbet ürünü gibi sunucuda veri kanalı sohbetini kalıcı tutmaz. Bedrud **istemci tarafı** saklama ipuçları uygular:
+
+| Ayar | Varsayılan (tipik) | Anlam |
+|------|--------------------|-------|
+| `chat.maxMessageCount` | 10000 | Bellek / session storage'da tutulan mesaj tavanı |
+| `chat.messageTTLHours` | 2160 (90 gün) | Yaşa göre budama |
+
+Ortam değişkenleri: `CHAT_MAX_MESSAGE_COUNT`, `CHAT_MESSAGE_TTL_HOURS`.
+
+Oda ortasında **yenilemeden** sonra geçmiş, ürün politikasına göre (oturum geri yükleme veya temiz başlangıç) ilerler ve çökmez.
+
+## İlgili
+
+- [Toplantı Kontrolleri](/tr/docs/using/meeting-controls)
+- [Toplantıya Katılma](/tr/docs/using/joining-a-meeting)
+- [API İşleyicileri](/tr/docs/backend/api-handlers) — `POST /room/:roomId/chat/upload`

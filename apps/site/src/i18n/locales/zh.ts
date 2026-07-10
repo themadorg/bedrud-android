@@ -150,7 +150,7 @@ export default {
       sipIntegrationJitsi: "SIP/Jibri 网关",
       sipIntegrationBbb: "SIP 网关",
       whiteboard: "白板",
-      whiteboardBedrud: "否",
+      whiteboardBedrud: "协作 (Yjs)",
       whiteboardJitsi: "否",
       whiteboardBbb: "内置白板",
       maxUsers: "最大并发用户",
@@ -458,6 +458,7 @@ export default {
     notFound: "文档未找到",
     sections: {
       gettingStarted: "快速入门",
+      using: "使用 Bedrud",
       architecture: "架构",
       backend: "后端",
       api: "API",
@@ -503,6 +504,15 @@ export default {
       "getting-started/clients": "客户端安装",
       "getting-started/configuration": "配置",
       "getting-started/cli-reference": "CLI 参考",
+      "using/account-and-settings": "账户与设置",
+      "using/dashboard-and-rooms": "仪表板与房间",
+      "using/joining-a-meeting": "加入会议",
+      "using/stage-mode": "舞台模式",
+      "using/whiteboard": "协作白板",
+      "using/youtube-watch": "YouTube 一起看",
+      "using/chat": "会议内聊天",
+      "using/audio-and-push-to-talk": "音频与一键通讲",
+      "using/meeting-controls": "会议控制",
       "architecture/overview": "架构概览",
       "architecture/server": "服务器架构",
       "architecture/web": "Web 前端",
@@ -731,6 +741,36 @@ export default {
       title: "音频处理",
       description:
         "由 RNNoise 驱动的内置降噪。可选的 Krisp 集成，用于高级 AI 降噪。每次通话都有清晰的音频。",
+    },
+    whiteboard: {
+      pain: "白板放在另一个应用里会打断会议流程。",
+      title: "协作白板",
+      description:
+        "在房间内绘制、选择并编辑共享画板。Yjs CRDT 经 LiveKit 数据通道同步 — 无需单独的白板服务器。若门控则在实验性设置中启用。",
+    },
+    stageMode: {
+      pain: "网格布局还行，直到有人需要向所有人演示。",
+      title: "舞台模式",
+      description:
+        "突出演示者布局，保留参与者条，以舞台叠加层共享屏幕，并让迟到者落在正确的舞台状态。",
+    },
+    inMeetingChat: {
+      pain: "没有投票和回应的侧聊会迫使所有人在通话中切到 Slack。",
+      title: "聊天、投票与回应",
+      description:
+        "房间内文字聊天，支持表情回应、实时投票与图片附件。客户端保留限制让长会话内存可控。",
+    },
+    youtubeWatch: {
+      pain: "「你现在在哪个时间点？」会毁掉一起看的会议。",
+      title: "YouTube 观影派对",
+      description:
+        "粘贴 YouTube URL，房间内所有人大致同步播放。完成后为所有参与者关闭叠加层。可选实验性开关。",
+    },
+    pushToTalk: {
+      pain: "开麦会让每次通话变成电话会议一团糟。",
+      title: "一键通讲",
+      description:
+        "按住键发送，松开静音。在音频设置中配置按住键。通话中切换设备无需重连。",
     },
     bots: {
       pain: "手动的会议任务浪费时间 - 录制、转录、笔记。",

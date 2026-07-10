@@ -1,14 +1,16 @@
 package cli
 
 import (
-	"bedrud/config"
-	"bedrud/internal/database"
-	"bedrud/internal/models"
-	"bedrud/internal/repository"
 	"crypto/rand"
 	"encoding/base64"
 	"fmt"
 	"time"
+
+	"bedrud/config"
+	"bedrud/internal/clioutput"
+	"bedrud/internal/database"
+	"bedrud/internal/models"
+	"bedrud/internal/repository"
 
 	"github.com/google/uuid"
 	"github.com/spf13/cobra"
@@ -41,16 +43,29 @@ func newInviteListCmd() *cobra.Command {
 				if err != nil {
 					return err
 				}
-				fmt.Printf("%-36s  %-64s  %-32s  %-25s  %-25s\n", "ID", "TOKEN", "EMAIL", "EXPIRES_AT", "USED_AT")
-				for _, t := range tokens {
+				if clioutput.JSON() {
+					items := make([]map[string]any, 0, len(tokens))
+					for i := range tokens {
+						items = append(items, inviteTokenJSON(&tokens[i]))
+					}
+					return clioutput.Success("", map[string]any{
+						"tokens":   items,
+						"page":     page,
+						"pageSize": pageSize,
+						"total":    total,
+					})
+				}
+				clioutput.Printf("%-36s  %-64s  %-32s  %-25s  %-25s\n", "ID", "TOKEN", "EMAIL", "EXPIRES_AT", "USED_AT")
+				for i := range tokens {
+					t := &tokens[i]
 					used := "-"
 					if t.UsedAt != nil {
 						used = t.UsedAt.Format(time.RFC3339)
 					}
-					fmt.Printf("%-36s  %-64s  %-32s  %-25s  %-25s\n",
+					clioutput.Printf("%-36s  %-64s  %-32s  %-25s  %-25s\n",
 						t.ID, t.Token, t.Email, t.ExpiresAt.Format(time.RFC3339), used)
 				}
-				fmt.Printf("\n%d total invite token(s)\n", total)
+				clioutput.Printf("\n%d total invite token(s)\n", total)
 				return nil
 			})
 		},
@@ -89,12 +104,14 @@ func newInviteCreateCmd() *cobra.Command {
 				if err := repo.Create(it); err != nil {
 					return err
 				}
-				fmt.Println("✓ Created invite token:")
-				fmt.Printf("  ID:        %s\n", it.ID)
-				fmt.Printf("  Token:     %s\n", it.Token)
-				fmt.Printf("  Email:     %s\n", it.Email)
-				fmt.Printf("  ExpiresAt: %s\n", it.ExpiresAt.Format(time.RFC3339))
-				return nil
+				if !clioutput.JSON() {
+					fmt.Println("✓ Created invite token:")
+					fmt.Printf("  ID:        %s\n", it.ID)
+					fmt.Printf("  Token:     %s\n", it.Token)
+					fmt.Printf("  Email:     %s\n", it.Email)
+					fmt.Printf("  ExpiresAt: %s\n", it.ExpiresAt.Format(time.RFC3339))
+				}
+				return clioutput.Success("✓ Created invite token", inviteTokenJSON(it))
 			})
 		},
 	}
@@ -114,8 +131,10 @@ func newInviteDeleteCmd() *cobra.Command {
 				if err := repo.Delete(args[0]); err != nil {
 					return err
 				}
-				fmt.Printf("✓ Deleted invite token %s\n", args[0])
-				return nil
+				return clioutput.Success(
+					fmt.Sprintf("✓ Deleted invite token %s", args[0]),
+					map[string]string{"id": args[0]},
+				)
 			})
 		},
 	}
@@ -135,6 +154,24 @@ func withInviteRepo(fn func(*repository.InviteTokenRepository) error) error {
 		return err
 	}
 	return fn(repository.NewInviteTokenRepository(database.GetDB()))
+}
+
+func inviteTokenJSON(t *models.InviteToken) map[string]any {
+	if t == nil {
+		return nil
+	}
+	usedAt := ""
+	if t.UsedAt != nil {
+		usedAt = t.UsedAt.Format(time.RFC3339)
+	}
+	return map[string]any{
+		"id":        t.ID,
+		"token":     t.Token,
+		"email":     t.Email,
+		"createdBy": t.CreatedBy,
+		"expiresAt": t.ExpiresAt.Format(time.RFC3339),
+		"usedAt":    usedAt,
+	}
 }
 
 func generateInviteToken() (string, error) {

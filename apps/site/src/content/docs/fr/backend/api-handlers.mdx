@@ -1,97 +1,89 @@
 ---
 title: Handlers API
-description: Implémentations des points de terminaison REST API
+description: Implémentations des endpoints REST
 order: 19
 ---
 
-Bedrud utilise le framework web **Fiber** (API de type Express pour Go).
+Bedrud uses the **Fiber** web framework. Production routes are registered in `server/internal/server/server.go` (used by `bedrud run`). Interactive OpenAPI: [API Reference](/fr/docs/api/api-reference).
 
-## Logique de Routage
+## Route Groups
 
-Les routes sont définies dans `internal/server/server.go`. Nous regroupons les routes pour appliquer facilement des middlewares ou des préfixes.
+| Prefix | Auth | Purpose |
+|--------|------|---------|
+| `/api/auth/*` | Mixed | Register, login, OAuth, passkeys, profile, preferences, verify, password reset |
+| `/api/room/*` | Mostly protected | Create/join/list/moderate rooms, chat upload |
+| `/api/admin/*` | Superadmin | Users, rooms, settings, invite tokens, webhooks, queue, overview |
+| `/api/livekit/webhook` | LiveKit JWT | Inbound media disconnect events |
+| `/api/cert` | Public | Cert metadata for clients (when applicable) |
+| `/livekit/*` | Proxied | Embedded LiveKit signaling (unless `livekit.external`) |
+| `/uploads/chat/*` | Protected | Chat image files |
+| `/uploads/avatars/*` | Public | Avatar files |
+| `/*` | SPA | Embedded frontend |
 
-### Groupes Principaux :
+Admin group middleware: `Protected` → `RequireEmailVerified` → `RequireAccess(superadmin)`.
 
-- **`/api/auth`** : Routes publiques et protégées pour l'authentification.
-- **`/api/room`** : Routes protégées pour la gestion des salles.
-- **`/api/admin`** : Routes restreintes aux utilisateurs avec le rôle `superadmin`.
-- **`/livekit`** : Un groupe de proxy spécial qui envoie les requêtes au serveur audio/vidéo LiveKit intégré.
+## Auth Highlights
 
-## Logique de Handler Spécialisée
+- Local register/login/refresh, OAuth (`/auth/:provider/login|callback`)
+- Passkey register/login/signup begin/finish
+- Profile + avatar: `GET/PUT /auth/me`, avatar upload/delete
+- Preferences: `GET/PUT /auth/preferences`
+- Email verify + resend; forgot/reset password
+- Public settings: `GET /auth/settings`
 
-### Gestion des Salles (`internal/handlers/room.go`)
+## Room Highlights
 
-Le `RoomHandler` fait la traduction entre les métadonnées de salle de Bedrud et le moteur média de LiveKit.
+- `POST /room/create`, `/room/join`, `/room/guest-join`, `/room/refresh-token`
+- `GET /room/list`, `/room/archived`
+- Moderation: kick, mute, ban, video off, promote/demote, chat block, deafen, ask, spotlight, screenshare stop, stage bring/remove
+- `PUT /room/:roomId/settings`, `DELETE /room/:roomId` (async job → **202**)
+- `POST /room/:roomId/chat/upload`
+- Presence: `GET /room/:roomId/presence`
 
-#### 1. Création de Salle
-Lorsqu'une salle est créée via `POST /api/room/create` :
+## Admin Highlights
 
-- **Normalisation :** Les noms de salles sont nettoyés et mis en minuscules.
-- **Génération Automatique :** Si aucun nom n'est fourni, Bedrud génère un nom aléatoire sécurisé pour l'URL (ex: `fancy-blue-whale`).
-- **Création Synchronisée :** Le backend appelle d'abord l'API LiveKit interne pour créer la session média, puis enregistre les métadonnées dans la base de données locale.
+- Users: list, detail, status, accesses, force-logout, set password, verify, sessions, **delete** (async), bulk ban/promote/delete
+- Rooms: list, events, token, close, suspend, reactivate, update, participants, bulk suspend/close
+- Settings: get/put, send-test-email, validate connectivity
+- Invite tokens CRUD; webhooks CRUD + rotate-secret + test
+- Overview, online-count, LiveKit stats, cert-info, queue stats
 
-#### 2. Rejoindre et Jetons
-Lorsqu'un utilisateur rejoint via `POST /api/room/join` :
+Recording admin/user routes are **not registered** in production (planned feature).
 
-- **Contrôle d'Accès :** Le backend vérifie si la salle existe et si l'utilisateur est autorisé.
-- **Génération de Jeton :** Un JWT signé (Jeton de Rejoindre) est généré avec :
-  - `Identity` : L'ID Utilisateur de Bedrud.
-  - `Name` : Le Nom d'Affichage de l'Utilisateur.
-  - `Grants` : Permissions spécifiques comme `CanJoin`, `CanPublish`, `CanSubscribe`.
-- **Handshake Client :** Le frontend reçoit à la fois les métadonnées de salle locale et le jeton LiveKit pour démarrer la connexion WebRTC.
+## Async Operations (Job Queue)
 
-## Administration & Gestion des Utilisateurs (`internal/handlers/users.go`)
+Destructive work and some side effects return **202 Accepted** and enqueue jobs:
 
-Les routes sous `/api/admin` sont strictement gardées par le middleware `RequireAccess("superadmin")`.
+| Endpoint | Job type (approx.) |
+|----------|--------------------|
+| `DELETE /api/room/:roomId` | `room_delete` |
+| `DELETE /api/admin/rooms/:roomId` | `room_delete` |
+| `POST /api/admin/rooms/:roomId/suspend` | `room_suspend` |
+| `POST /api/admin/rooms/bulk/suspend` | bulk suspend |
+| `POST /api/admin/rooms/bulk/close` | bulk close |
+| `DELETE /api/admin/users/:id` | `user_delete` |
+| `POST /api/admin/users/bulk/delete` | bulk `user_delete` |
 
-### 1. Contrôle des Utilisateurs
-Le `UsersHandler` permet aux administrateurs de :
+Other job types: `dispatch_webhook`, email sends, chat upload processing. Worker polls ~500ms (configurable); retries with exponential backoff `2^attempts * 5s` (cap 1h).
 
-- **Lister Tous les Utilisateurs :** Récupérer un répertoire complet des utilisateurs enregistrés incluant leur fournisseur d'auth et les métadonnées de dernière connexion.
-- **Mettre à Jour le Statut :** Activer ou désactiver instantanément l'accès au compte. Désactiver un utilisateur le bloque immédiatement de la connexion ou du rafraîchissement de ses jetons.
+## Room Creation & Join (summary)
 
-### 2. Vue d'Ensemble des Salles
-Les routes d'administration permettent de lister toutes les salles actives et historiques sur toute la plateforme, indépendamment de qui les a créées. C'est destiné à la modération de la plateforme.
+**Create** (`POST /api/room/create`): normalize/generate name → LiveKit room → DB metadata → optional `room.created` webhook.
 
-## Cycle de Vie de la Requête
+**Join** (`POST /api/room/join`): authorize → LiveKit JWT (identity, name, grants) → client connects via WebRTC.
 
-1.  **Arrivée de la Requête** : Fiber reçoit la requête HTTP.
-2.  **Middleware** :
+## Request Lifecycle
 
-    - `recover` : Empêche le serveur de planter s'il y a une erreur.
-    - `cors` : Gère le partage de ressources entre origines (Cross-Origin Resource Sharing).
-    - `Protected` : (Optionnel) Vérifie un JWT valide dans l'en-tête `Authorization`.
-3.  **Handler** : La fonction dans `internal/handlers` est appelée.
+1. Fiber receives request
+2. Middleware: recover, CORS, rate limit, optional JWT + email-verified
+3. Handler parses body, calls repo/service, returns JSON
 
-    - Elle analyse le corps JSON (si présent) en utilisant `c.BodyParser`.
-    - Elle appelle le Service ou Repository nécessaire.
-    - Elle renvoie une réponse JSON en utilisant `c.JSON`.
+## Static Frontend
 
-## Exemple : Handler de Création de Salle
+Built React assets are embedded and served from the binary. Non-`/api` routes fall through to the SPA shell.
 
-```go
-func (h *RoomHandler) CreateRoom(c *fiber.Ctx) error {
-    var input struct {
-        Name string `json:"name"`
-    }
-    // 1. Analyser l'Entrée
-    if err := c.BodyParser(&input); err != nil {
-        return c.Status(400).JSON(fiber.Map{"error": "Invalid input"})
-    }
+## See also
 
-    // 2. Logique Métier (via Repository)
-    room := &models.Room{Name: input.Name}
-    if err := h.roomRepo.Create(room); err != nil {
-        return c.Status(500).JSON(fiber.Map{"error": "Failed to create room"})
-    }
-
-    // 3. Réponse
-    return c.Status(201).JSON(room)
-}
-```
-
-## Fichiers Statiques (Frontend)
-
-Le frontend web est **intégré** dans le binaire Go au moment de la compilation. Fiber sert les fichiers React du répertoire `frontend/` en utilisant `filesystem.New`.
-
-Toute route qui ne commence pas par `/api` est redirigée vers le `index.html` de l'application React. Cela permet le routage côté client sans erreurs 404 lors du rafraîchissement de page.
+- [Authentication](/fr/docs/backend/authentication)
+- [Webhooks Guide](/fr/docs/guides/webhooks)
+- [Configuration](/fr/docs/getting-started/configuration)

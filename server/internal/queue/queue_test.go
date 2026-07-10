@@ -263,13 +263,13 @@ func TestQueueDepthCap(t *testing.T) {
 	defer func() { maxQueueDepth = origCap }()
 
 	// Insert 2 pending jobs directly (bypass Enqueue cap)
-	for i := 0; i < 2; i++ {
+	for i := range 2 {
 		id := string(rune('a' + i))
 		db.Create(&models.Job{
-			ID:       "preload-" + id,
-			Type:     "test",
-			Status:   models.JobPending,
-			RunAt:    time.Now(),
+			ID:     "preload-" + id,
+			Type:   "test",
+			Status: models.JobPending,
+			RunAt:  time.Now(),
 		})
 	}
 
@@ -293,12 +293,14 @@ func TestWorkerGracefulShutdown(t *testing.T) {
 	}
 	w := NewWorker(db, handlers, WorkerOptions{Interval: 50 * time.Millisecond, Concurrency: 1})
 
-	Enqueue(ctx, db, "blocking", "payload")
+	if err := Enqueue(ctx, db, "blocking", "payload"); err != nil {
+		t.Fatal(err)
+	}
 	w.Start(ctx)
 
 	time.Sleep(200 * time.Millisecond) // let worker claim and start handling
 
-	cancel()      // trigger shutdown
+	cancel()       // trigger shutdown
 	close(blockCh) // unblock handler
 
 	time.Sleep(100 * time.Millisecond)
