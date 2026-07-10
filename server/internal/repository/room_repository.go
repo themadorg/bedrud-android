@@ -180,7 +180,7 @@ func (r *RoomRepository) AddParticipant(roomID, userID string) error {
 		if err == nil {
 			// Check if participant is banned
 			if existing.IsBanned {
-				return errors.New("user is banned from this room")
+				return models.ErrParticipantBanned
 			}
 
 			// Participant exists, update their status
@@ -236,7 +236,7 @@ func (r *RoomRepository) AddParticipantWithCapacityCheck(roomID, userID string, 
 				return err
 			}
 			if count >= int64(maxParticipants) {
-				return errors.New("room is full")
+				return models.ErrRoomFull
 			}
 		}
 
@@ -247,7 +247,7 @@ func (r *RoomRepository) AddParticipantWithCapacityCheck(roomID, userID string, 
 		if err == nil {
 			// Check if participant is banned
 			if existing.IsBanned {
-				return errors.New("user is banned from this room")
+				return models.ErrParticipantBanned
 			}
 
 			// Participant exists, update their status

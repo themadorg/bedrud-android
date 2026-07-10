@@ -9,9 +9,9 @@ const BASE_URL = (import.meta.env['VITE_API_URL'] as string | undefined) ?? ''
  * CSRF protection strategy:
  *
  * 1. Primary: The `Authorization: Bearer <token>` header is sent on every
- *    request that has an access token. Custom headers trigger a CORS preflight,
- *    which cross-origin attackers cannot bypass, so this provides implicit CSRF
- *    protection for Bearer-authenticated requests.
+ *    request that has an access token. Server RequireBearerForMutations rejects
+ *    cookie-only POST/PUT/PATCH/DELETE. Custom headers trigger CORS preflight,
+ *    which cross-origin attackers cannot bypass — implicit CSRF protection.
  *
  * 2. Fallback: When no access token is available (e.g., cookie-only sessions),
  *    we attach an `X-CSRF-Token` header read from either:

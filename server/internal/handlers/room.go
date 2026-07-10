@@ -3,6 +3,7 @@ package handlers
 import (
 	"bytes"
 	"context"
+	"crypto/hmac"
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/base64"
@@ -92,6 +93,9 @@ type RoomHandler struct {
 	deletionInFlight sync.Map
 	uploadBackend    string
 	inlineMaxBytes   int64
+	// guestIDSecret signs stable guest identity cookies (session secret).
+	guestIDSecret string
+	secureCookies bool
 }
 
 func (h *RoomHandler) participantDisplayName(claims *auth.Claims) string {
@@ -189,6 +193,24 @@ func NewRoomHandler(
 	uploadTracker *storage.ChatUploadTracker,
 	cleanupSvc *services.RoomCleanupService,
 ) *RoomHandler {
+	return NewRoomHandlerWithSecrets(client, lkCfg, chatCfg, roomRepo, userRepo, recordingRepo, settingsRepo, webhookRepo, uploadTracker, cleanupSvc, "", false)
+}
+
+// NewRoomHandlerWithSecrets is like NewRoomHandler but sets guest identity cookie signing.
+func NewRoomHandlerWithSecrets(
+	client livekit.RoomService,
+	lkCfg *config.LiveKitConfig,
+	chatCfg *config.ChatConfig,
+	roomRepo *repository.RoomRepository,
+	userRepo *repository.UserRepository,
+	recordingRepo *repository.RecordingRepository,
+	settingsRepo *repository.SettingsRepository,
+	webhookRepo *repository.WebhookRepository,
+	uploadTracker *storage.ChatUploadTracker,
+	cleanupSvc *services.RoomCleanupService,
+	guestIDSecret string,
+	secureCookies bool,
+) *RoomHandler {
 	uploadMax := chatCfg.Uploads.MaxBytes.Int64()
 	if uploadMax == 0 {
 		uploadMax = 10 * 1024 * 1024
@@ -215,6 +237,8 @@ func NewRoomHandler(
 		settingsRepo:   settingsRepo,
 		uploadBackend:  chatCfg.Uploads.Backend,
 		inlineMaxBytes: inlineMaxBytes,
+		guestIDSecret:  guestIDSecret,
+		secureCookies:  secureCookies,
 	}
 }
 
@@ -423,10 +447,10 @@ func (h *RoomHandler) JoinRoom(c *fiber.Ctx) error {
 
 	// Enforce participant limit (atomic capacity check inside transaction)
 	if err := h.roomRepo.AddParticipantWithCapacityCheck(room.ID, claims.UserID, room.MaxParticipants); err != nil {
-		if err.Error() == "room is full" {
+		if errors.Is(err, models.ErrRoomFull) {
 			return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "room is full"})
 		}
-		if err.Error() == "user is banned from this room" {
+		if errors.Is(err, models.ErrParticipantBanned) {
 			return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "you are banned from this room"})
 		}
 		log.Error().Err(err).Str("roomID", room.ID).Str("userID", claims.UserID).Msg("AddParticipant failed")
@@ -437,7 +461,7 @@ func (h *RoomHandler) JoinRoom(c *fiber.Ctx) error {
 	h.dispatchRoomEvent(c.Context(), models.EventParticipantJoined, room.ID, room.Name, claims.UserID)
 
 	at := lkauth.NewAccessToken(h.apiKey, h.apiSecret)
-	at.AddGrant(&lkauth.VideoGrant{RoomJoin: true, Room: req.RoomName, CanUpdateOwnMetadata: boolPtr(true)}).SetIdentity(claims.UserID).SetName(h.participantDisplayName(claims)).SetValidFor(time.Hour) //nolint:staticcheck // AddGrant is deprecated but VideoGrant field is not available in this version of the protocol SDK
+	at.AddGrant(&lkauth.VideoGrant{RoomJoin: true, Room: req.RoomName, CanUpdateOwnMetadata: boolPtr(true)}).SetIdentity(claims.UserID).SetName(h.participantDisplayName(claims)).SetValidFor(livekitTokenTTL) //nolint:staticcheck // AddGrant is deprecated but VideoGrant field is not available in this version of the protocol SDK
 	if meta, err := json.Marshal(map[string]interface{}{"accesses": claims.Accesses}); err == nil {
 		at.SetMetadata(string(meta))
 	}
@@ -544,28 +568,34 @@ func (h *RoomHandler) GuestJoinRoom(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusGone).JSON(fiber.Map{"error": "room is no longer active"})
 	}
 
-	guestID := "guest-" + generateShortID()
-	// Note: Guest ban checking with random IDs is inherently ineffective —
-	// each guest visit generates a new ID. IP-based tracking or signed
-	// guest cookies would be needed for real guest ban enforcement.
+	// Stable guest identity via signed HttpOnly cookie (enables ban stickiness).
+	guestID := h.resolveGuestIdentity(c)
 
-	// Atomic capacity check + participant tracking
+	// Enforce ban for returning guests before capacity enrollment.
+	if banned, bErr := h.roomRepo.IsParticipantBanned(room.ID, guestID); bErr == nil && banned {
+		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "you are banned from this room"})
+	}
+
+	// Atomic capacity check + participant tracking — fail closed (no LiveKit token on error).
 	if err := h.roomRepo.AddParticipantWithCapacityCheck(room.ID, guestID, room.MaxParticipants); err != nil {
-		if err.Error() == "room is full" {
+		if errors.Is(err, models.ErrRoomFull) {
 			return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "room is full"})
 		}
-		log.Warn().Err(err).Str("roomID", room.ID).Str("guestID", guestID).Msg("Failed to track guest participant")
-	} else {
-		// Dispatch webhook: participant.joined
-		h.dispatchRoomEvent(c.Context(), models.EventParticipantJoined, room.ID, room.Name, guestID)
+		if errors.Is(err, models.ErrParticipantBanned) {
+			return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "you are banned from this room"})
+		}
+		log.Error().Err(err).Str("roomID", room.ID).Str("guestID", guestID).Msg("Failed to track guest participant")
+		return c.Status(500).JSON(fiber.Map{"error": "Failed to join room"})
 	}
+	// Dispatch webhook: participant.joined
+	h.dispatchRoomEvent(c.Context(), models.EventParticipantJoined, room.ID, room.Name, guestID)
 
 	at := lkauth.NewAccessToken(h.apiKey, h.apiSecret)
 	at.AddGrant(&lkauth.VideoGrant{ //nolint:staticcheck // AddGrant is deprecated but VideoGrant field is not available in this version of the protocol SDK
 		RoomJoin:             true,
 		Room:                 req.RoomName,
 		CanUpdateOwnMetadata: boolPtr(true),
-	}).SetIdentity(guestID).SetName(req.GuestName).SetValidFor(time.Hour)
+	}).SetIdentity(guestID).SetName(req.GuestName).SetValidFor(livekitTokenTTL)
 	token, err := at.ToJWT()
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to sign LiveKit guest token")
@@ -634,6 +664,11 @@ func (h *RoomHandler) RefreshLiveKitToken(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusGone).JSON(fiber.Map{"error": "room is no longer active"})
 	}
 
+	// Banned participants cannot refresh tokens (public or private).
+	if banned, err := h.roomRepo.IsParticipantBanned(room.ID, claims.UserID); err == nil && banned {
+		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "you are banned from this room"})
+	}
+
 	// Enforce private room access — only creator or approved participants can refresh
 	if !room.IsPublic && room.CreatedBy != claims.UserID {
 		isParticipant, err := h.roomRepo.IsParticipant(room.ID, claims.UserID)
@@ -642,10 +677,6 @@ func (h *RoomHandler) RefreshLiveKitToken(c *fiber.Ctx) error {
 			return c.Status(500).JSON(fiber.Map{"error": "Failed to check room access"})
 		}
 		if !isParticipant {
-			banned, err := h.roomRepo.IsParticipantBanned(room.ID, claims.UserID)
-			if err == nil && banned {
-				return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "you are banned from this room"})
-			}
 			return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": "This room is private"})
 		}
 	}
@@ -685,6 +716,58 @@ func generateShortID() string {
 		b[i] = chars[int(v)%charLen]
 	}
 	return string(b)
+}
+
+const guestIDCookie = "bedrud_guest_id"
+
+// guestIDMAC returns HMAC-SHA256 hex of guestID with secret.
+func guestIDMAC(secret, guestID string) string {
+	m := hmac.New(sha256.New, []byte(secret))
+	_, _ = m.Write([]byte(guestID))
+	return hex.EncodeToString(m.Sum(nil))
+}
+
+// parseGuestIDCookie validates cookie value "guest-<id>.<mac>".
+func parseGuestIDCookie(secret, raw string) (string, bool) {
+	if secret == "" || raw == "" {
+		return "", false
+	}
+	dot := strings.LastIndex(raw, ".")
+	if dot <= 0 || dot >= len(raw)-1 {
+		return "", false
+	}
+	id, mac := raw[:dot], raw[dot+1:]
+	if !strings.HasPrefix(id, "guest-") || len(id) > 64 {
+		return "", false
+	}
+	expected := guestIDMAC(secret, id)
+	if !hmac.Equal([]byte(mac), []byte(expected)) {
+		return "", false
+	}
+	return id, true
+}
+
+// resolveGuestIdentity returns a stable guest-* identity from signed cookie or mints one.
+func (h *RoomHandler) resolveGuestIdentity(c *fiber.Ctx) string {
+	if h.guestIDSecret != "" {
+		if id, ok := parseGuestIDCookie(h.guestIDSecret, c.Cookies(guestIDCookie)); ok {
+			return id
+		}
+	}
+	id := "guest-" + generateShortID()
+	if h.guestIDSecret != "" {
+		val := id + "." + guestIDMAC(h.guestIDSecret, id)
+		c.Cookie(&fiber.Cookie{
+			Name:     guestIDCookie,
+			Value:    val,
+			MaxAge:   30 * 24 * 3600, // 30 days — ban stickiness across visits
+			HTTPOnly: true,
+			Secure:   h.secureCookies,
+			SameSite: "Lax",
+			Path:     "/",
+		})
+	}
+	return id
 }
 
 // ListRooms returns rooms created by the authenticated user.
@@ -849,6 +932,8 @@ func (h *RoomHandler) resolveRoom(c *fiber.Ctx, roomID string) (*models.Room, st
 // @Failure 404 {object} ErrorResponse "Participant not found"
 // @Failure 500 {object} ErrorResponse "Failed to update participant"
 // @Router /room/{roomId}/promote/{identity} [post]
+// PromoteParticipant remains room-admin / superadmin only (not room-scoped moderators).
+// Moderators can kick/mute but cannot elevate others.
 func (h *RoomHandler) PromoteParticipant(c *fiber.Ctx) error {
 	roomID, identity := c.Params("roomId"), c.Params("identity")
 	claims := c.Locals("user").(*auth.Claims)
@@ -1343,14 +1428,27 @@ func (h *RoomHandler) GetRoomPresence(c *fiber.Ctx) error {
 		return c.Status(404).JSON(fiber.Map{"error": "Room not found"})
 	}
 
+	countOnly := c.Query("countOnly") == "1" || c.Query("countOnly") == queryTrue
+
 	type presenceParticipant struct {
 		Identity  string `json:"identity"`
 		Name      string `json:"name"`
 		AvatarURL string `json:"avatarUrl"`
 	}
 
+	// Identity lists require authentication. Public countOnly may return a count only.
+	if !countOnly {
+		raw := c.Locals("user")
+		if raw == nil {
+			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Unauthorized"})
+		}
+		if _, ok := raw.(*auth.Claims); !ok {
+			return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{"error": "Unauthorized"})
+		}
+	}
+
 	if !room.IsPublic {
-		if c.Query("countOnly") == "1" || c.Query("countOnly") == queryTrue {
+		if countOnly {
 			return c.Status(404).JSON(fiber.Map{"error": "Room not found"})
 		}
 		return c.JSON(fiber.Map{"participants": []presenceParticipant{}})
@@ -1359,13 +1457,13 @@ func (h *RoomHandler) GetRoomPresence(c *fiber.Ctx) error {
 	ctx := h.withAuth(c.Context(), &lkauth.VideoGrant{RoomAdmin: true, Room: room.Name})
 	resp, err := h.client.ListParticipants(ctx, &livekit.ListParticipantsRequest{Room: room.Name})
 	if err != nil {
-		if c.Query("countOnly") == "1" || c.Query("countOnly") == queryTrue {
+		if countOnly {
 			return c.JSON(fiber.Map{"count": 0})
 		}
 		return c.JSON(fiber.Map{"participants": []presenceParticipant{}})
 	}
 
-	if c.Query("countOnly") == "1" || c.Query("countOnly") == queryTrue {
+	if countOnly {
 		return c.JSON(fiber.Map{"count": len(resp.Participants)})
 	}
 
@@ -1411,6 +1509,7 @@ func (h *RoomHandler) GetRoomPresence(c *fiber.Ctx) error {
 // @Failure 404 {object} ErrorResponse "Participant not found"
 // @Failure 500 {object} ErrorResponse "Failed to remove participant"
 // @Router /room/{roomId}/kick/{identity} [post]
+// KickParticipant: room admin, room-scoped moderator, or superadmin.
 func (h *RoomHandler) KickParticipant(c *fiber.Ctx) error {
 	roomID, identity := c.Params("roomId"), c.Params("identity")
 	claims := c.Locals("user").(*auth.Claims)
@@ -1426,7 +1525,7 @@ func (h *RoomHandler) KickParticipant(c *fiber.Ctx) error {
 	if adminId == "" {
 		adminId = room.CreatedBy
 	}
-	if claims.UserID != adminId && !containsAccess(claims.Accesses, "superadmin") {
+	if !isRoomModerator(claims, adminId, room.ID, h.roomRepo) {
 		return c.Status(403).JSON(fiber.Map{"error": "Insufficient permissions"})
 	}
 	// Prevent self-targeting
@@ -1592,7 +1691,8 @@ func (h *RoomHandler) BanParticipant(c *fiber.Ctx) error {
 	if adminId == "" {
 		adminId = room.CreatedBy
 	}
-	if claims.UserID != adminId && !containsAccess(claims.Accesses, "superadmin") {
+	// Ban: room admin / room moderator / superadmin (stable guest IDs make ban useful for guests).
+	if !isRoomModerator(claims, adminId, room.ID, h.roomRepo) {
 		return c.Status(403).JSON(fiber.Map{"error": "Insufficient permissions"})
 	}
 	// Prevent self-targeting

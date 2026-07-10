@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { avatarInitials } from '#/components/meeting/chat/chatGrouping'
 import { ParticipantAvatar } from '#/components/meeting/ParticipantAvatar'
 import { API_URL } from '#/lib/api'
+import { useAuthStore } from '#/lib/auth.store'
 import { getPalette } from '#/lib/participant-palette'
 
 export interface WelcomePresenceParticipant {
@@ -248,12 +249,21 @@ function useWelcomeRoomPresence(roomId: string, enabled: boolean) {
 
     async function refresh() {
       try {
+        const token = useAuthStore.getState().tokens?.accessToken
+        const headers: Record<string, string> = {}
+        if (token) headers.Authorization = `Bearer ${token}`
         const res = await fetch(`${API_URL}/api/room/${encodeURIComponent(roomId)}/presence`, {
           credentials: 'include',
+          headers,
         })
         if (cancelled) return
         if (res.status === 429) {
           timer = setTimeout(refresh, 60_000)
+          return
+        }
+        // Unauthenticated guests get 401 for identity list — degrade to empty (no public leak).
+        if (res.status === 401 || res.status === 403) {
+          setParticipants([])
           return
         }
         if (!res.ok) return

@@ -21,6 +21,9 @@ var (
 	ErrRoomNameTooShort = fmt.Errorf("room name must be at least %d characters", RoomNameMinLength)
 	ErrRoomNameTooLong  = fmt.Errorf("room name must be at most %d characters", RoomNameMaxLength)
 	ErrRoomNameTaken    = errors.New("a room with this name already exists")
+	// Capacity / ban enrollment errors (handlers use errors.Is)
+	ErrRoomFull           = errors.New("room is full")
+	ErrParticipantBanned  = errors.New("user is banned from this room")
 )
 
 // validRoomNameRegex allows only lowercase alphanumeric and hyphens,
