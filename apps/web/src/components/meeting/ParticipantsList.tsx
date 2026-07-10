@@ -35,8 +35,12 @@ export function ParticipantsList({ onClose, adminId }: Props) {
   return (
     <aside
       ref={trapRef}
-      className="absolute start-0 top-0 bottom-0 z-30 flex flex-col bg-[var(--meet-sidebar)] backdrop-blur-2xl border-e border-[var(--meet-border-subtle)] pt-[env(safe-area-inset-top)] pb-[calc(88px+env(safe-area-inset-bottom))]"
-      style={{ width: 'min(288px, 100vw)' }}
+      role="dialog"
+      aria-modal="true"
+      aria-label="Participants"
+      className="z-40 flex flex-col bg-[var(--meet-sidebar)] backdrop-blur-2xl pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]
+        fixed inset-0 w-full
+        sm:absolute sm:inset-y-0 sm:start-0 sm:bottom-0 sm:w-[min(288px,100vw)] sm:border-e sm:border-[var(--meet-border-subtle)] sm:pb-[calc(88px+env(safe-area-inset-bottom))]"
     >
       {/* Header */}
       <div className="flex h-[52px] shrink-0 items-center justify-between border-b border-[var(--meet-border-subtle)] px-4">

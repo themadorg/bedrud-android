@@ -20,8 +20,43 @@ const extraAllowedHosts = (process.env.BEDRUD_ALLOWED_HOSTS ?? '')
   .map((host) => host.trim())
   .filter(Boolean)
 
-// Remote debug (public host via Traefik): HMR remounts meeting components and kills LiveKit PC.
+// Remote debug (devcli remote run): Traefik terminates TLS and proxies to local Vite.
 const isRemoteDebug = extraAllowedHosts.length > 0
+
+/**
+ * HMR for remote debug (public HTTPS host → Traefik → tunnel → Vite :7070).
+ *
+ * Without clientPort/protocol overrides, the browser tries wss://host:7070 which
+ * is not exposed publicly. Point HMR at the same origin Traefik serves (443/wss).
+ *
+ * Opt out: BEDRUD_HMR=0 (useful mid-call if a full reload would drop LiveKit).
+ * Fast Refresh of leaf UI usually keeps the room; edits that full-reload will not.
+ */
+function remoteHmrOptions(): false | { protocol: string; host: string; clientPort: number } | undefined {
+  if (!isRemoteDebug) return undefined
+  const flag = (process.env.BEDRUD_HMR ?? '1').trim().toLowerCase()
+  if (flag === '0' || flag === 'false' || flag === 'off') return false
+
+  const publicBase = (process.env.BEDRUD_PUBLIC_BASE ?? '').trim()
+  const isHttps = publicBase ? publicBase.startsWith('https:') : true
+  const host =
+    (process.env.BEDRUD_HMR_HOST ?? '').trim() ||
+    (() => {
+      try {
+        if (publicBase) return new URL(publicBase).hostname
+      } catch {
+        /* fall through */
+      }
+      return extraAllowedHosts[0]
+    })()
+  if (!host) return undefined
+
+  const clientPortRaw = (process.env.BEDRUD_HMR_CLIENT_PORT ?? '').trim()
+  const clientPort = clientPortRaw ? Number(clientPortRaw) : isHttps ? 443 : 80
+  const protocol = (process.env.BEDRUD_HMR_PROTOCOL ?? (isHttps ? 'wss' : 'ws')).trim()
+
+  return { protocol, host, clientPort }
+}
 
 /**
  * Deps pulled in when the whiteboard (vendored Excalidraw) first loads.
@@ -149,8 +184,8 @@ const config = defineConfig({
     host: process.env.BEDRUD_DEV_BIND_HOST || undefined,
     // Remote debug (devcli remote run) — Traefik forwards public host to local Vite.
     allowedHosts: ['localhost', '127.0.0.1', ...extraAllowedHosts],
-    // Prevent Vite HMR from tearing down WebRTC while testing on the public URL.
-    hmr: isRemoteDebug ? false : undefined,
+    // Remote: HMR over public wss://host (Traefik). Local make dev: Vite defaults.
+    hmr: remoteHmrOptions(),
     // Warm whiteboard entry so deps are discovered before the user opens it.
     warmup: {
       clientFiles: [

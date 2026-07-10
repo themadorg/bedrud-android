@@ -84,17 +84,28 @@ export function MeetingHeader({ meetId, infoOpen = false, onToggleInfo }: Meetin
   return (
     <header
       className={cn(
-        'absolute top-0 left-0 z-20 flex items-center justify-center px-4 pointer-events-none h-[calc(56px+env(safe-area-inset-top))] pt-[env(safe-area-inset-top)] transition-[right] duration-200',
+        // Full height includes safe-area; content sits in the 56px band below the notch.
+        'absolute top-0 left-0 z-20 flex flex-col justify-end pointer-events-none h-[calc(56px+env(safe-area-inset-top,0px))] transition-[right] duration-200',
         meetRightInsetClass(layout),
       )}
     >
-      <div className="flex items-center gap-2.5 pointer-events-auto">
+      {/* 56px row — mobile: left; desktop: centered. */}
+      <div
+        className={cn(
+          'flex h-14 min-w-0 items-center gap-2 pointer-events-auto leading-none',
+          // Mobile: left-aligned, clear of top-right icons.
+          'justify-start ps-3 max-sm:pe-[calc(100px+env(safe-area-inset-right,0px))]',
+          // Desktop: centered title cluster.
+          'sm:justify-center sm:px-4',
+        )}
+      >
+        {/* Connection status — desktop only (mobile: Room info in ⋯ menu) */}
         <button
           type="button"
           onClick={onToggleInfo}
           disabled={!onToggleInfo}
           className={cn(
-            'flex items-center gap-[5px] rounded-[7px] px-[9px] py-[3px] border transition-all duration-150',
+            'hidden sm:flex items-center gap-[5px] rounded-[7px] px-[9px] py-[3px] border transition-all duration-150',
             onToggleInfo && 'cursor-pointer hover:brightness-110',
             !onToggleInfo && 'cursor-default',
             infoOpen
@@ -180,14 +191,14 @@ export function MeetingHeader({ meetId, infoOpen = false, onToggleInfo }: Meetin
             {statusLabel}
           </span>
         </button>
-        <span className="text-[13px] text-[var(--meet-fg-muted)]">·</span>
-        <span className="text-xs font-mono text-[var(--meet-fg-muted)]">{meetId}</span>
-        <span className="text-[13px] text-[var(--meet-fg-muted)]">·</span>
+        <span className="hidden text-[13px] leading-none text-[var(--meet-fg-muted)] sm:inline">·</span>
+        <span className="truncate text-xs font-mono leading-none text-[var(--meet-fg-muted)]">{meetId}</span>
+        <span className="text-[13px] leading-none text-[var(--meet-fg-muted)]">·</span>
         <button
           type="button"
           onClick={() => setShowClock((v) => !v)}
           className={cn(
-            'cursor-pointer border-none bg-transparent p-0 text-[11px] font-mono transition-colors hover:text-[var(--meet-fg-strong)]',
+            'flex h-9 shrink-0 cursor-pointer items-center border-none bg-transparent p-0 text-[11px] font-mono leading-none transition-colors hover:text-[var(--meet-fg-strong)]',
             showClock ? 'text-[var(--meet-fg-strong)]' : 'text-[var(--meet-fg-muted)]',
           )}
           aria-label={showClock ? 'Show meeting duration' : 'Show current time'}

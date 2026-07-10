@@ -1,6 +1,6 @@
 import type { ExcalidrawImperativeAPI } from '@excalidraw/excalidraw/types'
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react'
-import { meetRightInsetClass, useMeetingUILayout } from '@/components/meeting/MeetingUILayoutContext'
+import { meetStageShellClass, useMeetingUILayout } from '@/components/meeting/MeetingUILayoutContext'
 import { useWhiteboardElementLocks } from '@/components/meeting/whiteboard/useWhiteboardElementLocks'
 import { useWhiteboardFollowSync } from '@/components/meeting/whiteboard/useWhiteboardFollowSync'
 import { useWhiteboardPointerSync } from '@/components/meeting/whiteboard/useWhiteboardPointerSync'
@@ -44,12 +44,7 @@ export function WhiteboardOverlay() {
   if (!clientReady || !whiteboardVisible || !session || !ydoc) return null
 
   return (
-    <div
-      className={cn(
-        'absolute top-[calc(56px+env(safe-area-inset-top))] left-0 bottom-[calc(88px+env(safe-area-inset-bottom))] z-[5] flex flex-col p-3 transition-[right] duration-200',
-        meetRightInsetClass(layout),
-      )}
-    >
+    <div className={cn(meetStageShellClass(layout, 'p-3 max-sm:p-1.5'))}>
       {/* Blur on a backdrop layer only — filter on an ancestor breaks Excalidraw's fixed SVGLayer (laser/eraser trails). */}
       <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-white/[0.08] shadow-2xl">
         <div className="pointer-events-none absolute inset-0 rounded-xl bg-[#030308]/95 backdrop-blur-md" aria-hidden />

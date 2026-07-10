@@ -2,7 +2,7 @@ import { useRoomContext } from '@livekit/components-react'
 import { LogOut, PhoneOff } from 'lucide-react'
 import { useState } from 'react'
 import { api } from '#/lib/api'
-import { ControlsBar } from '@/components/meeting/ControlsBar'
+import { ControlsBar, type ControlsBarMoreExtras } from '@/components/meeting/ControlsBar'
 import { useMeetingRoomContext } from '@/components/meeting/MeetingContext'
 import { Button } from '@/components/ui/button'
 import {
@@ -13,13 +13,18 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import { cn } from '@/lib/utils'
 
 interface MeetingControlsProps {
   onNavigate: () => void
+  /** Hide the floating controls bar on mobile (e.g. full-screen chat modal). */
+  hideOnMobile?: boolean
+  /** Merged into the single bottom ⋯ menu on mobile. */
+  moreExtras?: ControlsBarMoreExtras
 }
 
 /** Renders the bottom controls bar and the end-meeting dialog for creators. */
-export function MeetingControls({ onNavigate }: MeetingControlsProps) {
+export function MeetingControls({ onNavigate, hideOnMobile = false, moreExtras }: MeetingControlsProps) {
   const { isCreator, roomId } = useMeetingRoomContext()
   const room = useRoomContext()
   const [endDialogOpen, setEndDialogOpen] = useState(false)
@@ -48,7 +53,9 @@ export function MeetingControls({ onNavigate }: MeetingControlsProps) {
 
   return (
     <>
-      <ControlsBar onLeave={handleLeaveRequest} />
+      <div className={cn(hideOnMobile && 'max-sm:hidden')}>
+        <ControlsBar onLeave={handleLeaveRequest} moreExtras={moreExtras} />
+      </div>
       <Dialog open={endDialogOpen} onOpenChange={setEndDialogOpen}>
         <DialogContent className="meet-dialog sm:max-w-sm">
           <DialogHeader>

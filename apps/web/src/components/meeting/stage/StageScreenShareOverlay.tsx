@@ -2,7 +2,7 @@ import type { TrackReference } from '@livekit/components-react'
 import { useTracks, VideoTrack } from '@livekit/components-react'
 import { Track } from 'livekit-client'
 import { Monitor, X } from 'lucide-react'
-import { meetRightInsetClass, useMeetingUILayout } from '@/components/meeting/MeetingUILayoutContext'
+import { meetStageShellClass, useMeetingUILayout } from '@/components/meeting/MeetingUILayoutContext'
 import { cn } from '@/lib/utils'
 import { useMeetingStage } from './MeetingStageContext'
 import { stageOwnerLabel } from './stageWire'
@@ -23,12 +23,7 @@ export function StageScreenShareOverlay() {
 
   if (!trackRef?.publication) {
     return (
-      <div
-        className={cn(
-          'absolute top-[calc(56px+env(safe-area-inset-top))] left-0 bottom-[calc(88px+env(safe-area-inset-bottom))] z-[5] flex flex-col p-3 transition-[right] duration-200',
-          meetRightInsetClass(layout),
-        )}
-      >
+      <div className={cn(meetStageShellClass(layout, 'p-3 max-sm:p-2'))}>
         <div className="flex min-h-0 flex-1 flex-col items-center justify-center overflow-hidden rounded-xl border border-white/[0.08] bg-[#030308]/95 p-6 text-center shadow-2xl backdrop-blur-md">
           <Monitor size={28} className="mb-3 text-teal-400" />
           <p className="text-sm font-medium text-white">
@@ -44,12 +39,7 @@ export function StageScreenShareOverlay() {
     trackRef.participant.name || trackRef.participant.identity || (stage ? stageOwnerLabel(stage) : 'Presenter')
 
   return (
-    <div
-      className={cn(
-        'absolute top-[calc(56px+env(safe-area-inset-top))] left-0 bottom-[calc(88px+env(safe-area-inset-bottom))] z-[5] flex flex-col p-3 transition-[right] duration-200',
-        meetRightInsetClass(layout),
-      )}
-    >
+    <div className={cn(meetStageShellClass(layout, 'p-3 max-sm:p-2'))}>
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-white/[0.08] bg-[#030308]/95 shadow-2xl backdrop-blur-md">
         <div className="flex shrink-0 items-center justify-between gap-3 border-b border-white/[0.06] px-3 py-2.5">
           <div className="flex min-w-0 items-center gap-2">

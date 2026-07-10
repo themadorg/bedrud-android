@@ -1,5 +1,5 @@
 import { Pin, X } from 'lucide-react'
-import { useCallback, useEffect, useRef } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   type ChatAttachment,
   type ChatMessage,
@@ -12,6 +12,9 @@ import { cn } from '@/lib/utils'
 import { ChatInput, type ChatInputHandle } from './chat/ChatInput'
 import { ChatMessageList } from './chat/ChatMessageList'
 import { useFocusTrap } from './useFocusTrap'
+
+/** Matches Tailwind `sm` and ControlsBar mobile breakpoint (640px). */
+const MOBILE_MAX_WIDTH_MQ = '(max-width: 639px)'
 
 interface Props {
   onClose: () => void
@@ -33,6 +36,20 @@ const headerBtnClass = (active = false) =>
     active ? 'text-accent-400' : 'text-white/50 hover:text-white/70',
   )
 
+function useIsMobileChat() {
+  const [isMobile, setIsMobile] = useState(() =>
+    typeof window !== 'undefined' ? window.matchMedia(MOBILE_MAX_WIDTH_MQ).matches : false,
+  )
+  useEffect(() => {
+    const mq = window.matchMedia(MOBILE_MAX_WIDTH_MQ)
+    const onChange = () => setIsMobile(mq.matches)
+    onChange()
+    mq.addEventListener('change', onChange)
+    return () => mq.removeEventListener('change', onChange)
+  }, [])
+  return isMobile
+}
+
 export function ChatPanel({
   onClose,
   roomId,
@@ -48,12 +65,20 @@ export function ChatPanel({
 }: Props) {
   const inputRef = useRef<ChatInputHandle>(null)
   const noop = useCallback(() => {}, [])
+  const isMobile = useIsMobileChat()
+  // Mobile is always a full-screen modal — never dock/stick.
+  const isDocked = stuck && !isMobile
 
   useEffect(() => {
     markRead()
     const t = setTimeout(() => inputRef.current?.focus(), 80)
     return () => clearTimeout(t)
   }, [markRead])
+
+  // Clear pin/dock when entering mobile so desktop stick state does not leak.
+  useEffect(() => {
+    if (isMobile && stuck) onStuckChange?.(false)
+  }, [isMobile, stuck, onStuckChange])
 
   const uploadAndSend = useCallback(
     async (file: File): Promise<ChatAttachment> => {
@@ -67,26 +92,31 @@ export function ChatPanel({
     [roomId],
   )
 
-  const trapRef = useFocusTrap({ enabled: !stuck, onClose })
+  // Modal on mobile / undocked panel: trap focus. Docked desktop sidebar: leave focus free.
+  const trapRef = useFocusTrap({ enabled: !isDocked, onClose })
 
   return (
     <aside
       ref={trapRef}
+      role="dialog"
+      aria-modal={!isDocked}
+      aria-label="Chat"
       className={cn(
-        'top-0 bottom-0 z-30 flex flex-col bg-[var(--meet-sidebar)] backdrop-blur-2xl pt-[env(safe-area-inset-top)] pb-[calc(env(safe-area-inset-bottom))] transition-[left,right] duration-200',
-        stuck
-          ? 'fixed right-0 border-l border-[var(--meet-border-subtle)]'
-          : 'absolute right-0 border-l border-[var(--meet-border-subtle)]',
+        'z-40 flex flex-col bg-[var(--meet-sidebar)] backdrop-blur-2xl pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] transition-[left,right,width] duration-200',
+        // Mobile: full-screen modal above floating chrome (controls, toggles).
+        'fixed inset-0 w-full',
+        // Desktop: right sidebar (320px), absolute unless pinned/docked.
+        'sm:inset-y-0 sm:left-auto sm:right-0 sm:w-[min(320px,100vw)] sm:border-l sm:border-[var(--meet-border-subtle)]',
+        isDocked ? 'sm:fixed' : 'sm:absolute',
       )}
-      style={{ width: 'min(320px, 100vw)' }}
     >
-      <div className="h-[52px] shrink-0 flex items-center justify-between px-4 border-b border-white/[0.06]">
+      <div className="flex h-[52px] shrink-0 items-center justify-between border-b border-white/[0.06] px-4">
         <span className="text-base font-semibold text-white/85">Chat</span>
         <div className="flex items-center gap-2">
           <button
             type="button"
             onClick={() => onStuckChange?.(!stuck)}
-            className={headerBtnClass(stuck)}
+            className={cn(headerBtnClass(stuck), 'max-sm:hidden')}
             aria-label={stuck ? 'Unstick chat' : 'Stick chat open'}
             aria-pressed={stuck}
           >

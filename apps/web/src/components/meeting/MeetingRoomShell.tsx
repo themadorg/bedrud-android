@@ -14,7 +14,10 @@ interface MeetingRoomShellProps {
 }
 
 export function MeetingRoomShell({ meetId, navigate, children }: MeetingRoomShellProps) {
-  const [chatOpen, setChatOpen] = useState(true)
+  // Desktop: open chat sidebar by default. Mobile: closed — chat is a full-screen modal when opened.
+  const [chatOpen, setChatOpen] = useState(() =>
+    typeof window !== 'undefined' ? window.matchMedia('(min-width: 640px)').matches : true,
+  )
   const [chatStuck, setChatStuck] = useState(false)
   const [videoSidebarOpen, setVideoSidebarOpen] = useState(true)
   const [participantsOpen, setParticipantsOpen] = useState(false)
@@ -64,6 +67,7 @@ export function MeetingRoomShell({ meetId, navigate, children }: MeetingRoomShel
           onToggleVideoSidebar={() => setVideoSidebarOpen((open) => !open)}
           infoOpen={infoOpen}
           onCloseInfo={() => setInfoOpen(false)}
+          onToggleInfo={toggleInfo}
           participantsOpen={participantsOpen}
           onToggleParticipants={toggleParticipants}
           onCloseParticipants={() => setParticipantsOpen(false)}

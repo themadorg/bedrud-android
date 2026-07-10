@@ -65,8 +65,18 @@ local:
 		t.Fatalf("LiveKitInternal: got %q want %q", got, want)
 	}
 	env := cfg.WebEnv()
-	if len(env) != 1 || env[0] != "BEDRUD_ALLOWED_HOSTS=debug.example.com" {
-		t.Fatalf("WebEnv: got %v", env)
+	want := []string{
+		"BEDRUD_ALLOWED_HOSTS=debug.example.com",
+		"BEDRUD_PUBLIC_BASE=https://debug.example.com",
+		"BEDRUD_HMR=1",
+	}
+	if len(env) != len(want) {
+		t.Fatalf("WebEnv: got %v want %v", env, want)
+	}
+	for i := range want {
+		if env[i] != want[i] {
+			t.Fatalf("WebEnv[%d]: got %q want %q", i, env[i], want[i])
+		}
 	}
 }
 
@@ -97,6 +107,8 @@ traefik:
 	env := cfg.WebEnv()
 	want := []string{
 		"BEDRUD_ALLOWED_HOSTS=debug.example.com",
+		"BEDRUD_PUBLIC_BASE=https://debug.example.com",
+		"BEDRUD_HMR=1",
 		"VITE_LIVEKIT_ICE_RELAY=1",
 	}
 	if len(env) != len(want) {

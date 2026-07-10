@@ -363,7 +363,12 @@ func (c *Config) WebEnv() []string {
 	if c.URLs.PublicHost == "" {
 		return nil
 	}
-	env := []string{"BEDRUD_ALLOWED_HOSTS=" + c.URLs.PublicHost}
+	// BEDRUD_PUBLIC_BASE drives Vite HMR protocol/port (wss+443 behind Traefik TLS).
+	env := []string{
+		"BEDRUD_ALLOWED_HOSTS=" + c.URLs.PublicHost,
+		"BEDRUD_PUBLIC_BASE=" + c.URLs.PublicBase,
+		"BEDRUD_HMR=1",
+	}
 	// WireGuard TUN breaks SCTP unless the browser uses TURN/TLS relay only.
 	if c.UsesWireGuard() {
 		env = append(env, "VITE_LIVEKIT_ICE_RELAY=1")

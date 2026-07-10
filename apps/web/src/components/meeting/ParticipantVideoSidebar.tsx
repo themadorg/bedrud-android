@@ -1,6 +1,8 @@
 import { useIsSpeaking, useParticipants } from '@livekit/components-react'
 import type { Participant } from 'livekit-client'
 import { Users, X } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { MEET_MOBILE_CONTROLS_H, MEET_MOBILE_FILMSTRIP_H } from '@/components/meeting/MeetingUILayoutContext'
 import { ParticipantTile } from '@/components/meeting/ParticipantTile'
 import { cn } from '@/lib/utils'
 import { useFocusTrap } from './useFocusTrap'
@@ -10,21 +12,38 @@ interface Props {
   onClose: () => void
 }
 
+function useIsMobileFilmstrip(breakpoint = 640) {
+  const [mobile, setMobile] = useState(() =>
+    typeof window !== 'undefined' ? window.matchMedia(`(max-width: ${breakpoint - 1}px)`).matches : false,
+  )
+  useEffect(() => {
+    const mq = window.matchMedia(`(max-width: ${breakpoint - 1}px)`)
+    const onChange = () => setMobile(mq.matches)
+    onChange()
+    mq.addEventListener('change', onChange)
+    return () => mq.removeEventListener('change', onChange)
+  }, [breakpoint])
+  return mobile
+}
+
 function SidebarTile({
   participant,
   index,
   totalCount,
+  compact,
 }: {
   participant: Participant
   index: number
   totalCount: number
+  compact?: boolean
 }) {
   const isSpeaking = useIsSpeaking(participant)
 
   return (
     <div
       className={cn(
-        'relative aspect-video w-full shrink-0 overflow-hidden rounded-[10px] transition-[box-shadow] duration-200',
+        'relative shrink-0 overflow-hidden transition-[box-shadow] duration-200',
+        compact ? 'h-14 w-[6.25rem] rounded-md' : 'aspect-video w-full rounded-[10px]',
         isSpeaking &&
           'shadow-[0_0_0_1.5px_color-mix(in_oklab,var(--primary)_75%,transparent),0_0_14px_color-mix(in_oklab,var(--primary)_30%,transparent)]',
       )}
@@ -37,7 +56,37 @@ function SidebarTile({
 export function ParticipantVideoSidebar({ stackOffset, onClose }: Props) {
   const participants = useParticipants()
   const totalCount = participants.length
-  const trapRef = useFocusTrap({ enabled: true, onClose })
+  const isMobile = useIsMobileFilmstrip()
+  // Desktop sidebar traps focus; mobile filmstrip must not (controls stay usable).
+  const trapRef = useFocusTrap({ enabled: !isMobile, onClose })
+
+  if (isMobile) {
+    return (
+      <aside
+        ref={trapRef}
+        aria-label="Participant videos"
+        className="fixed inset-x-0 z-[6] flex items-center gap-1.5 border-t border-white/[0.08] bg-[#0a0a16]/90 px-2 backdrop-blur-xl"
+        style={{
+          height: MEET_MOBILE_FILMSTRIP_H,
+          bottom: `calc(${MEET_MOBILE_CONTROLS_H}px + env(safe-area-inset-bottom, 0px))`,
+        }}
+      >
+        <div className="meet-scroll flex min-w-0 flex-1 items-center gap-1.5 overflow-x-auto overflow-y-hidden py-1.5">
+          {participants.map((p, i) => (
+            <SidebarTile key={p.identity} participant={p} index={i} totalCount={totalCount} compact />
+          ))}
+        </div>
+        <button
+          type="button"
+          onClick={onClose}
+          className="flex h-7 w-7 shrink-0 cursor-pointer items-center justify-center border-none bg-transparent text-white/50 transition-colors hover:text-white/80"
+          aria-label="Hide videos"
+        >
+          <X size={14} />
+        </button>
+      </aside>
+    )
+  }
 
   return (
     <aside

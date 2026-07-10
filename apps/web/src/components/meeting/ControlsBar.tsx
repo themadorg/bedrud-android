@@ -5,8 +5,13 @@ import { ConnectionState, RoomEvent } from 'livekit-client'
 import {
   Check,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   Film,
+  Globe,
+  Info,
   Link2,
+  Lock,
   Maximize,
   Mic,
   MicOff,
@@ -18,8 +23,9 @@ import {
   Settings,
   Video,
   VideoOff,
+  X,
 } from 'lucide-react'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { DeafenHeadphonesIcon } from '#/components/meeting/DeafenHeadphonesIcon'
 import { useMeetingMicKeyboard } from '#/components/meeting/useMeetingMicKeyboard'
@@ -33,11 +39,13 @@ import { cn } from '#/lib/utils'
 import { DeviceSelector } from '@/components/meeting/DeviceSelector'
 import { useMeetingRoomContext } from '@/components/meeting/MeetingContext'
 import { meetControlsDockClass, useMeetingUILayout } from '@/components/meeting/MeetingUILayoutContext'
+import { RoomInfoContent } from '@/components/meeting/RoomInfoPanel'
 import { useMeetingStage } from '@/components/meeting/stage/MeetingStageContext'
 import { stageOwnerLabel } from '@/components/meeting/stage/stageWire'
 import { waitForScreenSharePublication } from '@/components/meeting/stage/waitForScreenShare'
 import { useWhiteboardWatch } from '@/components/meeting/whiteboard/whiteboard-watch-context'
 import { useYoutubeWatch } from '@/components/meeting/youtube/youtube-watch-context'
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -48,20 +56,37 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 
+/** Extra ⋯ menu items (merged into the single bottom More menu — no second ⋯). */
+export interface ControlsBarMoreExtras {
+  onRoomAccess?: () => void
+  isPublic?: boolean
+  /** Desktop only — mobile Room info is an in-sheet sub-page. */
+  onRoomInfo?: () => void
+  /** Required for mobile Room info sub-page. */
+  roomId?: string
+  onToggleVideoSidebar?: () => void
+  showVideoSidebarToggle?: boolean
+  videoSidebarOpen?: boolean
+}
+
 interface Props {
   onLeave: () => void
+  /** Mobile room-chrome actions live in the existing bottom ⋯ (not a second top ⋯). */
+  moreExtras?: ControlsBarMoreExtras
 }
 
 /* ── Mobile detection ──────────────────────────────────────────────────────── */
 
 function useIsMobile(breakpoint = 640) {
-  const [mobile, setMobile] = useState(false)
+  const [mobile, setMobile] = useState(() =>
+    typeof window !== 'undefined' ? window.matchMedia(`(max-width: ${breakpoint - 1}px)`).matches : false,
+  )
   useEffect(() => {
     const mq = window.matchMedia(`(max-width: ${breakpoint - 1}px)`)
-    setMobile(mq.matches)
-    const handler = (e: MediaQueryListEvent) => setMobile(e.matches)
-    mq.addEventListener('change', handler)
-    return () => mq.removeEventListener('change', handler)
+    const onChange = () => setMobile(mq.matches)
+    onChange()
+    mq.addEventListener('change', onChange)
+    return () => mq.removeEventListener('change', onChange)
   }, [breakpoint])
   return mobile
 }
@@ -250,7 +275,7 @@ function useDeviceList(kind: 'audioinput' | 'audiooutput') {
 
 /* ── ControlsBar ──────────────────────────────────────────────────────────── */
 
-export function ControlsBar({ onLeave }: Props) {
+export function ControlsBar({ onLeave, moreExtras }: Props) {
   const isMobile = useIsMobile()
   const layout = useMeetingUILayout()
   const { stage, isOwner, claimStage, clearStage } = useMeetingStage()
@@ -297,6 +322,11 @@ export function ControlsBar({ onLeave }: Props) {
   const linkCopiedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const [settingsOpen, setSettingsOpen] = useState(false)
+  const [moreOpen, setMoreOpen] = useState(false)
+  const [audioOpen, setAudioOpen] = useState(false)
+  /** Mobile More drill-down: null = root list. */
+  const [morePage, setMorePage] = useState<'info' | null>(null)
+  const [moreNavDir, setMoreNavDir] = useState<'forward' | 'back'>('forward')
 
   useEffect(() => {
     return () => {
@@ -306,6 +336,200 @@ export function ControlsBar({ onLeave }: Props) {
       }
     }
   }, [])
+
+  const copyRoomLink = useCallback(() => {
+    void navigator.clipboard
+      .writeText(window.location.href)
+      .then(() => {
+        setLinkCopied(true)
+        toast.success('Meeting link copied', {
+          description: 'Share it so others can join this room.',
+        })
+        if (linkCopiedTimerRef.current) clearTimeout(linkCopiedTimerRef.current)
+        linkCopiedTimerRef.current = setTimeout(() => {
+          setLinkCopied(false)
+          linkCopiedTimerRef.current = null
+        }, 2000)
+      })
+      .catch(() => {
+        toast.error('Could not copy link', {
+          description: 'Check clipboard permissions and try again.',
+        })
+      })
+  }, [])
+
+  const toggleFullscreen = useCallback(() => {
+    if (typeof document === 'undefined' || !document.fullscreenEnabled) return
+    if (document.fullscreenElement) void document.exitFullscreen()
+    else void document.documentElement.requestFullscreen()
+  }, [])
+
+  type MoreRow =
+    | { kind: 'action'; id: string; label: string; icon: React.ReactNode; disabled?: boolean; onSelect: () => void }
+    | { kind: 'separator'; id: string }
+
+  const moreRows: MoreRow[] = useMemo(() => {
+    const rows: MoreRow[] = []
+
+    if (isMobile && moreExtras) {
+      if (moreExtras.showVideoSidebarToggle && moreExtras.onToggleVideoSidebar) {
+        rows.push({
+          kind: 'action',
+          id: 'videos',
+          label: moreExtras.videoSidebarOpen ? 'Hide videos' : 'Show videos',
+          icon: <Video size={18} className="shrink-0" />,
+          onSelect: () => moreExtras.onToggleVideoSidebar?.(),
+        })
+      }
+      if (moreExtras.onRoomAccess) {
+        rows.push({
+          kind: 'action',
+          id: 'access',
+          label: moreExtras.isPublic ? 'Public room' : 'Private room',
+          icon: moreExtras.isPublic ? (
+            <Globe size={18} className="shrink-0 text-accent-400" />
+          ) : (
+            <Lock size={18} className="shrink-0" />
+          ),
+          onSelect: () => moreExtras.onRoomAccess?.(),
+        })
+      }
+      // Room info: in-sheet sub-page on mobile (not a second dialog).
+      if (moreExtras.roomId) {
+        rows.push({
+          kind: 'action',
+          id: 'info',
+          label: 'Room info',
+          icon: <Info size={18} className="shrink-0" />,
+          onSelect: () => {
+            setMoreNavDir('forward')
+            setMorePage('info')
+          },
+        })
+      }
+      if (rows.length > 0) rows.push({ kind: 'separator', id: 'sep-room' })
+    }
+
+    rows.push({
+      kind: 'action',
+      id: 'copy',
+      label: linkCopied ? 'Copied!' : 'Copy room link',
+      icon: linkCopied ? (
+        <Check size={18} className="shrink-0 text-emerald-400" />
+      ) : (
+        <Link2 size={18} className="shrink-0" />
+      ),
+      onSelect: copyRoomLink,
+    })
+
+    if (typeof document !== 'undefined' && document.fullscreenEnabled) {
+      rows.push({
+        kind: 'action',
+        id: 'fullscreen',
+        label: typeof document !== 'undefined' && document.fullscreenElement ? 'Exit fullscreen' : 'Fullscreen',
+        icon: <Maximize size={18} className="shrink-0" />,
+        onSelect: toggleFullscreen,
+      })
+    }
+
+    rows.push({
+      kind: 'action',
+      id: 'settings',
+      label: 'Settings',
+      icon: <Settings size={18} className="shrink-0" />,
+      onSelect: () => setSettingsOpen(true),
+    })
+
+    const hasWhiteboard = whiteboardEnabled || (stage?.kind === 'whiteboard' && isWhiteboardHost)
+    if (hasWhiteboard) {
+      rows.push({ kind: 'separator', id: 'sep-wb' })
+      if (stage?.kind === 'whiteboard' && isWhiteboardHost) {
+        rows.push({
+          kind: 'action',
+          id: 'wb-close',
+          label: 'Close whiteboard',
+          icon: <PenLine size={18} className="shrink-0 text-primary" />,
+          onSelect: () => clearStage(),
+        })
+      } else if (whiteboardEnabled) {
+        rows.push({
+          kind: 'action',
+          id: 'wb-open',
+          label: stage?.kind === 'whiteboard' ? 'Whiteboard on stage' : 'Open whiteboard',
+          icon: <PenLine size={18} className="shrink-0 text-primary" />,
+          disabled: stageTakenByOther,
+          onSelect: () => {
+            const err = requestStartWhiteboard()
+            if (err) toast.error(err)
+          },
+        })
+      }
+    }
+
+    const hasYoutube = youtubeEnabled || (stage?.kind === 'youtube' && isYoutubeHost)
+    if (hasYoutube) {
+      if (stage?.kind === 'youtube' && isYoutubeHost) {
+        rows.push({
+          kind: 'action',
+          id: 'yt-stop',
+          label: 'Stop YouTube',
+          icon: <Film size={18} className="shrink-0 text-red-400" />,
+          onSelect: () => stopYoutubeShare(),
+        })
+      } else if (youtubeEnabled) {
+        rows.push({
+          kind: 'action',
+          id: 'yt-share',
+          label: stage?.kind === 'youtube' ? 'YouTube on stage' : 'Share YouTube',
+          icon: <Film size={18} className="shrink-0 text-red-400" />,
+          disabled: stageTakenByOther,
+          onSelect: () => openShareDialog(),
+        })
+      }
+    }
+
+    return rows
+  }, [
+    isMobile,
+    moreExtras,
+    linkCopied,
+    copyRoomLink,
+    toggleFullscreen,
+    whiteboardEnabled,
+    youtubeEnabled,
+    stage,
+    isWhiteboardHost,
+    isYoutubeHost,
+    stageTakenByOther,
+    clearStage,
+    requestStartWhiteboard,
+    stopYoutubeShare,
+    openShareDialog,
+  ])
+
+  const runMoreAction = useCallback((row: Extract<MoreRow, { kind: 'action' }>) => {
+    if (row.disabled) return
+    // In-sheet pages (room info): stay inside More.
+    if (row.id === 'info') {
+      row.onSelect()
+      return
+    }
+    // Nested dialogs (Settings, room access): open first, close More same turn.
+    row.onSelect()
+    setMoreOpen(false)
+  }, [])
+
+  useEffect(() => {
+    if (!moreOpen) {
+      setMorePage(null)
+      setMoreNavDir('forward')
+    }
+  }, [moreOpen])
+
+  const morePageAnim =
+    moreNavDir === 'forward'
+      ? 'animate-in fade-in-0 slide-in-from-right duration-200 ease-out'
+      : 'animate-in fade-in-0 slide-in-from-left duration-200 ease-out'
 
   return (
     <TooltipProvider delayDuration={300}>
@@ -456,198 +680,409 @@ export function ControlsBar({ onLeave }: Props) {
             <DeafenHeadphonesIcon size={iconSizeSm} off={isSelfDeafened} />
           </CtrlBtn>
 
-          {/* Combined audio dropdown: devices + noise mode + settings */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button
-                type="button"
-                className={cn(
-                  'flex items-center justify-center shrink-0 border-none bg-transparent cursor-pointer text-[var(--meet-fg-muted)] transition-colors duration-150 hover:text-[var(--meet-fg-strong)]',
-                  isMobile ? 'w-5 h-[38px]' : 'w-6 h-11',
-                  'rounded-lg',
+          {/* Audio devices + noise: mobile full-screen sheet, desktop dropdown */}
+          {isMobile ? (
+            <button
+              type="button"
+              onClick={() => setAudioOpen(true)}
+              className={cn(
+                'flex h-[38px] w-5 shrink-0 items-center justify-center rounded-lg border-none bg-transparent cursor-pointer text-[var(--meet-fg-muted)] transition-colors duration-150 hover:text-[var(--meet-fg-strong)]',
+              )}
+              aria-label="Audio settings"
+            >
+              <ChevronDown size={12} />
+            </button>
+          ) : (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  type="button"
+                  className={cn(
+                    'flex h-11 w-6 shrink-0 items-center justify-center rounded-lg border-none bg-transparent cursor-pointer text-[var(--meet-fg-muted)] transition-colors duration-150 hover:text-[var(--meet-fg-strong)]',
+                  )}
+                  aria-label="Audio settings"
+                >
+                  <ChevronDown size={13} />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent side="top" align="end" sideOffset={12} className={meetMenuCn}>
+                {mics.devices.length > 0 && (
+                  <>
+                    <DropdownMenuLabel className={meetMenuLabelCn}>Microphone</DropdownMenuLabel>
+                    {mics.devices.map((d, i) => (
+                      <DropdownMenuItem
+                        key={d.deviceId}
+                        onClick={() => mics.select(d.deviceId)}
+                        className={meetMenuItemCn}
+                      >
+                        <Check
+                          size={12}
+                          className={cn(
+                            'shrink-0 text-teal-400',
+                            mics.activeId === d.deviceId ? 'opacity-100' : 'opacity-0',
+                          )}
+                        />
+                        <span className="truncate">{d.label || `Microphone ${i + 1}`}</span>
+                      </DropdownMenuItem>
+                    ))}
+                    <DropdownMenuSeparator className={meetMenuSeparatorCn} />
+                  </>
                 )}
-                aria-label="Audio settings"
-              >
-                <ChevronDown size={isMobile ? 12 : 13} />
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent side="top" align="end" sideOffset={12} className={meetMenuCn}>
-              {/* Microphone devices */}
-              {mics.devices.length > 0 && (
-                <>
-                  <DropdownMenuLabel className={meetMenuLabelCn}>Microphone</DropdownMenuLabel>
-                  {mics.devices.map((d, i) => (
+
+                {speakers.devices.length > 0 && (
+                  <>
+                    <DropdownMenuLabel className={meetMenuLabelCn}>Speaker</DropdownMenuLabel>
+                    {speakers.devices.map((d, i) => (
+                      <DropdownMenuItem
+                        key={d.deviceId}
+                        onClick={() => speakers.select(d.deviceId)}
+                        className={meetMenuItemCn}
+                      >
+                        <Check
+                          size={12}
+                          className={cn(
+                            'shrink-0 text-teal-400',
+                            speakers.activeId === d.deviceId ? 'opacity-100' : 'opacity-0',
+                          )}
+                        />
+                        <span className="truncate">{d.label || `Speaker ${i + 1}`}</span>
+                      </DropdownMenuItem>
+                    ))}
+                    <DropdownMenuSeparator className={meetMenuSeparatorCn} />
+                  </>
+                )}
+
+                <DropdownMenuLabel className={meetMenuLabelCn}>Noise Suppression</DropdownMenuLabel>
+                {NOISE_MODES.map(({ value, label }) => {
+                  const disabled = value === 'krisp' && !AudioProcessorService.isKrispSupported()
+                  return (
                     <DropdownMenuItem
-                      key={d.deviceId}
-                      onClick={() => mics.select(d.deviceId)}
-                      className={meetMenuItemCn}
+                      key={value}
+                      disabled={disabled}
+                      onSelect={() => setMode(value)}
+                      className={cn(meetMenuItemCn, disabled && 'cursor-not-allowed')}
                     >
                       <Check
                         size={12}
-                        className={cn(
-                          'shrink-0 text-teal-400',
-                          mics.activeId === d.deviceId ? 'opacity-100' : 'opacity-0',
-                        )}
+                        className={cn('shrink-0 text-teal-400', noiseMode === value ? 'opacity-100' : 'opacity-0')}
                       />
-                      <span className="truncate">{d.label || `Microphone ${i + 1}`}</span>
+                      <span className="flex-1">{label}</span>
+                      {disabled && <span className="text-[9px] text-red-400 bg-red-500/15 rounded-sm px-1">N/A</span>}
                     </DropdownMenuItem>
-                  ))}
-                  <DropdownMenuSeparator className={meetMenuSeparatorCn} />
-                </>
-              )}
-
-              {/* Speaker devices */}
-              {speakers.devices.length > 0 && (
-                <>
-                  <DropdownMenuLabel className={meetMenuLabelCn}>Speaker</DropdownMenuLabel>
-                  {speakers.devices.map((d, i) => (
-                    <DropdownMenuItem
-                      key={d.deviceId}
-                      onClick={() => speakers.select(d.deviceId)}
-                      className={meetMenuItemCn}
-                    >
-                      <Check
-                        size={12}
-                        className={cn(
-                          'shrink-0 text-teal-400',
-                          speakers.activeId === d.deviceId ? 'opacity-100' : 'opacity-0',
-                        )}
-                      />
-                      <span className="truncate">{d.label || `Speaker ${i + 1}`}</span>
-                    </DropdownMenuItem>
-                  ))}
-                  <DropdownMenuSeparator className={meetMenuSeparatorCn} />
-                </>
-              )}
-
-              {/* Noise suppression */}
-              <DropdownMenuLabel className={meetMenuLabelCn}>Noise Suppression</DropdownMenuLabel>
-              {NOISE_MODES.map(({ value, label }) => {
-                const disabled = value === 'krisp' && !AudioProcessorService.isKrispSupported()
-                return (
-                  <DropdownMenuItem
-                    key={value}
-                    disabled={disabled}
-                    onSelect={() => setMode(value)}
-                    className={cn(meetMenuItemCn, disabled && 'cursor-not-allowed')}
-                  >
-                    <Check
-                      size={12}
-                      className={cn('shrink-0 text-teal-400', noiseMode === value ? 'opacity-100' : 'opacity-0')}
-                    />
-                    <span className="flex-1">{label}</span>
-                    {disabled && <span className="text-[9px] text-red-400 bg-red-500/15 rounded-sm px-1">N/A</span>}
-                  </DropdownMenuItem>
-                )
-              })}
-            </DropdownMenuContent>
-          </DropdownMenu>
+                  )
+                })}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
         </div>
 
         {!isMobile && <div className={dividerCn} />}
 
         {/* ── Far right: More options ── */}
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <button
-              type="button"
-              className={cn(
-                'flex items-center justify-center shrink-0 border-none cursor-pointer transition-[background,color] duration-150',
-                'bg-[var(--meet-control)] text-[var(--meet-control-fg)] hover:bg-[var(--meet-control-hover)]',
-                isMobile ? 'h-[34px] w-[34px] rounded-[10px]' : 'h-11 w-[36px] rounded-xl',
-              )}
-              aria-label="More options"
-            >
-              <MoreVertical size={iconSizeSm} />
-            </button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent side="top" align="end" sideOffset={12} className={cn(meetMenuCn, 'min-w-[200px]')}>
-            <DropdownMenuItem
-              onClick={() => {
-                navigator.clipboard.writeText(window.location.href)
-                setLinkCopied(true)
-                if (linkCopiedTimerRef.current) clearTimeout(linkCopiedTimerRef.current)
-                linkCopiedTimerRef.current = setTimeout(() => {
-                  setLinkCopied(false)
-                  linkCopiedTimerRef.current = null
-                }, 2000)
-              }}
-              className={meetMenuItemCn}
-            >
-              {linkCopied ? (
-                <Check size={13} className="shrink-0 text-emerald-400" />
-              ) : (
-                <Link2 size={13} className="shrink-0" />
-              )}
-              {linkCopied ? 'Copied!' : 'Copy room link'}
-            </DropdownMenuItem>
-
-            {typeof document !== 'undefined' && document.fullscreenEnabled && (
-              <DropdownMenuItem
-                onClick={() => {
-                  if (document.fullscreenElement) document.exitFullscreen()
-                  else document.documentElement.requestFullscreen()
-                }}
-                className={meetMenuItemCn}
-              >
-                <Maximize size={13} className="shrink-0" />
-                {typeof document !== 'undefined' && document.fullscreenElement ? 'Exit fullscreen' : 'Fullscreen'}
-              </DropdownMenuItem>
+        {isMobile ? (
+          <button
+            type="button"
+            onClick={() => setMoreOpen(true)}
+            className={cn(
+              'flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-[10px] border-none cursor-pointer transition-[background,color] duration-150',
+              'bg-[var(--meet-control)] text-[var(--meet-control-fg)] hover:bg-[var(--meet-control-hover)]',
             )}
-
-            <DropdownMenuItem onClick={() => setSettingsOpen(true)} className={meetMenuItemCn}>
-              <Settings size={13} className="shrink-0" />
-              Settings
-            </DropdownMenuItem>
-
-            {(whiteboardEnabled || (stage?.kind === 'whiteboard' && isWhiteboardHost)) && (
-              <>
-                <DropdownMenuSeparator className={meetMenuSeparatorCn} />
-
-                {stage?.kind === 'whiteboard' && isWhiteboardHost ? (
-                  <DropdownMenuItem onClick={() => clearStage()} className={meetMenuItemCn}>
-                    <PenLine size={13} className="shrink-0 text-primary" />
-                    Close whiteboard
-                  </DropdownMenuItem>
-                ) : (
-                  whiteboardEnabled && (
-                    <DropdownMenuItem
-                      onClick={() => {
-                        const err = requestStartWhiteboard()
-                        if (err) toast.error(err)
-                      }}
-                      disabled={stageTakenByOther}
-                      className={meetMenuItemCn}
-                    >
-                      <PenLine size={13} className="shrink-0 text-primary" />
-                      {stage?.kind === 'whiteboard' ? 'Whiteboard on stage' : 'Open whiteboard'}
-                    </DropdownMenuItem>
-                  )
+            aria-label="More options"
+          >
+            <MoreVertical size={iconSizeSm} />
+          </button>
+        ) : (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                type="button"
+                className={cn(
+                  'flex h-11 w-[36px] shrink-0 items-center justify-center rounded-xl border-none cursor-pointer transition-[background,color] duration-150',
+                  'bg-[var(--meet-control)] text-[var(--meet-control-fg)] hover:bg-[var(--meet-control-hover)]',
                 )}
-              </>
-            )}
-
-            {(youtubeEnabled || (stage?.kind === 'youtube' && isYoutubeHost)) &&
-              (stage?.kind === 'youtube' && isYoutubeHost ? (
-                <DropdownMenuItem onClick={() => stopYoutubeShare()} className={meetMenuItemCn}>
-                  <Film size={13} className="shrink-0 text-red-400" />
-                  Stop YouTube
-                </DropdownMenuItem>
-              ) : (
-                youtubeEnabled && (
+                aria-label="More options"
+              >
+                <MoreVertical size={iconSizeSm} />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent side="top" align="end" sideOffset={12} className={cn(meetMenuCn, 'min-w-[200px]')}>
+              {moreRows.map((row) => {
+                if (row.kind === 'separator') {
+                  return <DropdownMenuSeparator key={row.id} className={meetMenuSeparatorCn} />
+                }
+                return (
                   <DropdownMenuItem
-                    onClick={() => openShareDialog()}
-                    disabled={stageTakenByOther}
-                    className={meetMenuItemCn}
+                    key={row.id}
+                    disabled={row.disabled}
+                    onClick={() => row.onSelect()}
+                    className={cn(meetMenuItemCn, row.disabled && 'cursor-not-allowed opacity-50')}
                   >
-                    <Film size={13} className="shrink-0 text-red-400" />
-                    {stage?.kind === 'youtube' ? 'YouTube on stage' : 'Share YouTube'}
+                    <span className="flex h-4 w-4 shrink-0 items-center justify-center [&>svg]:h-[13px] [&>svg]:w-[13px]">
+                      {row.icon}
+                    </span>
+                    {row.label}
                   </DropdownMenuItem>
                 )
-              ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
+              })}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
       </div>
+
+      {/* Mobile: audio devices + noise (full-screen, like More / Settings). */}
+      <Dialog
+        open={audioOpen && isMobile}
+        onOpenChange={(open) => {
+          if (!open) setAudioOpen(false)
+        }}
+      >
+        <DialogContent
+          className={cn(
+            'meet-dialog flex flex-col gap-0 overflow-hidden p-0 shadow-2xl',
+            'fixed inset-0 left-0 top-0 h-dvh max-h-dvh w-full max-w-none translate-x-0 translate-y-0 rounded-none border-0',
+            '[&>button.absolute]:hidden',
+          )}
+        >
+          <header className="flex shrink-0 items-center border-b border-[var(--meet-border)] pt-[env(safe-area-inset-top)]">
+            <div className="flex h-12 w-full items-center px-1">
+              <DialogTitle className="flex-1 px-3 text-[17px] font-semibold text-[var(--meet-fg-strong)]">
+                Audio
+              </DialogTitle>
+              <button
+                type="button"
+                onClick={() => setAudioOpen(false)}
+                className="flex h-10 w-10 shrink-0 items-center justify-center border-none bg-transparent text-[var(--meet-fg-muted)]"
+                aria-label="Close"
+              >
+                <X size={20} />
+              </button>
+            </div>
+          </header>
+
+          <div className="meet-scroll min-h-0 flex-1 space-y-4 overflow-y-auto p-3 pb-[calc(16px+env(safe-area-inset-bottom))]">
+            {mics.devices.length > 0 && (
+              <section>
+                <h3 className="mb-1.5 px-1 text-[11px] font-semibold uppercase tracking-wider text-[var(--meet-fg-muted)]">
+                  Microphone
+                </h3>
+                <ul className="m-0 list-none overflow-hidden rounded-xl border border-[var(--meet-border)] bg-[var(--meet-surface-muted)] p-0">
+                  {mics.devices.map((d, i) => {
+                    const active = mics.activeId === d.deviceId
+                    return (
+                      <li key={d.deviceId} className={cn(i > 0 && 'border-t border-[var(--meet-border)]')}>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            void mics.select(d.deviceId)
+                          }}
+                          className="flex w-full items-center gap-3 border-none bg-transparent px-3.5 py-3.5 text-start text-[var(--meet-fg-strong)] transition-colors active:bg-[var(--meet-control)]"
+                        >
+                          <Check
+                            size={16}
+                            className={cn('shrink-0 text-teal-400', active ? 'opacity-100' : 'opacity-0')}
+                          />
+                          <span className="min-w-0 flex-1 truncate text-[15px] font-medium">
+                            {d.label || `Microphone ${i + 1}`}
+                          </span>
+                        </button>
+                      </li>
+                    )
+                  })}
+                </ul>
+              </section>
+            )}
+
+            {speakers.devices.length > 0 && (
+              <section>
+                <h3 className="mb-1.5 px-1 text-[11px] font-semibold uppercase tracking-wider text-[var(--meet-fg-muted)]">
+                  Speaker
+                </h3>
+                <ul className="m-0 list-none overflow-hidden rounded-xl border border-[var(--meet-border)] bg-[var(--meet-surface-muted)] p-0">
+                  {speakers.devices.map((d, i) => {
+                    const active = speakers.activeId === d.deviceId
+                    return (
+                      <li key={d.deviceId} className={cn(i > 0 && 'border-t border-[var(--meet-border)]')}>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            void speakers.select(d.deviceId)
+                          }}
+                          className="flex w-full items-center gap-3 border-none bg-transparent px-3.5 py-3.5 text-start text-[var(--meet-fg-strong)] transition-colors active:bg-[var(--meet-control)]"
+                        >
+                          <Check
+                            size={16}
+                            className={cn('shrink-0 text-teal-400', active ? 'opacity-100' : 'opacity-0')}
+                          />
+                          <span className="min-w-0 flex-1 truncate text-[15px] font-medium">
+                            {d.label || `Speaker ${i + 1}`}
+                          </span>
+                        </button>
+                      </li>
+                    )
+                  })}
+                </ul>
+              </section>
+            )}
+
+            <section>
+              <h3 className="mb-1.5 px-1 text-[11px] font-semibold uppercase tracking-wider text-[var(--meet-fg-muted)]">
+                Noise Suppression
+              </h3>
+              <ul className="m-0 list-none overflow-hidden rounded-xl border border-[var(--meet-border)] bg-[var(--meet-surface-muted)] p-0">
+                {NOISE_MODES.map(({ value, label }, i) => {
+                  const disabled = value === 'krisp' && !AudioProcessorService.isKrispSupported()
+                  const active = noiseMode === value
+                  return (
+                    <li key={value} className={cn(i > 0 && 'border-t border-[var(--meet-border)]')}>
+                      <button
+                        type="button"
+                        disabled={disabled}
+                        onClick={() => {
+                          if (disabled) return
+                          setMode(value)
+                        }}
+                        className={cn(
+                          'flex w-full items-center gap-3 border-none bg-transparent px-3.5 py-3.5 text-start transition-colors',
+                          disabled
+                            ? 'cursor-not-allowed opacity-45'
+                            : 'text-[var(--meet-fg-strong)] active:bg-[var(--meet-control)]',
+                        )}
+                      >
+                        <Check
+                          size={16}
+                          className={cn('shrink-0 text-teal-400', active ? 'opacity-100' : 'opacity-0')}
+                        />
+                        <span className="min-w-0 flex-1 text-[15px] font-medium">{label}</span>
+                        {disabled && (
+                          <span className="rounded-sm bg-red-500/15 px-1.5 text-[10px] font-semibold text-red-400">
+                            N/A
+                          </span>
+                        )}
+                      </button>
+                    </li>
+                  )
+                })}
+              </ul>
+            </section>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Mobile-only full-screen more sheet (settings-app style + sub-pages). */}
+      <Dialog
+        open={moreOpen && isMobile}
+        onOpenChange={(open) => {
+          if (!open) setMoreOpen(false)
+        }}
+      >
+        <DialogContent
+          className={cn(
+            'meet-dialog flex flex-col gap-0 overflow-hidden p-0 shadow-2xl',
+            // Always full-viewport when this dialog is open (only opened on mobile).
+            'fixed inset-0 left-0 top-0 h-dvh max-h-dvh w-full max-w-none translate-x-0 translate-y-0 rounded-none border-0',
+            '[&>button.absolute]:hidden',
+          )}
+        >
+          <header className="flex shrink-0 items-center border-b border-[var(--meet-border)] pt-[env(safe-area-inset-top)]">
+            <div className="flex h-12 w-full items-center px-1">
+              {morePage ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMoreNavDir('back')
+                    setMorePage(null)
+                  }}
+                  className="flex h-10 min-w-0 flex-1 items-center gap-0.5 border-none bg-transparent px-1 text-[var(--meet-accent)]"
+                  aria-label="Back to more"
+                >
+                  <ChevronLeft size={22} className="shrink-0" />
+                  <span className="truncate text-[15px]">More</span>
+                </button>
+              ) : (
+                <DialogTitle className="flex-1 px-3 text-[17px] font-semibold text-[var(--meet-fg-strong)]">
+                  More
+                </DialogTitle>
+              )}
+              <button
+                type="button"
+                onClick={() => setMoreOpen(false)}
+                className="flex h-10 w-10 shrink-0 items-center justify-center border-none bg-transparent text-[var(--meet-fg-muted)]"
+                aria-label="Close"
+              >
+                <X size={20} />
+              </button>
+            </div>
+          </header>
+
+          {morePage === 'info' && (
+            <div
+              key="more-info-title"
+              className={cn('shrink-0 border-b border-[var(--meet-border)] px-4 py-2', morePageAnim)}
+            >
+              <h2 className="text-[15px] font-semibold text-[var(--meet-fg-strong)]">Room info</h2>
+            </div>
+          )}
+
+          <div className="relative min-h-0 flex-1 overflow-hidden pb-[env(safe-area-inset-bottom)]">
+            <div
+              key={morePage ?? 'root'}
+              className={cn('absolute inset-0 flex flex-col overflow-hidden', morePageAnim)}
+            >
+              {morePage === null ? (
+                <nav className="meet-scroll min-h-0 flex-1 overflow-y-auto p-3" aria-label="More options">
+                  <ul className="m-0 list-none overflow-hidden rounded-xl border border-[var(--meet-border)] bg-[var(--meet-surface-muted)] p-0">
+                    {moreRows.map((row, index) => {
+                      if (row.kind === 'separator') {
+                        return (
+                          <li
+                            key={row.id}
+                            className="h-2 border-t border-[var(--meet-border)] bg-[var(--meet-bg-panel)]"
+                            aria-hidden
+                          />
+                        )
+                      }
+                      return (
+                        <li
+                          key={row.id}
+                          className={cn(
+                            index > 0 &&
+                              moreRows[index - 1]?.kind === 'action' &&
+                              'border-t border-[var(--meet-border)]',
+                          )}
+                        >
+                          <button
+                            type="button"
+                            disabled={row.disabled}
+                            onClick={() => runMoreAction(row)}
+                            className={cn(
+                              'flex w-full items-center gap-3 border-none bg-transparent px-3.5 py-3.5 text-start transition-colors',
+                              row.disabled
+                                ? 'cursor-not-allowed opacity-45'
+                                : 'active:bg-[var(--meet-control)] text-[var(--meet-fg-strong)]',
+                            )}
+                          >
+                            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[var(--meet-btn-muted-bg)] text-[var(--meet-btn-muted-fg)] [&>svg]:h-4 [&>svg]:w-4">
+                              {row.icon}
+                            </span>
+                            <span className="min-w-0 flex-1 text-[15px] font-medium">{row.label}</span>
+                            {row.id === 'info' && (
+                              <ChevronRight size={18} className="shrink-0 text-[var(--meet-fg-subtle)]" />
+                            )}
+                          </button>
+                        </li>
+                      )
+                    })}
+                  </ul>
+                </nav>
+              ) : morePage === 'info' && moreExtras?.roomId ? (
+                <div className="meet-scroll flex min-h-0 flex-1 flex-col overflow-y-auto">
+                  <RoomInfoContent roomId={moreExtras.roomId} active={moreOpen && morePage === 'info'} hideClose />
+                </div>
+              ) : null}
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <BedrudSettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
     </TooltipProvider>

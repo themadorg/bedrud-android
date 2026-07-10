@@ -1,7 +1,7 @@
 import { X } from 'lucide-react'
 import { useCallback, useEffect, useRef } from 'react'
 import { useExperimentalPreferencesStore } from '#/lib/experimental-preferences.store'
-import { meetRightInsetClass, useMeetingUILayout } from '@/components/meeting/MeetingUILayoutContext'
+import { meetStageShellClass, useMeetingUILayout } from '@/components/meeting/MeetingUILayoutContext'
 import { cn } from '@/lib/utils'
 import { isYoutubePlayerReady } from './loadYoutubeIframeApi'
 import { useYoutubePlayer } from './useYoutubePlayer'
@@ -82,12 +82,7 @@ export function YoutubeWatchOverlay() {
   if (!youtubeEnabled || !session) return null
 
   return (
-    <div
-      className={cn(
-        'absolute top-[calc(56px+env(safe-area-inset-top))] left-0 bottom-[calc(88px+env(safe-area-inset-bottom))] z-[5] flex flex-col p-2 transition-[right] duration-200',
-        meetRightInsetClass(layout),
-      )}
-    >
+    <div className={cn(meetStageShellClass(layout, 'p-2 max-sm:p-1.5'))}>
       <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border border-white/[0.06] bg-black shadow-xl">
         <div ref={containerRef} className="absolute inset-0 h-full w-full" />
         {isHost && (

@@ -3,9 +3,10 @@
 #
 # Architecture:
 #   • Remote debug server: LiveKit + Traefik + devcli tunnel agent
-#   • Local machine: API (air) + web (vite) with hot reload
+#   • Local machine: API (air) + web (vite HMR over public wss via Traefik)
 #   • Local devcli connects outbound to server agent; Traefik routes
 #     public traffic to your local api/web over the tunnel
+#   • Opt out of web HMR mid-call: BEDRUD_HMR=0 in the environment
 #
 # Workflow:
 #   devcli remote tunnel deploy     # install agent on server (once)
