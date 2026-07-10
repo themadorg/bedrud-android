@@ -31,31 +31,35 @@ const RE_VIMEO =
 const RE_FIGMA = /^https:\/\/(?:www\.)?figma\.com/;
 
 const RE_GH_GIST = /^https:\/\/gist\.github\.com\/([\w_-]+)\/([\w_-]+)/;
+// linear: no [\s\S]*? / .*? backtracking (CodeQL js/polynomial-redos)
 const RE_GH_GIST_EMBED =
-  /^<script[\s\S]*?\ssrc=["'](https:\/\/gist\.github\.com\/.*?)\.js["']/i;
+  /^<script\b[^>]*\ssrc=["'](https:\/\/gist\.github\.com\/[^"']+)\.js["']/i;
 
 const RE_MSFORMS = /^(?:https?:\/\/)?forms\.microsoft\.com\//;
 
 // not anchored to start to allow <blockquote> twitter embeds
 const RE_TWITTER =
   /(?:https?:\/\/)?(?:(?:w){3}\.)?(?:twitter|x)\.com\/[^/]+\/status\/(\d+)/;
-const RE_TWITTER_EMBED =
-  /^<blockquote[\s\S]*?\shref=["'](https?:\/\/(?:twitter|x)\.com\/[^"']*)/i;
+// href may be nested inside blockquote; keep host match linear (no [\s\S]*?)
+const RE_TWITTER_EMBED_HREF =
+  /\bhref=["'](https?:\/\/(?:twitter|x)\.com\/[^"']+)/i;
 
 const RE_VALTOWN =
   /^https:\/\/(?:www\.)?val\.town\/(v|embed)\/[a-zA-Z_$][0-9a-zA-Z_$]+\.[a-zA-Z_$][0-9a-zA-Z_$]+/;
 
-const RE_GENERIC_EMBED =
-  /^<(?:iframe|blockquote)[\s\S]*?\s(?:src|href)=["']([^"']*)["'][\s\S]*?>$/i;
+// linear attr extract (no [\s\S]*? backtracking — CodeQL js/polynomial-redos)
+const RE_GENERIC_EMBED_ATTR =
+  /\s(?:src|href)=["']([^"']+)["']/i;
 
+// last slug token is the giphy id; avoid [a-zA-Z0-9]*?-? poly backtrack
 const RE_GIPHY =
-  /giphy.com\/(?:clips|embed|gifs)\/[a-zA-Z0-9]*?-?([a-zA-Z0-9]+)(?:[^a-zA-Z0-9]|$)/;
+  /giphy\.com\/(?:clips|embed|gifs)\/(?:[a-zA-Z0-9]+-)*([a-zA-Z0-9]+)(?:[^a-zA-Z0-9]|$)/;
 
 const RE_REDDIT =
   /^(?:http(?:s)?:\/\/)?(?:www\.)?reddit\.com\/r\/([a-zA-Z0-9_]+)\/comments\/([a-zA-Z0-9_]+)\/([a-zA-Z0-9_]+)\/?(?:\?[^#\s]*)?(?:#[^\s]*)?$/;
 
-const RE_REDDIT_EMBED =
-  /^<blockquote[\s\S]*?\shref=["'](https?:\/\/(?:www\.)?reddit\.com\/[^"']*)/i;
+const RE_REDDIT_EMBED_HREF =
+  /\bhref=["'](https?:\/\/(?:www\.)?reddit\.com\/[^"']+)/i;
 
 const parseYouTubeLikeTimestamp = (url: string): number => {
   let timeParam: string | null | undefined;
@@ -473,28 +477,32 @@ const matchHostname = (
 };
 
 export const maybeParseEmbedSrc = (str: string): string => {
-  const twitterMatch = str.match(RE_TWITTER_EMBED);
-  if (twitterMatch && twitterMatch.length === 2) {
-    return twitterMatch[1];
-  }
-
-  const redditMatch = str.match(RE_REDDIT_EMBED);
-  if (redditMatch && redditMatch.length === 2) {
-    return redditMatch[1];
+  if (/^<blockquote\b/i.test(str)) {
+    const twitterMatch = str.match(RE_TWITTER_EMBED_HREF);
+    if (twitterMatch) {
+      return twitterMatch[1];
+    }
+    const redditMatch = str.match(RE_REDDIT_EMBED_HREF);
+    if (redditMatch) {
+      return redditMatch[1];
+    }
   }
 
   const gistMatch = str.match(RE_GH_GIST_EMBED);
-  if (gistMatch && gistMatch.length === 2) {
+  if (gistMatch) {
     return gistMatch[1];
   }
 
-  if (RE_GIPHY.test(str)) {
-    return `https://giphy.com/embed/${RE_GIPHY.exec(str)![1]}`;
+  const giphyMatch = str.match(RE_GIPHY);
+  if (giphyMatch) {
+    return `https://giphy.com/embed/${giphyMatch[1]}`;
   }
 
-  const match = str.match(RE_GENERIC_EMBED);
-  if (match && match.length === 2) {
-    return match[1];
+  if (/^<(?:iframe|blockquote)\b/i.test(str) && />\s*$/.test(str)) {
+    const match = str.match(RE_GENERIC_EMBED_ATTR);
+    if (match) {
+      return match[1];
+    }
   }
 
   return str;
