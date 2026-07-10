@@ -1,14 +1,17 @@
 [Unit]
 Description=Bedrud Video Meeting Server
 Documentation=https://themadorg.github.io/bedrud/
-After=network.target network-online.target
-Wants=network-online.target
+After=network.target network-online.target livekit.service
+Wants=network-online.target livekit.service
 
 [Service]
 Type=simple
 User=bedrud
 Group=bedrud
 ExecStart=/usr/bin/bedrud run --config /etc/bedrud/config.yaml
+Environment=CONFIG_PATH=/etc/bedrud/config.yaml
+# LiveKit is managed by livekit.service (same binary, --livekit mode)
+Environment=LIVEKIT_MANAGED=true
 Restart=on-failure
 RestartSec=5s
 StandardOutput=journal

@@ -3,10 +3,12 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
   filterIceServersToTurnsTls,
   getLiveKitPublishDiagnostics,
+  isFatalPublishError,
   isPublishUnavailableError,
   isRoomConnected,
   isRoomPublishReady,
   isRoomSignalingReady,
+  isRoomTransportDead,
   livekitConnectOptionsForHost,
   livekitConnectOptionsForUrl,
   livekitHostnameFromUrl,
@@ -77,10 +79,34 @@ describe('livekit-publish', () => {
     expect(isRoomSignalingReady(signaling)).toBe(true)
   })
 
-  it('detects transient publish errors', () => {
+  it('detects fatal vs transient publish errors', () => {
+    expect(isFatalPublishError(new Error('PC manager is closed'))).toBe(true)
+    expect(isFatalPublishError({ name: 'UnexpectedConnectionState', code: 12 })).toBe(true)
     expect(isPublishUnavailableError(new Error('PC manager is closed'))).toBe(true)
     expect(isPublishUnavailableError({ name: 'UnexpectedConnectionState', code: 12 })).toBe(true)
+    expect(isPublishUnavailableError(new Error('could not establish Publisher connection'))).toBe(true)
     expect(isPublishUnavailableError(new Error('permission denied'))).toBe(false)
+    expect(isFatalPublishError(new Error('could not establish Publisher connection'))).toBe(false)
+  })
+
+  it('detects dead transport when pcManager is missing', () => {
+    const dead = {
+      state: ConnectionState.Connected,
+      engine: { pcManager: null, verifyTransport: () => false },
+    } as unknown as Room
+    expect(isRoomTransportDead(dead)).toBe(true)
+    expect(isRoomPublishReady(dead)).toBe(false)
+
+    const alive = {
+      state: ConnectionState.Connected,
+      engine: {
+        pcManager: { mode: 'publisher-only' },
+        verifyTransport: () => true,
+        reliableDC: { readyState: 'open' },
+      },
+    } as unknown as Room
+    expect(isRoomTransportDead(alive)).toBe(false)
+    expect(isRoomPublishReady(alive)).toBe(true)
   })
 
   afterEach(() => {
@@ -156,9 +182,10 @@ describe('livekit-publish', () => {
     expect(diag.iceTransportPolicy).toBe('relay')
   })
 
-  it('uses dual peer connections for remote LiveKit hosts', () => {
-    expect(livekitRoomOptionsForUrl('wss://debug.example.com/livekit')).toEqual({ singlePeerConnection: false })
-    expect(livekitRoomOptionsForUrl('ws://127.0.0.1:7072')).toBeUndefined()
-    expect(livekitRoomOptionsForUrl('ws://localhost:7072')).toBeUndefined()
+  it('uses single peer connection for LiveKit hosts (reliable data path)', () => {
+    expect(livekitRoomOptionsForUrl('wss://debug.example.com/livekit')).toEqual({ singlePeerConnection: true })
+    expect(livekitRoomOptionsForUrl('ws://127.0.0.1:7072')).toEqual({ singlePeerConnection: true })
+    expect(livekitRoomOptionsForUrl('ws://localhost:7072')).toEqual({ singlePeerConnection: true })
+    expect(livekitRoomOptionsForUrl('')).toEqual({ singlePeerConnection: true })
   })
 })

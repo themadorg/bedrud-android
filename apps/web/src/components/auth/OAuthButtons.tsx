@@ -8,15 +8,17 @@ const _API_URL = import.meta.env['VITE_API_URL'] as string | undefined
 
 function resolveOAuthBase(): string {
   // Dev: Vite proxies /api → :7071, so same-origin links work without env vars.
-  const base =
-    _EXPLICIT_OAUTH ||
-    _API_URL ||
-    (import.meta.env.DEV && typeof globalThis.location !== 'undefined' ? globalThis.location.origin : '')
+  // Resolve at call time (not module load) so SSR without `location` does not log errors.
+  const origin =
+    typeof globalThis.location !== 'undefined' && globalThis.location?.origin ? globalThis.location.origin : ''
+  const base = _EXPLICIT_OAUTH || _API_URL || (import.meta.env.DEV ? origin : '')
   if (!base) {
-    if (import.meta.env.DEV)
+    // Only warn in the real browser after hydrate — SSR has no window.location.
+    if (import.meta.env.DEV && typeof document !== 'undefined') {
       console.error(
         'OAuthButtons: VITE_OAUTH_URL or VITE_API_URL must be configured. ' + 'OAuth login links will not work.',
       )
+    }
     return ''
   }
   // In production (page served over HTTPS), force the redirect URL to HTTPS
@@ -26,8 +28,6 @@ function resolveOAuthBase(): string {
   }
   return base
 }
-
-const OAUTH_BASE = resolveOAuthBase()
 
 const ALL_PROVIDERS = [
   {
@@ -79,7 +79,8 @@ interface Props {
 }
 
 export function OAuthButtons({ availableProviders }: Props) {
-  if (!OAUTH_BASE) return null
+  const oauthBase = resolveOAuthBase()
+  if (!oauthBase) return null
 
   const filtered = ALL_PROVIDERS.filter((p) => availableProviders.includes(p.id))
   if (filtered.length === 0) return null
@@ -88,7 +89,7 @@ export function OAuthButtons({ availableProviders }: Props) {
     <div className="space-y-2">
       {filtered.map(({ id, label, icon }) => (
         <Button key={id} variant="outline" className="w-full gap-2" asChild>
-          <a href={`${OAUTH_BASE}/api/auth/${id}/login`}>
+          <a href={`${oauthBase}/api/auth/${id}/login`}>
             {icon}
             {label}
           </a>

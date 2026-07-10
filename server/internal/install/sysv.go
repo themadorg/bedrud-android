@@ -17,7 +17,7 @@ const sysvBedrudTemplate = `#!/bin/sh
 ### END INIT INFO
 
 PATH=/sbin:/usr/sbin:/bin:/usr/bin
-DAEMON=/usr/local/bin/bedrud
+DAEMON=%s
 DAEMON_ARGS="run --config %s"
 NAME=bedrud
 DESC="Bedrud Meeting Server"
@@ -126,7 +126,7 @@ const sysvLivekitTemplate = `#!/bin/sh
 ### END INIT INFO
 
 PATH=/sbin:/usr/sbin:/bin:/usr/bin
-DAEMON=/usr/local/bin/bedrud
+DAEMON=%s
 DAEMON_ARGS="--livekit --config /etc/bedrud/livekit.yaml"
 NAME=livekit
 DESC="LiveKit Server (Embedded in Bedrud)"
@@ -221,9 +221,10 @@ esac
 :
 `
 
-func writeSysVFiles(cfg *serviceConfig, lkManagedEnv, bedrudAfter string) error {
+func writeSysVFiles(cfg *serviceConfig, bedrudBin, lkManagedEnv, bedrudAfter string) error {
 	if cfg.HasLivekit {
-		if err := os.WriteFile("/etc/init.d/livekit", []byte(sysvLivekitTemplate), 0o755); err != nil {
+		lkScript := fmt.Sprintf(sysvLivekitTemplate, bedrudBin)
+		if err := os.WriteFile("/etc/init.d/livekit", []byte(lkScript), 0o755); err != nil {
 			return fmt.Errorf("failed to write livekit init script: %w", err)
 		}
 	}
@@ -238,7 +239,8 @@ func writeSysVFiles(cfg *serviceConfig, lkManagedEnv, bedrudAfter string) error 
 		envExports += "\nexport LIVEKIT_MANAGED=true"
 	}
 
-	bedrudScript := fmt.Sprintf(sysvBedrudTemplate, lkDep, lkDep, cfg.ConfigPath, envExports)
+	// Template order: Required-Start, Required-Stop, DAEMON, config path, env exports
+	bedrudScript := fmt.Sprintf(sysvBedrudTemplate, lkDep, lkDep, bedrudBin, cfg.ConfigPath, envExports)
 	if err := os.WriteFile("/etc/init.d/bedrud", []byte(bedrudScript), 0o755); err != nil {
 		return fmt.Errorf("failed to write bedrud init script: %w", err)
 	}

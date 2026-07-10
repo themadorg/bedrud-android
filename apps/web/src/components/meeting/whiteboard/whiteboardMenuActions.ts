@@ -1,5 +1,7 @@
-import { exportToClipboard, MIME_TYPES } from '@excalidraw/excalidraw'
+// Subpath imports from vendored tree — avoid full @excalidraw/excalidraw entry.
+import { MIME_TYPES } from '@excalidraw/common'
 import type { ExcalidrawImperativeAPI } from '@excalidraw/excalidraw/types'
+import { exportToClipboard } from '@excalidraw/utils'
 
 function isMac() {
   return typeof navigator !== 'undefined' && /Mac|iPod|iPhone|iPad/.test(navigator.platform)

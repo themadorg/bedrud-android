@@ -24,7 +24,10 @@ func LiveKitSync(cfg *Config) error {
 	state := cfg.Provision.StateDir
 	if cfg.acmeEnabled() {
 		if err := syncTurnCerts(cfg, state); err != nil {
-			return err
+			logfmt.Println("livekit", fmt.Sprintf("ACME TURN certs unavailable (%v) — ensuring fallback certs", err))
+			if err2 := ensureSelfSignedTurnCerts(cfg); err2 != nil {
+				return fmt.Errorf("TURN TLS certs: acme: %v; fallback: %w", err, err2)
+			}
 		}
 	}
 	if cfg.UsesWireGuard() {
@@ -137,6 +140,10 @@ if [ ! -f %s ]; then
   echo "missing %s (run traefik sync after ACME)" >&2
   exit 1
 fi
+# Prefer python3; fall back to openssl+jq-less pure python if needed.
+if ! command -v python3 >/dev/null 2>&1; then
+  apt-get update -qq && DEBIAN_FRONTEND=noninteractive apt-get install -y -qq python3
+fi
 python3 - <<'PY'
 import base64, json, sys
 domain = %q
@@ -167,6 +174,61 @@ chmod 600 %s %s
 		return fmt.Errorf("sync TURN TLS certs: %w", err)
 	}
 	logfmt.Println("livekit", fmt.Sprintf("TURN TLS certs → %s/turn.crt", state))
+	return nil
+}
+
+// waitAndSyncTurnCerts polls until Traefik has an ACME cert for the public host, then extracts TURN PEMs.
+func waitAndSyncTurnCerts(cfg *Config, timeout time.Duration) error {
+	state := cfg.Provision.StateDir
+	deadline := time.Now().Add(timeout)
+	// Kick HTTP-01 by hitting the public host (Traefik issues on first HTTPS request).
+	_, _ = SSHOutput(cfg, fmt.Sprintf(
+		"curl -sk --connect-timeout 5 --max-time 15 https://%s/ >/dev/null 2>&1 || true",
+		shellQuote(cfg.URLs.PublicHost),
+	))
+	var lastErr error
+	for time.Now().Before(deadline) {
+		if err := syncTurnCerts(cfg, state); err == nil {
+			return nil
+		} else {
+			lastErr = err
+		}
+		time.Sleep(3 * time.Second)
+		_, _ = SSHOutput(cfg, fmt.Sprintf(
+			"curl -sk --connect-timeout 5 --max-time 15 https://%s/ >/dev/null 2>&1 || true",
+			shellQuote(cfg.URLs.PublicHost),
+		))
+	}
+	if lastErr == nil {
+		lastErr = fmt.Errorf("timeout after %s", timeout)
+	}
+	return lastErr
+}
+
+// ensureSelfSignedTurnCerts writes temporary PEMs so LiveKit can start before ACME is ready.
+func ensureSelfSignedTurnCerts(cfg *Config) error {
+	state := cfg.Provision.StateDir
+	host := cfg.URLs.PublicHost
+	if host == "" {
+		host = cfg.SSH.Host
+	}
+	script := fmt.Sprintf(`set -e
+if [ -f %s/turn.crt ] && [ -f %s/turn.key ]; then
+  exit 0
+fi
+if ! command -v openssl >/dev/null 2>&1; then
+  apt-get update -qq && DEBIAN_FRONTEND=noninteractive apt-get install -y -qq openssl
+fi
+openssl req -x509 -newkey rsa:2048 -nodes \
+  -keyout %s/turn.key -out %s/turn.crt \
+  -days 30 -subj "/CN=%s" \
+  -addext "subjectAltName=DNS:%s"
+chmod 600 %s/turn.key %s/turn.crt
+`, state, state, state, state, host, host, state, state)
+	if err := SSHSudo(cfg, script); err != nil {
+		return fmt.Errorf("self-signed TURN certs: %w", err)
+	}
+	logfmt.Println("livekit", fmt.Sprintf("self-signed TURN TLS certs → %s/turn.crt (replace after ACME)", state))
 	return nil
 }
 

@@ -2,8 +2,10 @@
 
 Editable in-tree copy of the Excalidraw monorepo packages used by the meeting whiteboard.
 
-- Source of truth: `apps/web/src/vendor/excalidraw/packages/`
+- **Source of truth:** `apps/web/src/vendor/excalidraw/packages/` (this tree — project patches live here)
+- **Do not** use `node_modules/@excalidraw/excalidraw` dist — Vite aliases force all `@excalidraw/*` imports here
 - `apps/web/context/excalidraw/` is a read-only upstream reference (gitignored via `/context/` in `apps/web/.gitignore`)
+- Whiteboard UI loads via `excalidrawLazy.tsx` + lazy `MeetingSharedWhiteboard` for code-splitting / tree-shaking
 
 ## Packages
 

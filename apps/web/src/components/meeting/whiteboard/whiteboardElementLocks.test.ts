@@ -46,14 +46,11 @@ describe('whiteboardElementLocks', () => {
   })
 
   it('filterElementsForLocalSync keeps remote copy for foreign locks', () => {
-    const doc = new Y.Doc()
-    const yElements = doc.getMap<{ id: string; version: number }>('elements')
-    yElements.set('el-1', { id: 'el-1', version: 1 } as never)
-
+    const remoteById = new Map([['el-1', { id: 'el-1', version: 1, isDeleted: false }]])
     const locks = new Map([['el-1', { identity: 'alice', username: 'Alice', ts: 1 }]])
     const local = [{ id: 'el-1', version: 2, isDeleted: false }] as never[]
 
-    const filtered = filterElementsForLocalSync(local, locks, 'bob', yElements as never)
+    const filtered = filterElementsForLocalSync(local, locks, 'bob', (id) => remoteById.get(id) as never)
     expect(filtered[0]).toMatchObject({ version: 1 })
   })
 

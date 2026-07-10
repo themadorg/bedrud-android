@@ -132,7 +132,8 @@ Wants=network-online.target
 [Service]
 Type=simple
 ExecStart=/usr/local/bin/livekit-server --config %s/livekit.yaml
-Restart=on-failure
+# always: LiveKit exits 0 when TURN cert files are missing (ACME not ready yet)
+Restart=always
 RestartSec=3
 TimeoutStopSec=15
 KillMode=mixed

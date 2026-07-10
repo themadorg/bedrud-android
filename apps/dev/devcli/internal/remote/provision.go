@@ -8,6 +8,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"time"
 )
 
 // ProvisionOptions controls remote server bootstrap.
@@ -34,8 +35,9 @@ func Provision(cfg *Config, opts ProvisionOptions) error {
 		if err != nil {
 			return err
 		}
-		fmt.Println("provision | generated LiveKit API secret — add to server/.env:")
-		fmt.Printf("  REMOTE_DEBUG_LIVEKIT_API_SECRET=%s\n", apiSecret)
+		cfg.LiveKit.APISecret = apiSecret
+		fmt.Println("provision | generated LiveKit API secret")
+		persistRemoteSecrets(cfg, map[string]string{envLiveKitAPISecret: apiSecret})
 	}
 
 	var clientPriv, clientPub string
@@ -147,9 +149,10 @@ func Provision(cfg *Config, opts ProvisionOptions) error {
 	if wgIface == "" {
 		wgIface = "wg0"
 	}
+	// Start Traefik first so ACME can issue certs before LiveKit TURN TLS needs them.
 	startScript := `systemctl daemon-reload
-systemctl enable bedrud-livekit bedrud-traefik
-systemctl restart bedrud-livekit bedrud-traefik
+systemctl enable bedrud-traefik
+systemctl restart bedrud-traefik
 `
 	if cfg.UsesWireGuard() {
 		startScript += fmt.Sprintf("systemctl enable wg-quick@%s\nsystemctl restart wg-quick@%s\n", wgIface, wgIface)
@@ -164,6 +167,24 @@ systemctl restart bedrud-livekit bedrud-traefik
 	fmt.Println("provision | syncing Traefik routes...")
 	if err := TraefikSync(cfg); err != nil {
 		return err
+	}
+
+	if cfg.acmeEnabled() {
+		fmt.Println("provision | waiting for Let's Encrypt cert (needed for LiveKit TURN/TLS)...")
+		if err := waitAndSyncTurnCerts(cfg, 120*time.Second); err != nil {
+			fmt.Printf("provision | warning: %v — generating self-signed TURN certs as fallback\n", err)
+			if err := ensureSelfSignedTurnCerts(cfg); err != nil {
+				return err
+			}
+		}
+	}
+
+	fmt.Println("provision | starting LiveKit...")
+	if err := SSHSudo(cfg, "systemctl enable bedrud-livekit\nsystemctl restart bedrud-livekit"); err != nil {
+		return err
+	}
+	if err := waitLiveKitHTTP(cfg, 30*time.Second); err != nil {
+		return fmt.Errorf("livekit after provision: %w", err)
 	}
 
 	printProvisionDone(cfg, apiSecret)

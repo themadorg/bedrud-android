@@ -1,25 +1,16 @@
 import type { CollaboratorPointer, ExcalidrawImperativeAPI, Gesture } from '@excalidraw/excalidraw/types'
-import { X } from 'lucide-react'
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react'
 import type * as Y from 'yjs'
-import { bindExcalidrawToYDoc } from '@/components/meeting/whiteboard/excalidrawYjsBinding'
-import { WhiteboardMainMenu } from '@/components/meeting/whiteboard/WhiteboardMainMenu'
+import type { bindExcalidrawToYDoc } from '@/components/meeting/whiteboard/excalidrawYjsBinding'
 import { attachWhiteboardCursorSync } from '@/components/meeting/whiteboard/whiteboardCursorSync'
 import type { ElementLockSnapshot } from '@/components/meeting/whiteboard/whiteboardElementLocks'
 import { handleWhiteboardEscapeKey } from '@/components/meeting/whiteboard/whiteboardKeyboard'
 import { attachWhiteboardRightDragPan } from '@/components/meeting/whiteboard/whiteboardRightDragPan'
 import { releaseWhiteboardCursors } from '@/components/meeting/whiteboard/whiteboardTeardown'
-import { alignRtlTextElements } from '@/components/meeting/whiteboard/whiteboardTextDirection'
 import { applyWhiteboardToolCursor } from '@/components/meeting/whiteboard/whiteboardToolCursors'
-import '@/vendor/excalidraw/packages/excalidraw/css/app.scss'
-import '@/vendor/excalidraw/packages/excalidraw/css/styles.scss'
-import '@/vendor/excalidraw/packages/excalidraw/fonts/fonts.css'
 
-const Excalidraw = lazy(() =>
-  import('@excalidraw/excalidraw').then((m) => ({
-    default: m.Excalidraw,
-  })),
-)
+/** Vendored Excalidraw surface (Excalidraw + MainMenu + CSS) — one React graph. */
+const ExcalidrawCanvas = lazy(() => import('@/components/meeting/whiteboard/excalidrawLazy'))
 
 interface MeetingSharedWhiteboardProps {
   ydoc: Y.Doc
@@ -74,8 +65,11 @@ export function MeetingSharedWhiteboard({
     const api = apiRef.current
     if (!api) return
 
-    bindingRef.current?.destroy()
-    bindingRef.current = bindExcalidrawToYDoc(api, ydoc, { localIdentity, getLocks })
+    // Rebind when ydoc / identity changes (canvas already mounted).
+    void import('@/components/meeting/whiteboard/excalidrawYjsBinding').then(({ bindExcalidrawToYDoc: bind }) => {
+      bindingRef.current?.destroy()
+      bindingRef.current = bind(api, ydoc, { localIdentity, getLocks })
+    })
   }, [getLocks, localIdentity, ydoc])
 
   const handleViewportChange = useCallback(() => {
@@ -131,76 +125,20 @@ export function MeetingSharedWhiteboard({
         ref={shellRef}
         className="bedrud-whiteboard-shell h-full w-full [&_.excalidraw]:h-full [&_.context-menu]:hidden [&_.excalidraw-contextMenuContainer]:hidden"
       >
-        <Excalidraw
-          autoFocus
-          handleKeyboardGlobally
-          isCollaborating
+        <ExcalidrawCanvas
+          apiRef={apiRef}
+          shellRef={shellRef}
+          bindingRef={bindingRef}
+          setPanSurface={setPanSurface}
+          ydoc={ydoc}
+          localIdentity={localIdentity}
+          getLocks={getLocks}
+          onApiReady={onApiReady}
+          onClose={onClose}
+          onSyncFlush={onSyncFlush}
           onPointerUpdate={onPointerUpdate}
-          onExcalidrawAPI={(api: ExcalidrawImperativeAPI | null) => {
-            if (!api) {
-              apiRef.current = null
-              return
-            }
-            apiRef.current = api
-            onApiReady(api)
-            bindingRef.current?.destroy()
-            bindingRef.current = bindExcalidrawToYDoc(api, ydoc, { localIdentity, getLocks })
-            requestAnimationFrame(() => {
-              const container = shellRef.current?.querySelector('.excalidraw')
-              if (container instanceof HTMLElement) setPanSurface(container)
-              api.refresh()
-              applyWhiteboardToolCursor(api)
-            })
-          }}
-          theme="dark"
-          onChange={(elements, appState, files) => {
-            const aligned = alignRtlTextElements(elements)
-            const sceneElements = aligned ?? elements
-            if (aligned) {
-              apiRef.current?.updateScene({ elements: aligned, captureUpdate: 'NEVER' })
-            }
-            bindingRef.current?.onExcalidrawChange(sceneElements, appState, files)
-            applyWhiteboardToolCursor(apiRef.current, appState)
-          }}
-          onPointerUp={() => {
-            const api = apiRef.current
-            const binding = bindingRef.current
-            if (!api || !binding) return
-            binding.onExcalidrawChange(api.getSceneElementsIncludingDeleted(), api.getAppState(), api.getFiles())
-            binding.flush()
-            onSyncFlush?.()
-            onPointerUp?.()
-          }}
-          renderTopRightUI={() =>
-            onClose ? (
-              <button
-                type="button"
-                onClick={onClose}
-                aria-label="Close shared whiteboard"
-                title="Close whiteboard"
-                className="flex h-9 w-9 items-center justify-center rounded-lg border-none cursor-pointer"
-                style={{
-                  background: 'var(--island-bg-color)',
-                  color: 'var(--icon-fill-color)',
-                }}
-              >
-                <X size={18} />
-              </button>
-            ) : null
-          }
-          UIOptions={{
-            canvasActions: {
-              toggleTheme: false,
-              export: false,
-              loadScene: false,
-              saveToActiveFile: false,
-              saveAsImage: false,
-              clearCanvas: false,
-            },
-          }}
-        >
-          <WhiteboardMainMenu apiRef={apiRef} />
-        </Excalidraw>
+          onPointerUp={onPointerUp}
+        />
       </div>
     </Suspense>
   )

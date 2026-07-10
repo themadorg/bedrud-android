@@ -1,4 +1,6 @@
-import { getVisibleSceneBounds, zoomToFitBounds } from '@excalidraw/excalidraw'
+// IMPORTANT: do NOT static-import @excalidraw/excalidraw/actions/* here.
+// actionCanvas pulls React UI (ColorPicker, etc.) into the meeting shell and can
+// create a second React instance → "Cannot read properties of null (reading 'useCallback')".
 import type { ExcalidrawImperativeAPI, SocketId } from '@excalidraw/excalidraw/types'
 import { useRoomContext } from '@livekit/components-react'
 import { RoomEvent } from 'livekit-client'
@@ -11,6 +13,8 @@ import {
 } from '@/components/meeting/whiteboard/whiteboardFollowWire'
 
 const VIEWPORT_SYNC_MS = 33
+
+type SceneBounds = readonly [number, number, number, number]
 
 function throttleViewport(fn: () => void) {
   let last = 0
@@ -43,8 +47,19 @@ function throttleViewport(fn: () => void) {
   }
 }
 
+/** Lightweight bounds from appState scroll/zoom — no Excalidraw package import. */
+function visibleSceneBounds(appState: ReturnType<ExcalidrawImperativeAPI['getAppState']>): SceneBounds {
+  const { width, height, offsetLeft, offsetTop, scrollX, scrollY, zoom } = appState
+  const z = zoom.value || 1
+  const minX = -scrollX + offsetLeft / z
+  const minY = -scrollY + offsetTop / z
+  const maxX = minX + width / z
+  const maxY = minY + height / z
+  return [minX, minY, maxX, maxY]
+}
+
 function viewportKey(appState: ReturnType<ExcalidrawImperativeAPI['getAppState']>) {
-  const bounds = getVisibleSceneBounds(appState)
+  const bounds = visibleSceneBounds(appState)
   return `${bounds[0]}|${bounds[1]}|${bounds[2]}|${bounds[3]}|${appState.zoom.value}`
 }
 
@@ -93,7 +108,7 @@ export function useWhiteboardFollowSync(apiRef: RefObject<ExcalidrawImperativeAP
       const packet = {
         type: 'viewport' as const,
         identity: localId,
-        sceneBounds: getVisibleSceneBounds(appState),
+        sceneBounds: visibleSceneBounds(appState),
       }
 
       void room.localParticipant
@@ -186,15 +201,23 @@ export function useWhiteboardFollowSync(apiRef: RefObject<ExcalidrawImperativeAP
       if (appState.followedBy.has(leaderId)) return
 
       applyingRemoteViewportRef.current = true
-      const next = zoomToFitBounds({
-        bounds: packet.sceneBounds,
-        appState,
-        fitToViewport: true,
-        viewportZoomFactor: 1,
-      })
-      lastRelayedViewportRef.current = viewportKey(next.appState)
-      api.updateScene({ appState: next.appState })
-      applyingRemoteViewportRef.current = false
+      // Lazy-load only when a follow packet arrives — keeps Excalidraw UI out of meeting shell.
+      void import('@excalidraw/excalidraw/actions/actionCanvas')
+        .then(({ zoomToFitBounds }) => {
+          const live = apiRef.current
+          if (!live) return
+          const next = zoomToFitBounds({
+            bounds: packet.sceneBounds,
+            appState: live.getAppState(),
+            fitToViewport: true,
+            viewportZoomFactor: 1,
+          })
+          lastRelayedViewportRef.current = viewportKey(next.appState)
+          live.updateScene({ appState: next.appState })
+        })
+        .finally(() => {
+          applyingRemoteViewportRef.current = false
+        })
     }
 
     const onParticipantDisconnected = (participant: { identity: string }) => {

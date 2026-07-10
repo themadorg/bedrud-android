@@ -1,61 +1,46 @@
 import { useRoomContext } from '@livekit/components-react'
 import type { RoomConnectOptions } from 'livekit-client'
 import { ConnectionState, RoomEvent } from 'livekit-client'
-import { useEffect, useRef } from 'react'
-import { isLiveKitRelayConnectOptions, waitForRoomPublishReady } from '#/lib/livekit-publish'
-
-const P2P_DATA_CHANNEL_TIMEOUT_MS = 12_000
+import { useEffect } from 'react'
+import { installLiveKitPublisherPromiseFix, resetLiveKitPublisherPromise, waitForRoomPublishReady } from '#/lib/livekit-publish'
+import { meetingDebugLog } from '#/lib/meeting-debug-log'
 
 /**
- * When P2P ICE connects but SCTP data channels never open, remount on TURN/TLS relay
- * so chat/audio share a working peer connection.
+ * Observe data-channel readiness only. Never remount or force TURN —
+ * those caused connect/disconnect loops.
  */
 export function LiveKitTransportFallback({
-  connectOptions,
-  onNeedRelay,
+  connectOptions: _connectOptions,
+  onNeedRemount: _onNeedRemount,
+  onNeedRelay: _onNeedRelay,
 }: {
   connectOptions?: RoomConnectOptions
-  onNeedRelay: () => void
+  onNeedRemount: (reason: string) => void
+  onNeedRelay: (reason: string) => void
 }) {
   const room = useRoomContext()
-  const escalatedRef = useRef(false)
-
-  // biome-ignore lint/correctness/useExhaustiveDependencies: intentional reset on connectOptions change
-  useEffect(() => {
-    escalatedRef.current = false
-  }, [connectOptions])
 
   useEffect(() => {
-    if (isLiveKitRelayConnectOptions(connectOptions)) return
+    installLiveKitPublisherPromiseFix(room)
 
-    const escalate = () => {
-      if (escalatedRef.current) return
-      escalatedRef.current = true
-      console.warn('[livekit-transport] P2P ICE ok but data channels closed — switching to TURN/TLS relay for chat')
-      onNeedRelay()
-    }
-
-    const checkDataChannels = () => {
-      void waitForRoomPublishReady(room, P2P_DATA_CHANNEL_TIMEOUT_MS).then((ready) => {
-        if (!ready && room.state === ConnectionState.Connected) {
-          escalate()
-        }
+    const onConnected = () => {
+      installLiveKitPublisherPromiseFix(room)
+      resetLiveKitPublisherPromise(room)
+      void waitForRoomPublishReady(room, 45_000).then((ready) => {
+        resetLiveKitPublisherPromise(room)
+        meetingDebugLog('transport.fallback_watch_ready', { ready })
       })
     }
 
-    const onConnected = () => {
-      checkDataChannels()
-    }
-
     room.on(RoomEvent.Connected, onConnected)
-    if (room.state === ConnectionState.Connected) {
-      checkDataChannels()
-    }
+    room.on(RoomEvent.Reconnected, onConnected)
+    if (room.state === ConnectionState.Connected) onConnected()
 
     return () => {
       room.off(RoomEvent.Connected, onConnected)
+      room.off(RoomEvent.Reconnected, onConnected)
     }
-  }, [room, connectOptions, onNeedRelay])
+  }, [room])
 
   return null
 }

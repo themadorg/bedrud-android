@@ -134,8 +134,10 @@ jobs:
 
           cp dist/bedrud deb/usr/bin/bedrud
           cp apps/server/installer/linux/bedrud.service deb/usr/lib/systemd/system/
+          cp apps/server/installer/linux/livekit.service deb/usr/lib/systemd/system/
           cp apps/server/installer/linux/postinst deb/DEBIAN/postinst
-          chmod 0755 deb/DEBIAN/postinst
+          cp apps/server/installer/linux/prerm deb/DEBIAN/prerm
+          chmod 0755 deb/DEBIAN/postinst deb/DEBIAN/prerm
 
           {
             echo "Package: bedrud"

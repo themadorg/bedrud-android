@@ -49,8 +49,8 @@ describe('livekit-transport-type', () => {
   })
 
   it('labels transport modes for the header', () => {
-    expect(liveKitTransportModeLabel('p2p')).toBe('P2P')
-    expect(liveKitTransportModeLabel('relay')).toBe('Relay')
+    expect(liveKitTransportModeLabel('p2p')).toBe('Direct (SFU)')
+    expect(liveKitTransportModeLabel('relay')).toBe('Relay (TURN)')
     expect(liveKitTransportModeLabel('unknown')).toBe('Connected')
   })
 })

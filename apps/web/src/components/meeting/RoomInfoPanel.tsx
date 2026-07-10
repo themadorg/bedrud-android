@@ -1,10 +1,13 @@
 import { useConnectionState, useParticipants, useRoomContext } from '@livekit/components-react'
 import { ConnectionState } from 'livekit-client'
-import { Loader2 } from 'lucide-react'
+import { ClipboardCopy, Loader2 } from 'lucide-react'
 import type { ReactNode } from 'react'
+import { useState } from 'react'
+import { toast } from 'sonner'
 import { useAudioPreferencesStore } from '#/lib/audio-preferences.store'
 import { useRoomPublishReady } from '#/lib/livekit-publish'
 import { liveKitTransportModeLabel, useLiveKitTransportMode } from '#/lib/livekit-transport-type'
+import { copyMeetingDebugLog } from '#/lib/meeting-debug-log'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -54,6 +57,23 @@ export function RoomInfoPanel({ open, onOpenChange, roomId }: RoomInfoPanelProps
   const { stats, loading } = useMeetingConnectionStats(room.localParticipant, open)
   const transportMode = useLiveKitTransportMode(room, connected)
   const chatReady = useRoomPublishReady(room, connected)
+  const [copyingDebug, setCopyingDebug] = useState(false)
+
+  const handleCopyDebugLog = async () => {
+    setCopyingDebug(true)
+    try {
+      await copyMeetingDebugLog(room)
+      toast.success('Debug log copied', {
+        description: 'Also printed in the browser console as [bedrud-meet]. Paste it here.',
+      })
+    } catch (err) {
+      toast.error('Could not copy debug log', {
+        description: err instanceof Error ? err.message : 'Check the console for the full dump.',
+      })
+    } finally {
+      setCopyingDebug(false)
+    }
+  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -162,7 +182,18 @@ export function RoomInfoPanel({ open, onOpenChange, roomId }: RoomInfoPanelProps
           </div>
         </div>
 
-        <DialogFooter className="border-t border-[var(--meet-border)] px-4 py-3 sm:justify-end">
+        <DialogFooter className="border-t border-[var(--meet-border)] px-4 py-3 sm:justify-between">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={copyingDebug}
+            onClick={() => void handleCopyDebugLog()}
+            className="gap-1.5"
+          >
+            {copyingDebug ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ClipboardCopy className="h-3.5 w-3.5" />}
+            Copy debug log
+          </Button>
           <Button
             type="button"
             variant="ghost"

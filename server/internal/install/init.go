@@ -190,16 +190,16 @@ func enableStartOpenRC(cfg *serviceConfig) error {
 	return nil
 }
 
-func writeServiceFiles(initSystem string, cfg *serviceConfig, bedrudAfter, lkManagedEnv, lkService, serviceContent string) error {
+func writeServiceFiles(initSystem string, cfg *serviceConfig, bedrudBin, bedrudAfter, lkManagedEnv, lkService, serviceContent string) error {
 	switch initSystem {
 	case InitSystemNone:
 		return nil
 	case InitSystemSystemd:
 		return writeSystemdFiles(cfg, lkService, serviceContent)
 	case InitSystemSysV:
-		return writeSysVFiles(cfg, lkManagedEnv, bedrudAfter)
+		return writeSysVFiles(cfg, bedrudBin, lkManagedEnv, bedrudAfter)
 	case InitSystemOpenRC:
-		return writeOpenRCFiles(cfg, lkManagedEnv)
+		return writeOpenRCFiles(cfg, bedrudBin, lkManagedEnv)
 	default:
 		return fmt.Errorf("unsupported init system: %s", initSystem)
 	}
@@ -218,14 +218,21 @@ func writeSystemdFiles(cfg *serviceConfig, lkService, serviceContent string) err
 }
 
 func printContainerInstructions() {
+	bin := "/usr/local/bin/bedrud"
+	if _, err := os.Stat("/usr/bin/bedrud"); err == nil {
+		bin = "/usr/bin/bedrud"
+	}
 	fmt.Println("\n⚠ Container environment detected (no init system).")
 	fmt.Println("  Service files were skipped — systemd/service commands won't work here.")
 	fmt.Println()
-	fmt.Println("  To start Bedrud:")
-	fmt.Println("    /usr/local/bin/bedrud run --config /etc/bedrud/config.yaml")
+	fmt.Println("  To start Bedrud (API; starts embedded LiveKit unless LIVEKIT_MANAGED=true):")
+	fmt.Printf("    %s run --config /etc/bedrud/config.yaml\n", bin)
+	fmt.Println()
+	fmt.Println("  To run LiveKit separately (embedded binary):")
+	fmt.Printf("    %s --livekit --config /etc/bedrud/livekit.yaml\n", bin)
 	fmt.Println()
 	fmt.Println("  To run in background:")
-	fmt.Println("    nohup /usr/local/bin/bedrud run --config /etc/bedrud/config.yaml \\")
+	fmt.Printf("    nohup %s run --config /etc/bedrud/config.yaml \\\n", bin)
 	fmt.Println("      > /var/log/bedrud/bedrud.log 2>&1 &")
 	fmt.Println()
 	fmt.Println("  For proper service management, use the Docker image with --init")

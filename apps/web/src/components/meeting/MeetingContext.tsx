@@ -6,12 +6,18 @@ import { api } from '#/lib/api'
 import { useAuthStore } from '#/lib/auth.store'
 import { decodeBedrudJwt } from '#/lib/jwt-user'
 import {
+  getLiveKitPublishDiagnostics,
+  isFatalPublishError,
   isPublishUnavailableError,
   isRoomPublishReady,
   isRoomSignalingReady,
+  isRoomTransportDead,
   MEETING_CHAT_TOPIC,
+  prepareRoomForDataPublish,
+  resetLiveKitPublisherPromise,
   waitForRoomPublishReady,
 } from '#/lib/livekit-publish'
+import { meetingDebugLog } from '#/lib/meeting-debug-log'
 import { useProfileSyncStore } from '#/lib/profile-sync.store'
 import { getPublicSettings } from '#/lib/use-public-settings'
 import { type User, useUserStore } from '#/lib/user.store'
@@ -702,38 +708,100 @@ export function MeetingProvider({
   const chatChunkBuffersRef = useRef(createChunkBuffer())
   const chatPublishInFlightRef = useRef(false)
 
+  const markChatFailed = useCallback((id: string, err?: unknown) => {
+    setChatMessages((prev) => prev.map((m): ChatMessage => (m.id === id ? { ...m, status: 'failed' } : m)))
+    const message = err instanceof Error ? err.message : err != null ? String(err) : undefined
+    const code = err && typeof err === 'object' && 'code' in err ? (err as { code: unknown }).code : undefined
+    meetingDebugLog('chat.publish_failed', {
+      id,
+      message,
+      code,
+      ...getLiveKitPublishDiagnostics(room),
+      transportDead: isRoomTransportDead(room),
+    })
+    // Do NOT remount here — remount was causing disconnect loops (CLIENT_REQUEST_LEAVE).
+    if (isFatalPublishError(err)) {
+      resetLiveKitPublisherPromise(room)
+    }
+  }, [room])
+
   const publishChatPackets = useCallback(
     async (id: string, packets: ReturnType<typeof buildChatWirePackets>): Promise<boolean> => {
       const lp = room.localParticipant
-      const retryDelays = [0, 500, 1500, 3000, 5000, 8000, 12000, 18000, 24000]
-      for (let attempt = 0; attempt < retryDelays.length; attempt++) {
-        if (attempt > 0) {
-          await new Promise((resolve) => window.setTimeout(resolve, retryDelays[attempt]!))
-        }
-        if (!isRoomPublishReady(room)) {
-          const ready = await waitForRoomPublishReady(room, attempt === 0 ? 8_000 : 3_000)
-          if (!ready) continue
-        }
-        try {
-          for (const packet of packets) {
-            await lp.publishData(encodeChatWire(packet), { reliable: true, topic: MEETING_CHAT_TOPIC })
-          }
-          if (import.meta.env.DEV) {
-            console.log('[chat] published', { id, packets: packets.length, topic: MEETING_CHAT_TOPIC })
-          }
-          setChatMessages((prev) => prev.map((m): ChatMessage => (m.id === id ? { ...m, status: 'sent' } : m)))
-          return true
-        } catch (err) {
-          const transient = isPublishUnavailableError(err) || (err instanceof Error && err.message === 'not connected')
-          if (transient && attempt < retryDelays.length - 1) continue
-          setChatMessages((prev) => prev.map((m): ChatMessage => (m.id === id ? { ...m, status: 'failed' } : m)))
-          if (import.meta.env.DEV) console.error('[MeetingContext] failed to publish chat message:', err)
+      meetingDebugLog('chat.publish_start', {
+        id,
+        packets: packets.length,
+        topic: MEETING_CHAT_TOPIC,
+        localIdentity: lp.identity,
+        remotes: room.remoteParticipants.size,
+        ...getLiveKitPublishDiagnostics(room),
+        transportDead: isRoomTransportDead(room),
+      })
+
+      // Peer connection already torn down — fail immediately (no multi-minute retry).
+      if (isRoomTransportDead(room)) {
+        markChatFailed(id, new Error('PC manager is closed'))
+        return false
+      }
+
+      // Brief wait only while ICE/DC is still coming up — not when dead.
+      if (!isRoomPublishReady(room)) {
+        meetingDebugLog('chat.publish_wait_ready', { id, ...getLiveKitPublishDiagnostics(room) })
+        const ready = await waitForRoomPublishReady(room, 2_000)
+        if (!ready || isRoomTransportDead(room)) {
+          markChatFailed(id, new Error(ready ? 'transport dead after wait' : 'publish not ready within 2s'))
           return false
         }
       }
+
+      // At most one short retry for flaky open races (not closed-PC loops).
+      const maxAttempts = 2
+      for (let attempt = 0; attempt < maxAttempts; attempt++) {
+        if (attempt > 0) {
+          meetingDebugLog('chat.publish_retry', { id, attempt, ...getLiveKitPublishDiagnostics(room) })
+          if (isRoomTransportDead(room)) {
+            markChatFailed(id)
+            return false
+          }
+          await new Promise((resolve) => window.setTimeout(resolve, 300))
+        }
+        if (!prepareRoomForDataPublish(room)) {
+          markChatFailed(id, new Error('not ready for data publish'))
+          return false
+        }
+        try {
+          for (const packet of packets) {
+            prepareRoomForDataPublish(room)
+            await lp.publishData(encodeChatWire(packet), { reliable: true, topic: MEETING_CHAT_TOPIC })
+          }
+          meetingDebugLog('chat.publish_ok', {
+            id,
+            packets: packets.length,
+            topic: MEETING_CHAT_TOPIC,
+            remotes: room.remoteParticipants.size,
+            ...getLiveKitPublishDiagnostics(room),
+          })
+          setChatMessages((prev) => prev.map((m): ChatMessage => (m.id === id ? { ...m, status: 'sent' } : m)))
+          return true
+        } catch (err) {
+          // code 12 / "PC manager is closed" — clear stuck promise; one more try after clear.
+          if (isFatalPublishError(err) || isRoomTransportDead(room)) {
+            resetLiveKitPublisherPromise(room)
+            if (attempt < maxAttempts - 1 && isRoomPublishReady(room)) continue
+            markChatFailed(id, err)
+            return false
+          }
+          const transient =
+            isPublishUnavailableError(err) || (err instanceof Error && err.message === 'not connected')
+          if (transient && attempt < maxAttempts - 1) continue
+          markChatFailed(id, err)
+          return false
+        }
+      }
+      markChatFailed(id)
       return false
     },
-    [room],
+    [room, markChatFailed],
   )
 
   const retryPendingChatPublishes = useCallback(async () => {
@@ -793,9 +861,15 @@ export function MeetingProvider({
         const raw = JSON.parse(new TextDecoder().decode(payload))
         const isChatTopic = isMeetingChatDataTopic(topic, raw.type)
 
-        if (import.meta.env.DEV && isChatTopic && typeof raw.type === 'string') {
+        if (isChatTopic && typeof raw.type === 'string') {
           const from = (participant as { identity?: string } | null)?.identity ?? 'unknown'
-          console.log('[chat] received', { topic: topic ?? '(none)', type: raw.type, from })
+          meetingDebugLog('chat.received', {
+            topic: topic ?? '(none)',
+            type: raw.type,
+            from,
+            id: typeof raw.id === 'string' ? raw.id : undefined,
+            localIdentity: room.localParticipant.identity,
+          })
         }
 
         if (topic === 'presence' && raw.type === 'deafen_state' && typeof raw.identity === 'string') {

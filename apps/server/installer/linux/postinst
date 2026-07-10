@@ -10,14 +10,29 @@ fi
 mkdir -p /etc/bedrud /var/lib/bedrud /var/log/bedrud
 chown -R bedrud:bedrud /var/lib/bedrud /var/log/bedrud
 
-# Enable and start service if systemd is available
+# Enable systemd units (bedrud + embedded LiveKit via livekit.service)
 if command -v systemctl > /dev/null 2>&1 && systemctl is-system-running --quiet 2>/dev/null; then
     systemctl daemon-reload
-    systemctl enable bedrud.service || true
-    # Don't auto-start — user needs to configure /etc/bedrud/config.yaml first
+    systemctl enable livekit.service bedrud.service || true
+
+    # Restart on upgrade when configs already exist; first install needs
+    # `bedrud install` (or manual config) to generate secrets + livekit.yaml.
+    if [ -f /etc/bedrud/config.yaml ] && [ -f /etc/bedrud/livekit.yaml ]; then
+        systemctl restart livekit.service bedrud.service || true
+    fi
 fi
 
-echo ""
-echo "Bedrud installed. Before starting, configure /etc/bedrud/config.yaml"
-echo "then run: bedrud install  or  systemctl start bedrud"
-echo "Docs: https://themadorg.github.io/bedrud/getting-started/installation/"
+if [ ! -f /etc/bedrud/config.yaml ] || [ ! -f /etc/bedrud/livekit.yaml ]; then
+    echo ""
+    echo "Bedrud installed. Generate config + LiveKit setup, then start services:"
+    echo "  sudo bedrud install"
+    echo ""
+    echo "That writes /etc/bedrud/config.yaml and /etc/bedrud/livekit.yaml,"
+    echo "and enables livekit.service (embedded LiveKit from the bedrud binary)"
+    echo "plus bedrud.service."
+    echo ""
+    echo "Docs: https://themadorg.github.io/bedrud/getting-started/installation/"
+else
+    echo ""
+    echo "Bedrud upgraded. Services livekit + bedrud were restarted if systemd is available."
+fi

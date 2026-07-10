@@ -10,7 +10,7 @@ type EngineWithDataChannels = {
   pcManager?: {
     mode?: string
     subscriber?: unknown
-  }
+  } | null
 }
 
 /** Custom RTC topic for Bedrud chat wire payloads (polls, reactions, chunks). */
@@ -58,10 +58,30 @@ function hasOpenSubscriberDataChannel(room: Room): boolean {
   }
 }
 
+/** True when the WebRTC stack is gone — retries will never help until reconnect. */
+export function isRoomTransportDead(room: Room): boolean {
+  if (room.state === ConnectionState.Disconnected) return true
+  // Still establishing — not dead yet.
+  if (room.state === ConnectionState.Connecting || room.state === ConnectionState.Reconnecting) {
+    return false
+  }
+  try {
+    const engine = room.engine as unknown as EngineWithDataChannels
+    // LiveKit throws "PC manager is closed" when this is missing after teardown.
+    // Only treat as dead once we expected to be connected.
+    return room.state === ConnectionState.Connected && engine.pcManager == null
+  } catch {
+    return true
+  }
+}
+
 /** Peer connection + both publisher (send) and subscriber (receive) data channels when applicable. */
 export function isRoomPublishReady(room: Room): boolean {
   if (room.state !== ConnectionState.Connected) return false
+  if (isRoomTransportDead(room) || isLiveKitEngineClosed(room)) return false
   try {
+    const engine = room.engine as unknown as EngineWithDataChannels
+    if (engine.pcManager == null) return false
     if (!room.engine.verifyTransport() || !hasOpenPublisherDataChannel(room)) return false
     // publisher-only (default singlePeerConnection): send + receive on publisher reliable DC.
     if (isPublisherOnlyRoom(room)) return true
@@ -77,15 +97,141 @@ export function isRoomConnected(room: Room): boolean {
   return isRoomPublishReady(room)
 }
 
-export function isPublishUnavailableError(err: unknown): boolean {
+/** Errors where publishData cannot succeed without a full transport rebuild. */
+export function isFatalPublishError(err: unknown): boolean {
   const message = err instanceof Error ? err.message : String(err)
   const code = err && typeof err === 'object' && 'code' in err ? (err as { code: unknown }).code : null
   return (
     message.includes('PC manager is closed') ||
+    message.includes('publisher is closed') ||
+    code === 12
+  )
+}
+
+type EngineWithPublisherPromise = EngineWithDataChannels & {
+  publisherConnectionPromise?: Promise<void>
+  _isClosed?: boolean
+  isClosed?: boolean
+}
+
+/**
+ * LiveKit caches the first ensureDataTransportConnected() result on
+ * `publisherConnectionPromise`. If that first call races a disconnect (React Strict
+ * Mode remount, brief PC teardown), every later publishData rethrows
+ * "PC manager is closed" even after DCs look open again.
+ *
+ * When the reliable data channel is already open, force the promise to a resolved
+ * state so ensurePublisherConnected short-circuits and dc.send() runs. Clearing to
+ * undefined is NOT enough: re-running ensureDataTransportConnected can still throw
+ * if pcManager flickers during renegotiation.
+ */
+export function resetLiveKitPublisherPromise(room: Room): void {
+  try {
+    const engine = room.engine as unknown as EngineWithPublisherPromise & {
+      reliableDC?: { readyState?: string }
+    }
+    if (engine.publisherConnectionPromise != null) {
+      void Promise.resolve(engine.publisherConnectionPromise).catch(() => {})
+    }
+    // Prefer "already ready" over "re-check" when DC is open.
+    if (engine.reliableDC?.readyState === 'open' && engine.pcManager != null) {
+      engine.publisherConnectionPromise = Promise.resolve()
+    } else {
+      engine.publisherConnectionPromise = undefined
+    }
+  } catch {
+    /* ignore */
+  }
+}
+
+/** Call immediately before publishData — returns false if we must not publish. */
+export function prepareRoomForDataPublish(room: Room): boolean {
+  if (room.state !== ConnectionState.Connected) return false
+  if (isRoomTransportDead(room) || isLiveKitEngineClosed(room)) return false
+  try {
+    const engine = room.engine as unknown as EngineWithPublisherPromise & {
+      reliableDC?: { readyState?: string }
+    }
+    if (engine.pcManager == null) return false
+    if (engine.reliableDC?.readyState !== 'open') return false
+    // Neutralize stuck rejected promise; mark publisher as connected.
+    if (engine.publisherConnectionPromise != null) {
+      void Promise.resolve(engine.publisherConnectionPromise).catch(() => {})
+    }
+    engine.publisherConnectionPromise = Promise.resolve()
+    return true
+  } catch {
+    return false
+  }
+}
+
+/**
+ * Patch LiveKit RTCEngine.ensurePublisherConnected on the prototype used by this
+ * Room instance. If the reliable DC is already open, skip re-validation entirely.
+ */
+export function installLiveKitPublisherPromiseFix(room?: Room): void {
+  if (typeof window === 'undefined') return
+  try {
+    const probeEngine = room?.engine ?? new Room().engine
+    const proto = Object.getPrototypeOf(probeEngine) as {
+      ensurePublisherConnected?: (kind: unknown) => Promise<void>
+      reliableDC?: { readyState?: string }
+      pcManager?: unknown
+      publisherConnectionPromise?: Promise<void>
+    }
+    const original = proto.ensurePublisherConnected
+    if (!original || (original as { __bedrudPatched?: boolean }).__bedrudPatched) {
+      if (room) resetLiveKitPublisherPromise(room)
+      return
+    }
+    function ensurePublisherConnectedPatched(this: typeof proto, kind: unknown) {
+      const eng = this as EngineWithPublisherPromise & {
+        reliableDC?: { readyState?: string }
+      }
+      if (eng.reliableDC?.readyState === 'open' && eng.pcManager != null) {
+        if (eng.publisherConnectionPromise != null) {
+          void Promise.resolve(eng.publisherConnectionPromise).catch(() => {})
+        }
+        eng.publisherConnectionPromise = Promise.resolve()
+        return Promise.resolve()
+      }
+      if (eng.publisherConnectionPromise != null) {
+        void Promise.resolve(eng.publisherConnectionPromise).catch(() => {})
+        eng.publisherConnectionPromise = undefined
+      }
+      return original!.call(this, kind)
+    }
+    ;(ensurePublisherConnectedPatched as { __bedrudPatched?: boolean }).__bedrudPatched = true
+    proto.ensurePublisherConnected = ensurePublisherConnectedPatched
+    if (room) resetLiveKitPublisherPromise(room)
+  } catch {
+    /* ignore — best effort */
+  }
+}
+
+// Install as soon as this module loads in the browser (prototype of a probe Room).
+if (typeof window !== 'undefined') {
+  installLiveKitPublisherPromiseFix()
+}
+
+/** True when engine was fully closed (not just reconnecting). */
+export function isLiveKitEngineClosed(room: Room): boolean {
+  try {
+    const engine = room.engine as unknown as EngineWithPublisherPromise
+    return engine._isClosed === true || engine.isClosed === true
+  } catch {
+    return true
+  }
+}
+
+/** Transient: may recover after ICE/DC open (or short reconnect). Not for closed PC. */
+export function isPublishUnavailableError(err: unknown): boolean {
+  if (isFatalPublishError(err)) return true
+  const message = err instanceof Error ? err.message : String(err)
+  return (
     message.includes('cannot publish') ||
     message.includes('not connected') ||
-    message.includes('could not establish') ||
-    code === 12
+    message.includes('could not establish')
   )
 }
 
@@ -94,6 +240,10 @@ export async function waitForRoomPublishReady(room: Room, timeoutMs = 45_000): P
   const deadline = Date.now() + timeoutMs
   while (Date.now() < deadline) {
     if (isRoomPublishReady(room)) return true
+    // Don't burn the full timeout when the peer connection is already torn down.
+    if (isRoomTransportDead(room) || room.state === ConnectionState.Disconnected) {
+      return false
+    }
     await new Promise((resolve) => window.setTimeout(resolve, 150))
   }
   return false
@@ -112,11 +262,20 @@ function isPublisherOnlyRoom(room: Room): boolean {
   }
 }
 
-/** Dual peer connections — required for reliable user data on some remote LiveKit builds. */
-export function livekitRoomOptionsForUrl(livekitUrl: string): RoomOptions | undefined {
-  const hostname = livekitHostnameFromUrl(livekitUrl)
-  if (!hostname || isLocalLiveKitHostname(hostname)) return undefined
-  return { singlePeerConnection: false }
+/**
+ * Room options for the LiveKit host URL.
+ *
+ * Use the SDK default (singlePeerConnection: true). Forcing dual PC
+ * (subscriber-primary) broke reliable data for chat/stage between clients
+ * on remote SFUs while media still looked "connected".
+ *
+ * Always returns a value when hostname parses so LiveKitRoom gets a stable options
+ * object from the caller's useMemo (do not depend on host string for options shape).
+ */
+export function livekitRoomOptionsForUrl(livekitUrl: string): RoomOptions {
+  // hostname unused for options shape; kept for API compatibility / future host-specific opts
+  void livekitHostnameFromUrl(livekitUrl)
+  return { singlePeerConnection: true }
 }
 
 /** Remote debug sets VITE_LIVEKIT_ICE_RELAY=1 — TURN/TLS relay via port 5349 (not Traefik :443). */

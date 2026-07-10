@@ -11,11 +11,15 @@ export function StageScreenShareOverlay() {
   const layout = useMeetingUILayout()
   const { stage, isOwner, clearStage } = useMeetingStage()
   const screenShareTracks = useTracks([Track.Source.ScreenShare], { onlySubscribed: true })
-  const ownerIdentity = stage?.kind === 'screenshare' ? stage.ownerIdentity : null
-  const trackRef = ownerIdentity
-    ? screenShareTracks.find((t) => t.participant.identity === ownerIdentity && t.publication)
-    : undefined
-  if (stage?.kind !== 'screenshare') return null
+  const stageOwnerIdentity = stage?.kind === 'screenshare' ? stage.ownerIdentity : null
+  // Prefer stage owner track; if stage DC is delayed/missing, still show any remote screen share.
+  const trackRef =
+    (stageOwnerIdentity
+      ? screenShareTracks.find((t) => t.participant.identity === stageOwnerIdentity && t.publication)
+      : undefined) ?? screenShareTracks.find((t) => t.publication)
+
+  // Stage data channel owns exclusive stage UX; also show when a screen track is live without stage_set.
+  if (stage?.kind !== 'screenshare' && !trackRef?.publication) return null
 
   if (!trackRef?.publication) {
     return (
@@ -27,14 +31,19 @@ export function StageScreenShareOverlay() {
       >
         <div className="flex min-h-0 flex-1 flex-col items-center justify-center overflow-hidden rounded-xl border border-white/[0.08] bg-[#030308]/95 p-6 text-center shadow-2xl backdrop-blur-md">
           <Monitor size={28} className="mb-3 text-teal-400" />
-          <p className="text-sm font-medium text-white">Waiting for {stageOwnerLabel(stage)}&apos;s screen…</p>
+          <p className="text-sm font-medium text-white">
+            Waiting for {stage ? stageOwnerLabel(stage) : 'presenter'}&apos;s screen…
+          </p>
           <p className="mt-1 text-[11px] text-white/45">The presentation should appear shortly.</p>
         </div>
       </div>
     )
   }
 
-  const displayName = trackRef.participant.name || trackRef.participant.identity || stageOwnerLabel(stage)
+  const displayName =
+    trackRef.participant.name ||
+    trackRef.participant.identity ||
+    (stage ? stageOwnerLabel(stage) : 'Presenter')
 
   return (
     <div
@@ -53,7 +62,7 @@ export function StageScreenShareOverlay() {
             </div>
           </div>
 
-          {isOwner && (
+          {isOwner && stage?.kind === 'screenshare' && (
             <button
               type="button"
               onClick={() => clearStage()}

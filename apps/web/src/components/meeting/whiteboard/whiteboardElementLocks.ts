@@ -74,11 +74,11 @@ export function filterElementsForLocalSync(
   elements: readonly OrderedExcalidrawElement[],
   locks: ElementLockSnapshot,
   localIdentity: string,
-  yElements: Y.Map<OrderedExcalidrawElement>,
+  getRemoteElement: (id: string) => OrderedExcalidrawElement | undefined,
 ): OrderedExcalidrawElement[] {
   return elements.map((el) => {
     if (canEditElement(el.id, localIdentity, locks)) return el
-    const remote = yElements.get(el.id)
+    const remote = getRemoteElement(el.id)
     return remote ?? el
   })
 }

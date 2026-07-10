@@ -1,6 +1,5 @@
 import { Pin, X } from 'lucide-react'
 import { useCallback, useEffect, useRef } from 'react'
-import { toast } from 'sonner'
 import {
   type ChatAttachment,
   type ChatMessage,
@@ -108,27 +107,7 @@ export function ChatPanel({
         onReactToMessage={reactToMessage}
         onScrollUnreadChange={noop}
         onDrop={(file) => {
-          void uploadAndSend(file)
-            .then((att) => {
-              sendChat('', [att])
-              inputRef.current?.focus()
-            })
-            .catch((err) => {
-              const message = err instanceof Error ? err.message : 'Upload failed'
-              try {
-                const jsonMatch = message.match(/\{.*\}/)
-                if (jsonMatch) {
-                  const parsed = JSON.parse(jsonMatch[0]) as { error?: string }
-                  if (parsed.error) {
-                    toast.error(parsed.error)
-                    return
-                  }
-                }
-              } catch {
-                // ignore parse error
-              }
-              toast.error(message)
-            })
+          inputRef.current?.attachFile(file)
         }}
       />
 

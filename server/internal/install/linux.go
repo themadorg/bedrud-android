@@ -117,7 +117,7 @@ func LinuxInstall(cfg *InstallConfig) error {
 		fmt.Printf("⚠ Warning: could not create 'bedrud' user: %v\n", err)
 	}
 
-	// 1. Stop existing services and remove binary to avoid ETXTBSY
+	// 1. Stop existing services and remove standalone binary to avoid ETXTBSY
 	fmt.Println("➜ Stopping existing services...")
 	stopAllInitSystems([]string{"bedrud", "livekit"})
 	_ = os.Remove("/usr/local/bin/bedrud")
@@ -130,19 +130,28 @@ func LinuxInstall(cfg *InstallConfig) error {
 	}
 
 	// 2. Install Bedrud Binary
-	selfBytes, err := os.ReadFile("/proc/self/exe")
-	if err != nil {
-		execPath, errFallback := os.Executable()
-		if errFallback != nil {
-			return fmt.Errorf("failed to get executable path: %w", errFallback)
+	// Prefer package path (/usr/bin) when dpkg/rpm already placed the binary there
+	// so apt/dnf upgrades keep working and we don't maintain a second copy.
+	bedrudBin := "/usr/local/bin/bedrud"
+	if _, err := os.Stat("/usr/bin/bedrud"); err == nil {
+		bedrudBin = "/usr/bin/bedrud"
+		fmt.Println("➜ Using package binary at", bedrudBin)
+	} else {
+		selfBytes, err := os.ReadFile("/proc/self/exe")
+		if err != nil {
+			execPath, errFallback := os.Executable()
+			if errFallback != nil {
+				return fmt.Errorf("failed to get executable path: %w", errFallback)
+			}
+			selfBytes, err = os.ReadFile(execPath)
 		}
-		selfBytes, err = os.ReadFile(execPath)
-	}
-	if err != nil || len(selfBytes) == 0 {
-		return fmt.Errorf("failed to read current binary for installation: %w", err)
-	}
-	if err := os.WriteFile("/usr/local/bin/bedrud", selfBytes, 0o755); err != nil {
-		return fmt.Errorf("failed to install binary to /usr/local/bin/bedrud: %w", err)
+		if err != nil || len(selfBytes) == 0 {
+			return fmt.Errorf("failed to read current binary for installation: %w", err)
+		}
+		if err := os.WriteFile(bedrudBin, selfBytes, 0o755); err != nil {
+			return fmt.Errorf("failed to install binary to %s: %w", bedrudBin, err)
+		}
+		fmt.Println("➜ Installed binary to", bedrudBin)
 	}
 
 	apiKey := generateSecret(32)
@@ -354,8 +363,8 @@ func LinuxInstall(cfg *InstallConfig) error {
 			bedrudAfter = "network.target livekit.service"
 		}
 
-		lkService := `[Unit]
-Description=Bedrud Video Meeting Server (LiveKit)
+		lkService := fmt.Sprintf(`[Unit]
+Description=Bedrud LiveKit Media Server (embedded)
 Documentation=https://docs.bedrud.com
 After=network.target network-online.target
 Wants=network-online.target
@@ -364,7 +373,7 @@ Wants=network-online.target
 User=bedrud
 Group=bedrud
 Type=simple
-ExecStart=/usr/local/bin/bedrud --livekit --config /etc/bedrud/livekit.yaml
+ExecStart=%s --livekit --config /etc/bedrud/livekit.yaml
 Restart=on-failure
 RestartSec=5s
 WorkingDirectory=/etc/bedrud
@@ -375,11 +384,11 @@ SyslogIdentifier=livekit
 NoNewPrivileges=true
 PrivateTmp=true
 ProtectSystem=strict
-ReadWritePaths=/var/lib/bedrud /var/log/bedrud /etc/bedrud
+ReadWritePaths=/var/lib/bedrud /var/log/bedrud /etc/bedrud /tmp
 
 [Install]
 WantedBy=multi-user.target
-`
+`, bedrudBin)
 
 		serviceContent := fmt.Sprintf(`[Unit]
 Description=Bedrud Video Meeting Server
@@ -391,7 +400,7 @@ Wants=network-online.target
 User=bedrud
 Group=bedrud
 Type=simple
-ExecStart=/usr/local/bin/bedrud run --config /etc/bedrud/config.yaml
+ExecStart=%s run --config /etc/bedrud/config.yaml
 Restart=on-failure
 RestartSec=5s
 Environment=CONFIG_PATH=/etc/bedrud/config.yaml%s
@@ -406,9 +415,9 @@ ReadWritePaths=/var/lib/bedrud /var/log/bedrud /etc/bedrud
 
 [Install]
 WantedBy=multi-user.target
-`, bedrudAfter, lkManagedEnv)
+`, bedrudAfter, bedrudBin, lkManagedEnv)
 
-		if err := writeServiceFiles(initSystem, &serviceCfg, bedrudAfter, lkManagedEnv, lkService, serviceContent); err != nil {
+		if err := writeServiceFiles(initSystem, &serviceCfg, bedrudBin, bedrudAfter, lkManagedEnv, lkService, serviceContent); err != nil {
 			return fmt.Errorf("failed to write service files: %w", err)
 		}
 

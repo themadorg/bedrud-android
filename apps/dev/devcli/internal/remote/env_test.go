@@ -3,6 +3,7 @@ package remote
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -60,5 +61,46 @@ func TestProcessEnvOverridesDotEnv(t *testing.T) {
 	}
 	if cfg.SSH.User != "envuser" {
 		t.Fatalf("user: got %q", cfg.SSH.User)
+	}
+}
+
+func TestUpsertDotEnv(t *testing.T) {
+	dir := t.TempDir()
+	envPath := filepath.Join(dir, "server", ".env")
+	if err := os.MkdirAll(filepath.Dir(envPath), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	initial := "# header\nREMOTE_DEBUG_SSH_HOST=old\nREMOTE_DEBUG_SSH_USER=root\n"
+	if err := os.WriteFile(envPath, []byte(initial), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := UpsertDotEnv(dir, "REMOTE_DEBUG_SSH_HOST", "new.host"); err != nil {
+		t.Fatal(err)
+	}
+	if err := UpsertDotEnv(dir, "REMOTE_DEBUG_TUNNEL_TOKEN", "abc123"); err != nil {
+		t.Fatal(err)
+	}
+
+	vals, err := parseDotEnv(envPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if vals["REMOTE_DEBUG_SSH_HOST"] != "new.host" {
+		t.Fatalf("host: got %q", vals["REMOTE_DEBUG_SSH_HOST"])
+	}
+	if vals["REMOTE_DEBUG_SSH_USER"] != "root" {
+		t.Fatalf("user: got %q", vals["REMOTE_DEBUG_SSH_USER"])
+	}
+	if vals["REMOTE_DEBUG_TUNNEL_TOKEN"] != "abc123" {
+		t.Fatalf("token: got %q", vals["REMOTE_DEBUG_TUNNEL_TOKEN"])
+	}
+
+	raw, err := os.ReadFile(envPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(raw), "# header") {
+		t.Fatalf("expected comments preserved, got:\n%s", raw)
 	}
 }

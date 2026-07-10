@@ -38,8 +38,8 @@ func ensureDevTunnelTLSFingerprint(cfg *Config) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("REMOTE_DEBUG_TUNNEL_TLS_FINGERPRINT missing in server/.env (run: devcli remote tunnel deploy): %w", err)
 	}
-	fmt.Println("deploy | fetched tunnel TLS fingerprint from server — add to server/.env:")
-	fmt.Printf("  REMOTE_DEBUG_TUNNEL_TLS_FINGERPRINT=%s\n", fp)
+	fmt.Println("deploy | fetched tunnel TLS fingerprint from server")
+	persistRemoteSecrets(cfg, map[string]string{envTunnelTLSFingerprint: fp})
 	return fp, nil
 }
 

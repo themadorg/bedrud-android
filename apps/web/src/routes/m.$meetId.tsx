@@ -15,11 +15,18 @@ import { useExperimentalPreferencesStore } from '#/lib/experimental-preferences.
 import { useInterfacePreferencesStore } from '#/lib/interface-preferences.store'
 import {
   getLiveKitPublishDiagnostics,
+  installLiveKitPublisherPromiseFix,
   livekitConnectOptionsForUrl,
-  livekitRoomOptionsForUrl,
+  resetLiveKitPublisherPromise,
   waitForRoomPublishReady,
 } from '#/lib/livekit-publish'
 import { getLiveKitTransportMode } from '#/lib/livekit-transport-type'
+import {
+  installMeetingDebugGlobals,
+  meetingDebugClear,
+  meetingDebugLog,
+  meetingDebugSetMeta,
+} from '#/lib/meeting-debug-log'
 import { readMeetingDeviceId } from '#/lib/meeting-device-storage'
 import { useRecentRoomsStore } from '#/lib/recent-rooms.store'
 import { usePinnedParticipants } from '#/lib/usePinnedParticipants'
@@ -80,45 +87,99 @@ interface ArchivedOwnedResponse {
   }
 }
 
-/** Dev-only: logs WebSocket vs data-channel readiness (chat/whiteboard need open _reliable/_lossy DCs). */
-function LiveKitTransportDiagnostics({ connectOptions }: { connectOptions?: { rtcConfig?: RTCConfiguration } }) {
+/** Always-on transport diagnostics (console + copyable ring buffer for bug reports). */
+function LiveKitTransportDiagnostics({
+  connectOptions,
+  meetId,
+  livekitHost,
+}: {
+  connectOptions?: { rtcConfig?: RTCConfiguration }
+  meetId?: string
+  livekitHost?: string
+}) {
   const room = useRoomContext()
   useEffect(() => {
-    if (!import.meta.env.DEV) return
+    // Patch the prototype used by THIS room instance (handles Vite multi-instance cases).
+    installLiveKitPublisherPromiseFix(room)
+    meetingDebugClear()
+    meetingDebugSetMeta({
+      meetId: meetId ?? room.name,
+      livekitHost: livekitHost ?? '',
+      iceTransportPolicy: connectOptions?.rtcConfig?.iceTransportPolicy ?? 'default(direct)',
+      singlePeerConnection: true,
+      buildTag: 'no-strict-mode-v4',
+    })
+    installMeetingDebugGlobals(() => room)
+
     const log = (label: string) => {
-      console.log(`[livekit-transport] ${label}`, getLiveKitPublishDiagnostics(room, connectOptions))
+      const diag = getLiveKitPublishDiagnostics(room, connectOptions)
+      meetingDebugLog(`transport.${label}`, { ...diag })
     }
     const onConnected = () => {
+      installLiveKitPublisherPromiseFix(room)
+      resetLiveKitPublisherPromise(room)
       log('connected')
       void room.engine.getConnectedServerAddress?.().then((addr) => {
-        if (addr) console.log('[livekit-transport] selected ICE address', addr)
+        if (addr) meetingDebugLog('transport.ice_address', { address: addr })
       })
       void getLiveKitTransportMode(room).then((mode) => {
         if (mode !== 'unknown') {
-          console.log(`[livekit-transport] mode=${mode} (chat uses same peer connection)`)
-        }
-      })
-      void waitForRoomPublishReady(room, 45_000).then((ready) => {
-        log(ready ? 'data-channels-ready' : 'data-channels-timeout')
-        const diag = getLiveKitPublishDiagnostics(room, connectOptions)
-        if (diag.pcMode) {
-          console.log(`[livekit-transport] pcMode=${diag.pcMode}`)
-        }
-        if (!ready) {
-          console.warn('[livekit-transport] chat needs publisher + subscriber reliable channels', {
-            pcMode: diag.pcMode,
-            publisher: diag.reliableDcState,
-            subscriber: diag.reliableDcSubState,
+          // p2p/direct = host/srflx ICE to the LiveKit SFU (not peer↔peer)
+          meetingDebugLog('transport.ice_mode', {
+            mode,
+            note: 'p2p means Direct to SFU, not browser-to-browser',
           })
         }
       })
+      void waitForRoomPublishReady(room, 45_000).then((ready) => {
+        resetLiveKitPublisherPromise(room)
+        const diag = getLiveKitPublishDiagnostics(room, connectOptions)
+        meetingDebugLog(ready ? 'transport.data_channels_ready' : 'transport.data_channels_timeout', {
+          ...diag,
+          buildTag: 'no-strict-mode-v4',
+        })
+      })
     }
+    const onState = (state: ConnectionState) => {
+      meetingDebugLog('transport.connection_state', {
+        state,
+        ...getLiveKitPublishDiagnostics(room, connectOptions),
+      })
+    }
+    const onParticipantConnected = (p: { identity: string }) => {
+      meetingDebugLog('transport.participant_joined', {
+        identity: p.identity,
+        remotes: room.remoteParticipants.size,
+      })
+    }
+    const onParticipantDisconnected = (p: { identity: string }) => {
+      meetingDebugLog('transport.participant_left', {
+        identity: p.identity,
+        remotes: room.remoteParticipants.size,
+      })
+    }
+
     room.on(RoomEvent.Connected, onConnected)
+    room.on(RoomEvent.Reconnected, onConnected)
+    room.on(RoomEvent.ConnectionStateChanged, onState)
+    room.on(RoomEvent.ParticipantConnected, onParticipantConnected)
+    room.on(RoomEvent.ParticipantDisconnected, onParticipantDisconnected)
     if (room.state === ConnectionState.Connected) onConnected()
+
+    const interval = window.setInterval(() => {
+      if (room.state !== ConnectionState.Connected) return
+      meetingDebugLog('transport.heartbeat', getLiveKitPublishDiagnostics(room, connectOptions))
+    }, 15_000)
+
     return () => {
       room.off(RoomEvent.Connected, onConnected)
+      room.off(RoomEvent.Reconnected, onConnected)
+      room.off(RoomEvent.ConnectionStateChanged, onState)
+      room.off(RoomEvent.ParticipantConnected, onParticipantConnected)
+      room.off(RoomEvent.ParticipantDisconnected, onParticipantDisconnected)
+      window.clearInterval(interval)
     }
-  }, [room, connectOptions])
+  }, [room, connectOptions, meetId, livekitHost])
   return null
 }
 
@@ -283,6 +344,7 @@ function MeetingPage() {
   }, [joinData, mergeAudioPrefs, mergeExperimentalPrefs, mergeInterfacePrefs, mergeVideoPrefs, tokens])
 
   const [preferRelayTransport, setPreferRelayTransport] = useState(false)
+
   const livekitConnectOptions = useMemo(
     () =>
       typeof window !== 'undefined' && joinData?.livekitHost
@@ -290,9 +352,23 @@ function MeetingPage() {
         : undefined,
     [joinData?.livekitHost, preferRelayTransport],
   )
-  const livekitRoomOptions = useMemo(
-    () => (joinData?.livekitHost ? livekitRoomOptionsForUrl(joinData.livekitHost) : undefined),
-    [joinData?.livekitHost],
+  // Stable options identity — LiveKitRoom recreates its Room when options JSON changes.
+  const livekitRoomOptions = useMemo(() => ({ singlePeerConnection: true }), [])
+
+  // Stable media capture options (must stay above early returns).
+  const joinMediaChoicesForHooks = welcomeChoices ?? { micEnabled: true, camEnabled: false }
+  const micDeviceIdForHooks = readMeetingDeviceId('audioinput')
+  const camDeviceIdForHooks = readMeetingDeviceId('videoinput')
+  const livekitAudioStable: AudioCaptureOptions | boolean = useMemo(() => {
+    if (!joinMediaChoicesForHooks.micEnabled) return false
+    if (typeof audioConstraints === 'object') {
+      return { ...audioConstraints, deviceId: micDeviceIdForHooks || undefined }
+    }
+    return audioConstraints
+  }, [joinMediaChoicesForHooks.micEnabled, audioConstraints, micDeviceIdForHooks])
+  const livekitVideoStable = useMemo(
+    () => (joinMediaChoicesForHooks.camEnabled ? { deviceId: camDeviceIdForHooks || undefined } : false),
+    [joinMediaChoicesForHooks.camEnabled, camDeviceIdForHooks],
   )
 
   const [currentToken, setCurrentToken] = useState<string | null>(null)
@@ -304,6 +380,7 @@ function MeetingPage() {
   const disconnectedAtRef = useRef(0)
   const reconnectAttemptRef = useRef(0)
   const retryTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const remountCooldownRef = useRef(0)
 
   // New overlay state for better disconnect UX
   const [showDisconnectedOverlay, setShowDisconnectedOverlay] = useState(false)
@@ -311,98 +388,88 @@ function MeetingPage() {
   const disconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const cancelledRef = useRef(false)
 
-  const handleTransportRelayFallback = useCallback(() => {
-    if (preferRelayTransport || cancelledRef.current) return
-    setPreferRelayTransport(true)
-    setLiveKitEpoch((epoch) => epoch + 1)
-  }, [preferRelayTransport])
+  // Do NOT own a Room instance. Passing a long-lived Room into LiveKitRoom + React Strict Mode
+  // disconnects it on the first unmount; reusing that closed engine makes every publishData fail
+  // with "PC manager is closed" (cached rejected publisher promise). LiveKitRoom creates a
+  // fresh Room per mount; key={liveKitEpoch} forces a clean session when we remount.
 
+  // ALL automatic remounts disabled. setLiveKitEpoch was the reconnect loop:
+  // disconnect → setLiveKitEpoch → unmount → disconnect → …
+  const handleTransportRemount = useCallback((reason: string) => {
+    meetingDebugLog('transport.remount_suppressed', { reason })
+  }, [])
+
+  const handleTransportRelayFallback = useCallback((reason: string) => {
+    // Do not remount for TURN either — it was part of the connect/disconnect storm.
+    meetingDebugLog('transport.relay_suppressed', {
+      reason,
+      note: 'automatic remount disabled to stop reconnect loop',
+    })
+  }, [])
+
+  /**
+   * LiveKit SDK reconnects the same Room automatically on most drops.
+   * We only refresh a token + remount when the user hits Retry (never on every disconnect).
+   */
   const attemptReconnect = useCallback(() => {
     if (!meetId) return
-
     const attempt = ++reconnectAttemptRef.current
-    const backoff = Math.min(1000 * 2 ** (attempt - 1), 30000)
-
-    console.log(`[reconnect] attempt=${attempt} backoff=${backoff}ms`)
-
+    meetingDebugLog('reconnect.token_refresh', { attempt })
     api
       .post<{ token: string }>('/api/room/refresh-token', { roomName: meetId })
       .then(({ token }) => {
         if (cancelledRef.current) return
         freshTokenRef.current = token
-        if (!isDisconnectedRef.current) {
-          // Never call setCurrentToken while connected — useLiveKitRoom re-runs room.connect()
-          // and tears down the peer connection (breaks chat / data channels).
-          console.log('[reconnect] already reconnected natively, cached token (skipped room.connect)')
-          return
+        // Only swap token if still disconnected — never while LiveKit is mid-session.
+        if (isDisconnectedRef.current) {
+          setCurrentToken(token)
         }
-        console.log(`[reconnect] attempt=${attempt} succeeded — remounting LiveKit session`)
-        setCurrentToken(token)
-        setLiveKitEpoch((epoch) => epoch + 1)
       })
       .catch((err: Error) => {
         if (cancelledRef.current) return
         const status = Number(err.message?.split(':')[0])
-        if (status === 410) {
-          console.log('[reconnect] fatal: room gone')
-          setFatalReconnectError('Room is no longer available.')
-          return
-        }
-        if (status === 403) {
-          console.log('[reconnect] fatal: access denied')
-          setFatalReconnectError('Access denied.')
-          return
-        }
-        console.log(`[reconnect] attempt=${attempt} failed, retry in ${backoff}ms`)
-        if (!cancelledRef.current) {
-          retryTimerRef.current = setTimeout(attemptReconnect, backoff)
-        }
+        if (status === 410) setFatalReconnectError('Room is no longer available.')
+        else if (status === 403) setFatalReconnectError('Access denied.')
+        else meetingDebugLog('reconnect.token_failed', { message: err.message })
       })
   }, [meetId])
 
-  const handleDisconnected = useCallback(
-    (reason?: DisconnectReason) => {
-      if (reason === DisconnectReason.CLIENT_INITIATED) return
+  /** Manual full remount — only from the Retry button. */
+  const manualHardReconnect = useCallback(() => {
+    meetingDebugLog('reconnect.manual_hard', { buildTag: 'no-strict-mode-v4' })
+    remountCooldownRef.current = Date.now()
+    isDisconnectedRef.current = true
+    setPreferRelayTransport(false)
+    setLiveKitEpoch((e) => e + 1)
+    attemptReconnect()
+  }, [attemptReconnect])
 
-      if (retryTimerRef.current) {
-        clearTimeout(retryTimerRef.current)
-        retryTimerRef.current = null
+  const handleDisconnected = useCallback((reason?: DisconnectReason) => {
+    // React unmount / user leave — do nothing (StrictMode used to spam this path).
+    if (reason === DisconnectReason.CLIENT_INITIATED || reason === undefined) {
+      meetingDebugLog('reconnect.ignore', { reason: String(reason) })
+      return
+    }
+
+    meetingDebugLog('reconnect.disconnected', { reason: String(reason) })
+    console.log(`[reconnect] disconnected reason=${reason}`)
+
+    isDisconnectedRef.current = true
+    disconnectedAtRef.current = Date.now()
+    setShowDisconnectedOverlay(true)
+    setOverlayMode('reconnecting')
+    setShowReconnectBanner(true)
+
+    // Soft: refresh token for native SDK reconnect / next connect. No remount.
+    attemptReconnect()
+
+    if (disconnectTimeoutRef.current) clearTimeout(disconnectTimeoutRef.current)
+    disconnectTimeoutRef.current = setTimeout(() => {
+      if (!cancelledRef.current && isDisconnectedRef.current) {
+        setOverlayMode('disconnected')
       }
-      if (disconnectTimeoutRef.current) {
-        clearTimeout(disconnectTimeoutRef.current)
-        disconnectTimeoutRef.current = null
-      }
-
-      isDisconnectedRef.current = true
-      disconnectedAtRef.current = Date.now()
-      reconnectAttemptRef.current = 0
-      setShowReconnectBanner(false)
-      setFatalReconnectError(null)
-
-      console.log(`[reconnect] disconnected reason=${reason}`)
-
-      // Show overlay immediately in reconnecting mode (with debounce to avoid flicker)
-      setShowDisconnectedOverlay(true)
-      setOverlayMode('reconnecting')
-
-      // After 30s with no success, switch to full "disconnected" state with manual controls
-      disconnectTimeoutRef.current = setTimeout(() => {
-        if (!cancelledRef.current && isDisconnectedRef.current) {
-          setOverlayMode('disconnected')
-        }
-      }, 30000)
-
-      // Keep the old banner behavior for now (can be removed later)
-      setTimeout(() => {
-        if (!cancelledRef.current && isDisconnectedRef.current) {
-          setShowReconnectBanner(true)
-        }
-      }, 5000)
-
-      attemptReconnect()
-    },
-    [attemptReconnect],
-  )
+    }, 30_000)
+  }, [attemptReconnect])
 
   const handleReconnected = useCallback(() => {
     console.log('[reconnect] connected')
@@ -643,17 +710,7 @@ function MeetingPage() {
     )
   }
 
-  const joinMediaChoices = welcomeChoices ?? { micEnabled: true, camEnabled: false }
-  const micDeviceId = readMeetingDeviceId('audioinput')
-  const camDeviceId = readMeetingDeviceId('videoinput')
-  const livekitAudio: AudioCaptureOptions | boolean =
-    joinMediaChoices.micEnabled && typeof audioConstraints === 'object'
-      ? { ...audioConstraints, deviceId: micDeviceId || undefined }
-      : joinMediaChoices.micEnabled
-        ? audioConstraints
-        : false
-  const livekitVideo = joinMediaChoices.camEnabled ? { deviceId: camDeviceId || undefined } : false
-
+  // joinData is guaranteed non-null past the early returns above.
   const {
     id,
     token: originalToken,
@@ -664,6 +721,8 @@ function MeetingPage() {
     isPublic = false,
   } = joinData
   const token = currentToken ?? originalToken
+  const livekitAudio = livekitAudioStable
+  const livekitVideo = livekitVideoStable
 
   if (fatalReconnectError) {
     return <ErrorPage variant="room-error" title="Disconnected" description={fatalReconnectError} showBack />
@@ -689,10 +748,23 @@ function MeetingPage() {
       video={livekitVideo}
       onDisconnected={handleDisconnected}
       onConnected={handleReconnected}
+      onError={(err) => {
+        meetingDebugLog('transport.livekit_error', {
+          message: err instanceof Error ? err.message : String(err),
+        })
+      }}
     >
       <MeetingErrorBoundary>
-        <LiveKitTransportDiagnostics connectOptions={livekitConnectOptions} />
-        <LiveKitTransportFallback connectOptions={livekitConnectOptions} onNeedRelay={handleTransportRelayFallback} />
+        <LiveKitTransportDiagnostics
+          connectOptions={livekitConnectOptions}
+          meetId={meetId}
+          livekitHost={joinData.livekitHost}
+        />
+        <LiveKitTransportFallback
+          connectOptions={livekitConnectOptions}
+          onNeedRemount={handleTransportRemount}
+          onNeedRelay={handleTransportRelayFallback}
+        />
         {/* LiveKitRoom renders as display:contents — this div is the actual viewport container */}
         {showReconnectBanner && (
           <div className="fixed top-0 start-0 end-0 z-[9999] bg-yellow-500/15 border-b border-yellow-500/30 px-4 py-2 text-center text-[13px] text-amber-400 backdrop-blur-sm">
@@ -713,8 +785,9 @@ function MeetingPage() {
                 if (!cancelledRef.current && isDisconnectedRef.current) {
                   setOverlayMode('disconnected')
                 }
-              }, 30000)
-              attemptReconnect()
+              }, 30_000)
+              // User-initiated only — hard remount + token refresh.
+              manualHardReconnect()
             }}
             onLeave={() => {
               navigate({ to: '/dashboard' })

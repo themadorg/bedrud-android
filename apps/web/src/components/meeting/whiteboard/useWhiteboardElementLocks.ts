@@ -65,6 +65,9 @@ export function useWhiteboardElementLocks(
     const yLocks = ydoc.getMap('locks')
     yLocks.observe(onLocksChange)
 
+    // Throttle lock Yjs writes during freehand — locking every pointermove
+    // flooded the doc and froze the pen after ~2s of continuous drawing.
+    let lockTimer: number | null = null
     const unsubChange = api.onChange((elements, appState) => {
       const currentIds = new Set(elements.filter((el) => !el.isDeleted).map((el) => el.id))
       for (const id of currentIds) {
@@ -75,10 +78,24 @@ export function useWhiteboardElementLocks(
       previousElementIdsRef.current = currentIds
 
       const held = heldLockElementIds(appState, drawingIdsRef.current)
+      const penDown = appState.newElement?.type === 'freedraw'
+      if (penDown) {
+        if (lockTimer != null) return
+        lockTimer = window.setTimeout(() => {
+          lockTimer = null
+          syncHeldLocks(heldLockElementIds(api.getAppState(), drawingIdsRef.current))
+        }, 200)
+        return
+      }
+      if (lockTimer != null) {
+        window.clearTimeout(lockTimer)
+        lockTimer = null
+      }
       syncHeldLocks(held)
     })
 
     teardownRef.current = () => {
+      if (lockTimer != null) window.clearTimeout(lockTimer)
       yLocks.unobserve(onLocksChange)
       unsubChange()
     }

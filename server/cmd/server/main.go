@@ -367,7 +367,8 @@ func run() error {
 	api.Post("/room/:roomId/ask/:identity/:action", middleware.Protected(), middleware.RequireEmailVerified(cfg, userRepo), roomHandler.AskParticipantAction)
 	api.Post("/room/:roomId/spotlight/:identity", middleware.Protected(), middleware.RequireEmailVerified(cfg, userRepo), roomHandler.SpotlightParticipant)
 	api.Post("/room/:roomId/screenshare/:identity/stop", middleware.Protected(), middleware.RequireEmailVerified(cfg, userRepo), roomHandler.StopScreenShare)
-	api.Get("/room/:roomId/presence", middleware.APIRateLimiter(cfg.RateLimit), roomHandler.GetRoomPresence)
+	// OptionalAuth: presence list requires claims in Locals("user"); countOnly stays public.
+	api.Get("/room/:roomId/presence", middleware.OptionalAuth(), middleware.APIRateLimiter(cfg.RateLimit), roomHandler.GetRoomPresence)
 	api.Get("/room/:roomId/participant/:identity/info", middleware.Protected(), middleware.RequireEmailVerified(cfg, userRepo), roomHandler.GetParticipantInfo)
 	api.Get("/room/:roomId/participant/:identity/profile", middleware.Protected(), middleware.RequireEmailVerified(cfg, userRepo), roomHandler.GetParticipantProfile)
 	api.Post("/room/:roomId/stage/:identity/bring", middleware.Protected(), middleware.RequireEmailVerified(cfg, userRepo), roomHandler.BringToStage)

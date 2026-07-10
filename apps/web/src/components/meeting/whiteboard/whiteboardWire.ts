@@ -1,4 +1,5 @@
-import { restoreElements } from '@excalidraw/excalidraw'
+// Subpath import — tree-shakeable; resolves to apps/web/src/vendor/excalidraw
+import { restoreElements } from '@excalidraw/excalidraw/data/restore'
 import type { ExcalidrawTextElement, OrderedExcalidrawElement } from '@excalidraw/excalidraw/element/types'
 import type { AppState, BinaryFiles } from '@excalidraw/excalidraw/types'
 

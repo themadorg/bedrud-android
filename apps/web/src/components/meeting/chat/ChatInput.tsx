@@ -1,4 +1,4 @@
-import { BarChart3, Image as ImageIcon, Send } from 'lucide-react'
+import { BarChart3, Image as ImageIcon, Send, X } from 'lucide-react'
 import {
   type ChangeEvent,
   type ClipboardEvent,
@@ -65,6 +65,8 @@ interface Props {
 
 export interface ChatInputHandle {
   focus: () => void
+  /** Validate + upload an image and stage it as a pending attachment (does not send). */
+  attachFile: (file: File) => void
 }
 
 function generateID(): string {
@@ -84,6 +86,7 @@ const iconBtnClass = (enabled: boolean) =>
 
 export const ChatInput = forwardRef<ChatInputHandle, Props>(function ChatInput({ onSend, onUpload, disabled }, ref) {
   const [draft, setDraft] = useState('')
+  const [pendingAttachments, setPendingAttachments] = useState<ChatAttachment[]>([])
   const [uploading, setUploading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [showPollComposer, setShowPollComposer] = useState(false)
@@ -94,8 +97,6 @@ export const ChatInput = forwardRef<ChatInputHandle, Props>(function ChatInput({
   const focusInput = useCallback(() => {
     requestAnimationFrame(() => textareaRef.current?.focus())
   }, [])
-
-  useImperativeHandle(ref, () => ({ focus: focusInput }), [focusInput])
 
   const minHeight = MIN_ROWS * LINE_HEIGHT + VERTICAL_PADDING
   const maxHeight = MAX_ROWS * LINE_HEIGHT + VERTICAL_PADDING
@@ -115,13 +116,16 @@ export const ChatInput = forwardRef<ChatInputHandle, Props>(function ChatInput({
 
   const send = useCallback(() => {
     const text = draft.trim()
-    if (!text || disabled || uploading) return
-    onSend(text)
+    if (disabled || uploading) return
+    if (!text && pendingAttachments.length === 0) return
+    onSend(text, pendingAttachments.length > 0 ? pendingAttachments : undefined)
     setDraft('')
+    setPendingAttachments([])
+    setError(null)
     if (textareaRef.current) textareaRef.current.style.height = `${minHeight}px`
     setInputScrollable(false)
     focusInput()
-  }, [draft, disabled, uploading, onSend, focusInput, minHeight])
+  }, [draft, pendingAttachments, disabled, uploading, onSend, focusInput, minHeight])
 
   const handleKeyDown = useCallback(
     (e: KeyboardEvent<HTMLTextAreaElement>) => {
@@ -132,6 +136,10 @@ export const ChatInput = forwardRef<ChatInputHandle, Props>(function ChatInput({
     },
     [send],
   )
+
+  const removePendingAttachment = useCallback((index: number) => {
+    setPendingAttachments((prev) => prev.filter((_, i) => i !== index))
+  }, [])
 
   const uploadFile = useCallback(
     async (file: File) => {
@@ -162,8 +170,7 @@ export const ChatInput = forwardRef<ChatInputHandle, Props>(function ChatInput({
         }
 
         const attachment = await onUpload(file)
-        onSend(draft.trim(), [attachment])
-        setDraft('')
+        setPendingAttachments((prev) => [...prev, attachment])
         focusInput()
       } catch (err) {
         if (err instanceof ApiError) {
@@ -177,7 +184,18 @@ export const ChatInput = forwardRef<ChatInputHandle, Props>(function ChatInput({
         setUploading(false)
       }
     },
-    [draft, onSend, onUpload, focusInput],
+    [onUpload, focusInput],
+  )
+
+  useImperativeHandle(
+    ref,
+    () => ({
+      focus: focusInput,
+      attachFile: (file: File) => {
+        void uploadFile(file)
+      },
+    }),
+    [focusInput, uploadFile],
   )
 
   const handlePaste = useCallback(
@@ -224,7 +242,7 @@ export const ChatInput = forwardRef<ChatInputHandle, Props>(function ChatInput({
     [onSend, focusInput],
   )
 
-  const canSend = Boolean(draft.trim()) && !uploading && !disabled
+  const canSend = (Boolean(draft.trim()) || pendingAttachments.length > 0) && !uploading && !disabled
   const actionsEnabled = !uploading && !disabled
 
   const insertEmoji = useCallback(
@@ -341,6 +359,34 @@ export const ChatInput = forwardRef<ChatInputHandle, Props>(function ChatInput({
     <div className="border-t border-[var(--meet-border)] px-1.5 py-1.5">
       {error && <p className="m-0 mb-1.5 text-[11px] text-red-400/90">{error}</p>}
       {uploading && <p className="m-0 mb-1.5 text-[11px] text-[var(--meet-accent)]">Uploading image…</p>}
+
+      {pendingAttachments.length > 0 && (
+        <ul className="m-0 mb-1.5 flex list-none flex-wrap gap-1.5 p-0" aria-label="Attached images (not sent yet)">
+          {pendingAttachments.map((att, index) => (
+            <li
+              key={`${att.url}-${index}`}
+              className="group relative h-16 w-16 shrink-0 overflow-hidden border border-[var(--meet-border)] bg-white/[0.04]"
+            >
+              <img
+                src={att.url}
+                alt={`Attachment ${index + 1}`}
+                className="h-full w-full object-cover"
+                draggable={false}
+              />
+              <button
+                type="button"
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => removePendingAttachment(index)}
+                className="absolute top-0.5 right-0.5 flex h-5 w-5 items-center justify-center border-none bg-black/65 text-white/90 transition-colors hover:bg-black/80 hover:text-white"
+                aria-label={`Remove attachment ${index + 1}`}
+                title="Remove"
+              >
+                <X size={12} />
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
 
       <ChatPollComposer
         open={showPollComposer}

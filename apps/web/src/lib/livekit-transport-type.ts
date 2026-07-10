@@ -73,8 +73,10 @@ export async function getLiveKitTransportMode(room: Room): Promise<LiveKitTransp
 }
 
 export function liveKitTransportModeLabel(mode: LiveKitTransportMode): string {
-  if (mode === 'p2p') return 'P2P'
-  if (mode === 'relay') return 'Relay'
+  // "Direct" = ICE host/srflx to the LiveKit SFU (still SFU-mediated, not peer↔peer).
+  // "Relay" = TURN path to the same SFU.
+  if (mode === 'p2p') return 'Direct (SFU)'
+  if (mode === 'relay') return 'Relay (TURN)'
   return 'Connected'
 }
 

@@ -21,11 +21,11 @@ func DevTunnelDeploy(cfg *Config) error {
 	if err != nil {
 		return err
 	}
-	if generated {
-		fmt.Println("deploy | generated tunnel token — add to server/.env:")
-		fmt.Printf("  REMOTE_DEBUG_TUNNEL_TOKEN=%s\n", token)
-	}
 	cfg.Tunnel.DevTunnel.Token = token
+	if generated {
+		fmt.Println("deploy | generated tunnel token")
+		persistRemoteSecrets(cfg, map[string]string{envTunnelToken: token})
+	}
 
 	tlsFP, localCert, localKey, tlsCleanup, tlsGenerated, err := prepareDevTunnelTLSFiles(cfg)
 	if err != nil {
@@ -33,9 +33,15 @@ func DevTunnelDeploy(cfg *Config) error {
 	}
 	defer tlsCleanup()
 	cfg.Tunnel.DevTunnel.TLSFingerprint = tlsFP
-	if tlsGenerated || strings.TrimSpace(os.Getenv("REMOTE_DEBUG_TUNNEL_TLS_FINGERPRINT")) == "" {
-		fmt.Println("deploy | tunnel TLS fingerprint — add to server/.env:")
-		fmt.Printf("  REMOTE_DEBUG_TUNNEL_TLS_FINGERPRINT=%s\n", tlsFP)
+	// Always persist the effective fingerprint so server/.env matches the agent cert
+	// (covers first deploy, cert rotation, and pointing at a new host).
+	if tlsFP != "" {
+		if tlsGenerated {
+			fmt.Println("deploy | generated tunnel TLS cert + fingerprint")
+		} else {
+			fmt.Println("deploy | tunnel TLS fingerprint")
+		}
+		persistRemoteSecrets(cfg, map[string]string{envTunnelTLSFingerprint: tlsFP})
 	}
 
 	binary, err := buildDevCLILinux(cfg)

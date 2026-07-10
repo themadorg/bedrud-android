@@ -9,7 +9,7 @@ const openrcBedrudTemplate = `#!/sbin/openrc-run
 
 name="bedrud"
 description="Bedrud Meeting Server"
-command="/usr/local/bin/bedrud"
+command="%s"
 command_args="run --config %s"
 pidfile="/var/run/${RC_SVCNAME}.pid"
 command_background="yes"
@@ -31,7 +31,7 @@ const openrcLivekitTemplate = `#!/sbin/openrc-run
 
 name="livekit"
 description="LiveKit Server (Embedded in Bedrud)"
-command="/usr/local/bin/bedrud"
+command="%s"
 command_args="--livekit --config /etc/bedrud/livekit.yaml"
 pidfile="/var/run/${RC_SVCNAME}.pid"
 command_background="yes"
@@ -44,9 +44,10 @@ depend() {
 }
 `
 
-func writeOpenRCFiles(cfg *serviceConfig, lkManagedEnv string) error {
+func writeOpenRCFiles(cfg *serviceConfig, bedrudBin, lkManagedEnv string) error {
 	if cfg.HasLivekit {
-		if err := os.WriteFile("/etc/init.d/livekit", []byte(openrcLivekitTemplate), 0o755); err != nil {
+		lkScript := fmt.Sprintf(openrcLivekitTemplate, bedrudBin)
+		if err := os.WriteFile("/etc/init.d/livekit", []byte(lkScript), 0o755); err != nil {
 			return fmt.Errorf("failed to write livekit openrc script: %w", err)
 		}
 	}
@@ -61,7 +62,7 @@ func writeOpenRCFiles(cfg *serviceConfig, lkManagedEnv string) error {
 		envExports += "\n\texport LIVEKIT_MANAGED=true"
 	}
 
-	bedrudScript := fmt.Sprintf(openrcBedrudTemplate, cfg.ConfigPath, lkDep, envExports)
+	bedrudScript := fmt.Sprintf(openrcBedrudTemplate, bedrudBin, cfg.ConfigPath, lkDep, envExports)
 	if err := os.WriteFile("/etc/init.d/bedrud", []byte(bedrudScript), 0o755); err != nil {
 		return fmt.Errorf("failed to write bedrud openrc script: %w", err)
 	}

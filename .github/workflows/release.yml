@@ -133,6 +133,7 @@ jobs:
 
           cp dist/bedrud_${{ matrix.suffix }} deb/usr/bin/bedrud
           cp apps/server/installer/linux/bedrud.service deb/usr/lib/systemd/system/
+          cp apps/server/installer/linux/livekit.service deb/usr/lib/systemd/system/
 
           {
             echo "Package: bedrud"
@@ -147,7 +148,8 @@ jobs:
           } > deb/DEBIAN/control
 
           cp apps/server/installer/linux/postinst deb/DEBIAN/postinst
-          chmod 0755 deb/DEBIAN/postinst
+          cp apps/server/installer/linux/prerm deb/DEBIAN/prerm
+          chmod 0755 deb/DEBIAN/postinst deb/DEBIAN/prerm
 
           dpkg-deb --build deb bedrud_${{ matrix.deb_arch }}.deb
 
@@ -190,6 +192,8 @@ jobs:
           install -Dm755 dist/bedrud_${{ matrix.suffix }} rpmbuild/BUILD/bedrud
           install -Dm644 apps/server/installer/linux/bedrud.service \
             rpmbuild/BUILD/bedrud.service
+          install -Dm644 apps/server/installer/linux/livekit.service \
+            rpmbuild/BUILD/livekit.service
 
           rpmbuild --define "_topdir $(pwd)/rpmbuild" \
             --define "_builddir $(pwd)/rpmbuild/BUILD" \
@@ -1301,8 +1305,9 @@ jobs:
           ARM_SHA=$(curl -fsSL "$ARM_URL" | sha256sum | awk '{print $1}')
 
           sed -i "s/^pkgver=.*/pkgver=${PKGVER}/" packages/aur/bedrud-server/PKGBUILD
-          sed -i "0,/^sha256sums_x86_64=/{s/^sha256sums_x86_64=.*/sha256sums_x86_64=('${X86_SHA}' 'SKIP')/}" packages/aur/bedrud-server/PKGBUILD
-          sed -i "0,/^sha256sums_aarch64=/{s/^sha256sums_aarch64=.*/sha256sums_aarch64=('${ARM_SHA}' 'SKIP')/}" packages/aur/bedrud-server/PKGBUILD
+          # binary + bedrud.service + livekit.service
+          sed -i "0,/^sha256sums_x86_64=/{s/^sha256sums_x86_64=.*/sha256sums_x86_64=('${X86_SHA}' 'SKIP' 'SKIP')/}" packages/aur/bedrud-server/PKGBUILD
+          sed -i "0,/^sha256sums_aarch64=/{s/^sha256sums_aarch64=.*/sha256sums_aarch64=('${ARM_SHA}' 'SKIP' 'SKIP')/}" packages/aur/bedrud-server/PKGBUILD
 
           sed -i "s/pkgver = .*/pkgver = ${PKGVER}/" packages/aur/bedrud-server/.SRCINFO
           sed -i "s|source_x86_64 = .*tar.xz.*|source_x86_64 = bedrud-bin-${PKGVER}-x86_64.tar.xz::${X86_URL}|" packages/aur/bedrud-server/.SRCINFO

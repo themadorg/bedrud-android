@@ -137,3 +137,105 @@ func parseDotEnv(path string) (map[string]string, error) {
 	}
 	return out, nil
 }
+
+// UpsertDotEnv sets key=value in server/.env (creates the file if missing).
+// Existing keys are replaced in place; new keys are appended. Comments and
+// unrelated lines are preserved. Values with spaces or # are double-quoted.
+func UpsertDotEnv(repo, key, value string) error {
+	if repo == "" {
+		return fmt.Errorf("upsert .env: empty repo path")
+	}
+	key = strings.TrimSpace(key)
+	if key == "" {
+		return fmt.Errorf("upsert .env: empty key")
+	}
+	path := EnvPath(repo)
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		return err
+	}
+
+	var lines []string
+	data, err := os.ReadFile(path)
+	if err != nil {
+		if !os.IsNotExist(err) {
+			return err
+		}
+	} else if len(data) > 0 {
+		// Preserve trailing newline handling via Split (no trailing empty from final \n).
+		text := string(data)
+		text = strings.TrimSuffix(text, "\n")
+		if text != "" {
+			lines = strings.Split(text, "\n")
+		}
+	}
+
+	encoded := encodeDotEnvValue(value)
+	assignment := key + "=" + encoded
+	replaced := false
+	for i, line := range lines {
+		trimmed := strings.TrimSpace(line)
+		if trimmed == "" || strings.HasPrefix(trimmed, "#") {
+			continue
+		}
+		exportPrefixed := false
+		work := trimmed
+		if strings.HasPrefix(work, "export ") {
+			exportPrefixed = true
+			work = strings.TrimSpace(strings.TrimPrefix(work, "export "))
+		}
+		k, _, ok := strings.Cut(work, "=")
+		if !ok || strings.TrimSpace(k) != key {
+			continue
+		}
+		if exportPrefixed {
+			lines[i] = "export " + assignment
+		} else {
+			lines[i] = assignment
+		}
+		replaced = true
+		// Keep replacing all occurrences so duplicates stay consistent.
+	}
+	if !replaced {
+		if len(lines) > 0 && lines[len(lines)-1] != "" {
+			lines = append(lines, "")
+		}
+		lines = append(lines, assignment)
+	}
+
+	out := strings.Join(lines, "\n") + "\n"
+	return os.WriteFile(path, []byte(out), 0o600)
+}
+
+func encodeDotEnvValue(v string) string {
+	if v == "" {
+		return ""
+	}
+	if strings.ContainsAny(v, " \t#\"'\\") || strings.Contains(v, "\n") {
+		escaped := strings.ReplaceAll(v, `\`, `\\`)
+		escaped = strings.ReplaceAll(escaped, `"`, `\"`)
+		return `"` + escaped + `"`
+	}
+	return v
+}
+
+// persistRemoteSecrets writes generated secrets into server/.env when repo is known.
+func persistRemoteSecrets(cfg *Config, pairs map[string]string) {
+	if len(pairs) == 0 {
+		return
+	}
+	repo, err := findRepoForDetached(cfg)
+	if err != nil {
+		fmt.Printf("warning: could not locate repo to update server/.env: %v\n", err)
+		return
+	}
+	for k, v := range pairs {
+		if strings.TrimSpace(v) == "" {
+			continue
+		}
+		if err := UpsertDotEnv(repo, k, v); err != nil {
+			fmt.Printf("warning: failed to write %s to server/.env: %v\n", k, err)
+			continue
+		}
+		fmt.Printf("wrote %s to server/.env\n", k)
+	}
+}

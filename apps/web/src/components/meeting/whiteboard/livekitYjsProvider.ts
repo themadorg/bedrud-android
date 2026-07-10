@@ -3,7 +3,11 @@ import * as encoding from 'lib0/encoding'
 import { type Room, RoomEvent } from 'livekit-client'
 import * as syncProtocol from 'y-protocols/sync'
 import * as Y from 'yjs'
-import { isPublishUnavailableError, isRoomConnected } from '#/lib/livekit-publish'
+import {
+  isPublishUnavailableError,
+  prepareRoomForDataPublish,
+  resetLiveKitPublisherPromise,
+} from '#/lib/livekit-publish'
 import {
   applyYjsChunkPart,
   assembledYjsFromChunks,
@@ -16,8 +20,9 @@ import {
 } from './yjsWire'
 
 const MESSAGE_SYNC = 0
-const OUTBOUND_FLUSH_MS = 120
-const CHUNK_SEND_GAP_MS = 8
+/** ~1 frame so freehand Yjs updates leave the publisher promptly. */
+const OUTBOUND_FLUSH_MS = 16
+const CHUNK_SEND_GAP_MS = 2
 
 export const LIVEKIT_YJS_ORIGIN = Symbol('livekit-yjs-provider')
 
@@ -52,17 +57,19 @@ export class LiveKitYjsProvider {
   }
 
   private isRoomReady(): boolean {
-    return !this.destroyed && isRoomConnected(this.room)
+    return !this.destroyed && prepareRoomForDataPublish(this.room)
   }
 
   private bootstrapSync() {
     if (this.isRoomReady()) {
       this.requestSync()
     }
+    // Only retry if we never got SyncStep2 — re-syncing at 2s mid freehand
+    // was applying remote state and freezing the pen stroke.
     for (const ms of [800, 2000, 4000]) {
       this.syncTimers.push(
         window.setTimeout(() => {
-          if (this.isRoomReady()) this.requestSync()
+          if (this.isRoomReady() && !this.synced) this.requestSync()
         }, ms),
       )
     }
@@ -198,9 +205,10 @@ export class LiveKitYjsProvider {
   private async drainPublishQueue() {
     if (this.publishing || this.destroyed || !this.isRoomReady()) return
     this.publishing = true
+    resetLiveKitPublisherPromise(this.room)
 
     while (this.publishQueue.length > 0 && !this.destroyed) {
-      if (!this.isRoomReady()) break
+      if (!prepareRoomForDataPublish(this.room)) break
 
       const packet = this.publishQueue.shift()
       if (!packet) break
@@ -209,13 +217,18 @@ export class LiveKitYjsProvider {
         await this.room.localParticipant.publishData(packet, { reliable: true, topic: this.topic })
       } catch (err) {
         if (isPublishUnavailableError(err)) {
+          // Re-arm publisher promise and retry this packet.
+          resetLiveKitPublisherPromise(this.room)
           this.publishQueue.unshift(packet)
           break
         }
+        // Keep packet for retry — freehand strokes must not drop mid-path updates.
+        this.publishQueue.unshift(packet)
         if (import.meta.env.DEV) {
           const detail = err instanceof Error ? err.message : JSON.stringify(err)
           console.error('[LiveKitYjsProvider] failed to publish packet:', detail)
         }
+        break
       }
 
       if (this.publishQueue.length > 0) {
@@ -247,11 +260,17 @@ export class LiveKitYjsProvider {
   }
 }
 
+/**
+ * Yjs doc shape matching y-excalidraw (webxdc-correct):
+ *   elements: Y.Array<Y.Map<{ pos, el }>>
+ *   assets:   Y.Map (files)
+ *   settings / locks: bedrud extras
+ */
 export function createWhiteboardYDoc(): Y.Doc {
   const doc = new Y.Doc()
-  doc.getMap('elements')
-  doc.getArray('order')
-  doc.getMap('files')
+  doc.getArray('elements')
+  doc.getMap('assets')
+  doc.getMap('files') // legacy no-op for older code paths
   doc.getMap('settings')
   doc.getMap('locks')
   return doc

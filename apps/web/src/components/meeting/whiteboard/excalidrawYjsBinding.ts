@@ -1,18 +1,49 @@
-import type { ExcalidrawTextElement, OrderedExcalidrawElement } from '@excalidraw/excalidraw/element/types'
+/**
+ * Excalidraw ↔ Yjs binding modeled on context/y-excalidraw (webxdc-correct path).
+ *
+ * Structure:
+ *   ydoc.getArray('elements') → Y.Array<Y.Map<{ pos, el }>>
+ *   ydoc.getMap('assets') / settings / locks
+ *
+ * Freehand: version bumps every point, but we **throttle** Yjs writes while the pen
+ * is down. Writing the full stroke on every pointermove freezes the main thread
+ * after ~1–2s (hundreds of points × Yjs encode × LiveKit publish) and the stroke
+ * appears to stop even though the user is still dragging.
+ */
+import type { OrderedExcalidrawElement } from '@excalidraw/excalidraw/element/types'
 import type { AppState, BinaryFileData, BinaryFiles, ExcalidrawImperativeAPI } from '@excalidraw/excalidraw/types'
 import * as Y from 'yjs'
-import { normalizeRemoteScene, sceneElementsSignature, type WhiteboardScenePayload } from './excalidrawSceneUtils'
-import { type ElementLockSnapshot, filterElementsForLocalSync, mergeElementsWithLocks } from './whiteboardElementLocks'
+import { canEditElement, type ElementLockSnapshot, WHITEBOARD_LOCKS_ORIGIN } from './whiteboardElementLocks'
 import {
   pickSyncableSettings,
   settingsSignature,
   WHITEBOARD_SYNC_SETTINGS_KEYS,
   type WhiteboardSyncSettings,
 } from './whiteboardSyncSettings'
+import {
+  applyAssetOperations,
+  applyElementOperations,
+  getDeltaOperationsForAssets,
+  getDeltaOperationsForElements,
+  type LastKnownOrderedElement,
+} from './yExcalidrawDiff'
+import { areElementsSame, type YElementEntry, yElementById, yjsToExcalidraw } from './yExcalidrawHelpers'
 
 export const EXCALIDRAW_YJS_ORIGIN = Symbol('excalidraw-yjs-binding')
 
-const LOCAL_SYNC_DEBOUNCE_MS = 60
+/** Max freehand Yjs pushes per second while pen is down (remote stream still smooth). */
+const FREEHAND_SYNC_MS = 100
+
+export type BindExcalidrawToYDocOptions = {
+  localIdentity: string
+  getLocks: () => ElementLockSnapshot
+}
+
+export interface ExcalidrawYjsBinding {
+  onExcalidrawChange: (elements: readonly OrderedExcalidrawElement[], appState: AppState, files: BinaryFiles) => void
+  flush: () => void
+  destroy: () => void
+}
 
 function readSettingsFromDoc(doc: Y.Doc): Partial<WhiteboardSyncSettings> | null {
   const ySettings = doc.getMap<WhiteboardSyncSettings[keyof WhiteboardSyncSettings]>('settings')
@@ -37,7 +68,7 @@ function readSettingsFromDoc(doc: Y.Doc): Partial<WhiteboardSyncSettings> | null
   return hasAny ? settings : null
 }
 
-function syncSettingsToDoc(doc: Y.Doc, settings: WhiteboardSyncSettings) {
+function syncSettingsToDoc(doc: Y.Doc, settings: WhiteboardSyncSettings, origin: unknown) {
   const ySettings = doc.getMap<WhiteboardSyncSettings[keyof WhiteboardSyncSettings]>('settings')
   doc.transact(() => {
     for (const key of WHITEBOARD_SYNC_SETTINGS_KEYS) {
@@ -48,122 +79,60 @@ function syncSettingsToDoc(doc: Y.Doc, settings: WhiteboardSyncSettings) {
       }
       if (ySettings.get(key) !== value) ySettings.set(key, value)
     }
-  }, EXCALIDRAW_YJS_ORIGIN)
+  }, origin)
 }
 
-type PointList = readonly (readonly [number, number])[]
-
-function cloneElement(el: OrderedExcalidrawElement): OrderedExcalidrawElement {
-  return structuredClone(el)
-}
-
-function pointsSignature(points: PointList | undefined): string {
-  if (!points || points.length === 0) return '0'
-  const last = points[points.length - 1]
-  return `${points.length}:${last[0]},${last[1]}`
-}
-
-function pointCount(el: OrderedExcalidrawElement): number {
-  if (!('points' in el) || !Array.isArray(el.points)) return 0
-  return (el.points as PointList).length
-}
-
-function pickNewerElement(local: OrderedExcalidrawElement, remote: OrderedExcalidrawElement): OrderedExcalidrawElement {
-  if (remote.version > local.version) return remote
-  if (local.version > remote.version) return local
-
-  const localPoints = pointCount(local)
-  const remotePoints = pointCount(remote)
-  if (remotePoints > localPoints) return remote
-  if (localPoints > remotePoints) return local
-
-  if (elementChanged(local, remote)) return remote
-  return local
-}
-
-export type BindExcalidrawToYDocOptions = {
-  localIdentity: string
-  getLocks: () => ElementLockSnapshot
-}
-
-function elementChanged(prev: OrderedExcalidrawElement | undefined, next: OrderedExcalidrawElement): boolean {
-  if (!prev) return true
-  if (prev.version !== next.version) return true
-
-  if (prev.type === 'text' && next.type === 'text') {
-    return (prev as ExcalidrawTextElement).originalText !== (next as ExcalidrawTextElement).originalText
-  }
-
-  const prevPoints = 'points' in prev ? (prev.points as PointList | undefined) : undefined
-  const nextPoints = 'points' in next ? (next.points as PointList | undefined) : undefined
-  if (pointsSignature(prevPoints) !== pointsSignature(nextPoints)) return true
-
-  if (prev.x !== next.x || prev.y !== next.y || prev.width !== next.width || prev.height !== next.height) {
-    return true
-  }
-
-  return false
-}
-
-function readSceneFromDoc(doc: Y.Doc): WhiteboardScenePayload {
-  const yElements = doc.getMap<OrderedExcalidrawElement>('elements')
-  const yOrder = doc.getArray<string>('order')
-  const yFiles = doc.getMap<BinaryFileData>('files')
-
-  const elements = yOrder
+function lastKnownFromYArray(yElements: Y.Array<YElementEntry>): LastKnownOrderedElement[] {
+  return yElements
     .toArray()
-    .map((id) => yElements.get(id))
-    .filter((el): el is OrderedExcalidrawElement => el != null)
-
-  const files: BinaryFiles = {}
-  yFiles.forEach((file, id) => {
-    files[id] = file
-  })
-
-  return normalizeRemoteScene({ elements, files })
-}
-
-function syncSceneToDoc(doc: Y.Doc, scene: WhiteboardScenePayload) {
-  const yElements = doc.getMap<OrderedExcalidrawElement>('elements')
-  const yOrder = doc.getArray<string>('order')
-  const yFiles = doc.getMap<BinaryFileData>('files')
-
-  doc.transact(() => {
-    const nextIds = scene.elements.map((el) => el.id)
-    const prevIds = yOrder.toArray()
-
-    if (nextIds.join('|') !== prevIds.join('|')) {
-      yOrder.delete(0, yOrder.length)
-      yOrder.push(nextIds)
-    }
-
-    const nextIdSet = new Set(nextIds)
-    for (const id of prevIds) {
-      if (!nextIdSet.has(id)) yElements.delete(id)
-    }
-
-    for (const el of scene.elements) {
-      const prev = yElements.get(el.id)
-      if (elementChanged(prev, el)) {
-        yElements.set(el.id, cloneElement(el))
-      }
-    }
-
-    const nextFiles = scene.files ?? {}
-    const nextFileIds = new Set(Object.keys(nextFiles))
-    yFiles.forEach((_, id) => {
-      if (!nextFileIds.has(id)) yFiles.delete(id)
+    .map((x) => {
+      const el = x.get('el') as OrderedExcalidrawElement
+      return { id: el.id, version: el.version, pos: x.get('pos') as string }
     })
-    for (const [id, file] of Object.entries(nextFiles)) {
-      yFiles.set(id, structuredClone(file))
-    }
-  }, EXCALIDRAW_YJS_ORIGIN)
+    .sort((a, b) => (a.pos > b.pos ? 1 : a.pos < b.pos ? -1 : 0))
 }
 
-export interface ExcalidrawYjsBinding {
-  onExcalidrawChange: (elements: readonly OrderedExcalidrawElement[], appState: AppState, files: BinaryFiles) => void
-  flush: () => void
-  destroy: () => void
+function filterLockedElements(
+  elements: readonly OrderedExcalidrawElement[],
+  locks: ElementLockSnapshot,
+  localIdentity: string,
+  yElements: Y.Array<YElementEntry>,
+): OrderedExcalidrawElement[] {
+  return elements.map((el) => {
+    if (canEditElement(el.id, localIdentity, locks)) return el
+    const remote = yElementById(yElements, el.id) as OrderedExcalidrawElement | undefined
+    return remote ?? el
+  }) as OrderedExcalidrawElement[]
+}
+
+/** True while local user has an in-progress freehand stroke. */
+function isPenDown(api: ExcalidrawImperativeAPI): boolean {
+  try {
+    return api.getAppState().newElement?.type === 'freedraw'
+  } catch {
+    return false
+  }
+}
+
+/** Any in-progress local creation that must not be interrupted by updateScene. */
+function isLocallyDrawing(api: ExcalidrawImperativeAPI): boolean {
+  try {
+    const s = api.getAppState()
+    return !!(s.newElement || s.multiElement || s.selectedLinearElement?.isEditing || s.resizingElement)
+  } catch {
+    return false
+  }
+}
+
+/**
+ * Deep-clone freehand for Yjs so the live scene element is not shared with CRDT state.
+ * Shallow `{...el}` reuses the points array — later mutateElement can race with Yjs encode.
+ */
+function cloneForYjs(el: OrderedExcalidrawElement): OrderedExcalidrawElement {
+  if (el.type === 'freedraw' || el.type === 'line' || el.type === 'arrow') {
+    return JSON.parse(JSON.stringify(el)) as OrderedExcalidrawElement
+  }
+  return { ...el } as OrderedExcalidrawElement
 }
 
 export function bindExcalidrawToYDoc(
@@ -172,144 +141,215 @@ export function bindExcalidrawToYDoc(
   options: BindExcalidrawToYDocOptions,
 ): ExcalidrawYjsBinding {
   const { localIdentity, getLocks } = options
-  const yElements = doc.getMap<OrderedExcalidrawElement>('elements')
-  const yOrder = doc.getArray<string>('order')
-  const yFiles = doc.getMap<BinaryFileData>('files')
 
+  const yElements = doc.getArray<YElementEntry>('elements')
+  const yAssets = doc.getMap<BinaryFileData>('assets')
+  const yFilesLegacy = doc.getMap<BinaryFileData>('files')
   const ySettings = doc.getMap<WhiteboardSyncSettings[keyof WhiteboardSyncSettings]>('settings')
 
-  let applyingRemote = false
-  let trackedSignature = ''
+  const origin = Object.create(null) as object
+
+  let lastKnownElements: LastKnownOrderedElement[] = lastKnownFromYArray(yElements)
+  let lastKnownFileIds = new Set<string>([...yAssets.keys(), ...yFilesLegacy.keys()])
   let trackedSettingsSignature = ''
-  let debounceTimer: number | null = null
-  let pendingScene: WhiteboardScenePayload | null = null
+  const subscriptions: (() => void)[] = []
 
-  const pushLocalScene = (scene: WhiteboardScenePayload) => {
-    const locks = getLocks()
-    const filteredElements = filterElementsForLocalSync(scene.elements, locks, localIdentity, yElements)
-    const filteredScene = { ...scene, elements: filteredElements }
-    const signature = sceneElementsSignature(filteredScene.elements)
-    if (signature === trackedSignature) return
-    syncSceneToDoc(doc, filteredScene)
-    trackedSignature = signature
-  }
+  let freehandTimer: number | null = null
+  let freehandPushPending = false
+  let destroyed = false
 
-  const flush = () => {
-    if (debounceTimer != null) {
-      window.clearTimeout(debounceTimer)
-      debounceTimer = null
-    }
-    if (pendingScene) {
-      pushLocalScene(pendingScene)
-      pendingScene = null
-    }
-  }
+  const pushLocalFromApi = () => {
+    if (destroyed) return
 
-  const reapplyDocToExcalidraw = () => {
-    if (applyingRemote) return
-    applyingRemote = true
-
-    const remoteScene = readSceneFromDoc(doc)
-    const remoteSettings = readSettingsFromDoc(doc)
-    const localElements = api.getSceneElementsIncludingDeleted()
-    const mergedElements = mergeElementsWithLocks(
-      localElements,
-      remoteScene.elements,
+    const elements = filterLockedElements(
+      api.getSceneElements() as OrderedExcalidrawElement[],
       getLocks(),
       localIdentity,
-      pickNewerElement,
-    )
-    const scene = { ...remoteScene, elements: mergedElements }
-    trackedSignature = sceneElementsSignature(scene.elements)
+      yElements,
+    ).map(cloneForYjs)
 
-    api.updateScene({
-      elements: scene.elements,
-      appState: remoteSettings as Pick<AppState, 'viewBackgroundColor' | 'gridModeEnabled'> | undefined,
+    const files = api.getFiles()
+
+    if (!areElementsSame(lastKnownElements, elements)) {
+      const res = getDeltaOperationsForElements(lastKnownElements, elements)
+      lastKnownElements = res.lastKnownElements
+      if (res.operations.length > 0) {
+        applyElementOperations(yElements, res.operations, origin)
+      }
+    }
+
+    // Skip asset/settings churn mid freehand — keep the pen path light.
+    if (isPenDown(api)) return
+
+    const assetRes = getDeltaOperationsForAssets(lastKnownFileIds, files)
+    lastKnownFileIds = assetRes.lastKnownFileIds
+    if (assetRes.operations.length > 0) {
+      applyAssetOperations(yAssets, assetRes.operations, origin)
+    }
+
+    try {
+      const settings = pickSyncableSettings(api.getAppState())
+      const nextSig = settingsSignature(settings)
+      if (nextSig !== trackedSettingsSignature) {
+        syncSettingsToDoc(doc, settings, origin)
+        trackedSettingsSignature = nextSig
+      }
+    } catch {
+      /* unmount */
+    }
+  }
+
+  /**
+   * Freehand: schedule at most one Yjs write per FREEHAND_SYNC_MS.
+   * Non-freehand: push immediately (rects etc.).
+   */
+  const schedulePush = (force = false) => {
+    if (destroyed) return
+
+    if (!force && isPenDown(api)) {
+      freehandPushPending = true
+      if (freehandTimer != null) return
+      freehandTimer = window.setTimeout(() => {
+        freehandTimer = null
+        if (!freehandPushPending || destroyed) return
+        freehandPushPending = false
+        pushLocalFromApi()
+        // Still pen-down? schedule next sample so path keeps streaming.
+        if (isPenDown(api)) schedulePush()
+      }, FREEHAND_SYNC_MS)
+      return
+    }
+
+    if (freehandTimer != null) {
+      window.clearTimeout(freehandTimer)
+      freehandTimer = null
+    }
+    freehandPushPending = false
+    pushLocalFromApi()
+  }
+
+  const unsubOnChange = api.onChange((_elements, state) => {
+    // api.onChange is the only push path (do not also push from props onChange).
+    const pen = state.newElement?.type === 'freedraw'
+    schedulePush(!pen)
+  })
+  subscriptions.push(unsubOnChange)
+
+  const safeUpdateScene = (payload: {
+    elements?: readonly OrderedExcalidrawElement[]
+    appState?: Partial<AppState>
+    captureUpdate?: 'NEVER'
+  }) => {
+    // Never replace the scene mid freehand — detaches newElement and freezes the stroke.
+    if (isLocallyDrawing(api)) return
+    api.updateScene(payload as Parameters<ExcalidrawImperativeAPI['updateScene']>[0])
+  }
+
+  const onRemoteElements = (_events: Y.YEvent<Y.AbstractType<unknown>>[], txn: Y.Transaction) => {
+    if (txn.origin === origin) return
+    if (isLocallyDrawing(api)) return
+
+    const remoteElements = yjsToExcalidraw(yElements) as OrderedExcalidrawElement[]
+    const localScene = api.getSceneElements() as OrderedExcalidrawElement[]
+    const localById = new Map(localScene.map((el) => [el.id, el]))
+
+    // Prefer remote for ids that exist in Yjs; keep local-only ids.
+    const remoteIds = new Set(remoteElements.map((el) => el.id))
+    const elements = [
+      ...remoteElements.map((el) =>
+        localById.get(el.id) && el.version === localById.get(el.id)!.version ? localById.get(el.id)! : el,
+      ),
+      ...localScene.filter((el) => !remoteIds.has(el.id) && !el.isDeleted),
+    ]
+
+    lastKnownElements = lastKnownFromYArray(yElements)
+
+    const remoteSettings = readSettingsFromDoc(doc)
+    safeUpdateScene({
+      elements,
+      ...(remoteSettings
+        ? { appState: remoteSettings as Pick<AppState, 'viewBackgroundColor' | 'gridModeEnabled'> }
+        : {}),
       captureUpdate: 'NEVER',
     })
+  }
+  yElements.observeDeep(onRemoteElements)
+  subscriptions.push(() => yElements.unobserveDeep(onRemoteElements))
 
-    if (remoteSettings) {
-      trackedSettingsSignature = settingsSignature(remoteSettings)
-    }
+  const onRemoteAssets = (event: Y.YMapEvent<BinaryFileData>, txn: Y.Transaction) => {
+    if (txn.origin === origin) return
+    if (isLocallyDrawing(api)) return
+    const added = [...event.keysChanged].map((key) => yAssets.get(key)).filter((f): f is BinaryFileData => f != null)
+    if (added.length > 0) api.addFiles(added)
+    lastKnownFileIds = new Set([...yAssets.keys()])
+  }
+  yAssets.observe(onRemoteAssets)
+  subscriptions.push(() => yAssets.unobserve(onRemoteAssets))
 
-    if (scene.files && Object.keys(scene.files).length > 0) {
-      api.addFiles(Object.values(scene.files))
-    }
-
-    queueMicrotask(() => {
-      applyingRemote = false
+  const onRemoteSettings = (_event: unknown, txn: Y.Transaction) => {
+    if (txn.origin === origin) return
+    if (isLocallyDrawing(api)) return
+    const remoteSettings = readSettingsFromDoc(doc)
+    if (!remoteSettings) return
+    trackedSettingsSignature = settingsSignature(remoteSettings)
+    safeUpdateScene({
+      appState: remoteSettings as Pick<AppState, 'viewBackgroundColor' | 'gridModeEnabled'>,
+      captureUpdate: 'NEVER',
     })
   }
-
-  const applyDocToExcalidraw = (_events: unknown, transaction: Y.Transaction) => {
-    if (transaction.origin === EXCALIDRAW_YJS_ORIGIN || applyingRemote) return
-    reapplyDocToExcalidraw()
-  }
+  ySettings.observe(onRemoteSettings)
+  subscriptions.push(() => ySettings.unobserve(onRemoteSettings))
 
   const yLocks = doc.getMap('locks')
-  const applyLocksChange = () => reapplyDocToExcalidraw()
-
-  yElements.observe(applyDocToExcalidraw)
-  yOrder.observe(applyDocToExcalidraw)
-  yFiles.observe(applyDocToExcalidraw)
-  ySettings.observe(applyDocToExcalidraw)
-  yLocks.observe(applyLocksChange)
-
-  if (yOrder.length > 0 || ySettings.size > 0) {
-    applyingRemote = true
-    const scene = readSceneFromDoc(doc)
-    const initialSettings = readSettingsFromDoc(doc)
-    trackedSignature = sceneElementsSignature(scene.elements)
-    api.updateScene({
-      elements: scene.elements,
-      appState: initialSettings as Pick<AppState, 'viewBackgroundColor' | 'gridModeEnabled'> | undefined,
+  const onRemoteLocks = (_event: unknown, txn: Y.Transaction) => {
+    if (txn.origin === origin || txn.origin === WHITEBOARD_LOCKS_ORIGIN) return
+    if (isLocallyDrawing(api)) return
+    lastKnownElements = lastKnownFromYArray(yElements)
+    safeUpdateScene({
+      elements: yjsToExcalidraw(yElements) as OrderedExcalidrawElement[],
       captureUpdate: 'NEVER',
     })
-    if (initialSettings) {
-      trackedSettingsSignature = settingsSignature(initialSettings)
-    }
-    if (scene.files && Object.keys(scene.files).length > 0) {
-      api.addFiles(Object.values(scene.files))
-    }
-    applyingRemote = false
   }
+  yLocks.observe(onRemoteLocks)
+  subscriptions.push(() => yLocks.unobserve(onRemoteLocks))
 
-  const onExcalidrawChange = (
-    elements: readonly OrderedExcalidrawElement[],
-    appState: AppState,
-    files: BinaryFiles,
-  ) => {
-    if (applyingRemote) return
-
-    const settings = pickSyncableSettings(appState)
-    const nextSettingsSignature = settingsSignature(settings)
-    if (nextSettingsSignature !== trackedSettingsSignature) {
-      syncSettingsToDoc(doc, settings)
-      trackedSettingsSignature = nextSettingsSignature
-    }
-
-    pendingScene = { elements, files }
-    if (debounceTimer != null) return
-
-    debounceTimer = window.setTimeout(() => {
-      debounceTimer = null
-      if (!pendingScene) return
-      pushLocalScene(pendingScene)
-      pendingScene = null
-    }, LOCAL_SYNC_DEBOUNCE_MS)
+  if (yElements.length > 0 || ySettings.size > 0) {
+    const initial = yjsToExcalidraw(yElements) as OrderedExcalidrawElement[]
+    lastKnownElements = lastKnownFromYArray(yElements)
+    const initialSettings = readSettingsFromDoc(doc)
+    if (initialSettings) trackedSettingsSignature = settingsSignature(initialSettings)
+    api.updateScene({
+      elements: initial,
+      ...(initialSettings
+        ? { appState: initialSettings as Pick<AppState, 'viewBackgroundColor' | 'gridModeEnabled'> }
+        : {}),
+      captureUpdate: 'NEVER',
+    })
+    const assets = [...yAssets.keys()].map((k) => yAssets.get(k)).filter((f): f is BinaryFileData => f != null)
+    if (assets.length > 0) api.addFiles(assets)
   }
 
   return {
-    onExcalidrawChange,
-    flush,
+    onExcalidrawChange: () => {
+      // Props onChange is for UI only — push is owned by api.onChange to avoid double work.
+    },
+    flush: () => {
+      // Pen-up: force immediate full freehand write.
+      if (freehandTimer != null) {
+        window.clearTimeout(freehandTimer)
+        freehandTimer = null
+      }
+      freehandPushPending = false
+      pushLocalFromApi()
+    },
     destroy: () => {
-      flush()
-      if (debounceTimer != null) window.clearTimeout(debounceTimer)
-      yElements.unobserve(applyDocToExcalidraw)
-      yOrder.unobserve(applyDocToExcalidraw)
-      yFiles.unobserve(applyDocToExcalidraw)
-      ySettings.unobserve(applyDocToExcalidraw)
-      yLocks.unobserve(applyLocksChange)
+      destroyed = true
+      if (freehandTimer != null) {
+        window.clearTimeout(freehandTimer)
+        freehandTimer = null
+      }
+      pushLocalFromApi()
+      for (const unsub of subscriptions) unsub()
     },
   }
 }

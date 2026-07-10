@@ -1,7 +1,12 @@
 // @ts-nocheck
 import path from 'node:path'
 
-/** Vite resolve aliases for in-tree Excalidraw packages (source, not npm dist). */
+/**
+ * Vite resolve aliases for **in-tree** Excalidraw packages (source under
+ * apps/web/src/vendor/excalidraw — not npm dist under node_modules).
+ *
+ * Bedrud's vendored tree has project-specific patches; always resolve here.
+ */
 export function excalidrawAliases(appRoot: string) {
   const root = path.join(appRoot, 'src/vendor/excalidraw/packages')
 
@@ -17,6 +22,7 @@ export function excalidrawAliases(appRoot: string) {
   const aliases: { find: string | RegExp; replacement: string }[] = []
 
   for (const [name, srcDir] of Object.entries(workspace)) {
+    // More-specific path first, then package root.
     aliases.push({
       find: new RegExp(`^@excalidraw/${name}/(.*)$`),
       replacement: `${srcDir}/$1`,
@@ -38,10 +44,12 @@ export function excalidrawAliases(appRoot: string) {
     find: '@excalidraw/excalidraw/types',
     replacement: path.join(excalidrawPkg, 'types.ts'),
   })
+  // Subpath imports (data/restore, actions/…, components/…) → vendor source.
   aliases.push({
     find: /^@excalidraw\/excalidraw\/(.+)$/,
     replacement: `${excalidrawPkg}/$1`,
   })
+  // Package root → vendor index (must win over node_modules/@excalidraw/excalidraw).
   aliases.push({
     find: '@excalidraw/excalidraw',
     replacement: path.join(excalidrawPkg, 'index.tsx'),

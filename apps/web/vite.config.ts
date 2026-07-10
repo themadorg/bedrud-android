@@ -23,10 +23,58 @@ const extraAllowedHosts = (process.env.BEDRUD_ALLOWED_HOSTS ?? '')
 // Remote debug (public host via Traefik): HMR remounts meeting components and kills LiveKit PC.
 const isRemoteDebug = extraAllowedHosts.length > 0
 
+/**
+ * Deps pulled in when the whiteboard (vendored Excalidraw) first loads.
+ * Must be pre-optimized at server start — otherwise Vite re-optimizes mid-session,
+ * full-reloads the page, and can leave dual React/Yjs instances (invalid hook call /
+ * "Yjs was already imported").
+ */
+const EXCALIDRAW_RUNTIME_DEPS = [
+  'canvas-roundrect-polyfill',
+  'browser-fs-access',
+  'roughjs',
+  'perfect-freehand',
+  'points-on-curve',
+  'pako',
+  'pica',
+  'image-blob-reduce',
+  'nanoid',
+  'clsx',
+  'lodash.debounce',
+  'lodash.throttle',
+  'jotai',
+  'jotai-scope',
+  'tunnel-rat',
+  'fuzzy',
+  'es6-promise-pool',
+  '@braintree/sanitize-url',
+  'pwacompat',
+  'radix-ui',
+  '@codemirror/commands',
+  '@codemirror/language',
+  '@codemirror/state',
+  '@codemirror/view',
+  '@lezer/highlight',
+]
+
 const config = defineConfig({
   resolve: {
     tsconfigPaths: true,
-    dedupe: ['react', 'react-dom'],
+    // Single shared copies for anything Excalidraw + whiteboard collab touch.
+    // Do NOT alias react → CJS index.js (breaks Vite SSR: "module is not defined").
+    dedupe: [
+      'react',
+      'react-dom',
+      'react/jsx-runtime',
+      'react/jsx-dev-runtime',
+      'yjs',
+      'lib0',
+      'y-protocols',
+      'jotai',
+      'jotai-scope',
+      'livekit-client',
+      '@livekit/components-react',
+    ],
     alias: [
       { find: /^@\/(.*)$/, replacement: path.join(appRoot, 'src/$1') },
       { find: /^#\/(.*)$/, replacement: path.join(appRoot, 'src/$1') },
@@ -34,20 +82,68 @@ const config = defineConfig({
     ],
   },
   optimizeDeps: {
+    // Crawl whiteboard entry at startup so first open doesn't discover new deps.
+    entries: [
+      'src/client.tsx',
+      'src/routes/**/*.{ts,tsx}',
+      'src/components/meeting/whiteboard/excalidrawLazy.tsx',
+      'src/components/meeting/whiteboard/MeetingSharedWhiteboard.tsx',
+    ],
     include: [
+      'react',
+      'react-dom',
+      'react/jsx-runtime',
+      'react/jsx-dev-runtime',
       '@livekit/components-react',
       '@livekit/krisp-noise-filter',
       'livekit-client',
-      'roughjs',
-      'jotai',
-      'perfect-freehand',
       'yjs',
       'y-protocols/sync',
+      'y-protocols/awareness',
+      'lib0',
       'lib0/encoding',
       'lib0/decoding',
+      ...EXCALIDRAW_RUNTIME_DEPS,
+    ],
+    // Keep vendored package *names* out of prebundle as npm packages — they resolve
+    // to apps/web/src/vendor/excalidraw source via aliases (project patches).
+    exclude: [
+      '@excalidraw/excalidraw',
+      '@excalidraw/element',
+      '@excalidraw/common',
+      '@excalidraw/math',
+      '@excalidraw/utils',
+      '@excalidraw/fractional-indexing',
+      '@excalidraw/laser-pointer',
     ],
   },
-  plugins: [devtools({ eventBusConfig: { port: DEV_PORT_DEVTOOLS } }), tailwindcss(), tanstackStart(), viteReact()],
+  // TanStack Start SSR runner must share the same optimized graph.
+  ssr: {
+    optimizeDeps: {
+      include: [
+        'react',
+        'react-dom',
+        'react/jsx-runtime',
+        'yjs',
+        'jotai',
+        'jotai-scope',
+        'lib0',
+      ],
+    },
+    // Don't externalize these so SSR doesn't load a second copy vs client.
+    noExternal: ['yjs', 'lib0', 'y-protocols', 'jotai', 'jotai-scope'],
+  },
+  plugins: [
+    devtools({ eventBusConfig: { port: DEV_PORT_DEVTOOLS } }),
+    tailwindcss(),
+    // Custom client entry without React.StrictMode — required for stable LiveKit/WebRTC.
+    tanstackStart({
+      client: {
+        entry: path.join(appRoot, 'src/client.tsx'),
+      },
+    }),
+    viteReact(),
+  ],
   test: {
     environment: 'jsdom',
     globals: true,
@@ -63,6 +159,13 @@ const config = defineConfig({
     allowedHosts: ['localhost', '127.0.0.1', ...extraAllowedHosts],
     // Prevent Vite HMR from tearing down WebRTC while testing on the public URL.
     hmr: isRemoteDebug ? false : undefined,
+    // Warm whiteboard entry so deps are discovered before the user opens it.
+    warmup: {
+      clientFiles: [
+        './src/components/meeting/whiteboard/excalidrawLazy.tsx',
+        './src/components/meeting/whiteboard/MeetingSharedWhiteboard.tsx',
+      ],
+    },
     proxy: {
       '/api': `http://localhost:${DEV_PORT_API}`,
       '/uploads': `http://localhost:${DEV_PORT_API}`,
@@ -81,11 +184,18 @@ const config = defineConfig({
     rollupOptions: {
       output: {
         manualChunks(id: string) {
+          // Never force React/Yjs into isolated chunks — dual copies break hooks & Y.Doc.
+          if (
+            id.includes('/node_modules/react/') ||
+            id.includes('/node_modules/react-dom/') ||
+            id.includes('/node_modules/yjs/') ||
+            id.includes('/node_modules/lib0/') ||
+            id.includes('/node_modules/jotai/')
+          ) {
+            return
+          }
           if (id.includes('/components/meeting/MeetingContext')) {
             return 'meeting-context'
-          }
-          if (id.includes('/node_modules/react/') || id.includes('/node_modules/react-dom/')) {
-            return 'react-vendor'
           }
           if (id.includes('/node_modules/@tanstack/')) {
             return 'tanstack-vendor'
@@ -121,8 +231,6 @@ const config = defineConfig({
             id.includes('/node_modules/') &&
             !id.includes('/node_modules/@livekit/krisp-noise-filter/') &&
             !id.includes('/node_modules/@jitsi/rnnoise-wasm/') &&
-            // Keep mermaid lazy: dynamic-imported by Excalidraw TTD/paste only.
-            // Forcing it into the shared vendor chunk defeats that split.
             !id.includes('/node_modules/@excalidraw/mermaid-to-excalidraw/') &&
             !id.includes('/node_modules/@excalidraw/markdown-to-text/') &&
             !id.includes('/node_modules/mermaid/') &&

@@ -1,6 +1,5 @@
-import { MainMenu } from '@excalidraw/excalidraw'
 import type { ExcalidrawImperativeAPI } from '@excalidraw/excalidraw/types'
-import type { RefObject } from 'react'
+import type { ComponentType, ReactNode, RefObject } from 'react'
 import {
   copyWhiteboardAsPng,
   copyWhiteboardAsSvg,
@@ -13,8 +12,13 @@ import {
   toggleWhiteboardZenMode,
 } from './whiteboardMenuActions'
 
+/** Same MainMenu export as Excalidraw (from excalidrawLazy) — keeps one React/context graph. */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type MainMenuComponent = ComponentType<{ children?: ReactNode }> & Record<string, any>
+
 interface WhiteboardMainMenuProps {
   apiRef: RefObject<ExcalidrawImperativeAPI | null>
+  MainMenu: MainMenuComponent
 }
 
 function runWithApi(apiRef: RefObject<ExcalidrawImperativeAPI | null>, fn: (api: ExcalidrawImperativeAPI) => void) {
@@ -32,7 +36,7 @@ function runAsyncWithApi(
   void fn(api).catch(() => {})
 }
 
-export function WhiteboardMainMenu({ apiRef }: WhiteboardMainMenuProps) {
+export function WhiteboardMainMenu({ apiRef, MainMenu }: WhiteboardMainMenuProps) {
   return (
     <MainMenu>
       <MainMenu.Item onSelect={() => pasteToWhiteboard()} shortcut="Ctrl+V">

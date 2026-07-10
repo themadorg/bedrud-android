@@ -1,7 +1,16 @@
 import { useLocalParticipant, useRoomContext } from '@livekit/components-react'
-import { ParticipantEvent, RoomEvent, Track } from 'livekit-client'
+import { ConnectionState, ParticipantEvent, RoomEvent, Track } from 'livekit-client'
 import { createContext, type ReactNode, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
-import { isPublishUnavailableError, isRoomPublishReady, waitForRoomPublishReady } from '#/lib/livekit-publish'
+import {
+  isFatalPublishError,
+  isPublishUnavailableError,
+  isRoomPublishReady,
+  isRoomTransportDead,
+  prepareRoomForDataPublish,
+  resetLiveKitPublisherPromise,
+  waitForRoomPublishReady,
+} from '#/lib/livekit-publish'
+import { meetingDebugLog } from '#/lib/meeting-debug-log'
 import {
   encodeStageWire,
   type MeetingStage,
@@ -86,19 +95,39 @@ export function MeetingStageProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const drainPublishQueue = useCallback(async () => {
-    if (publishingRef.current || !isRoomPublishReady(room)) return
+    if (publishingRef.current) return
+    if (!prepareRoomForDataPublish(room)) return
     publishingRef.current = true
 
-    while (publishQueueRef.current.length > 0 && isRoomPublishReady(room)) {
+    while (publishQueueRef.current.length > 0) {
+      if (!prepareRoomForDataPublish(room)) break
+
       const payload = publishQueueRef.current.shift()
       if (!payload) break
 
       try {
+        meetingDebugLog('stage.publish', {
+          type: payload.type,
+          topic: STAGE_DATA_TOPIC,
+          localIdentity: room.localParticipant.identity,
+          remotes: room.remoteParticipants.size,
+        })
         await room.localParticipant.publishData(encodeStageWire(payload), {
           reliable: true,
           topic: STAGE_DATA_TOPIC,
         })
+        meetingDebugLog('stage.publish_ok', { type: payload.type })
       } catch (err) {
+        const message = err instanceof Error ? err.message : String(err)
+        meetingDebugLog('stage.publish_failed', { type: payload.type, message })
+
+        // Fatal: never remount. Drop queue; re-arm publisher if DC still open.
+        if (isFatalPublishError(err) || isRoomTransportDead(room)) {
+          publishQueueRef.current = []
+          prepareRoomForDataPublish(room)
+          break
+        }
+
         if (isPublishUnavailableError(err)) {
           publishQueueRef.current.unshift(payload)
           break
@@ -108,7 +137,7 @@ export function MeetingStageProvider({ children }: { children: ReactNode }) {
     }
 
     publishingRef.current = false
-    if (publishQueueRef.current.length > 0 && isRoomPublishReady(room)) {
+    if (publishQueueRef.current.length > 0 && prepareRoomForDataPublish(room)) {
       scheduleDrainRetry(1500)
     }
   }, [room, scheduleDrainRetry])
@@ -119,10 +148,30 @@ export function MeetingStageProvider({ children }: { children: ReactNode }) {
 
   const publish = useCallback(
     (payload: StageWire) => {
+      // Don't pile stage_request forever onto a dead / not-ready transport.
+      if (isRoomTransportDead(room)) {
+        meetingDebugLog('stage.publish_skipped_dead', { type: payload.type })
+        return
+      }
+      if (!isRoomPublishReady(room)) {
+        // Only queue user-driven stage_set / clear; drop opportunistic stage_request until ready.
+        if (payload.type === 'stage_request') {
+          meetingDebugLog('stage.request_deferred', { reason: 'not publish ready yet' })
+          return
+        }
+      }
+      // Cap queue — stage_request storms were flooding closed PCs.
+      if (publishQueueRef.current.length > 20) {
+        publishQueueRef.current = publishQueueRef.current.filter((p) => p.type !== 'stage_request').slice(-10)
+      }
+      // Dedupe stage_request in queue
+      if (payload.type === 'stage_request') {
+        publishQueueRef.current = publishQueueRef.current.filter((p) => p.type !== 'stage_request')
+      }
       publishQueueRef.current.push(payload)
       void drainPublishQueue()
     },
-    [drainPublishQueue],
+    [drainPublishQueue, room],
   )
 
   const stopLocalScreenShare = useCallback(() => {
@@ -218,11 +267,13 @@ export function MeetingStageProvider({ children }: { children: ReactNode }) {
   )
 
   useEffect(() => {
-    const handler = (payload: Uint8Array, _participant: unknown, _kind: unknown, topic?: string) => {
+    const handler = (payload: Uint8Array, participant: unknown, _kind: unknown, topic?: string) => {
       if (topic !== STAGE_DATA_TOPIC) return
       try {
         const wire = parseStageWire(JSON.parse(new TextDecoder().decode(payload)))
         if (!wire) return
+        const from = (participant as { identity?: string } | null)?.identity ?? 'unknown'
+        meetingDebugLog('stage.received', { type: wire.type, from, topic: STAGE_DATA_TOPIC })
 
         if (wire.type === 'stage_set') {
           applyRemoteStage(wire.stage)
@@ -264,37 +315,50 @@ export function MeetingStageProvider({ children }: { children: ReactNode }) {
   }, [applyRemoteStage, applyYoutubeSync, publish, room])
 
   const requestStageState = useCallback(() => {
+    if (isRoomTransportDead(room) || !isRoomPublishReady(room)) {
+      meetingDebugLog('stage.request_skipped', { reason: 'not publish ready' })
+      return
+    }
     publish({ type: 'stage_request', ts: Date.now() })
-  }, [publish])
+  }, [publish, room])
 
   const pushStageToRoom = useCallback(() => {
     const active = stageRef.current
     if (!active || active.ownerIdentity !== room.localParticipant.identity) return
+    if (isRoomTransportDead(room) || !isRoomPublishReady(room)) return
     publish({ type: 'stage_state', stage: active, ts: Date.now() })
-  }, [publish, room.localParticipant.identity])
+  }, [publish, room])
 
+  // One late sync after join (was 3 timers × storm → PC closed races).
   useEffect(() => {
-    const delays = [800, 2000, 4000]
-    const timers = delays.map((ms) => window.setTimeout(requestStageState, ms))
+    let cancelled = false
+    const timer = window.setTimeout(() => {
+      if (!cancelled) requestStageState()
+    }, 1_500)
     return () => {
-      for (const timer of timers) window.clearTimeout(timer)
+      cancelled = true
+      window.clearTimeout(timer)
     }
   }, [requestStageState])
 
   useEffect(() => {
+    const joinTimers: number[] = []
     const onParticipantJoined = () => {
       requestStageState()
       const active = stageRef.current
       if (!active || active.ownerIdentity !== room.localParticipant.identity) return
-      const delays = [400, 1200, 2500]
-      for (const ms of delays) {
-        window.setTimeout(pushStageToRoom, ms)
-      }
+      // Single delayed push — enough for late joiners without flooding publishData.
+      joinTimers.push(
+        window.setTimeout(() => {
+          pushStageToRoom()
+        }, 800),
+      )
     }
 
     room.on(RoomEvent.ParticipantConnected, onParticipantJoined)
     return () => {
       room.off(RoomEvent.ParticipantConnected, onParticipantJoined)
+      for (const t of joinTimers) window.clearTimeout(t)
     }
   }, [pushStageToRoom, requestStageState, room])
 
@@ -334,9 +398,14 @@ export function MeetingStageProvider({ children }: { children: ReactNode }) {
   }, [stage, room.localParticipant.identity, localParticipant?.isScreenShareEnabled, clearStage])
 
   useEffect(() => {
+    let cancelled = false
+
     const onRoomReady = () => {
-      void waitForRoomPublishReady(room).then((ready) => {
-        if (!ready) return
+      resetLiveKitPublisherPromise(room)
+      void waitForRoomPublishReady(room, 30_000).then((ready) => {
+        if (cancelled || !ready) return
+        // Clear again after ready — first ensure* call may have raced during connect.
+        resetLiveKitPublisherPromise(room)
         requestStageState()
         const active = stageRef.current
         if (active && active.ownerIdentity === room.localParticipant.identity) {
@@ -349,13 +418,17 @@ export function MeetingStageProvider({ children }: { children: ReactNode }) {
     const onRoomNotReady = () => {
       publishingRef.current = false
       clearDrainRetry()
+      publishQueueRef.current = []
     }
 
     room.on(RoomEvent.Connected, onRoomReady)
     room.on(RoomEvent.Reconnected, onRoomReady)
     room.on(RoomEvent.Reconnecting, onRoomNotReady)
     room.on(RoomEvent.Disconnected, onRoomNotReady)
+    if (room.state === ConnectionState.Connected) onRoomReady()
+
     return () => {
+      cancelled = true
       room.off(RoomEvent.Connected, onRoomReady)
       room.off(RoomEvent.Reconnected, onRoomReady)
       room.off(RoomEvent.Reconnecting, onRoomNotReady)
