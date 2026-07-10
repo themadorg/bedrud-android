@@ -53,6 +53,7 @@ const config = defineConfig({
     globals: true,
     setupFiles: [],
     include: ['src/**/*.test.ts', 'src/**/*.test.tsx'],
+    exclude: ['**/node_modules/**', '**/vendor/excalidraw/**'],
   },
   server: {
     port: DEV_PORT_WEB,
