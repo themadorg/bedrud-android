@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { PRECISION } from "./utils";
 
 import type {

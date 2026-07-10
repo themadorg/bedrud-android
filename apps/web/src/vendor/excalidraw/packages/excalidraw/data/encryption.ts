@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { ENCRYPTION_KEY_BITS } from "@excalidraw/common";
 
 import { blobToArrayBuffer } from "./blob";

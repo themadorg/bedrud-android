@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { COLOR_WHITE, THEME, applyDarkModeFilter } from "@excalidraw/common";
 
 import type { StaticCanvasRenderConfig } from "../scene/types";

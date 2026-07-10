@@ -1,3 +1,4 @@
+// @ts-nocheck
 import path from 'node:path'
 
 /** Vite resolve aliases for in-tree Excalidraw packages (source, not npm dist). */

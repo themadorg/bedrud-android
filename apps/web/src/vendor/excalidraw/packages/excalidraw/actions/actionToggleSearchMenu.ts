@@ -1,3 +1,4 @@
+// @ts-nocheck
 import {
   KEYS,
   CANVAS_SEARCH_TAB,

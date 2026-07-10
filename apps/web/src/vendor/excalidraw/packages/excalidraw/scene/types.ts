@@ -1,3 +1,4 @@
+// @ts-nocheck
 import type { UserIdleState, EditorInterface } from "@excalidraw/common";
 import type {
   ExcalidrawElement,

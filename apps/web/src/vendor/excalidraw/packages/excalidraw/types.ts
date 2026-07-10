@@ -1,3 +1,4 @@
+// @ts-nocheck
 import type {
   IMAGE_MIME_TYPES,
   UserIdleState,

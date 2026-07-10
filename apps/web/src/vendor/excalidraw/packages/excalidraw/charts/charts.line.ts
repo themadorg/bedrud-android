@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { pointFrom } from "@excalidraw/math";
 
 import { isDevEnv } from "@excalidraw/common";

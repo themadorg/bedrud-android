@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { simplify } from "points-on-curve";
 import { getStroke } from "perfect-freehand";
 import { LaserPointer } from "@excalidraw/laser-pointer";

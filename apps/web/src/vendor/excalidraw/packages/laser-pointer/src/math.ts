@@ -1,3 +1,4 @@
+// @ts-nocheck
 export type Point = [x: number, y: number, r: number];
 
 export function add([ax, ay, ar]: Point, [bx, by, br]: Point): Point {

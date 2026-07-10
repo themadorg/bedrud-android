@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { isDarwin } from "@excalidraw/common";
 
 import type { SubtypeOf } from "@excalidraw/common/utility-types";

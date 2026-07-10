@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { isEmbeddableElement } from "@excalidraw/element";
 
 import { KEYS } from "@excalidraw/common";

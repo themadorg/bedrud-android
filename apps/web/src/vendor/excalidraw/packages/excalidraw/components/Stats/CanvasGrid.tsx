@@ -1,3 +1,4 @@
+// @ts-nocheck
 import type { Scene } from "@excalidraw/element";
 
 import { getNormalizedGridStep } from "../../scene";

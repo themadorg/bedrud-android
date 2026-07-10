@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { promiseTry, resolvablePromise } from ".";
 
 import type { ResolvablePromise } from ".";

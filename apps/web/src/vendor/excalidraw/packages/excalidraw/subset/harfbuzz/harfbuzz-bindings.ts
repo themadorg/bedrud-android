@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Modified version of hb-subset bindings from "subset-font" package https://github.com/papandreou/subset-font/blob/3f711c8aa29a426c7f22655861abfb976950f527/index.js
  * 

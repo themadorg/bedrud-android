@@ -1,3 +1,4 @@
+// @ts-nocheck
 import {
   DEFAULT_ADAPTIVE_RADIUS,
   DEFAULT_PROPORTIONAL_RADIUS,

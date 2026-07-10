@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { getDefaultAppState } from "./appState";
 import { exportToCanvas } from "./scene/export";
 

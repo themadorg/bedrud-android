@@ -1,3 +1,4 @@
+// @ts-nocheck
 import "./Card.scss";
 
 // for open-color see https://github.com/yeun/open-color/blob/master/open-color.scss

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { CaptureUpdateAction } from "@excalidraw/element";
 
 import { register } from "./register";

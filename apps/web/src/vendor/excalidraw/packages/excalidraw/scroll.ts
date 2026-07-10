@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { easeOut } from "@excalidraw/common";
 import { clamp } from "@excalidraw/math";
 

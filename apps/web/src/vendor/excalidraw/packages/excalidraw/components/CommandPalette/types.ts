@@ -1,3 +1,4 @@
+// @ts-nocheck
 import type { ActionManager } from "../../actions/manager";
 import type { Action } from "../../actions/types";
 

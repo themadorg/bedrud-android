@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { toBrandedType } from "@excalidraw/common";
 
 import type { InclusiveRange } from "./types";

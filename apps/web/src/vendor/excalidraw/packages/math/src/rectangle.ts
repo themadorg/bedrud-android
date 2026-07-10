@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { pointFrom } from "./point";
 import { lineSegment, lineSegmentIntersectionPoints } from "./segment";
 

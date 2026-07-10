@@ -1,3 +1,4 @@
+// @ts-nocheck
 import {
   FONT_FAMILY,
   VERTICAL_ALIGN,

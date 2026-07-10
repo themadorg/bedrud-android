@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { isFiniteNumber, isValidPoint, pointFrom } from "@excalidraw/math";
 
 import {

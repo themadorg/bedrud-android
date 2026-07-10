@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { round } from "@excalidraw/math";
 import clsx from "clsx";
 import throttle from "lodash.throttle";

@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * x and y position of top left corner, x and y position of bottom right corner
  */

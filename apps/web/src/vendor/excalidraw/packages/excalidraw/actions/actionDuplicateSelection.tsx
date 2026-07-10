@@ -1,3 +1,4 @@
+// @ts-nocheck
 import {
   DEFAULT_GRID_SIZE,
   KEYS,

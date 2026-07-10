@@ -1,3 +1,4 @@
+// @ts-nocheck
 import {
   SHIFT_LOCKING_ANGLE,
   viewportCoordsToSceneCoords,

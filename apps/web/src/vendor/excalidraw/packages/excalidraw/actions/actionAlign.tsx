@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { getNonDeletedElements } from "@excalidraw/element";
 
 import { isFrameLikeElement } from "@excalidraw/element";

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { isDevEnv, isTestEnv } from "@excalidraw/common";
 
 import { charWidth, getLineWidth } from "./textMeasurements";

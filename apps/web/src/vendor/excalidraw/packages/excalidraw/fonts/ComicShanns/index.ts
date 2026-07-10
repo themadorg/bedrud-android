@@ -1,3 +1,4 @@
+// @ts-nocheck
 // The following file content was generated with https://chinese-font.netlify.app/online-split,
 // but has been manully rewritten from `@font-face` rules into TS while leveraging FontFace API.
 

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { trackEvent } from "../../analytics";
 import { useTunnels } from "../../context/tunnels";
 import { useI18n } from "../../i18n";

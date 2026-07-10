@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { type ExcalidrawFontFaceDescriptor } from "../Fonts";
 
 import _5 from "./Excalifont-Regular-349fac6ca4700ffec595a7150a0d1e1d.woff2";

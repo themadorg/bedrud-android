@@ -1,3 +1,4 @@
+// @ts-nocheck
 import React, { useState } from "react";
 
 import { t } from "../i18n";

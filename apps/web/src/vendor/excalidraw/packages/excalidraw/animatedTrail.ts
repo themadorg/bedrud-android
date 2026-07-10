@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { LaserPointer } from "@excalidraw/laser-pointer";
 import {
   SVG_NS,

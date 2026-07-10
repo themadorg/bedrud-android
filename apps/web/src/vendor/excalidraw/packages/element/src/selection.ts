@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { arrayToMap, isShallowEqual, type Bounds } from "@excalidraw/common";
 
 import type {

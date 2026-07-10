@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { getNonDeletedElements } from "@excalidraw/element";
 import { bindOrUnbindBindingElements } from "@excalidraw/element";
 import { getCommonBoundingBox } from "@excalidraw/element";

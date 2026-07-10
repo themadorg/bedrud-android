@@ -1,3 +1,4 @@
+// @ts-nocheck
 import type { MaybePromise } from "@excalidraw/common/utility-types";
 
 import type { ExcalidrawElement } from "@excalidraw/element/types";

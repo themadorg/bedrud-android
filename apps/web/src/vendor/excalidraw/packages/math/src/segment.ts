@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { line, linesIntersectAt } from "./line";
 import {
   isPoint,

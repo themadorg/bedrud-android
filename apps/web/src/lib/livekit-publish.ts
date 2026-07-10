@@ -155,14 +155,13 @@ let remoteTransportPatchInstalled = false
 
 /** Keep only TURN/TLS (TCP) — UDP TURN relay breaks SCTP data channels through VPN/TUN. */
 export function filterIceServersToTurnsTls(iceServers: RTCIceServer[]): RTCIceServer[] {
-  const filtered = iceServers
-    .map((server) => {
-      const urls = (Array.isArray(server.urls) ? server.urls : [server.urls])
-        .filter((url): url is string => typeof url === 'string' && url.startsWith('turns:'))
-        .map(normalizeTurnsTlsPort)
-      return urls.length > 0 ? { ...server, urls } : null
-    })
-    .filter((server): server is RTCIceServer => server != null)
+  const filtered: RTCIceServer[] = []
+  for (const server of iceServers) {
+    const urls = (Array.isArray(server.urls) ? server.urls : [server.urls])
+      .filter((url): url is string => typeof url === 'string' && url.startsWith('turns:'))
+      .map(normalizeTurnsTlsPort)
+    if (urls.length > 0) filtered.push({ ...server, urls })
+  }
   return filtered.length > 0 ? filtered : iceServers
 }
 

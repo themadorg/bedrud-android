@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { degreesToRadians, radiansToDegrees } from "@excalidraw/math";
 
 import { getBoundTextElement } from "@excalidraw/element";

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import rough from "roughjs/bin/rough";
 import {
   arrayToMap,

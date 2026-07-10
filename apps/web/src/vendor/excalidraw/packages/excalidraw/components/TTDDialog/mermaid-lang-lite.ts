@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { StreamLanguage } from "@codemirror/language";
 
 const mermaidStreamParser = StreamLanguage.define({

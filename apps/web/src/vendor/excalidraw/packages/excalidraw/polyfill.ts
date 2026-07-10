@@ -1,3 +1,4 @@
+// @ts-nocheck
 const polyfill = () => {
   if (!Array.prototype.at) {
     // Taken from https://github.com/tc39/proposal-relative-indexing-method#polyfill so that it works in tests

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { clamp, roundToStep } from "@excalidraw/math";
 
 import {

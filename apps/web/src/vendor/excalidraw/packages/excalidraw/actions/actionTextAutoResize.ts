@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { getFontString } from "@excalidraw/common";
 
 import { isExcalidrawElement, newElementWith } from "@excalidraw/element";

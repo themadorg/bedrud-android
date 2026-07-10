@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { isRenderThrottlingEnabled } from "../reactUtils";
 
 export type Animation<R extends object> = (params: {

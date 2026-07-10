@@ -1,3 +1,4 @@
+// @ts-nocheck
 export const InlineIcon = ({
   className,
   icon,

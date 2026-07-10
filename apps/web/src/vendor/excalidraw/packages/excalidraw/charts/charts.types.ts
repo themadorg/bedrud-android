@@ -1,3 +1,4 @@
+// @ts-nocheck
 import type { NonDeletedExcalidrawElement } from "@excalidraw/element/types";
 
 export type ChartElements = readonly NonDeletedExcalidrawElement[];

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { Tabs as RadixTabs } from "radix-ui";
 
 import type { SidebarTabName } from "../../types";

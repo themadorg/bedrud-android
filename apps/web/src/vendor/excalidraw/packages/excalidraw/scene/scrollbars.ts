@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { getGlobalCSSVariable } from "@excalidraw/common";
 
 import { getCommonBounds } from "@excalidraw/element";

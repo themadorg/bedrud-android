@@ -1,3 +1,4 @@
+// @ts-nocheck
 import {
   ALLOWED_PASTE_MIME_TYPES,
   EXPORT_DATA_TYPES,

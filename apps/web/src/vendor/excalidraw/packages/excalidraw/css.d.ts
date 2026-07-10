@@ -1,3 +1,4 @@
+// @ts-nocheck
 import "csstype";
 
 declare module "csstype" {

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { isServerEnv, promiseTry } from "@excalidraw/common";
 
 import { WorkerInTheMainChunkError, WorkerUrlNotDefinedError } from "../errors";

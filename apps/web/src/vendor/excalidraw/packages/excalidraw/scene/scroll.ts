@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { getVisibleElements } from "@excalidraw/element";
 import {
   sceneCoordsToViewportCoords,

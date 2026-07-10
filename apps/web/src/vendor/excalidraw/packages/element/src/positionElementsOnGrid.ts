@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { getCommonBounds } from "./bounds";
 import { type ElementUpdate, newElementWith } from "./mutateElement";
 

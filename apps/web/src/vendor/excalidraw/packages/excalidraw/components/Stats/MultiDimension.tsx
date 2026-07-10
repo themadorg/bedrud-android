@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { pointFrom, type GlobalPoint } from "@excalidraw/math";
 import { useMemo } from "react";
 

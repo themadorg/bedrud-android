@@ -1,3 +1,4 @@
+// @ts-nocheck
 import type { VERSIONS } from "@excalidraw/common";
 
 import type { ExcalidrawElement } from "@excalidraw/element/types";

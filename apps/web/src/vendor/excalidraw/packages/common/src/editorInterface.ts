@@ -1,3 +1,4 @@
+// @ts-nocheck
 export type StylesPanelMode = "compact" | "full" | "mobile";
 
 export type EditorInterface = Readonly<{

@@ -29,7 +29,7 @@ export function transportModeFromStatsReport(report: RTCStatsReport): LiveKitTra
       selectedPairId = stat.selectedCandidatePairId
     }
     if (type === 'candidate-pair') {
-      const pair = entry as RTCIceCandidatePairStats
+      const pair = entry as RTCIceCandidatePairStats & { selected?: boolean }
       if (!selectedPairId && pair.selected) {
         selectedPairId = pair.id
       }

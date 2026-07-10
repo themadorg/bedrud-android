@@ -1,3 +1,4 @@
+// @ts-nocheck
 import type { AppState, NormalizedZoomValue } from "../types";
 
 export const getStateForZoom = (

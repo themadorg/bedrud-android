@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useState, useLayoutEffect } from "react";
 
 import { THEME } from "@excalidraw/common";

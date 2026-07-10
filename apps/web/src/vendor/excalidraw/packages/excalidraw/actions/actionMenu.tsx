@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { KEYS } from "@excalidraw/common";
 
 import { CaptureUpdateAction } from "@excalidraw/element";

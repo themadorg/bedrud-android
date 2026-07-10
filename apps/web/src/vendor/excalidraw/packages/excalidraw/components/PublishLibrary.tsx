@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { exportToCanvas, exportToSvg } from "@excalidraw/utils/export";
 import { useCallback, useEffect, useRef, useState } from "react";
 

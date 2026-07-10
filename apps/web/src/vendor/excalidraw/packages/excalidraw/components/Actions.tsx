@@ -1,3 +1,4 @@
+// @ts-nocheck
 import clsx from "clsx";
 import { useRef, useState } from "react";
 import { Popover } from "radix-ui";

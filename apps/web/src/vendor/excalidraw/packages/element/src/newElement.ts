@@ -1,3 +1,4 @@
+// @ts-nocheck
 import {
   DEFAULT_ELEMENT_PROPS,
   DEFAULT_FONT_FAMILY,

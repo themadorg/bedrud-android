@@ -1,3 +1,4 @@
+// @ts-nocheck
 import type { ElementOrToolType } from "@excalidraw/excalidraw/types";
 
 export const hasBackground = (type: ElementOrToolType) =>

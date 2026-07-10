@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { createIsolation } from "jotai-scope";
 import React from "react";
 import tunnel from "tunnel-rat";

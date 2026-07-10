@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { average } from "@excalidraw/math";
 
 import type { GlobalCoord } from "@excalidraw/math";

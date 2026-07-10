@@ -1,3 +1,4 @@
+// @ts-nocheck
 export class BinaryHeap<T> {
   private content: T[] = [];
 

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import React from "react";
 
 import type { NonDeletedExcalidrawElement } from "@excalidraw/element/types";

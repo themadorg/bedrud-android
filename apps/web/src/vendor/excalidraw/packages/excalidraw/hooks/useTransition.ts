@@ -1,3 +1,4 @@
+// @ts-nocheck
 import React, { useCallback } from "react";
 
 /** noop polyfill for v17. Subset of API available */

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { promiseTry, LOCAL_FONT_PROTOCOL } from "@excalidraw/common";
 
 import { subsetWoff2GlyphsByCodepoints } from "../subset/subset-main";

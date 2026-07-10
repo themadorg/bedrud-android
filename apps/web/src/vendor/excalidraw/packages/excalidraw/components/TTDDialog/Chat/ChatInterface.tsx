@@ -1,3 +1,4 @@
+// @ts-nocheck
 import React, { useRef, useEffect, useLayoutEffect } from "react";
 import { KEYS } from "@excalidraw/common";
 

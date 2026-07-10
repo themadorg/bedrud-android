@@ -1,3 +1,4 @@
+// @ts-nocheck
 import type { EDITOR_LS_KEYS } from "@excalidraw/common";
 
 import type { JSONValue } from "../types";

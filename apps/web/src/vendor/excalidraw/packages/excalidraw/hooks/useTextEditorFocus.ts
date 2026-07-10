@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useState, useCallback } from "react";
 
 // Utility type for caret position

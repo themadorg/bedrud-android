@@ -1,3 +1,4 @@
+// @ts-nocheck
 import type { Arrowhead, AnyArrowhead } from "./types";
 
 export const normalizeArrowhead = (

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import {
   DEFAULT_EXPORT_PADDING,
   DEFAULT_FILENAME,

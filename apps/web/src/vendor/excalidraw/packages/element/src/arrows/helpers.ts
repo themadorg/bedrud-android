@@ -1,3 +1,4 @@
+// @ts-nocheck
 import type { App } from "@excalidraw/excalidraw/types";
 
 import { LinearElementEditor } from "../linearElementEditor";

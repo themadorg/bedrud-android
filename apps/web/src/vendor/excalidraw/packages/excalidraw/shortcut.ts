@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { isDarwin } from "@excalidraw/common";
 
 import { t } from "./i18n";

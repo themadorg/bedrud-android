@@ -1,3 +1,4 @@
+// @ts-nocheck
 interface Window {
   ClipboardItem: any;
   __EXCALIDRAW_SHA__: string | undefined;

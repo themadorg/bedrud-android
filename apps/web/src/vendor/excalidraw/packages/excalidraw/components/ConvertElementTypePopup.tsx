@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 
 import {

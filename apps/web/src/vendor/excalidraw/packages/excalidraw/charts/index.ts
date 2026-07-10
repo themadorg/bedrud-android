@@ -1,3 +1,4 @@
+// @ts-nocheck
 import type { ChartType } from "@excalidraw/element/types";
 
 import { renderBarChart } from "./charts.bar";

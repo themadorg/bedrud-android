@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { FilledButton } from "./FilledButton";
 
 export const LinkButton = ({

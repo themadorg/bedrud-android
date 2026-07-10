@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * DON'T depend on anything from the outside like `promiseTry`, as this module is part of a separate lazy-loaded chunk.
  *

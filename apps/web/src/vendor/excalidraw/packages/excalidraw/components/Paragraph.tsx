@@ -1,3 +1,4 @@
+// @ts-nocheck
 export const Paragraph = (props: {
   children: React.ReactNode;
   style?: React.CSSProperties;

@@ -1,3 +1,4 @@
+// @ts-nocheck
 //
 // All icons are imported from https://fontawesome.com/icons?d=gallery
 // Icons are under the license https://fontawesome.com/license

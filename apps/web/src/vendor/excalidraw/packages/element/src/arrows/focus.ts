@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { pointDistance, pointFrom, type GlobalPoint } from "@excalidraw/math";
 import { invariant } from "@excalidraw/common";
 

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useState, useRef, useEffect, useDeferredValue } from "react";
 
 import { EDITOR_LS_KEYS, debounce, isDevEnv } from "@excalidraw/common";

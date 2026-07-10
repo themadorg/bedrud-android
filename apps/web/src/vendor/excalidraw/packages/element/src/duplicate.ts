@@ -1,3 +1,4 @@
+// @ts-nocheck
 import {
   ORIG_ID,
   randomId,

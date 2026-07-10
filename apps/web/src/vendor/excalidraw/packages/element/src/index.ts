@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { toIterable } from "@excalidraw/common";
 
 import { isInvisiblySmallElement } from "./sizeHelpers";

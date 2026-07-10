@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * https://stackoverflow.com/a/3368118
  * Draws a rounded rectangle using the current state of the canvas.

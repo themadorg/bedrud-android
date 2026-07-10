@@ -1,3 +1,4 @@
+// @ts-nocheck
 import type { AppState } from "@excalidraw/excalidraw/types";
 
 import { updateBoundElements } from "./binding";

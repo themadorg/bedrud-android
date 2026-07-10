@@ -1,3 +1,4 @@
+// @ts-nocheck
 export { actionDeleteSelected } from "./actionDeleteSelected";
 export {
   actionBringForward,

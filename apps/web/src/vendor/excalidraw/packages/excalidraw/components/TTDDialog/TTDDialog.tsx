@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useEffect, useState } from "react";
 
 import { useUIAppState } from "../../context/ui-appState";

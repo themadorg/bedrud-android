@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { randomId } from "@excalidraw/common";
 
 import { atom } from "../../editor-jotai";

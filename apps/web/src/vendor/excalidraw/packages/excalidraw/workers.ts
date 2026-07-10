@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { debounce } from "@excalidraw/common";
 
 import { WorkerInTheMainChunkError, WorkerUrlNotDefinedError } from "./errors";

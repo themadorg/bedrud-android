@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { getShortcutKey } from "../../shortcut";
 
 export const TTDDialogSubmitShortcut = () => {

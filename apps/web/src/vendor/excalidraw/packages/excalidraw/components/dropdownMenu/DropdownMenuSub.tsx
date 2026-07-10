@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { DropdownMenu as DropdownMenuPrimitive } from "radix-ui";
 
 import DropdownMenuSubContent from "./DropdownMenuSubContent";

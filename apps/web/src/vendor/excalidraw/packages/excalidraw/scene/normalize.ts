@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { MAX_ZOOM, MIN_ZOOM } from "@excalidraw/common";
 
 import { clamp, round } from "@excalidraw/math";

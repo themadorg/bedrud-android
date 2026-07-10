@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * @param func handler taking at most single parameter (event).
  */

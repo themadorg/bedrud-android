@@ -1,3 +1,4 @@
+// @ts-nocheck
 import {
   assertNever,
   COLOR_PALETTE,

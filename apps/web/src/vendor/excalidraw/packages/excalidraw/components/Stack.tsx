@@ -1,3 +1,4 @@
+// @ts-nocheck
 import React, { forwardRef } from "react";
 import clsx from "clsx";
 

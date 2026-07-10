@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { throttleRAF } from "@excalidraw/common";
 
 import {

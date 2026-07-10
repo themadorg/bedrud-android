@@ -1,3 +1,4 @@
+// @ts-nocheck
 import {
   COLOR_PALETTE,
   DEFAULT_FONT_FAMILY,

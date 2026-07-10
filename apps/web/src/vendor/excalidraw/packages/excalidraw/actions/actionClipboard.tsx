@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { isTextElement } from "@excalidraw/element";
 import { getTextFromElements } from "@excalidraw/element";
 

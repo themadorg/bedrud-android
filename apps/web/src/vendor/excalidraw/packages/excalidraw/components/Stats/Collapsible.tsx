@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { InlineIcon } from "../InlineIcon";
 import { collapseDownIcon, collapseUpIcon } from "../icons";
 

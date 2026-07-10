@@ -1,3 +1,4 @@
+// @ts-nocheck
 import type { GlobalPoint, LocalPoint, Triangle } from "./types";
 
 // Types

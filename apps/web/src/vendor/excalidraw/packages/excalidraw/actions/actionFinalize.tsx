@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { pointFrom } from "@excalidraw/math";
 
 import { bindOrUnbindBindingElement } from "@excalidraw/element/binding";

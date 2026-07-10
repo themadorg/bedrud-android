@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useAtom } from "../../../editor-jotai";
 import { chatHistoryAtom } from "../../TTDDialog/TTDContext";
 import {

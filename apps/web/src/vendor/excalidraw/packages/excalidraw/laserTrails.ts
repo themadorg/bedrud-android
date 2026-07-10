@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { DEFAULT_LASER_COLOR, easeOut } from "@excalidraw/common";
 
 import type { LaserPointerOptions } from "@excalidraw/laser-pointer";

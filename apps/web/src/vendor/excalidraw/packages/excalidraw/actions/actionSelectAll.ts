@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { getNonDeletedElements } from "@excalidraw/element";
 import { LinearElementEditor } from "@excalidraw/element";
 import { isLinearElement, isTextElement } from "@excalidraw/element";

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import clsx from "clsx";
 
 import { useTunnels } from "../../context/tunnels";

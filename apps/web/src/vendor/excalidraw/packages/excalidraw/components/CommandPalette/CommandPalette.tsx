@@ -1,3 +1,4 @@
+// @ts-nocheck
 import clsx from "clsx";
 import fuzzy from "fuzzy";
 import { useEffect, useRef, useMemo, useState } from "react";

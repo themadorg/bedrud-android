@@ -1,3 +1,4 @@
+// @ts-nocheck
 import {
   applyDarkModeFilter,
   COLOR_WHITE,

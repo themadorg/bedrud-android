@@ -1,3 +1,4 @@
+// @ts-nocheck
 import React from "react";
 
 import { useI18n } from "../i18n";

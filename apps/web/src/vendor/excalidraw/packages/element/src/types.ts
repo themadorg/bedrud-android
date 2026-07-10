@@ -1,3 +1,4 @@
+// @ts-nocheck
 import type { LocalPoint, Radians } from "@excalidraw/math";
 
 import type {

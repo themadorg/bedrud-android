@@ -1,3 +1,4 @@
+// @ts-nocheck
 import * as m from "./math";
 import { douglasPeucker } from "./simplify";
 

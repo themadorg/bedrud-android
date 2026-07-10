@@ -1,3 +1,4 @@
+// @ts-nocheck
 import React from "react";
 
 const getMenuComponent = (component: string) => (children: React.ReactNode) => {

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { degreesToRadians } from "./angle";
 import { isFiniteNumber, PRECISION } from "./utils";
 import { vectorFromPoint, vectorScale } from "./vector";

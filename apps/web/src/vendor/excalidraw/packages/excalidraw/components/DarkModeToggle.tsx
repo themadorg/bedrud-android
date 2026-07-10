@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { THEME } from "@excalidraw/common";
 
 import type { Theme } from "@excalidraw/element/types";

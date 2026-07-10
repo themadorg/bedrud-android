@@ -1,3 +1,4 @@
+// @ts-nocheck
 import type { Action } from "./types";
 
 export let actions: readonly Action[] = [];

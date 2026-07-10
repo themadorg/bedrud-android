@@ -1,3 +1,4 @@
+// @ts-nocheck
 import type { AppState, UnsubscribeCallback } from "../types";
 
 type StateChangeSelector =

@@ -1,3 +1,4 @@
+// @ts-nocheck
 /** heuristically checks whether the text may be a mermaid diagram definition */
 export const isMaybeMermaidDefinition = (text: string) => {
   const chartTypes = [

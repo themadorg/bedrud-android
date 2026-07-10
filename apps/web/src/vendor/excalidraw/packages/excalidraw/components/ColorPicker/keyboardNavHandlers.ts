@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { COLORS_PER_ROW, COLOR_PALETTE, KEYS } from "@excalidraw/common";
 
 import type {

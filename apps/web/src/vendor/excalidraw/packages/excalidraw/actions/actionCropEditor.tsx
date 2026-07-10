@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { isImageElement } from "@excalidraw/element";
 
 import { CaptureUpdateAction } from "@excalidraw/element";

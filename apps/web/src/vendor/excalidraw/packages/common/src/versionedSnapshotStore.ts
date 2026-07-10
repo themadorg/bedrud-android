@@ -1,3 +1,4 @@
+// @ts-nocheck
 export type VersionedSnapshot<T> = Readonly<{
   version: number;
   value: T;

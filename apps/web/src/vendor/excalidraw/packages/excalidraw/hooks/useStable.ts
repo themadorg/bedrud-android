@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useRef } from "react";
 
 export const useStable = <T extends Record<string, any>>(value: T) => {

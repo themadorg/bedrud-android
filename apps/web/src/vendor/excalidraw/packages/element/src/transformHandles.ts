@@ -1,3 +1,4 @@
+// @ts-nocheck
 import {
   DEFAULT_TRANSFORM_HANDLE_SPACING,
   type EditorInterface,

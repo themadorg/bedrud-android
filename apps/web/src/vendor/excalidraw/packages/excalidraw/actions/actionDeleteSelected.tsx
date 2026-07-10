@@ -1,3 +1,4 @@
+// @ts-nocheck
 import {
   KEYS,
   MOBILE_ACTION_BUTTON_BG,

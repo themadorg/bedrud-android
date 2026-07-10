@@ -1,3 +1,4 @@
+// @ts-nocheck
 import {
   fileOpen as _fileOpen,
   fileSave as _fileSave,

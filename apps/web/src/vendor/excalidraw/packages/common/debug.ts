@@ -1,3 +1,4 @@
+// @ts-nocheck
 const lessPrecise = (num: number, precision = 5) =>
   parseFloat(num.toPrecision(precision));
 

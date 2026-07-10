@@ -1,3 +1,4 @@
+// @ts-nocheck
 import tinycolor from "tinycolor2";
 
 import { clamp } from "@excalidraw/math";

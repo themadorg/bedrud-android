@@ -1,3 +1,4 @@
+// @ts-nocheck
 // place here categories that you want to track. We want to track just a
 
 import { isDevEnv } from "@excalidraw/common";

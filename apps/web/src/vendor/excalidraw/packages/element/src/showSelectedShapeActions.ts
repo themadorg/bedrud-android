@@ -1,3 +1,4 @@
+// @ts-nocheck
 import type { UIAppState } from "@excalidraw/excalidraw/types";
 
 import { getSelectedElements } from "./selection";

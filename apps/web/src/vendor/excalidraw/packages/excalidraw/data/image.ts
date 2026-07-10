@@ -1,3 +1,4 @@
+// @ts-nocheck
 import tEXt from "png-chunk-text";
 import encodePng from "png-chunks-encode";
 import decodePng from "png-chunks-extract";

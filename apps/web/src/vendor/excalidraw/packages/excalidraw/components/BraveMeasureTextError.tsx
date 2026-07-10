@@ -1,3 +1,4 @@
+// @ts-nocheck
 import Trans from "./Trans";
 
 const BraveMeasureTextError = () => {

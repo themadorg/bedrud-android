@@ -1,3 +1,4 @@
+// @ts-nocheck
 import {
   FRAME_STYLE,
   MAX_DECIMALS_FOR_SVG_EXPORT,

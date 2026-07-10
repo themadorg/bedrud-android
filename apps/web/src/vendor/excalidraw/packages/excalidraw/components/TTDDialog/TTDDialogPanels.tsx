@@ -1,3 +1,4 @@
+// @ts-nocheck
 import type { ReactNode } from "react";
 
 export const TTDDialogPanels = ({ children }: { children: ReactNode }) => {

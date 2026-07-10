@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { LIBRARY_DISABLED_TYPES, randomId } from "@excalidraw/common";
 import { deepCopyElement } from "@excalidraw/element";
 

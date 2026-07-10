@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { updateActiveTool } from "@excalidraw/common";
 
 import { CaptureUpdateAction } from "@excalidraw/element";

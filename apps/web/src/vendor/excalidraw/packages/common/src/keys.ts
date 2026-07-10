@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { isDarwin } from "./editorInterface";
 
 import type { ValueOf } from "./utility-types";

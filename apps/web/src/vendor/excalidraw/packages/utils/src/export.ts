@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { MIME_TYPES } from "@excalidraw/common";
 import { getDefaultAppState } from "@excalidraw/excalidraw/appState";
 import {

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import type { GlobalPoint, LocalPoint, Vector } from "./types";
 
 /**

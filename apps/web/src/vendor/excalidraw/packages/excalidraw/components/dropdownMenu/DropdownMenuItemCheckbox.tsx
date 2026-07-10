@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { checkIcon, emptyIcon } from "../icons";
 
 import DropdownMenuItem from "./DropdownMenuItem";

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { MAX_CUSTOM_COLORS_USED_IN_CANVAS } from "@excalidraw/common";
 
 import type { ExcalidrawElement } from "@excalidraw/element/types";

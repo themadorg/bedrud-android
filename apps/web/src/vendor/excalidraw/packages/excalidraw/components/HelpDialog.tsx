@@ -1,3 +1,4 @@
+// @ts-nocheck
 import React from "react";
 
 import { isDarwin, isFirefox, isWindows } from "@excalidraw/common";

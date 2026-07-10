@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { invariant, isTransparent, type Bounds } from "@excalidraw/common";
 import {
   curveIntersectLineSegment,

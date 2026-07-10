@@ -1,3 +1,4 @@
+// @ts-nocheck
 import Pool from "es6-promise-pool";
 
 // extending the missing types

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { arrayToMap, findIndex, findLastIndex } from "@excalidraw/common";
 
 import { isFiniteNumber } from "@excalidraw/math";

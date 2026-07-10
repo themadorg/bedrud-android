@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { isDevEnv } from "@excalidraw/common";
 
 import { newElement } from "@excalidraw/element";

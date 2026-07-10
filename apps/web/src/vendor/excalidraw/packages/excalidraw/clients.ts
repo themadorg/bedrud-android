@@ -1,3 +1,4 @@
+// @ts-nocheck
 import {
   COLOR_CHARCOAL_BLACK,
   COLOR_VOICE_CALL,

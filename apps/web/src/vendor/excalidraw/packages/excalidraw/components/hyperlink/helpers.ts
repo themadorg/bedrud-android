@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { pointFrom, pointRotateRads } from "@excalidraw/math";
 
 import { MIME_TYPES } from "@excalidraw/common";

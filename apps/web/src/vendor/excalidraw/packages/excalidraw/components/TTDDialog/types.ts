@@ -1,3 +1,4 @@
+// @ts-nocheck
 import type { RequestError } from "@excalidraw/excalidraw/errors";
 
 import type { NonDeletedExcalidrawElement } from "@excalidraw/element/types";

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { CANVAS_SEARCH_TAB, DEFAULT_SIDEBAR } from "@excalidraw/common";
 
 import {

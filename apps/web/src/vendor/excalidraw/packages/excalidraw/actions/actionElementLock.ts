@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { KEYS, arrayToMap, randomId } from "@excalidraw/common";
 
 import {

@@ -1,3 +1,4 @@
+// @ts-nocheck
 // Vendored from https://www.npmjs.com/package/fractional-indexing
 // License: CC0 (no rights reserved).
 // This is based on https://observablehq.com/@dgreensp/implementing-fractional-indexing

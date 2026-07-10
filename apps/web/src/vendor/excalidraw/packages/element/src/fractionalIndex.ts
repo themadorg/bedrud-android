@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { arrayToMap } from "@excalidraw/common";
 
 import {

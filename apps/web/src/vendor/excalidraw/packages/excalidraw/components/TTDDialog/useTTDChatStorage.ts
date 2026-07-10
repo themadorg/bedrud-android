@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useCallback, useEffect, useRef } from "react";
 import { randomId } from "@excalidraw/common";
 

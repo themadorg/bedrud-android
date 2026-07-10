@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { Tabs as RadixTabs } from "radix-ui";
 
 import { useUIAppState } from "../../context/ui-appState";

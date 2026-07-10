@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { getNonDeletedElements } from "@excalidraw/element";
 import { mutateElement } from "@excalidraw/element";
 import { newFrameElement } from "@excalidraw/element";

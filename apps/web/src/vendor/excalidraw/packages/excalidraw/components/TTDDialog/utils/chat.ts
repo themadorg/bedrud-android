@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { findLastIndex, randomId } from "@excalidraw/common";
 
 import type { LLMMessage, TChat } from "../types";

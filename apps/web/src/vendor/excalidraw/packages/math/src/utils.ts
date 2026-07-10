@@ -1,3 +1,4 @@
+// @ts-nocheck
 export const PRECISION = 10e-5;
 
 export const clamp = (value: number, min: number, max: number) => {

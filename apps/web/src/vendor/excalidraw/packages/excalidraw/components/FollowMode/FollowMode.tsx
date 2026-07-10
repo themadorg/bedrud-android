@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { CloseIcon } from "../icons";
 
 import "./FollowMode.scss";

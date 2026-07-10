@@ -1,3 +1,4 @@
+// @ts-nocheck
 const MERMAID_SYNTAX_ERROR_LINE = /(?:Parse|Lexical) error on line (\d+)[.:]/i;
 const MERMAID_INACTIVE_PARTICIPANT_ERROR =
   /Trying to inactivate an inactive participant \((.+)\)/i;

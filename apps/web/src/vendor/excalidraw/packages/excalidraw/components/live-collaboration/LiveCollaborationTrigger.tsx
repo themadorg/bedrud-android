@@ -1,3 +1,4 @@
+// @ts-nocheck
 import clsx from "clsx";
 
 import { MQ_MIN_WIDTH_DESKTOP, type EditorInterface } from "@excalidraw/common";

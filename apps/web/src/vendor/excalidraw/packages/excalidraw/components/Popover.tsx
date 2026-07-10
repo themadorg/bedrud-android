@@ -1,3 +1,4 @@
+// @ts-nocheck
 import React, { useLayoutEffect, useRef, useEffect } from "react";
 import { unstable_batchedUpdates } from "react-dom";
 

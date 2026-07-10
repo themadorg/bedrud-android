@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { arrayToMap, easeOut, THEME } from "@excalidraw/common";
 
 import {

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import React, { useEffect, useImperativeHandle, useState } from "react";
 
 import { EVENT } from "@excalidraw/common";

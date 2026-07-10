@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { Center } from "./WelcomeScreen.Center";
 import { MenuHint, ToolbarHint, HelpHint } from "./WelcomeScreen.Hints";
 

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useEditorInterface } from "../App";
 
 import { Ellipsify } from "../Ellipsify";

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { t } from "../i18n";
 
 import { HelpIcon } from "./icons";

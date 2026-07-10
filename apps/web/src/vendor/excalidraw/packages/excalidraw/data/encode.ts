@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { deflate, inflate } from "pako";
 
 import { encryptData, decryptData } from "./encryption";

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import React, { useLayoutEffect, useRef, useState } from "react";
 
 import { newTextElement } from "@excalidraw/element";

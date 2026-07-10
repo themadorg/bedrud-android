@@ -1,3 +1,4 @@
+// @ts-nocheck
 // taken from lodash (MIT)
 // https://github.com/lodash/lodash/blob/67389a8c78975d97505fa15aa79bec6397749807/lodash.js#L14180
 

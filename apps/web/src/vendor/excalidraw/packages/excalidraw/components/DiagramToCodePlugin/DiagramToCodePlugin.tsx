@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useLayoutEffect } from "react";
 
 import { useApp } from "../App";

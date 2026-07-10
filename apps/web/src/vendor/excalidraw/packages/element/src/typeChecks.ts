@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { ROUNDNESS, assertNever } from "@excalidraw/common";
 
 import { pointsEqual } from "@excalidraw/math";

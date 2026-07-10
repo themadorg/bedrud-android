@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { KEYS, CODES, isDarwin } from "@excalidraw/common";
 
 import {

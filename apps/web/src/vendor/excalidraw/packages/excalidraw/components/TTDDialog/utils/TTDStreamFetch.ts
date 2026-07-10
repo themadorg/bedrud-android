@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { RequestError } from "../../../errors";
 
 import type { LLMMessage, TTTDDialog } from "../types";

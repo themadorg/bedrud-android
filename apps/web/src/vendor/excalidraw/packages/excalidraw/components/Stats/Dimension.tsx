@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { clamp, round } from "@excalidraw/math";
 
 import { MIN_WIDTH_OR_HEIGHT } from "@excalidraw/common";

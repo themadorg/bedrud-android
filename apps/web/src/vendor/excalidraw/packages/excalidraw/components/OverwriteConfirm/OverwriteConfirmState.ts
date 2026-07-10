@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { atom, editorJotaiStore } from "../../editor-jotai";
 
 import type React from "react";

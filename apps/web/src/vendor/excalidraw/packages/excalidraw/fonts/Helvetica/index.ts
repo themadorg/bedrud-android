@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { LOCAL_FONT_PROTOCOL } from "@excalidraw/common";
 
 import { type ExcalidrawFontFaceDescriptor } from "../Fonts";

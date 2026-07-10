@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { CaptureUpdateAction } from "@excalidraw/element";
 
 import type { ExcalidrawElement } from "@excalidraw/element/types";

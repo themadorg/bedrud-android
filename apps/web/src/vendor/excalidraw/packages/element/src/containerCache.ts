@@ -1,3 +1,4 @@
+// @ts-nocheck
 import type { ExcalidrawTextContainer } from "./types";
 
 export const originalContainerCache: {

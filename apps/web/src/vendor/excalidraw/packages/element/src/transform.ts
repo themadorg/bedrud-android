@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { pointFrom, type LocalPoint } from "@excalidraw/math";
 
 import {

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { isDevEnv } from "@excalidraw/common";
 
 import type { NestedKeyOf } from "@excalidraw/common/utility-types";

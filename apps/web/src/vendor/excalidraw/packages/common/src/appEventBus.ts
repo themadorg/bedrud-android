@@ -1,3 +1,4 @@
+// @ts-nocheck
 import type { UnsubscribeCallback } from "@excalidraw/excalidraw/types";
 
 import { Emitter } from "./emitter";
