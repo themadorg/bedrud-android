@@ -151,7 +151,7 @@ export default {
       sipIntegrationJitsi: "Gateway SIP/Jibri",
       sipIntegrationBbb: "Gateway SIP",
       whiteboard: "Pizarra",
-      whiteboardBedrud: "No",
+      whiteboardBedrud: "Collaborative (Yjs)",
       whiteboardJitsi: "No",
       whiteboardBbb: "Pizarra integrada",
       maxUsers: "Usuarios concurrentes máx.",
@@ -721,6 +721,36 @@ export default {
       title: "Procesamiento de audio",
       description:
         "Supresión de ruido incorporada impulsada por RNNoise. Integración opcional de Krisp para supresión de ruido de IA premium. Audio limpio, cada llamada.",
+    },
+    whiteboard: {
+      pain: "Las pizarras en otra app rompen el flujo de la reunión.",
+      title: "Pizarra colaborativa",
+      description:
+        "Dibuja, selecciona y edita un tablero compartido en la sala. Sync CRDT Yjs sobre data channels de LiveKit — sin servidor de pizarra aparte. Actívalo en Ajustes experimentales si está restringido.",
+    },
+    stageMode: {
+      pain: "Las cuadrículas van bien hasta que alguien tiene que presentar a todos.",
+      title: "Modo escenario",
+      description:
+        "Destaca un diseño de presentador, mantén la franja de participantes, comparte la pantalla como superposición de escenario y haz aterrizar a quien se une tarde en el estado de escenario correcto.",
+    },
+    inMeetingChat: {
+      pain: "Los chats laterales sin encuestas ni reacciones empujan a todos a Slack a mitad de llamada.",
+      title: "Chat, encuestas y reacciones",
+      description:
+        "Chat de texto en sala con reacciones emoji, encuestas en vivo y adjuntos de imagen. Los límites de retención en el cliente mantienen la memoria acotada en sesiones largas.",
+    },
+    youtubeWatch: {
+      pain: "«¿En qué minuto estás?» mata las reuniones de ver juntos.",
+      title: "Ver YouTube juntos",
+      description:
+        "Pega una URL de YouTube y reproduce más o menos en sync para todos en la sala. Cierra la superposición para todos los participantes cuando termines. Conmutador experimental opcional.",
+    },
+    pushToTalk: {
+      pain: "Los micrófonos abiertos convierten cada llamada en un caos de conferencia.",
+      title: "Push-to-talk",
+      description:
+        "Mantén una tecla para transmitir, suéltala para silenciar. Configura la tecla de mantener en los ajustes de audio. Cambio de dispositivo a mitad de llamada sin reconectar.",
     },
     bots: {
       pain: "Las tareas manuales de reuniones desperdician tiempo - grabación, transcripción, notas.",

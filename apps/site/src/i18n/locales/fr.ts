@@ -153,7 +153,7 @@ export default {
       sipIntegrationJitsi: "Passerelle SIP/Jibri",
       sipIntegrationBbb: "Passerelle SIP",
       whiteboard: "Tableau blanc",
-      whiteboardBedrud: "Non",
+      whiteboardBedrud: "Collaboratif (Yjs)",
       whiteboardJitsi: "Non",
       whiteboardBbb: "Tableau blanc intégré",
       maxUsers: "Utilisateurs simultanés max",
@@ -724,6 +724,36 @@ export default {
       title: "Traitement audio",
       description:
         "Suppression de bruit intégrée propulsée par RNNoise. Intégration Krisp facultative pour la suppression de bruit IA premium. Audio propre, chaque appel.",
+    },
+    whiteboard: {
+      pain: "Les tableaux blancs dans une autre app cassent le flux de la réunion.",
+      title: "Tableau blanc collaboratif",
+      description:
+        "Dessinez, sélectionnez et modifiez un tableau partagé dans la salle. Sync CRDT Yjs sur les data channels LiveKit — pas de serveur de tableau blanc séparé. Activez sous les paramètres expérimentaux si verrouillé.",
+    },
+    stageMode: {
+      pain: "Les grilles vont bien jusqu'à ce que quelqu'un doive présenter à tout le monde.",
+      title: "Mode scène",
+      description:
+        "Mettez en avant une disposition présentateur, gardez la bande de participants, partagez l'écran en overlay de scène et faites atterrir les arrivants tardifs dans le bon état de scène.",
+    },
+    inMeetingChat: {
+      pain: "Les chats latéraux sans sondages ni réactions poussent tout le monde vers Slack en plein appel.",
+      title: "Chat, sondages et réactions",
+      description:
+        "Chat texte en salle avec réactions emoji, sondages en direct et pièces jointes image. Des limites de rétention côté client bornent la mémoire sur les longues sessions.",
+    },
+    youtubeWatch: {
+      pain: "« Tu es à quelle minute ? » tue les réunions de visionnage partagé.",
+      title: "Visionnage YouTube partagé",
+      description:
+        "Collez une URL YouTube et lisez à peu près en sync pour tout le monde dans la salle. Fermez l'overlay pour tous les participants quand vous avez terminé. Bascule expérimentale optionnelle.",
+    },
+    pushToTalk: {
+      pain: "Les micros ouverts transforment chaque appel en chaos de conférence.",
+      title: "Push-to-talk",
+      description:
+        "Maintenez une touche pour émettre, relâchez pour couper le micro. Configurez la touche de maintien dans les réglages audio. Changement d'appareil en cours d'appel sans reconnexion.",
     },
     bots: {
       pain: "Les tâches manuelles de réunion gaspillent du temps - enregistrement, transcription, notes.",

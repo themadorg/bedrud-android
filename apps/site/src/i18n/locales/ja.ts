@@ -150,7 +150,7 @@ export default {
       sipIntegrationJitsi: "SIP/Jibriゲートウェイ",
       sipIntegrationBbb: "SIPゲートウェイ",
       whiteboard: "ホワイトボード",
-      whiteboardBedrud: "なし",
+      whiteboardBedrud: "共同編集 (Yjs)",
       whiteboardJitsi: "なし",
       whiteboardBbb: "内蔵ホワイトボード",
       maxUsers: "最大同時ユーザー",
@@ -700,6 +700,36 @@ export default {
       title: "オーディオ処理",
       description:
         "RNNoise駆動の内蔵ノイズ抑制。プレミアムAIノイズ抑制用のオプションKrisp統合。すべての通話でクリーンなオーディオ。",
+    },
+    whiteboard: {
+      pain: "別アプリのホワイトボードは会議の流れを断ちます。",
+      title: "共同ホワイトボード",
+      description:
+        "ルーム内で共有ボードを描画・選択・編集。Yjs CRDT を LiveKit データチャネルで同期 — 別のホワイトボードサーバー不要。ゲート時は実験的設定で有効化。",
+    },
+    stageMode: {
+      pain: "グリッドは誰かが全員にプレゼンするまで問題ありません。",
+      title: "ステージモード",
+      description:
+        "発表者レイアウトを前面に、参加者ストリップを維持し、画面をステージオーバーレイとして共有し、遅れて参加した人を正しいステージ状態に着地させます。",
+    },
+    inMeetingChat: {
+      pain: "アンケートやリアクションのないサイドチャットは、通話中に全員を Slack へ押し出します。",
+      title: "チャット、アンケート、リアクション",
+      description:
+        "絵文字リアクション、ライブアンケート、画像添付付きのルーム内テキストチャット。クライアント側の保持制限で長いセッションのメモリを抑制。",
+    },
+    youtubeWatch: {
+      pain: "「今どのタイムスタンプ？」が一緒に見る会議を壊します。",
+      title: "YouTube ウォッチパーティー",
+      description:
+        "YouTube URL を貼り付け、ルーム内の全員でおおよそ同期再生。終わったら全員のオーバーレイを閉じます。任意の実験的トグル。",
+    },
+    pushToTalk: {
+      pain: "開きっぱなしのマイクは通話を電話会議の混乱にします。",
+      title: "プッシュトゥトーク",
+      description:
+        "キーを押したまま送信、離してミュート。オーディオ設定でホールドキーを構成。通話中のデバイス切り替えは再接続なし。",
     },
     bots: {
       pain: "手動の会議タスクは時間を浪費します - 録画、文字起こし、メモ。",
