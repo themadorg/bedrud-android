@@ -6,7 +6,6 @@ import (
 	"crypto/hmac"
 	"crypto/rand"
 	"crypto/sha256"
-	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -91,8 +90,6 @@ type RoomHandler struct {
 	cleanupSvc       *services.RoomCleanupService
 	settingsRepo     *repository.SettingsRepository
 	deletionInFlight sync.Map
-	uploadBackend    string
-	inlineMaxBytes   int64
 	// guestIDSecret signs stable guest identity cookies (session secret).
 	guestIDSecret string
 	secureCookies bool
@@ -216,29 +213,22 @@ func NewRoomHandlerWithSecrets(
 		uploadMax = 10 * 1024 * 1024
 	}
 
-	inlineMaxBytes := chatCfg.Uploads.InlineMaxBytes.Int64()
-	if inlineMaxBytes == 0 {
-		inlineMaxBytes = 512_000 // 500 KB default
-	}
-
 	return &RoomHandler{
-		roomRepo:       roomRepo,
-		userRepo:       userRepo,
-		webhookRepo:    webhookRepo,
-		livekitHost:    lkCfg.Host,
-		apiKey:         lkCfg.APIKey,
-		apiSecret:      lkCfg.APISecret,
-		recordingRepo:  recordingRepo,
-		client:         client,
-		uploadStore:    storage.NewChatUploadStore(&chatCfg.Uploads),
-		uploadMax:      uploadMax,
-		uploadTracker:  uploadTracker,
-		cleanupSvc:     cleanupSvc,
-		settingsRepo:   settingsRepo,
-		uploadBackend:  chatCfg.Uploads.Backend,
-		inlineMaxBytes: inlineMaxBytes,
-		guestIDSecret:  guestIDSecret,
-		secureCookies:  secureCookies,
+		roomRepo:      roomRepo,
+		userRepo:      userRepo,
+		webhookRepo:   webhookRepo,
+		livekitHost:   lkCfg.Host,
+		apiKey:        lkCfg.APIKey,
+		apiSecret:     lkCfg.APISecret,
+		recordingRepo: recordingRepo,
+		client:        client,
+		uploadStore:   storage.NewChatUploadStore(&chatCfg.Uploads),
+		uploadMax:     uploadMax,
+		uploadTracker: uploadTracker,
+		cleanupSvc:    cleanupSvc,
+		settingsRepo:  settingsRepo,
+		guestIDSecret: guestIDSecret,
+		secureCookies: secureCookies,
 	}
 }
 
@@ -251,6 +241,28 @@ func (h *RoomHandler) maxParticipantsLimit() int {
 		return 1000
 	}
 	return s.MaxParticipantsLimit
+}
+
+const defaultChatUploadMaxBytes int64 = 10 * 1024 * 1024
+const defaultChatUploadMaxDimension = 8192
+
+// effectiveChatUploadMaxBytes: settings (>0) → handler boot config → default 10 MiB.
+func effectiveChatUploadMaxBytes(s *models.SystemSettings, bootMax int64) int64 {
+	if s != nil && s.ChatUploadMaxBytes > 0 {
+		return s.ChatUploadMaxBytes
+	}
+	if bootMax > 0 {
+		return bootMax
+	}
+	return defaultChatUploadMaxBytes
+}
+
+// effectiveChatUploadMaxDimension: settings (>0) → default 8192.
+func effectiveChatUploadMaxDimension(s *models.SystemSettings) int {
+	if s != nil && s.ChatUploadMaxDimension > 0 {
+		return s.ChatUploadMaxDimension
+	}
+	return defaultChatUploadMaxDimension
 }
 
 func (h *RoomHandler) withAuth(ctx context.Context, grants ...*lkauth.VideoGrant) context.Context {
@@ -2536,11 +2548,14 @@ func (h *RoomHandler) UploadChatImage(c *fiber.Ctx) error {
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to verify upload quota"})
 	}
 
+	maxBytes := effectiveChatUploadMaxBytes(settings, h.uploadMax)
+	maxDim := effectiveChatUploadMaxDimension(settings)
+
 	file, err := c.FormFile("file")
 	if err != nil {
 		return c.Status(400).JSON(fiber.Map{"error": "Missing file field"})
 	}
-	if file.Size > h.uploadMax {
+	if file.Size > maxBytes {
 		return c.Status(413).JSON(fiber.Map{"error": "File too large"})
 	}
 
@@ -2574,54 +2589,28 @@ func (h *RoomHandler) UploadChatImage(c *fiber.Ctx) error {
 	}
 	defer f.Close()
 
-	// Read into memory (limited to uploadMax, already checked above).
+	// Read into memory (limited to maxBytes, already checked above).
 	data := make([]byte, file.Size)
-	if _, err := f.Read(data); err != nil {
+	n, err := f.Read(data)
+	if err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": "Failed to read upload"})
 	}
+	data = data[:n]
+	if int64(len(data)) > maxBytes {
+		return c.Status(413).JSON(fiber.Map{"error": "File too large"})
+	}
 
-	// Validate image dimensions
+	// Validate image dimensions when decodable
 	if cfg, _, err := image.DecodeConfig(bytes.NewReader(data)); err == nil {
-		const maxDim = 8192
 		if cfg.Width > maxDim || cfg.Height > maxDim {
 			return c.Status(400).JSON(fiber.Map{"error": fmt.Sprintf("Image dimensions too large (max %dx%d)", maxDim, maxDim)})
 		}
 	}
 	// If DecodeConfig fails, it's potentially not an image; let the storage backend decide
 
-	// For S3 backend with files above the inline threshold, enqueue async upload
-	// instead of blocking the HTTP request on an S3 PUT.
-	if h.uploadBackend == "s3" && int64(len(data)) > h.inlineMaxBytes {
-		// Determine MIME type for the payload
-		mime, err := storage.SniffMime(data)
-		if err != nil {
-			return c.Status(400).JSON(fiber.Map{"error": err.Error()})
-		}
-
-		payload := queue.ChatUploadS3Payload{
-			Data:     base64.StdEncoding.EncodeToString(data),
-			RoomID:   roomID,
-			MimeType: mime,
-			UserID:   claims.UserID,
-		}
-		if err := queue.Enqueue(context.Background(), database.GetDB(), "chat_upload_s3", payload); err != nil {
-			log.Error().Err(err).Str("roomID", roomID).Msg("Failed to enqueue chat upload")
-			return c.Status(500).JSON(fiber.Map{"error": "Failed to queue upload"})
-		}
-
-		log.Info().Str("roomID", roomID).Str("userID", claims.UserID).
-			Int("bytes", len(data)).Str("mime", mime).
-			Msg("chat upload enqueued for async S3 upload")
-		return c.Status(fiber.StatusAccepted).JSON(fiber.Map{
-			"status":   "upload_queued",
-			"job_type": "chat_upload_s3",
-			"size":     len(data),
-			"mime":     mime,
-		})
-	}
-
-	// Sync path for disk/hybrid/inline or small S3 files
-	attachment, err := h.uploadStore.Store(data)
+	// Always store sync so the client gets a usable {url,mime,...} attachment.
+	// Async S3 queue returned 202 {status:upload_queued} with no url — FE can't send image.
+	attachment, err := h.uploadStore.Store(roomID, claims.UserID, data)
 	if err != nil {
 		log.Warn().Err(err).Str("roomId", roomID).Msg("Chat image upload failed")
 		return c.Status(400).JSON(fiber.Map{"error": err.Error()})
@@ -2629,6 +2618,9 @@ func (h *RoomHandler) UploadChatImage(c *fiber.Ctx) error {
 
 	if h.uploadTracker != nil {
 		hash, ext, backend := parseUploadMeta(attachment.URL, attachment.Mime, data)
+		if attachment.StorageBackend != "" {
+			backend = attachment.StorageBackend
+		}
 		if err := h.uploadTracker.Record(roomID, claims.UserID, hash, ext, attachment.Size, backend); err != nil {
 			log.Warn().Err(err).Str("roomID", roomID).Str("hash", hash).Msg("failed to track chat upload")
 		}
@@ -2964,20 +2956,33 @@ func parseUploadMeta(url, mime string, data []byte) (hash, ext, backend string) 
 	backend = detectUploadBackend(url)
 	switch backend {
 	case uploadBackendDisk:
-		filename := strings.TrimPrefix(url, "/uploads/chat/")
+		// /uploads/chat/{room}/{user}/{hash}.ext  or legacy flat /uploads/chat/{hash}.ext
+		rel := strings.TrimPrefix(url, "/uploads/chat/")
+		filename := rel
+		if slash := strings.LastIndex(rel, "/"); slash >= 0 {
+			filename = rel[slash+1:]
+		}
 		if dotIdx := strings.LastIndex(filename, "."); dotIdx > 0 {
 			return filename[:dotIdx], filename[dotIdx:], backend
 		}
 		return filename, "", backend
 	case uploadBackendS3:
-		if idx := strings.LastIndex(url, "/"); idx >= 0 {
-			filename := url[idx+1:]
-			if dotIdx := strings.LastIndex(filename, "."); dotIdx > 0 {
-				return filename[:dotIdx], filename[dotIdx:], backend
-			}
-			return filename, "", backend
+		// Scoped proxy URL or absolute S3 URL; last path segment is hash.ext
+		if !strings.Contains(url, "/") {
+			return "", "", backend
 		}
-		return "", "", backend
+		rel := url
+		if strings.HasPrefix(url, "/uploads/chat/") {
+			rel = strings.TrimPrefix(url, "/uploads/chat/")
+		}
+		filename := rel
+		if slash := strings.LastIndex(rel, "/"); slash >= 0 {
+			filename = rel[slash+1:]
+		}
+		if dotIdx := strings.LastIndex(filename, "."); dotIdx > 0 {
+			return filename[:dotIdx], filename[dotIdx:], backend
+		}
+		return filename, "", backend
 	default: // inline
 		if len(data) > 0 {
 			h := sha256.Sum256(data)

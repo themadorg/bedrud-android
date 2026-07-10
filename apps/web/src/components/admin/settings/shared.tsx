@@ -197,6 +197,9 @@ export function validateLocalSettings(s: SystemSettings): Record<string, string>
   if (s.chatUploadMaxBytes < 0) {
     errors.chatUploadMaxBytes = 'Cannot be negative'
   }
+  if (s.chatUploadMaxDimension < 0) {
+    errors.chatUploadMaxDimension = 'Cannot be negative'
+  }
   if (s.chatUploadInlineMax < 0) {
     errors.chatUploadInlineMax = 'Cannot be negative'
   }

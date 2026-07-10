@@ -173,6 +173,9 @@ type ChatUploadConfig struct {
 	Backend string `yaml:"backend"`
 	// MaxBytes is the hard upload size limit (default 10 MB).
 	MaxBytes ConfigInt `yaml:"maxBytes"`
+	// MaxDimension is the max image width/height in pixels (default 8192).
+	// 0 = use default. Overridable via admin settings chatUploadMaxDimension.
+	MaxDimension ConfigInt `yaml:"maxDimension"`
 	// InlineMaxBytes: images smaller than this are returned as data: URIs instead
 	// of stored on disk / S3. Set to 0 to disable inline encoding. Default 512000 (500 KB).
 	InlineMaxBytes ConfigInt `yaml:"inlineMaxBytes"`

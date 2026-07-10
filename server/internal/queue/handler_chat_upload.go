@@ -30,7 +30,7 @@ func NewChatUploadS3Handler(
 			return fmt.Errorf("decode base64: %w", err)
 		}
 
-		attachment, err := uploadStore.Store(data)
+		attachment, err := uploadStore.Store(payload.RoomID, payload.UserID, data)
 		if err != nil {
 			return fmt.Errorf("store upload: %w", err)
 		}
@@ -39,7 +39,11 @@ func NewChatUploadS3Handler(
 			// Derive fileHash from content and ext from MIME type
 			fileHash := storage.ContentHash(data)
 			ext := mimeToExt(attachment.Mime)
-			if err := uploadTracker.Record(payload.RoomID, payload.UserID, fileHash, ext, attachment.Size, "s3"); err != nil {
+			backend := "s3"
+			if attachment.StorageBackend != "" {
+				backend = attachment.StorageBackend
+			}
+			if err := uploadTracker.Record(payload.RoomID, payload.UserID, fileHash, ext, attachment.Size, backend); err != nil {
 				return fmt.Errorf("record upload tracker: %w", err)
 			}
 		}

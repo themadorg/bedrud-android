@@ -49,6 +49,9 @@ func validateSettings(s *models.SystemSettings) error {
 	if s.ChatUploadMaxBytes < 0 {
 		return fmt.Errorf("chatUploadMaxBytes cannot be negative")
 	}
+	if s.ChatUploadMaxDimension < 0 {
+		return fmt.Errorf("chatUploadMaxDimension cannot be negative")
+	}
 	if s.ChatUploadInlineMax < 0 {
 		return fmt.Errorf("chatUploadInlineMax cannot be negative")
 	}
@@ -297,6 +300,14 @@ func (h *AdminHandler) GetPublicSettings(c *fiber.Ctx) error {
 	if cfg := config.GetSafe(); cfg != nil {
 		requireEmailVerify = cfg.Auth.RequireEmailVerification
 	}
+	maxBytes := s.ChatUploadMaxBytes
+	if maxBytes <= 0 {
+		maxBytes = defaultChatUploadMaxBytes
+	}
+	maxDim := s.ChatUploadMaxDimension
+	if maxDim <= 0 {
+		maxDim = defaultChatUploadMaxDimension
+	}
 	return c.JSON(fiber.Map{
 		"serverName":               s.ServerName,
 		"registrationEnabled":      s.RegistrationEnabled,
@@ -307,6 +318,8 @@ func (h *AdminHandler) GetPublicSettings(c *fiber.Ctx) error {
 		"requireEmailVerification": requireEmailVerify,
 		"chatMaxMessageCount":      s.ChatMaxMessageCount,
 		"chatMessageTTLHours":      s.ChatMessageTTLHours,
+		"chatUploadMaxBytes":       maxBytes,
+		"chatUploadMaxDimension":   maxDim,
 		"recordingsEnabled":        s.RecordingsEnabled,
 	})
 }
@@ -566,6 +579,7 @@ func applySettingsFields(existing *models.SystemSettings, raw map[string]json.Ra
 		case "corsMaxAge", "tokenDuration",
 			"maxParticipantsLimit", "maxRoomsPerUser",
 			"chatMaxMessageCount", "chatMessageTTLHours",
+			"chatUploadMaxDimension",
 			"recordingMaxDurationMins", "recordingMaxFileSizeMB",
 			"emailSmtpPort":
 			var i int
@@ -585,6 +599,8 @@ func applySettingsFields(existing *models.SystemSettings, raw map[string]json.Ra
 				existing.ChatMaxMessageCount = i
 			case "chatMessageTTLHours":
 				existing.ChatMessageTTLHours = i
+			case "chatUploadMaxDimension":
+				existing.ChatUploadMaxDimension = i
 			case "recordingMaxDurationMins":
 				existing.RecordingMaxDurationMins = i
 			case "recordingMaxFileSizeMB":

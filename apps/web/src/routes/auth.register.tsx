@@ -49,6 +49,8 @@ function RegisterPage() {
           requireEmailVerification: false,
           chatMaxMessageCount: 10000,
           chatMessageTTLHours: 2160,
+          chatUploadMaxBytes: 10485760,
+          chatUploadMaxDimension: 8192,
           // TODO oncoming feature
           recordingsEnabled: true,
         }),

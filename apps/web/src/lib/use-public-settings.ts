@@ -11,6 +11,10 @@ export interface PublicSettings {
   requireEmailVerification: boolean
   chatMaxMessageCount: number
   chatMessageTTLHours: number
+  /** Hard per-file chat image limit (bytes). Default 10 MiB. */
+  chatUploadMaxBytes: number
+  /** Max image width/height in pixels. Default 8192. */
+  chatUploadMaxDimension: number
   // TODO oncoming feature - always disabled
   recordingsEnabled: boolean
 }

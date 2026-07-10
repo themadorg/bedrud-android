@@ -1,4 +1,4 @@
-import { BarChart3, Image, Send } from 'lucide-react'
+import { BarChart3, Image as ImageIcon, Send } from 'lucide-react'
 import {
   type ChangeEvent,
   type ClipboardEvent,
@@ -10,7 +10,9 @@ import {
   useRef,
   useState,
 } from 'react'
+import { ApiError } from '#/lib/api'
 import { textDirectionFor } from '#/lib/text-direction'
+import { getPublicSettings } from '#/lib/use-public-settings'
 import { cn } from '@/lib/utils'
 import type { ChatAttachment, ChatPoll } from '../MeetingContext'
 import { ChatEmojiPicker } from './ChatEmojiPicker'
@@ -20,6 +22,40 @@ const LINE_HEIGHT = 20
 const VERTICAL_PADDING = 8
 const MIN_ROWS = 2
 const MAX_ROWS = 10
+const DEFAULT_MAX_BYTES = 10 * 1024 * 1024
+const DEFAULT_MAX_DIM = 8192
+
+function formatBytes(n: number): string {
+  if (n >= 1024 * 1024) return `${(n / (1024 * 1024)).toFixed(n % (1024 * 1024) === 0 ? 0 : 1)} MB`
+  if (n >= 1024) return `${Math.round(n / 1024)} KB`
+  return `${n} bytes`
+}
+
+async function readImageDimensions(file: File): Promise<{ w: number; h: number } | null> {
+  try {
+    if (typeof createImageBitmap === 'function') {
+      const bmp = await createImageBitmap(file)
+      const dims = { w: bmp.width, h: bmp.height }
+      bmp.close()
+      return dims
+    }
+  } catch {
+    /* fall through */
+  }
+  return new Promise((resolve) => {
+    const url = URL.createObjectURL(file)
+    const img = new Image()
+    img.onload = () => {
+      resolve({ w: img.naturalWidth, h: img.naturalHeight })
+      URL.revokeObjectURL(url)
+    }
+    img.onerror = () => {
+      URL.revokeObjectURL(url)
+      resolve(null)
+    }
+    img.src = url
+  })
+}
 
 interface Props {
   onSend: (text: string, attachments?: ChatAttachment[], poll?: ChatPoll) => void
@@ -102,12 +138,41 @@ export const ChatInput = forwardRef<ChatInputHandle, Props>(function ChatInput({
       setError(null)
       setUploading(true)
       try {
+        let maxBytes = DEFAULT_MAX_BYTES
+        let maxDim = DEFAULT_MAX_DIM
+        try {
+          const s = await getPublicSettings()
+          if (s.chatUploadMaxBytes > 0) maxBytes = s.chatUploadMaxBytes
+          if (s.chatUploadMaxDimension > 0) maxDim = s.chatUploadMaxDimension
+        } catch {
+          /* use defaults */
+        }
+
+        if (file.size > maxBytes) {
+          setError(`Image must be under ${formatBytes(maxBytes)}`)
+          return
+        }
+
+        if (file.type.startsWith('image/') || !file.type) {
+          const dims = await readImageDimensions(file)
+          if (dims && (dims.w > maxDim || dims.h > maxDim)) {
+            setError(`Image dimensions too large (max ${maxDim}×${maxDim})`)
+            return
+          }
+        }
+
         const attachment = await onUpload(file)
         onSend(draft.trim(), [attachment])
         setDraft('')
         focusInput()
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Upload failed')
+        if (err instanceof ApiError) {
+          const msg =
+            (typeof err.parsedBody?.error === 'string' && err.parsedBody.error) || err.message || 'Upload failed'
+          setError(msg)
+        } else {
+          setError(err instanceof Error ? err.message : 'Upload failed')
+        }
       } finally {
         setUploading(false)
       }
@@ -196,7 +261,7 @@ export const ChatInput = forwardRef<ChatInputHandle, Props>(function ChatInput({
         className={iconBtnClass(actionsEnabled)}
         aria-label="Upload image"
       >
-        <Image size={16} />
+        <ImageIcon size={16} />
       </button>
       <button
         type="button"

@@ -101,6 +101,30 @@ func TestAdminHandler_GetPublicSettings(t *testing.T) {
 	if _, ok := result["tokenRegistrationOnly"]; !ok {
 		t.Fatal("expected 'tokenRegistrationOnly' in public settings response")
 	}
+	if _, ok := result["chatUploadMaxBytes"]; !ok {
+		t.Fatal("expected 'chatUploadMaxBytes' in public settings response")
+	}
+	if _, ok := result["chatUploadMaxDimension"]; !ok {
+		t.Fatal("expected 'chatUploadMaxDimension' in public settings response")
+	}
+}
+
+func TestAdminHandler_UpdateSettings_NegativeMaxDimension(t *testing.T) {
+	app, _, _ := setupAdminTestApp(t)
+	body, _ := json.Marshal(map[string]interface{}{
+		"chatUploadMaxDimension": -1,
+	})
+	req := httptest.NewRequest(http.MethodPut, "/admin/settings", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := app.Test(req, -1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusBadRequest {
+		respBody, _ := io.ReadAll(resp.Body)
+		t.Fatalf("expected 400, got %d: %s", resp.StatusCode, string(respBody))
+	}
 }
 
 func TestAdminHandler_UpdateSettings_Success(t *testing.T) {

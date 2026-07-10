@@ -117,6 +117,7 @@ const TAB_FIELDS: Record<TabId, (keyof SystemSettings)[]> = {
   chat: [
     'chatUploadBackend',
     'chatUploadMaxBytes',
+    'chatUploadMaxDimension',
     'chatUploadInlineMax',
     'chatUploadDiskDir',
     'chatUploadS3Endpoint',

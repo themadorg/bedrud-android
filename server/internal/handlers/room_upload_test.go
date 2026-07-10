@@ -4,6 +4,9 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
+	"image"
+	"image/color"
+	"image/png"
 	"io"
 	"mime/multipart"
 	"net/http"
@@ -123,15 +126,22 @@ func TestDetectUploadBackend_Empty(t *testing.T) {
 // ─── Category A: parseUploadMeta ─────────────────────────────────────────
 
 func TestParseUploadMeta_Disk(t *testing.T) {
-	hash, ext, backend := parseUploadMeta("/uploads/chat/abcdef123.png", "image/png", nil)
+	hash, ext, backend := parseUploadMeta("/uploads/chat/room1/user1/abcdef123.png", "image/png", nil)
 	if hash != hashAbcdef || ext != extPNG || backend != uploadBackendDisk {
 		t.Fatalf("got hash=%q ext=%q backend=%q", hash, ext, backend)
 	}
 }
 
 func TestParseUploadMeta_Disk_NoExt(t *testing.T) {
-	hash, ext, backend := parseUploadMeta("/uploads/chat/abcdef123", "image/png", nil)
+	hash, ext, backend := parseUploadMeta("/uploads/chat/room1/user1/abcdef123", "image/png", nil)
 	if hash != hashAbcdef || ext != "" || backend != uploadBackendDisk {
+		t.Fatalf("got hash=%q ext=%q backend=%q", hash, ext, backend)
+	}
+}
+
+func TestParseUploadMeta_Disk_LegacyFlat(t *testing.T) {
+	hash, ext, backend := parseUploadMeta("/uploads/chat/abcdef123.png", "image/png", nil)
+	if hash != hashAbcdef || ext != extPNG || backend != uploadBackendDisk {
 		t.Fatalf("got hash=%q ext=%q backend=%q", hash, ext, backend)
 	}
 }
@@ -321,8 +331,9 @@ func TestServices_RoomCleanup_WithMockDeleter(t *testing.T) {
 	}
 
 	keys := mockDel.Keys()
-	if len(keys) != 1 || keys[0] != "svc-key.png" {
-		t.Fatalf("expected [svc-key.png], got %v", keys)
+	want := room.ID + "/user-a/svc-key.png"
+	if len(keys) != 1 || keys[0] != want {
+		t.Fatalf("expected [%s], got %v", want, keys)
 	}
 }
 
@@ -387,3 +398,132 @@ func TestUploadChatImage_OverLimit_Returns413(t *testing.T) {
 
 // helper to keep test import alive
 var _ = strings.NewReader
+
+// tinyPNG1x1 is a minimal valid 1×1 PNG (same bytes as audit_continue_test).
+var tinyPNG1x1 = []byte{
+	0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0x00, 0x0d,
+	0x49, 0x48, 0x44, 0x52, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01,
+	0x08, 0x02, 0x00, 0x00, 0x00, 0x90, 0x77, 0x53, 0xde, 0x00, 0x00, 0x00,
+	0x0c, 0x49, 0x44, 0x41, 0x54, 0x08, 0xd7, 0x63, 0xf8, 0xcf, 0xc0, 0x00,
+	0x00, 0x00, 0x03, 0x00, 0x01, 0x00, 0x05, 0xfe, 0xd4, 0xef, 0x00, 0x00,
+	0x00, 0x00, 0x49, 0x45, 0x4e, 0x44, 0xae, 0x42, 0x60, 0x82,
+}
+
+func chatUploadAppWithSettings(t *testing.T, maxBytes int64, maxDim int) (*fiber.App, *models.Room) {
+	t.Helper()
+	db := testutil.SetupTestDB(t)
+	roomRepo := repository.NewRoomRepository(db)
+	settingsRepo := repository.NewSettingsRepository(db)
+	uploadTracker := storage.NewChatUploadTracker(db, t.TempDir(), nil)
+	cleanupSvc := testCleanupSvc(t, roomRepo, uploadTracker)
+
+	s, _ := settingsRepo.GetSettings()
+	s.ChatUploadMaxBytes = maxBytes
+	s.ChatUploadMaxDimension = maxDim
+	if err := settingsRepo.SaveSettings(s); err != nil {
+		t.Fatal(err)
+	}
+
+	lkMock := testutil.NewMockRoomService()
+	lkCfg := config.LiveKitConfig{Host: "http://localhost:9999", APIKey: "key", APISecret: "secret"}
+	chatCfg := &config.ChatConfig{}
+	handler := NewRoomHandler(lkMock, &lkCfg, chatCfg, roomRepo, nil, nil, settingsRepo, nil, uploadTracker, cleanupSvc)
+
+	claims := &auth.Claims{UserID: "user-a", Email: "a@ex.com", Name: "A", Accesses: []string{"user"}}
+	app := fiber.New()
+	app.Use(func(c *fiber.Ctx) error {
+		c.Locals("user", claims)
+		return c.Next()
+	})
+	app.Post("/room/:roomId/chat/upload", handler.UploadChatImage)
+
+	db.Create(&models.User{ID: "user-a", Email: "a@ex.com", Name: "A", Provider: "local", IsActive: true})
+	room, _ := roomRepo.CreateRoom("user-a", "upload-limits", true, "standard", 0, &models.RoomSettings{AllowChat: true})
+	return app, room
+}
+
+func postChatUpload(t *testing.T, app *fiber.App, roomID, filename string, data []byte) *http.Response {
+	t.Helper()
+	body := new(bytes.Buffer)
+	writer := multipart.NewWriter(body)
+	part, _ := writer.CreateFormFile("file", filename)
+	if _, err := part.Write(data); err != nil {
+		t.Fatal(err)
+	}
+	writer.Close()
+	req := httptest.NewRequest(http.MethodPost, "/room/"+roomID+"/chat/upload", body)
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+	resp, err := app.Test(req, -1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return resp
+}
+
+func TestUploadChatImage_FileTooLarge_Returns413(t *testing.T) {
+	app, room := chatUploadAppWithSettings(t, 50, 0) // 50 byte max
+	oversized := make([]byte, 100)
+	copy(oversized, tinyPNG1x1)
+	for i := len(tinyPNG1x1); i < len(oversized); i++ {
+	oversized[i] = 0
+	}
+	resp := postChatUpload(t, app, room.ID, "big.bin", oversized)
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusRequestEntityTooLarge {
+		b, _ := io.ReadAll(resp.Body)
+		t.Fatalf("expected 413, got %d: %s", resp.StatusCode, b)
+	}
+}
+
+func encodePNG(t *testing.T, w, h int) []byte {
+	t.Helper()
+	img := image.NewRGBA(image.Rect(0, 0, w, h))
+	img.Set(0, 0, color.RGBA{R: 255, A: 255})
+	var buf bytes.Buffer
+	if err := png.Encode(&buf, img); err != nil {
+		t.Fatal(err)
+	}
+	return buf.Bytes()
+}
+
+func TestUploadChatImage_OverDimension_Returns400(t *testing.T) {
+	app, room := chatUploadAppWithSettings(t, 0, 1) // max 1px
+	resp := postChatUpload(t, app, room.ID, "bigdim.png", encodePNG(t, 2, 2))
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusBadRequest {
+		b, _ := io.ReadAll(resp.Body)
+		t.Fatalf("expected 400, got %d: %s", resp.StatusCode, b)
+	}
+}
+
+func TestUploadChatImage_UnderLimit_Returns200(t *testing.T) {
+	app, room := chatUploadAppWithSettings(t, 10*1024*1024, 8192)
+	resp := postChatUpload(t, app, room.ID, "ok.png", tinyPNG1x1)
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		b, _ := io.ReadAll(resp.Body)
+		t.Fatalf("expected 200, got %d: %s", resp.StatusCode, b)
+	}
+	b, _ := io.ReadAll(resp.Body)
+	if !bytes.Contains(b, []byte(`"url"`)) || !bytes.Contains(b, []byte(`"mime"`)) {
+		t.Fatalf("expected url+mime in body: %s", b)
+	}
+}
+
+func TestEffectiveChatUploadLimits(t *testing.T) {
+	if got := effectiveChatUploadMaxBytes(&models.SystemSettings{ChatUploadMaxBytes: 123}, 999); got != 123 {
+		t.Fatalf("settings win: got %d", got)
+	}
+	if got := effectiveChatUploadMaxBytes(&models.SystemSettings{}, 456); got != 456 {
+		t.Fatalf("boot max: got %d", got)
+	}
+	if got := effectiveChatUploadMaxBytes(nil, 0); got != defaultChatUploadMaxBytes {
+		t.Fatalf("default bytes: got %d", got)
+	}
+	if got := effectiveChatUploadMaxDimension(&models.SystemSettings{ChatUploadMaxDimension: 100}); got != 100 {
+		t.Fatalf("settings dim: got %d", got)
+	}
+	if got := effectiveChatUploadMaxDimension(nil); got != defaultChatUploadMaxDimension {
+		t.Fatalf("default dim: got %d", got)
+	}
+}

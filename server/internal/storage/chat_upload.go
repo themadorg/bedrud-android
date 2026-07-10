@@ -43,11 +43,32 @@ type ChatAttachment struct {
 	Size   int64  `json:"size"`
 	Width  int    `json:"w"`
 	Height int    `json:"h"`
+	// StorageBackend is server-only for cleanup routing (disk/s3 both use /uploads/chat/).
+	StorageBackend string `json:"-"`
 }
 
 // ChatUploadStore handles persisting uploaded chat images.
 type ChatUploadStore interface {
-	Store(data []byte) (*ChatAttachment, error)
+	// Store writes data under roomID/userID/{hash}{ext}.
+	Store(roomID, userID string, data []byte) (*ChatAttachment, error)
+}
+
+// ChatObjectKey is the relative storage key / URL suffix: room/user/hash.ext
+func ChatObjectKey(roomID, userID, hash, ext string) string {
+	return roomID + "/" + userID + "/" + hash + ext
+}
+
+// ChatUploadRoomID extracts roomID from a relative /uploads/chat/* path.
+// Expected: {roomID}/{userID}/{hash}.ext
+func ChatUploadRoomID(path string) (roomID string, ok bool) {
+	if path == "" || strings.Contains(path, "..") || strings.Contains(path, "\\") {
+		return "", false
+	}
+	parts := strings.Split(path, "/")
+	if len(parts) != 3 || parts[0] == "" || parts[1] == "" || parts[2] == "" {
+		return "", false
+	}
+	return parts[0], true
 }
 
 // allowedMimeTypes are the only MIME types accepted for chat image uploads.
@@ -174,20 +195,20 @@ func NewChatUploadStore(cfg *config.ChatUploadConfig) ChatUploadStore {
 
 type diskStore struct{ dir string }
 
-func (s *diskStore) Store(data []byte) (*ChatAttachment, error) {
+func (s *diskStore) Store(roomID, userID string, data []byte) (*ChatAttachment, error) {
 	mime, err := SniffMime(data)
 	if err != nil {
 		return nil, err
 	}
 	ext := allowedMimeTypes[mime]
 	hash := ContentHash(data)
-	filename := hash + ext
+	key := ChatObjectKey(roomID, userID, hash, ext)
 
-	if err := os.MkdirAll(s.dir, 0o755); err != nil {
+	path := filepath.Join(s.dir, filepath.FromSlash(key))
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		return nil, fmt.Errorf("failed to create upload dir: %w", err)
 	}
 
-	path := filepath.Join(s.dir, filename)
 	// Write only if not already present (content-addressed = idempotent).
 	if _, err := os.Stat(path); os.IsNotExist(err) {
 		if err := os.WriteFile(path, data, 0o644); err != nil {
@@ -197,12 +218,13 @@ func (s *diskStore) Store(data []byte) (*ChatAttachment, error) {
 
 	w, h := imageDimensions(data)
 	return &ChatAttachment{
-		Kind:   "image",
-		URL:    "/uploads/chat/" + filename,
-		Mime:   mime,
-		Size:   int64(len(data)),
-		Width:  w,
-		Height: h,
+		Kind:           "image",
+		URL:            "/uploads/chat/" + key,
+		Mime:           mime,
+		Size:           int64(len(data)),
+		Width:          w,
+		Height:         h,
+		StorageBackend: uploadBackendDisk,
 	}, nil
 }
 
@@ -210,7 +232,8 @@ func (s *diskStore) Store(data []byte) (*ChatAttachment, error) {
 
 type inlineStore struct{}
 
-func (s *inlineStore) Store(data []byte) (*ChatAttachment, error) {
+func (s *inlineStore) Store(roomID, userID string, data []byte) (*ChatAttachment, error) {
+	_, _ = roomID, userID
 	mime, err := SniffMime(data)
 	if err != nil {
 		return nil, err
@@ -219,12 +242,13 @@ func (s *inlineStore) Store(data []byte) (*ChatAttachment, error) {
 	dataURI := "data:" + mime + ";base64," + encoded
 	w, h := imageDimensions(data)
 	return &ChatAttachment{
-		Kind:   "image",
-		URL:    dataURI,
-		Mime:   mime,
-		Size:   int64(len(data)),
-		Width:  w,
-		Height: h,
+		Kind:           "image",
+		URL:            dataURI,
+		Mime:           mime,
+		Size:           int64(len(data)),
+		Width:          w,
+		Height:         h,
+		StorageBackend: uploadBackendInline,
 	}, nil
 }
 
@@ -235,11 +259,11 @@ type hybridStore struct {
 	disk           *diskStore
 }
 
-func (s *hybridStore) Store(data []byte) (*ChatAttachment, error) {
+func (s *hybridStore) Store(roomID, userID string, data []byte) (*ChatAttachment, error) {
 	if int64(len(data)) < s.inlineMaxBytes {
-		return (&inlineStore{}).Store(data)
+		return (&inlineStore{}).Store(roomID, userID, data)
 	}
-	return s.disk.Store(data)
+	return s.disk.Store(roomID, userID, data)
 }
 
 // ─── S3-compatible backend ─────────────────────────────────────────────────────
@@ -253,15 +277,15 @@ type s3Store struct {
 	diskFallback   *diskStore
 }
 
-func (s *s3Store) Store(data []byte) (*ChatAttachment, error) {
+func (s *s3Store) Store(roomID, userID string, data []byte) (*ChatAttachment, error) {
 	if s.cfg.Endpoint == "" || s.cfg.Bucket == "" || s.cfg.AccessKey == "" {
 		// Fall back to disk when S3 is not fully configured.
-		return s.diskFallback.Store(data)
+		return s.diskFallback.Store(roomID, userID, data)
 	}
 
 	// Inline if small.
 	if s.inlineMaxBytes > 0 && int64(len(data)) < s.inlineMaxBytes {
-		return (&inlineStore{}).Store(data)
+		return (&inlineStore{}).Store(roomID, userID, data)
 	}
 
 	mime, err := SniffMime(data)
@@ -270,26 +294,22 @@ func (s *s3Store) Store(data []byte) (*ChatAttachment, error) {
 	}
 	ext := allowedMimeTypes[mime]
 	hash := ContentHash(data)
-	key := hash + ext
+	key := ChatObjectKey(roomID, userID, hash, ext)
 
 	if err := s.putObject(key, mime, data); err != nil {
 		return nil, fmt.Errorf("s3 upload failed: %w", err)
 	}
 
-	publicBase := strings.TrimRight(s.cfg.PublicBaseURL, "/")
-	if publicBase == "" {
-		publicBase = strings.TrimRight(s.cfg.Endpoint, "/") + "/" + s.cfg.Bucket
-	}
-	url := publicBase + "/" + key
-
+	// Serve via /uploads/chat/* which presigns a short-lived GET URL.
 	w, h := imageDimensions(data)
 	return &ChatAttachment{
-		Kind:   "image",
-		URL:    url,
-		Mime:   mime,
-		Size:   int64(len(data)),
-		Width:  w,
-		Height: h,
+		Kind:           "image",
+		URL:            "/uploads/chat/" + key,
+		Mime:           mime,
+		Size:           int64(len(data)),
+		Width:          w,
+		Height:         h,
+		StorageBackend: uploadBackendS3,
 	}, nil
 }
 
@@ -446,14 +466,97 @@ type ObjectDeleter interface {
 	DeleteObject(key string) error
 }
 
+// ObjectPresigner issues time-limited GET URLs for private S3 objects.
+type ObjectPresigner interface {
+	PresignGet(key string, expiry time.Duration) (string, error)
+}
+
 // NewS3Deleter creates an ObjectDeleter backed by the S3 configuration.
-// The returned deleter supports deleting objects via the same SigV4 signing
-// used by the s3Store upload path.
+// Also implements ObjectPresigner when fully configured.
 func NewS3Deleter(cfg *config.ChatUploadS3Config) ObjectDeleter {
 	if cfg == nil {
 		return &s3Store{}
 	}
 	return &s3Store{cfg: *cfg}
+}
+
+// defaultChatUploadPresignTTL is how long a signed GET URL stays valid.
+const defaultChatUploadPresignTTL = time.Hour
+
+// PresignGet implements ObjectPresigner.
+func (s *s3Store) PresignGet(key string, expiry time.Duration) (string, error) {
+	if s.cfg.Endpoint == "" || s.cfg.Bucket == "" || s.cfg.AccessKey == "" || s.cfg.SecretKey == "" {
+		return "", fmt.Errorf("s3 not configured")
+	}
+	if expiry <= 0 {
+		expiry = defaultChatUploadPresignTTL
+	}
+	return s3PresignGetURL(s.cfg.Endpoint, s.cfg.Bucket, s.cfg.Region, s.cfg.AccessKey, s.cfg.SecretKey, key, expiry)
+}
+
+// s3PresignGetURL builds an AWS SigV4 query-string presigned GET URL (path-style).
+func s3PresignGetURL(endpoint, bucket, region, accessKey, secretKey, key string, expiry time.Duration) (string, error) {
+	if region == "" {
+		region = "auto"
+	}
+	endpoint = strings.TrimRight(endpoint, "/")
+	parsed, err := http.NewRequest(http.MethodGet, endpoint+"/"+bucket+"/"+key, http.NoBody)
+	if err != nil {
+		return "", err
+	}
+
+	now := time.Now().UTC()
+	datestamp := now.Format("20060102")
+	amzdate := now.Format("20060102T150405Z")
+	expires := int(expiry.Seconds())
+	if expires < 1 {
+		expires = 1
+	}
+	if expires > 604800 { // AWS max 7 days
+		expires = 604800
+	}
+
+	credScope := datestamp + "/" + region + "/s3/aws4_request"
+	credential := accessKey + "/" + credScope
+
+	// Query params sorted by name for the canonical request.
+	query := fmt.Sprintf(
+		"X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=%s&X-Amz-Date=%s&X-Amz-Expires=%d&X-Amz-SignedHeaders=host",
+		s3URIEncode(credential, true), amzdate, expires,
+	)
+
+	canonicalURI := "/" + bucket + "/" + key
+	canonicalHeaders := "host:" + parsed.URL.Host + "\n"
+	signedHeaders := "host"
+	canonicalRequest := strings.Join([]string{
+		"GET", canonicalURI, query, canonicalHeaders, signedHeaders, "UNSIGNED-PAYLOAD",
+	}, "\n")
+
+	stringToSign := strings.Join([]string{
+		"AWS4-HMAC-SHA256", amzdate, credScope,
+		fmt.Sprintf("%x", sha256.Sum256([]byte(canonicalRequest))),
+	}, "\n")
+
+	signingKey := s3DeriveSigningKey(secretKey, datestamp, region)
+	signature := fmt.Sprintf("%x", s3HMACSHA256(signingKey, stringToSign))
+
+	return endpoint + "/" + bucket + "/" + key + "?" + query + "&X-Amz-Signature=" + signature, nil
+}
+
+// s3URIEncode percent-encodes for AWS SigV4 (encodeSlash=true for query values).
+func s3URIEncode(s string, encodeSlash bool) string {
+	var b strings.Builder
+	b.Grow(len(s) * 2)
+	for i := 0; i < len(s); i++ {
+		c := s[i]
+		if (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') ||
+			c == '-' || c == '_' || c == '.' || c == '~' || (c == '/' && !encodeSlash) {
+			b.WriteByte(c)
+			continue
+		}
+		fmt.Fprintf(&b, "%%%02X", c)
+	}
+	return b.String()
 }
 
 type ChatUploadTracker struct {
@@ -471,6 +574,32 @@ func NewChatUploadTracker(db *gorm.DB, chatDir string, deleter ObjectDeleter) *C
 		chatDir = defaultChatUploadDir
 	}
 	return &ChatUploadTracker{db: db, chatDir: chatDir, deleter: deleter}
+}
+
+// ResolveChatUpload maps /uploads/chat/{room}/{user}/{hash}.ext to local file or presigned S3 GET.
+// Prefer local file if present (disk backend). Else presign when ObjectPresigner is set.
+// Returns (filePath, redirectURL, error). Caller: if redirectURL != "" → 302, else SendFile(filePath).
+// Caller must authorize room access separately via ChatUploadRoomID(path).
+func ResolveChatUpload(path, uploadDir string, presigner ObjectPresigner) (filePath, redirect string, err error) {
+	if _, ok := ChatUploadRoomID(path); !ok {
+		return "", "", fmt.Errorf("invalid path")
+	}
+	cleanDir := filepath.Clean(uploadDir)
+	resolved := filepath.Join(uploadDir, filepath.FromSlash(path))
+	if !strings.HasPrefix(resolved, cleanDir+string(os.PathSeparator)) && resolved != cleanDir {
+		return "", "", fmt.Errorf("invalid path")
+	}
+	if st, statErr := os.Stat(resolved); statErr == nil && !st.IsDir() {
+		return resolved, "", nil
+	}
+	if presigner != nil {
+		url, pErr := presigner.PresignGet(path, defaultChatUploadPresignTTL)
+		if pErr != nil {
+			return "", "", pErr
+		}
+		return "", url, nil
+	}
+	return "", "", fmt.Errorf("not found")
 }
 
 func (t *ChatUploadTracker) Record(roomID, userID, fileHash, ext string, fileSize int64, backend string) error {
@@ -533,25 +662,20 @@ func (t *ChatUploadTracker) DeleteByRoom(roomID string) error {
 	}
 	for i := range deleted {
 		u := &deleted[i]
-		// Only delete the file if no other room references it (cross-room safety)
-		var remaining int64
-		t.db.Model(&models.ChatUpload{}).Where("file_hash = ? AND id != ?", u.FileHash, u.ID).Count(&remaining)
-		if remaining > 0 {
-			continue
-		}
+		// Objects are keyed room/user/hash — unique per upload path, always delete.
+		key := ChatObjectKey(u.RoomID, u.UploadedBy, u.FileHash, u.Extension)
 		switch u.StorageBackend {
 		case uploadBackendS3:
 			if t.deleter != nil {
-				key := u.FileHash + u.Extension
 				if err := t.deleter.DeleteObject(key); err != nil {
 					log.Warn().Err(err).Str("key", key).Str("roomID", roomID).Msg("failed to delete S3 chat upload object")
 				}
 			} else {
-				log.Warn().Str("key", u.FileHash+u.Extension).Str("roomID", roomID).Msg("no S3 deleter configured, orphaned S3 object")
+				log.Warn().Str("key", key).Str("roomID", roomID).Msg("no S3 deleter configured, orphaned S3 object")
 			}
 		case uploadBackendInline:
 		default: // disk or unknown
-			path := filepath.Join(t.chatDir, u.FileHash+u.Extension)
+			path := filepath.Join(t.chatDir, filepath.FromSlash(key))
 			if err := os.Remove(path); err != nil && !os.IsNotExist(err) {
 				log.Warn().Err(err).Str("path", path).Msg("orphan chat upload file on disk")
 			}

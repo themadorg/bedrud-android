@@ -160,6 +160,9 @@ func mergeFromConfig(s *models.SystemSettings, cfg *config.Config) {
 	if s.ChatUploadMaxBytes == 0 && cfg.Chat.Uploads.MaxBytes != 0 {
 		s.ChatUploadMaxBytes = cfg.Chat.Uploads.MaxBytes.Int64()
 	}
+	if s.ChatUploadMaxDimension == 0 && cfg.Chat.Uploads.MaxDimension != 0 {
+		s.ChatUploadMaxDimension = cfg.Chat.Uploads.MaxDimension.Int()
+	}
 	if s.ChatUploadInlineMax == 0 && cfg.Chat.Uploads.InlineMaxBytes != 0 {
 		s.ChatUploadInlineMax = cfg.Chat.Uploads.InlineMaxBytes.Int64()
 	}

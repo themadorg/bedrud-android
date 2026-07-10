@@ -300,11 +300,16 @@ func Run(configPath, version string) error {
 		uploadDir = "./data/uploads/chat"
 	}
 	var s3Deleter storage.ObjectDeleter
+	var s3Presigner storage.ObjectPresigner
 	if cfg.Chat.Uploads.Backend == "s3" &&
 		cfg.Chat.Uploads.S3.Endpoint != "" &&
 		cfg.Chat.Uploads.S3.Bucket != "" &&
 		cfg.Chat.Uploads.S3.AccessKey != "" {
-		s3Deleter = storage.NewS3Deleter(&cfg.Chat.Uploads.S3)
+		s3Client := storage.NewS3Deleter(&cfg.Chat.Uploads.S3)
+		s3Deleter = s3Client
+		if p, ok := s3Client.(storage.ObjectPresigner); ok {
+			s3Presigner = p
+		}
 	}
 	uploadStore := storage.NewChatUploadStore(&cfg.Chat.Uploads)
 	recordingStore := storage.NewRecordingStore(&cfg.Recording, &cfg.Chat.Uploads.S3)
@@ -437,17 +442,44 @@ func Run(configPath, version string) error {
 	if err := os.MkdirAll(uploadDir, 0o755); err != nil {
 		log.Warn().Err(err).Str("dir", uploadDir).Msg("Could not create chat upload dir")
 	}
-	// Protected chat upload endpoint with path traversal prevention
+	// Protected chat upload: room participant only; disk file or S3 presigned redirect.
 	app.Get("/uploads/chat/*", middleware.Protected(), middleware.RequireEmailVerified(cfg, userRepo), func(c *fiber.Ctx) error {
 		path := c.Params("*")
-		if path == "" {
-			return c.Status(400).JSON(fiber.Map{"error": "Missing file path"})
-		}
-		resolved := filepath.Join(uploadDir, path)
-		if !strings.HasPrefix(resolved, filepath.Clean(uploadDir)+string(os.PathSeparator)) && resolved != filepath.Clean(uploadDir) {
+		roomID, ok := storage.ChatUploadRoomID(path)
+		if !ok {
 			return c.Status(400).JSON(fiber.Map{"error": "Invalid path"})
 		}
-		return c.SendFile(resolved)
+		claims, _ := c.Locals("user").(*auth.Claims)
+		if claims == nil {
+			return c.Status(401).JSON(fiber.Map{"error": "Unauthorized"})
+		}
+		isSuper := false
+		for _, a := range claims.Accesses {
+			if a == string(models.AccessSuperAdmin) {
+				isSuper = true
+				break
+			}
+		}
+		if !isSuper {
+			ok, err := roomRepo.IsParticipant(roomID, claims.UserID)
+			if err != nil {
+				return c.Status(500).JSON(fiber.Map{"error": "Failed to verify access"})
+			}
+			if !ok {
+				return c.Status(403).JSON(fiber.Map{"error": "Not a participant in this room"})
+			}
+		}
+		filePath, redirect, err := storage.ResolveChatUpload(path, uploadDir, s3Presigner)
+		if err != nil {
+			if err.Error() == "not found" {
+				return c.Status(404).JSON(fiber.Map{"error": "Not found"})
+			}
+			return c.Status(400).JSON(fiber.Map{"error": "Invalid path"})
+		}
+		if redirect != "" {
+			return c.Redirect(redirect, fiber.StatusFound)
+		}
+		return c.SendFile(filePath)
 	})
 
 	avatarDir := storage.AvatarDir()
