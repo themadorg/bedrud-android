@@ -94,9 +94,14 @@ var frontendFS embed.FS
 
 At build time, `bun run build:embed` SSR pre-renders the React app and copies `dist/client/` into `server/frontend/`. The Go compiler then bundles it into the binary. The Fiber server serves these files for any non-API route.
 
-### JWT Authentication
+### JWT-Authentifizierung
 
-The middleware extracts the JWT from the `Authorization: Bearer <token>` header, validates it, and attaches the user context to the request. Protected routes use `RequireAccess` middleware to check user roles.
+Die Middleware liest das JWT aus dem Header `Authorization: Bearer <token>` (Cookie-Fallback bei Lesezugriffen), prüft es und hängt den Benutzerkontext an die Anfrage. Geschützte Routen nutzen `RequireAccess` für Rollen.
+
+- **Zweck-Tokens** (`email_verify`, `password_reset`) teilen den Signaturschlüssel, dürfen aber **nicht** als Access-Token auf `Protected`-Routen dienen.
+- **Mutationen** (POST/PUT/PATCH/DELETE auf authentifizierten Routen) erfordern einen Bearer-Header via `RequireBearerForMutations` — reine Cookie-POSTs cross-site werden abgelehnt (CSRF-Schutz).
+- **Widerruf von Access-Tokens** (Logout / Passwortänderung) wird in der Datenbank persistiert und überlebt Neustarts sowie Multi-Instance-Deployments.
+- **Raum-Präsenz**-Identitätslisten erfordern Authentifizierung; öffentliche Räume können `?countOnly=1` anbieten (nur Anzahl, keine Identitäten).
 
 ### LiveKit Token Generation
 
@@ -107,11 +112,11 @@ When a user joins a room, the server:
 3. Returns the token to the client
 4. The client connects directly to LiveKit using the token
 
-### Recordings & LiveKit Egress
+### Aufzeichnungen & LiveKit Egress
 
-🚧 **Planned feature.** Recording HTTP routes and queue handlers are present in the codebase but **not registered** on the production route table (`// TODO oncoming feature` in `internal/server/server.go`). YAML keys under `recording:` are reserved for the upcoming release.
+Queue-Handler **`process_recording`** und **`recording_delete`** sind am Worker registriert. LiveKit-Webhooks `egress_ended` stellen `process_recording` in die Queue (Download → Speichern → als fertig markieren → optional Webhook `recording.completed`).
 
-When enabled, the design uses three-layer authorization (system setting → room setting → moderator check), LiveKit Room Composite Egress, and a `process_recording` job. Until then, do not rely on recording API endpoints.
+🚧 **HTTP-Aufzeichnungsrouten** (Start/Stop/Liste über die API) bleiben im Produktion-Routentable `// TODO oncoming feature` — betreiben Sie öffentliche Recording-REST-Endpunkte erst, wenn sie freigeschaltet sind. YAML-Schlüssel unter `recording:` konfigurieren den Speicher der Pipeline.
 
 ### Webhooks
 

@@ -73,7 +73,7 @@ Auth state is managed by a Zustand store in `src/lib/auth.store.ts`:
 
 1. **Login** - User submits credentials to `POST /api/auth/login`
 2. **Token Storage** - Access and refresh tokens saved to `localStorage`
-3. **Automatic Injection** - `authFetch` wraps every API call, adding the `Authorization: Bearer` header
+3. **Automatic Injection** - `authFetch` wraps every API call, adding the `Authorization: Bearer` header (required for state-changing requests; cookie-only mutations are rejected by the server)
 4. **Auto-Refresh** - When a request returns 401, `authFetch` attempts to refresh the token using the refresh token
 5. **Logout** - Clears tokens and redirects to the login page
 

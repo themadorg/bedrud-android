@@ -96,7 +96,12 @@ At build time, `bun run build:embed` SSR pre-renders the React app and copies `d
 
 ### JWT Authentication
 
-The middleware extracts the JWT from the `Authorization: Bearer <token>` header, validates it, and attaches the user context to the request. Protected routes use `RequireAccess` middleware to check user roles.
+The middleware extracts the JWT from the `Authorization: Bearer <token>` header (cookie fallback on reads), validates it, and attaches the user context to the request. Protected routes use `RequireAccess` middleware to check user roles.
+
+- **Purpose tokens** (`email_verify`, `password_reset`) share the signing key but **cannot** be used as access tokens on `Protected` routes.
+- **Mutations** (POST/PUT/PATCH/DELETE on authenticated routes) require a Bearer header via `RequireBearerForMutations` — cookie-only cross-site POSTs are rejected (CSRF defense).
+- **Access-token revocation** (logout / password change) is persisted in the database so it survives restarts and multi-instance deploys.
+- **Room presence** identity lists require authentication; public rooms may expose `?countOnly=1` (count only, no identities).
 
 ### LiveKit Token Generation
 
@@ -109,9 +114,9 @@ When a user joins a room, the server:
 
 ### Recordings & LiveKit Egress
 
-🚧 **Planned feature.** Recording HTTP routes and queue handlers are present in the codebase but **not registered** on the production route table (`// TODO oncoming feature` in `internal/server/server.go`). YAML keys under `recording:` are reserved for the upcoming release.
+Queue handlers **`process_recording`** and **`recording_delete`** are registered on the worker. LiveKit `egress_ended` webhooks enqueue `process_recording` (download → store → mark completed → optional `recording.completed` webhook).
 
-When enabled, the design uses three-layer authorization (system setting → room setting → moderator check), LiveKit Room Composite Egress, and a `process_recording` job. Until then, do not rely on recording API endpoints.
+🚧 **HTTP recording routes** (start/stop/list from the API) remain `// TODO oncoming feature` on the production route table — operators should not rely on public recording REST endpoints until those land. YAML keys under `recording:` configure storage for the processing pipeline.
 
 ### Webhooks
 

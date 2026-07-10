@@ -94,9 +94,14 @@ var frontendFS embed.FS
 
 At build time, `bun run build:embed` SSR pre-renders the React app and copies `dist/client/` into `server/frontend/`. The Go compiler then bundles it into the binary. The Fiber server serves these files for any non-API route.
 
-### JWT Authentication
+### احراز هویت JWT
 
-The middleware extracts the JWT from the `Authorization: Bearer <token>` header, validates it, and attaches the user context to the request. Protected routes use `RequireAccess` middleware to check user roles.
+میان‌افزار JWT را از سرآیند `Authorization: Bearer <token>` می‌خواند (در خواندن می‌تواند به کوکی برگردد)، اعتبارسنجی می‌کند و زمینهٔ کاربر را به درخواست می‌چسباند. مسیرهای محافظت‌شده با `RequireAccess` نقش را بررسی می‌کنند.
+
+- **توکن‌های هدفمند** (`email_verify`، `password_reset`) کلید امضا را شریک‌اند اما **نباید** روی مسیرهای `Protected` به‌عنوان توکن دسترسی به‌کار روند.
+- **درخواست‌های تغییردهنده** (POST/PUT/PATCH/DELETE احراز‌شده) به Bearer از طریق `RequireBearerForMutations` نیاز دارند — POST فقط-کوکی بین‌سایتی رد می‌شود (دفاع CSRF).
+- **ابطال توکن دسترسی** (خروج / تغییر گذرواژه) در پایگاه داده ماندگار است و از راه‌اندازی مجدد و چندنمونه عبور می‌کند.
+- فهرست‌های **هویت حضور اتاق** نیاز به احراز هویت دارند؛ اتاق‌های عمومی می‌توانند `?countOnly=1` بدهند (فقط تعداد، بدون هویت).
 
 ### LiveKit Token Generation
 
@@ -107,11 +112,11 @@ When a user joins a room, the server:
 3. Returns the token to the client
 4. The client connects directly to LiveKit using the token
 
-### Recordings & LiveKit Egress
+### ضبط‌ها و LiveKit Egress
 
-🚧 **Planned feature.** Recording HTTP routes and queue handlers are present in the codebase but **not registered** on the production route table (`// TODO oncoming feature` in `internal/server/server.go`). YAML keys under `recording:` are reserved for the upcoming release.
+هندلرهای صف **`process_recording`** و **`recording_delete`** روی worker ثبت شده‌اند. وب‌هوک‌های LiveKit با `egress_ended` کار `process_recording` را در صف می‌گذارند (دانلود → ذخیره → علامت‌گذاری تکمیل → وب‌هوک اختیاری `recording.completed`).
 
-When enabled, the design uses three-layer authorization (system setting → room setting → moderator check), LiveKit Room Composite Egress, and a `process_recording` job. Until then, do not rely on recording API endpoints.
+🚧 **مسیرهای HTTP ضبط** (start/stop/list در API) در جدول مسیر تولید همچنان `// TODO oncoming feature` هستند — تا زمان عرضه به REST عمومی ضبط تکیه نکنید. کلیدهای YAML زیر `recording:` ذخیرهٔ خط لوله را پیکربندی می‌کنند.
 
 ### Webhooks
 

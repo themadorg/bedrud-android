@@ -94,9 +94,14 @@ var frontendFS embed.FS
 
 At build time, `bun run build:embed` SSR pre-renders the React app and copies `dist/client/` into `server/frontend/`. The Go compiler then bundles it into the binary. The Fiber server serves these files for any non-API route.
 
-### JWT Authentication
+### مصادقة JWT
 
-The middleware extracts the JWT from the `Authorization: Bearer <token>` header, validates it, and attaches the user context to the request. Protected routes use `RequireAccess` middleware to check user roles.
+تستخرج البرمجية الوسيطة JWT من الترويسة `Authorization: Bearer <token>` (مع احتياطي الكوكي للقراءة)، وتتحقق منه، وتُرفق سياق المستخدم بالطلب. تستخدم المسارات المحمية `RequireAccess` للأدوار.
+
+- **رموز الغرض** (`email_verify`، `password_reset`) تشارك مفتاح التوقيع لكن **لا يجوز** استخدامها كرموز وصول على مسارات `Protected`.
+- **طلبات التغيير** (POST/PUT/PATCH/DELETE المصادَق عليها) تتطلب ترويسة Bearer عبر `RequireBearerForMutations` — تُرفض طلبات POST عبر المواقع بالكوكي فقط (حماية CSRF).
+- **إبطال رمز الوصول** (تسجيل الخروج / تغيير كلمة المرور) يُخزَّن في قاعدة البيانات ويصمد أمام إعادة التشغيل والنشر متعدد النسخ.
+- قوائم **هويات الحضور** في الغرفة تتطلب مصادقة؛ قد تعرض الغرف العامة `?countOnly=1` (العدد فقط بلا هويات).
 
 ### LiveKit Token Generation
 
@@ -107,11 +112,11 @@ When a user joins a room, the server:
 3. Returns the token to the client
 4. The client connects directly to LiveKit using the token
 
-### Recordings & LiveKit Egress
+### التسجيلات و LiveKit Egress
 
-🚧 **Planned feature.** Recording HTTP routes and queue handlers are present in the codebase but **not registered** on the production route table (`// TODO oncoming feature` in `internal/server/server.go`). YAML keys under `recording:` are reserved for the upcoming release.
+مُعالِجات الطابور **`process_recording`** و **`recording_delete`** مسجَّلة على العامل. تُدرِج خطافات LiveKit `egress_ended` مهمة `process_recording` (تنزيل → تخزين → تعليم كمكتمل → خطاف اختياري `recording.completed`).
 
-When enabled, the design uses three-layer authorization (system setting → room setting → moderator check), LiveKit Room Composite Egress, and a `process_recording` job. Until then, do not rely on recording API endpoints.
+🚧 **مسارات HTTP للتسجيل** (start/stop/list عبر API) ما تزال `// TODO oncoming feature` في جدول المسارات الإنتاجي — لا تعتمد على نقاط REST عامة للتسجيل حتى تُتاح. مفاتيح YAML تحت `recording:` تضبط تخزين خط المعالجة.
 
 ### Webhooks
 

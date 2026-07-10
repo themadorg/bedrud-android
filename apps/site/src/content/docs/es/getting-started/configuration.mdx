@@ -65,8 +65,8 @@ server:
   domain: ""                    # Public domain (ACME, passkey RP ID). Env: SERVER_DOMAIN
   email: ""                     # ACME registration email. Env: SERVER_EMAIL
   useACME: false                # Let's Encrypt. Env: SERVER_USE_ACME
-  behindProxy: false            # Trusted-proxy mode (Cloudflare, nginx)
-  trustedProxies: []            # Proxy IPs/CIDRs. Env: SERVER_TRUSTED_PROXIES (comma-separated)
+  behindProxy: false            # Trusted-proxy mode (Cloudflare, nginx). If true, trustedProxies MUST be non-empty or the process refuses to start.
+  trustedProxies: []            # Required when behindProxy=true (proxy IPs/CIDRs). Never defaults to 0.0.0.0/0. Env: SERVER_TRUSTED_PROXIES
   proxyHeader: ""               # Client IP header (e.g. X-Forwarded-For). Env: SERVER_PROXY_HEADER
   certAlgorithm: "ed25519"      # Self-signed key algo: ed25519, ecdsa256, rsa2048, rsa4096. Env: SERVER_CERT_ALGORITHM
   maxParticipantsLimit: 1000    # Hard ceiling for room capacity (0 = unlimited). Env: SERVER_MAX_PARTICIPANTS_LIMIT
@@ -157,7 +157,7 @@ chat:
   messageTTLHours: 2160                  # 90 days. Env: CHAT_MESSAGE_TTL_HOURS
   uploads:
     backend: "disk"                      # disk | s3 | inline
-    maxBytes: 10485760                   # Hard per-file limit (default 10 MB)
+    maxBytes: 10485760                   # Hard per-file limit (default 10 MB). Server HTTP body limit is aligned to this value.
     inlineMaxBytes: 512000               # Below this → data URI (0 = disable)
     diskDir: "./data/uploads/chat"
     # s3:

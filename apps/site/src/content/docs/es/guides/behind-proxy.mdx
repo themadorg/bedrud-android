@@ -6,6 +6,8 @@ order: 29
 
 How to deploy Bedrud when your server sits behind a reverse proxy or CDN. This is a common production setup, but WebRTC (LiveKit) requires special handling because **CDNs cannot proxy UDP media traffic**.
 
+**Requisito de configuración:** si `behindProxy: true`, **debe** establecer una lista `trustedProxies` no vacía (IPs/CIDR del proxy). El servidor no arranca sin ella (sin valor por defecto `0.0.0.0/0`). Env: `SERVER_TRUSTED_PROXIES`.
+
 ---
 
 ## The Problem

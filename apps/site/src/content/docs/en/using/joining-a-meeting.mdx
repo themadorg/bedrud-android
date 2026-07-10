@@ -44,7 +44,7 @@ Use two browsers (or normal + private) to confirm:
 
 Rooms may require a **password**, wait for approval, or other access checks depending on room settings. Complete the **room access dialog** when shown, then proceed to pre-join / join.
 
-Guest join (no account) may be allowed on some instances — share a link and guests enter with a display name only.
+Guest join (no account) may be allowed on some instances — share a link and guests enter with a display name only. Guest join fails closed if the room is full or capacity tracking fails (no media token). Guests get a **stable signed identity cookie** (`bedrud_guest_id`) so room bans stick across revisits. Lobby **count** for public rooms may be public; participant identity lists require authentication.
 
 ## After you are in
 

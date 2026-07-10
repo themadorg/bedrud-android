@@ -94,9 +94,14 @@ var frontendFS embed.FS
 
 At build time, `bun run build:embed` SSR pre-renders the React app and copies `dist/client/` into `server/frontend/`. The Go compiler then bundles it into the binary. The Fiber server serves these files for any non-API route.
 
-### JWT Authentication
+### JWT 身份验证
 
-The middleware extracts the JWT from the `Authorization: Bearer <token>` header, validates it, and attaches the user context to the request. Protected routes use `RequireAccess` middleware to check user roles.
+中间件从 `Authorization: Bearer <token>` 请求头提取 JWT（读取时也可回退 Cookie），校验后将用户上下文附加到请求。受保护路由使用 `RequireAccess` 检查角色。
+
+- **用途令牌**（`email_verify`、`password_reset`）与访问令牌共用签名密钥，但**不能**在 `Protected` 路由上当作访问令牌。
+- **变更请求**（已认证的 POST/PUT/PATCH/DELETE）须通过 `RequireBearerForMutations` 携带 Bearer；仅 Cookie 的跨站 POST 会被拒绝（CSRF 防护）。
+- **访问令牌吊销**（登出 / 改密）持久化到数据库，可跨进程重启与多实例部署生效。
+- **房间在线身份列表**需要身份验证；公开房间可提供 `?countOnly=1`（仅人数，无身份）。
 
 ### LiveKit Token Generation
 
@@ -107,11 +112,11 @@ When a user joins a room, the server:
 3. Returns the token to the client
 4. The client connects directly to LiveKit using the token
 
-### Recordings & LiveKit Egress
+### 录制与 LiveKit Egress
 
-🚧 **Planned feature.** Recording HTTP routes and queue handlers are present in the codebase but **not registered** on the production route table (`// TODO oncoming feature` in `internal/server/server.go`). YAML keys under `recording:` are reserved for the upcoming release.
+队列处理器 **`process_recording`** 与 **`recording_delete`** 已在 worker 上注册。LiveKit 的 `egress_ended` webhook 会入队 `process_recording`（下载 → 存储 → 标记完成 → 可选 `recording.completed` webhook）。
 
-When enabled, the design uses three-layer authorization (system setting → room setting → moderator check), LiveKit Room Composite Egress, and a `process_recording` job. Until then, do not rely on recording API endpoints.
+🚧 **HTTP 录制路由**（API 的 start/stop/list）在生产路由表上仍为 `// TODO oncoming feature` — 在正式提供前请勿依赖公开录制 REST 端点。`recording:` 下的 YAML 键配置处理流水线的存储。
 
 ### Webhooks
 

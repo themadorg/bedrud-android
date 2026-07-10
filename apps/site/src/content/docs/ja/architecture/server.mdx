@@ -94,9 +94,14 @@ var frontendFS embed.FS
 
 At build time, `bun run build:embed` SSR pre-renders the React app and copies `dist/client/` into `server/frontend/`. The Go compiler then bundles it into the binary. The Fiber server serves these files for any non-API route.
 
-### JWT Authentication
+### JWT 認証
 
-The middleware extracts the JWT from the `Authorization: Bearer <token>` header, validates it, and attaches the user context to the request. Protected routes use `RequireAccess` middleware to check user roles.
+ミドルウェアは `Authorization: Bearer <token>` ヘッダーから JWT を取り出し（読み取り時は Cookie フォールバック可）、検証してユーザー文脈をリクエストに付与します。保護ルートは `RequireAccess` でロールを確認します。
+
+- **用途トークン**（`email_verify`、`password_reset`）は署名鍵を共有しますが、`Protected` ルートのアクセストークンとしては**使えません**。
+- **変更系**（認証付き POST/PUT/PATCH/DELETE）は `RequireBearerForMutations` による Bearer が必須 — Cookie のみのクロスサイト POST は拒否（CSRF 対策）。
+- **アクセストークン失効**（ログアウト / パスワード変更）は DB に永続化され、再起動やマルチインスタンスでも有効です。
+- **ルーム在席の ID 一覧**には認証が必要。公開ルームは `?countOnly=1`（人数のみ、ID なし）を公開できます。
 
 ### LiveKit Token Generation
 
@@ -107,11 +112,11 @@ When a user joins a room, the server:
 3. Returns the token to the client
 4. The client connects directly to LiveKit using the token
 
-### Recordings & LiveKit Egress
+### 録画と LiveKit Egress
 
-🚧 **Planned feature.** Recording HTTP routes and queue handlers are present in the codebase but **not registered** on the production route table (`// TODO oncoming feature` in `internal/server/server.go`). YAML keys under `recording:` are reserved for the upcoming release.
+キューハンドラ **`process_recording`** と **`recording_delete`** はワーカーに登録済みです。LiveKit の `egress_ended` Webhook は `process_recording` をエンキューします（ダウンロード → 保存 → 完了マーク → 任意の `recording.completed` Webhook）。
 
-When enabled, the design uses three-layer authorization (system setting → room setting → moderator check), LiveKit Room Composite Egress, and a `process_recording` job. Until then, do not rely on recording API endpoints.
+🚧 **HTTP 録画ルート**（API の start/stop/list）は本番ルート表で `// TODO oncoming feature` のままです — 公開されるまで公開録画 REST に依存しないでください。`recording:` 配下の YAML がパイプラインの保存先を設定します。
 
 ### Webhooks
 
