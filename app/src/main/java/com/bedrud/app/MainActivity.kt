@@ -252,7 +252,10 @@ fun BedrudNavHost(
             instanceManager.store.activeInstance?.let { instance ->
                 recentRoomsStore.add(roomName, instance.id, instance.displayName)
             }
-            navController.navigate(Routes.meeting(roomName))
+            navController.navigate(Routes.meeting(roomName)) {
+                launchSingleTop = true
+                popUpTo(Routes.MEETING) { inclusive = true }
+            }
             deepLinkRoomName.value = null
         }
     }
@@ -326,7 +329,10 @@ fun BedrudNavHost(
         composable(Routes.MAIN) {
             MainScreen(
                 onJoinRoom = { roomName ->
-                    navController.navigate(Routes.meeting(roomName))
+                    navController.navigate(Routes.meeting(roomName)) {
+                        launchSingleTop = true
+                        popUpTo(Routes.MEETING) { inclusive = true }
+                    }
                 },
                 onLogout = {
                     instanceManager.authManager.value?.logout()
@@ -350,7 +356,14 @@ fun BedrudNavHost(
             MeetingScreen(
                 roomName = roomName,
                 onLeave = {
-                    navController.popBackStack()
+                    // Leaving can be triggered twice for one action (e.g. the
+                    // button handler pops immediately, then the connection-state
+                    // watcher pops again once the async disconnect lands). Only
+                    // pop while the meeting screen is still the current entry so
+                    // the second call can't pop past it and empty the back stack.
+                    if (navController.currentDestination?.route == Routes.MEETING) {
+                        navController.popBackStack()
+                    }
                 }
             )
         }
