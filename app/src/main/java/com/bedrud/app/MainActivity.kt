@@ -142,6 +142,7 @@ class MainActivity : ComponentActivity() {
     /** Keep the meeting UI off the lock screen; the call continues via [CallService]. */
     private fun hideUiBehindKeyguard() {
         clearLockScreenFlags()
+        if (!CallService.isRunning) return
         if (intent?.action == CallService.ACTION_RETURN_TO_MEETING) return
         val keyguard = getSystemService(KeyguardManager::class.java) ?: return
         if (keyguard.isKeyguardLocked) {
