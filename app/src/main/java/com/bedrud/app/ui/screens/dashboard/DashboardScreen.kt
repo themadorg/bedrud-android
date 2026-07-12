@@ -77,6 +77,7 @@ import com.bedrud.app.core.recent.formatRecentRoomTimeAgo
 import com.bedrud.app.core.recent.recentRoomsNotInApiList
 import com.bedrud.app.models.CreateRoomRequest
 import com.bedrud.app.models.UserRoomResponse
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 
@@ -101,6 +102,8 @@ fun DashboardContent(
     recentRoomsStore: RecentRoomsStore = koinInject(),
 ) {
     val roomApi = instanceManager.roomApi.collectAsState().value ?: return
+    val authManager = instanceManager.authManager.collectAsState().value
+    val currentUser by (authManager?.currentUser ?: MutableStateFlow(null)).collectAsState()
     val recentRooms by recentRoomsStore.rooms.collectAsState()
     val activeInstanceId by instanceManager.store.activeInstanceId.collectAsState()
     val scope = rememberCoroutineScope()
@@ -111,7 +114,7 @@ fun DashboardContent(
     var showCreateDialog by remember { mutableStateOf(false) }
     var roomToEdit by remember { mutableStateOf<UserRoomResponse?>(null) }
     var roomToDelete by remember { mutableStateOf<UserRoomResponse?>(null) }
-    var activeFilter by rememberSaveable { mutableStateOf(RoomFilter.ALL) }
+    var activeFilter by rememberSaveable { mutableStateOf(RoomFilter.RECENT) }
     var quickJoinText by remember { mutableStateOf("") }
 
     fun loadRooms() {
@@ -222,10 +225,10 @@ fun DashboardContent(
 
     val isKeyboardVisible = WindowInsets.ime.getBottom(LocalDensity.current) > 0
 
-    val filteredRooms = remember(rooms, activeFilter) {
+    val filteredRooms = remember(rooms, activeFilter, currentUser) {
         when (activeFilter) {
             RoomFilter.RECENT -> emptyList()
-            RoomFilter.MY_ROOMS -> rooms.filter { it.relationship == "owner" }
+            RoomFilter.MY_ROOMS -> rooms.filter { it.createdBy == currentUser?.id }
             RoomFilter.ALL -> rooms
         }
     }
@@ -349,7 +352,7 @@ fun DashboardContent(
                                     room = entry.room,
                                     onJoin = { onJoinRoom(entry.room.name) },
                                     onDelete = { roomToDelete = entry.room },
-                                    onSettings = if (entry.room.relationship == "owner") {
+                                    onSettings = if (entry.room.createdBy == currentUser?.id) {
                                         { roomToEdit = entry.room }
                                     } else null,
                                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
@@ -382,7 +385,7 @@ fun DashboardContent(
                             room = room,
                             onJoin = { onJoinRoom(room.name) },
                             onDelete = { roomToDelete = room },
-                            onSettings = if (room.relationship == "owner") {
+                            onSettings = if (room.createdBy == currentUser?.id) {
                                 { roomToEdit = room }
                             } else null,
                             modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
