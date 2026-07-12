@@ -11,6 +11,43 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # ── Path filters: only run jobs when their trees change ──
+  # Note: Docker (dev-nightly) is server + apps/web only — NOT apps/site landing/docs.
+  # Site (landing/docs) is independent of the product binary, but copies server/docs/swagger.json,
+  # so server changes still rebuild the site.
+  changes:
+    name: Detect changes
+    runs-on: ubuntu-latest
+    outputs:
+      android: ${{ steps.filter.outputs.android }}
+      desktop: ${{ steps.filter.outputs.desktop }}
+      ios: ${{ steps.filter.outputs.ios }}
+      site: ${{ steps.filter.outputs.site }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            android:
+              - 'apps/android/**'
+              - '.github/workflows/ci.yml'
+            desktop:
+              - 'apps/desktop/**'
+              - 'Cargo.toml'
+              - 'Cargo.lock'
+              - '.github/workflows/ci.yml'
+            ios:
+              - 'apps/ios/**'
+              - '.github/workflows/ci.yml'
+            # Landing + docs (Astro). Not the meeting web app (apps/web).
+            # Rebuild when site content changes OR when server swagger/docs may change.
+            site:
+              - 'apps/site/**'
+              - 'server/**'
+              - '.github/workflows/ci.yml'
+              - '.github/workflows/deploy-site.yml'
+
   # ── Server (Go) ───────────────────────────────────────────────
   server:
     name: Server – Build & Vet
@@ -68,6 +105,8 @@ jobs:
   # ── Android ───────────────────────────────────────────────────
   android:
     name: Android – Lint & Test
+    needs: changes
+    if: needs.changes.outputs.android == 'true'
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -127,6 +166,8 @@ jobs:
   # ── iOS ───────────────────────────────────────────────────────
   ios:
     name: iOS – Build & Test
+    needs: changes
+    if: needs.changes.outputs.ios == 'true'
     runs-on: macos-15
     defaults:
       run:
@@ -200,6 +241,8 @@ jobs:
   # ── Desktop (Rust/Slint) ──────────────────────────────────────
   desktop:
     name: Desktop – Build & Test
+    needs: changes
+    if: needs.changes.outputs.desktop == 'true'
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -230,9 +273,12 @@ jobs:
       - name: Test
         run: cargo test -p bedrud-desktop
 
-  # ── Site (Astro) ───────────────────────────────────────────────
+  # ── Site (Astro landing + docs) ────────────────────────────────
+  # Independent of the Go binary / Docker image; only shares swagger from server/docs.
   site:
     name: Site – Build & Check
+    needs: changes
+    if: needs.changes.outputs.site == 'true'
     runs-on: ubuntu-latest
     defaults:
       run:
