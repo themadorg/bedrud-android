@@ -88,9 +88,9 @@ data class JoinRoomRequest(
 data class JoinRoomResponse(
     val id: String,
     val name: String,
-    val token: String,
+    val token: String? = null,
     @SerializedName("livekitHost")
-    val livekitHost: String,
+    val livekitHost: String? = null,
     @SerializedName("createdBy")
     val createdBy: String,
     @SerializedName("adminId")

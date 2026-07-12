@@ -210,8 +210,8 @@ fun MeetingScreen(
         CallService.start(
             context,
             roomName,
-            info.livekitHost,
-            info.token,
+            info.livekitHost!!,
+            info.token!!,
             currentUser?.avatarUrl,
         )
         isJoining = false
@@ -286,8 +286,15 @@ fun MeetingScreen(
         try {
             val response = roomApi.joinRoom(JoinRoomRequest(roomName = roomName))
             if (response.isSuccessful) {
-                roomInfo = response.body()
-                permissionLauncher.launch(requiredPermissions)
+                val info = response.body()
+                if (info?.token != null && info.livekitHost != null) {
+                    roomInfo = info
+                    permissionLauncher.launch(requiredPermissions)
+                } else {
+                    snackbarHostState.showSnackbar("This room no longer exists")
+                    isJoining = false
+                    onLeave()
+                }
             } else {
                 snackbarHostState.showSnackbar("Failed to join room")
                 isJoining = false
