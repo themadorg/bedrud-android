@@ -167,8 +167,7 @@
   <string name="dashboard_feature_e2ee">端到端加密</string>
   <string name="dashboard_feature_private">私密</string>
   <string name="dashboard_filter_all">全部</string>
-  <string name="dashboard_filter_active">活跃</string>
-  <string name="dashboard_filter_private">私密</string>
+  <string name="dashboard_filter_myRooms">我的房间</string>
   <string name="dashboard_roomSettings_allowChat">允许聊天</string>
   <string name="dashboard_roomSettings_allowVideo">允许视频</string>
   <string name="dashboard_roomSettings_allowAudio">允许音频</string>

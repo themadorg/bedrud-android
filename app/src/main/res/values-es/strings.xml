@@ -167,8 +167,7 @@
   <string name="dashboard_feature_e2ee">E2EE</string>
   <string name="dashboard_feature_private">Privado</string>
   <string name="dashboard_filter_all">Todos</string>
-  <string name="dashboard_filter_active">Activos</string>
-  <string name="dashboard_filter_private">Privados</string>
+  <string name="dashboard_filter_myRooms">Mis Salas</string>
   <string name="dashboard_roomSettings_allowChat">Permitir chat</string>
   <string name="dashboard_roomSettings_allowVideo">Permitir video</string>
   <string name="dashboard_roomSettings_allowAudio">Permitir audio</string>

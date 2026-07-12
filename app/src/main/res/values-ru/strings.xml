@@ -167,8 +167,7 @@
   <string name="dashboard_feature_e2ee">E2EE</string>
   <string name="dashboard_feature_private">Закрытая</string>
   <string name="dashboard_filter_all">Все</string>
-  <string name="dashboard_filter_active">Активные</string>
-  <string name="dashboard_filter_private">Закрытые</string>
+  <string name="dashboard_filter_myRooms">Мои комнаты</string>
   <string name="dashboard_roomSettings_allowChat">Разрешить чат</string>
   <string name="dashboard_roomSettings_allowVideo">Разрешить видео</string>
   <string name="dashboard_roomSettings_allowAudio">Разрешить аудио</string>

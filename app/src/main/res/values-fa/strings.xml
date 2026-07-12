@@ -164,8 +164,7 @@
   <string name="dashboard_feature_e2ee">E2EE</string>
   <string name="dashboard_feature_private">خصوصی</string>
   <string name="dashboard_filter_all">همه</string>
-  <string name="dashboard_filter_active">فعال</string>
-  <string name="dashboard_filter_private">خصوصی</string>
+  <string name="dashboard_filter_myRooms">اتاق‌های من</string>
   <string name="dashboard_roomSettings_allowChat">اجازه چت</string>
   <string name="dashboard_roomSettings_allowVideo">اجازه ویدئو</string>
   <string name="dashboard_roomSettings_allowAudio">اجازه صدا</string>

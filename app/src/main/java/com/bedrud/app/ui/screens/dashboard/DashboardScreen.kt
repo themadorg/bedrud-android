@@ -82,7 +82,7 @@ import org.koin.compose.koinInject
 
 // ── Filter state ─────────────────────────────────────────────────────────────
 
-private enum class RoomFilter { ALL, ACTIVE, PRIVATE, RECENT }
+private enum class RoomFilter { RECENT, MY_ROOMS, ALL }
 
 private sealed interface RoomListEntry {
     data class FromApi(val room: UserRoomResponse) : RoomListEntry
@@ -224,10 +224,9 @@ fun DashboardContent(
 
     val filteredRooms = remember(rooms, activeFilter) {
         when (activeFilter) {
-            RoomFilter.ALL -> rooms
-            RoomFilter.ACTIVE -> rooms.filter { it.isActive }
-            RoomFilter.PRIVATE -> rooms.filter { it.isPublic == false }
             RoomFilter.RECENT -> emptyList()
+            RoomFilter.MY_ROOMS -> rooms.filter { it.relationship == "owner" }
+            RoomFilter.ALL -> rooms
         }
     }
 
@@ -438,10 +437,9 @@ private fun FilterRow(
                 label = {
                     Text(
                         when (filter) {
-                            RoomFilter.ALL -> stringResource(R.string.dashboard_filter_all)
-                            RoomFilter.ACTIVE -> stringResource(R.string.dashboard_filter_active)
-                            RoomFilter.PRIVATE -> stringResource(R.string.dashboard_filter_private)
                             RoomFilter.RECENT -> stringResource(R.string.dashboard_filter_recent)
+                            RoomFilter.MY_ROOMS -> stringResource(R.string.dashboard_filter_myRooms)
+                            RoomFilter.ALL -> stringResource(R.string.dashboard_filter_all)
                         }
                     )
                 }

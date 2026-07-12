@@ -167,8 +167,7 @@
   <string name="dashboard_feature_e2ee">UÇU</string>
   <string name="dashboard_feature_private">Özel</string>
   <string name="dashboard_filter_all">Tümü</string>
-  <string name="dashboard_filter_active">Aktif</string>
-  <string name="dashboard_filter_private">Özel</string>
+  <string name="dashboard_filter_myRooms">Odalarım</string>
   <string name="dashboard_roomSettings_allowChat">Sohbete İzin Ver</string>
   <string name="dashboard_roomSettings_allowVideo">Videoya İzin Ver</string>
   <string name="dashboard_roomSettings_allowAudio">Sese İzin Ver</string>

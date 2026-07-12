@@ -201,8 +201,7 @@
   <string name="dashboard_feature_e2ee">E2EE</string>
   <string name="dashboard_feature_private">Private</string>
   <string name="dashboard_filter_all">All</string>
-  <string name="dashboard_filter_active">Active</string>
-  <string name="dashboard_filter_private">Private</string>
+  <string name="dashboard_filter_myRooms">My Rooms</string>
   <string name="dashboard_filter_recent">Recent</string>
   <string name="dashboard_dialog_deleteTitle">Delete room?</string>
   <string name="dashboard_dialog_deleteMessage">Are you sure you want to delete <xliff:g id="roomName" example="team-standup">%1$s</xliff:g>? This cannot be undone.</string>

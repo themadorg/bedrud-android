@@ -167,8 +167,7 @@
   <string name="dashboard_feature_e2ee">E2EE</string>
   <string name="dashboard_feature_private">プライベート</string>
   <string name="dashboard_filter_all">すべて</string>
-  <string name="dashboard_filter_active">アクティブ</string>
-  <string name="dashboard_filter_private">プライベート</string>
+  <string name="dashboard_filter_myRooms">マイルーム</string>
   <string name="dashboard_roomSettings_allowChat">チャットを許可</string>
   <string name="dashboard_roomSettings_allowVideo">ビデオを許可</string>
   <string name="dashboard_roomSettings_allowAudio">オーディオを許可</string>

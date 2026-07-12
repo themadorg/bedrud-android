@@ -167,8 +167,7 @@
   <string name="dashboard_feature_e2ee">التشفير من طرف إلى طرف</string>
   <string name="dashboard_feature_private">خاص</string>
   <string name="dashboard_filter_all">الكل</string>
-  <string name="dashboard_filter_active">نشط</string>
-  <string name="dashboard_filter_private">خاص</string>
+  <string name="dashboard_filter_myRooms">غرفي</string>
   <string name="dashboard_roomSettings_allowChat">السماح بالدردشة</string>
   <string name="dashboard_roomSettings_allowVideo">السماح بالفيديو</string>
   <string name="dashboard_roomSettings_allowAudio">السماح بالصوت</string>
