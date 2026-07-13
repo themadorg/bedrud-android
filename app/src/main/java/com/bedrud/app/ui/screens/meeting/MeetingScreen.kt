@@ -453,8 +453,7 @@ fun MeetingScreen(
                                 MeetingHeaderHUD(
                                     roomName = roomName,
                                     participantCount = participants.size,
-                                    connectionState = connectionState,
-                                    sessionStartedAt = roomInfo?.sessionStartedAt ?: 0L
+                                    connectionState = connectionState
                                 )
 
                                 val screenShareStage = activeStage?.takeIf { it.kind == "screenshare" }
@@ -1214,28 +1213,8 @@ private fun KickedScreen(onBack: () -> Unit) {
 private fun MeetingHeaderHUD(
     roomName: String,
     participantCount: Int,
-    connectionState: ConnectionState,
-    sessionStartedAt: Long
+    connectionState: ConnectionState
 ) {
-    var connectedAtMs by remember { mutableStateOf<Long?>(null) }
-    var elapsedText by remember { mutableStateOf("0:00") }
-    LaunchedEffect(connectionState) {
-        if (connectionState == ConnectionState.CONNECTED && connectedAtMs == null) {
-            connectedAtMs = System.currentTimeMillis()
-        }
-    }
-    val startMs: Long? = if (sessionStartedAt > 0L) sessionStartedAt else connectedAtMs
-    LaunchedEffect(startMs) {
-        while (startMs != null) {
-            val secs = ((System.currentTimeMillis() - startMs) / 1000L).coerceAtLeast(0L)
-            val h = secs / 3600
-            val m = (secs % 3600) / 60
-            val s = secs % 60
-            elapsedText = if (h > 0) "%d:%02d:%02d".format(h, m, s) else "%d:%02d".format(m, s)
-            kotlinx.coroutines.delay(1000L)
-        }
-    }
-
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -1265,13 +1244,6 @@ private fun MeetingHeaderHUD(
             Text(participantCount.toString(), style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
-
-        // Elapsed call duration
-        Text(
-            elapsedText,
-            style = MaterialTheme.typography.labelSmall.copy(fontFamily = FontFamily.Monospace),
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
 
         // Connection state dot
         Box(
