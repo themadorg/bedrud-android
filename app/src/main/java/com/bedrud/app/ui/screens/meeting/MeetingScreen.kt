@@ -283,10 +283,13 @@ fun MeetingScreen(
 
     // Join room via API and connect to LiveKit (or reattach to an ongoing call)
     LaunchedEffect(roomName) {
-        if (CallService.isRunning && CallService.activeRoomName == roomName) {
-            isJoining = false
-            return@LaunchedEffect
-        }
+        // Even when reattaching to a call CallService already has running in the
+        // background, roomInfo (adminId, roomId, ...) belongs to this fresh
+        // composition and must be re-fetched — it isn't carried over from the
+        // previous MeetingScreen instance that was disposed when the call was
+        // minimized. Skipping this call left isAdmin stuck false (hiding the
+        // kick/ban/mute menu) until a full leave-and-rejoin.
+        val reattaching = CallService.isRunning && CallService.activeRoomName == roomName
 
         try {
             val response = roomApi.joinRoom(JoinRoomRequest(roomName = roomName))
@@ -294,7 +297,11 @@ fun MeetingScreen(
                 val info = response.body()
                 if (info?.token != null && info.livekitHost != null) {
                     roomInfo = info
-                    permissionLauncher.launch(requiredPermissions)
+                    if (reattaching) {
+                        isJoining = false
+                    } else {
+                        permissionLauncher.launch(requiredPermissions)
+                    }
                 } else {
                     snackbarHostState.showSnackbar("This room no longer exists")
                     isJoining = false
