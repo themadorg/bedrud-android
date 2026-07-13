@@ -37,7 +37,6 @@ class CallService : Service() {
     private var serviceScope: CoroutineScope? = null
     private var callStartTime: Long = 0L
     private var wakeLock: PowerManager.WakeLock? = null
-    private var activeInstanceId: String? = null
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -304,6 +303,9 @@ class CallService : Service() {
             private set
 
         var activeRoomName: String? = null
+            private set
+
+        var activeInstanceId: String? = null
             private set
 
         private var userInitiatedHangUp = false

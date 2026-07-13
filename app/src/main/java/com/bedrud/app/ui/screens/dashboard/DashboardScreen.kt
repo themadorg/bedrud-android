@@ -72,6 +72,7 @@ import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.bedrud.app.R
+import com.bedrud.app.core.call.CallService
 import com.bedrud.app.core.deeplink.BedrudURLParser
 import com.bedrud.app.core.instance.InstanceManager
 import com.bedrud.app.core.recent.RecentRoom
@@ -590,7 +591,10 @@ private fun RecentRoomCard(
     onRemove: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val recentTime = recent.leftAt ?: recent.joinedAt
+    val isOngoing = CallService.isRunning &&
+        CallService.activeRoomName == recent.roomName &&
+        CallService.activeInstanceId == recent.instanceId
+    val recentTime = if (isOngoing) System.currentTimeMillis() else recent.leftAt ?: recent.joinedAt
     val metaText = if (isCurrentServer) {
         formatRecentRoomTimeAgo(recentTime)
     } else {
