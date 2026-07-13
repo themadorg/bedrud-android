@@ -350,7 +350,7 @@ fun MeetingScreen(
                         Spacer(modifier = Modifier.height(16.dp))
                         Text(
                             text = if (connectionState == ConnectionState.CONNECTING)
-                                stringResource(R.string.meeting_status_connecting)
+                                stringResource(R.string.meeting_status_connecting, roomName)
                             else stringResource(R.string.meeting_status_preparing),
                             style = MaterialTheme.typography.bodyLarge,
                             color = MaterialTheme.colorScheme.onBackground
@@ -1028,7 +1028,7 @@ private fun ParticipantsPanel(
             .background(MaterialTheme.colorScheme.surface)
     ) {
         PanelHeader(
-            title = stringResource(R.string.meeting_panel_participants),
+            title = stringResource(R.string.meeting_panel_participants, participants.size),
             onClose = onClose,
             closeContentDescription = stringResource(R.string.meeting_contentDescription_close),
         )
