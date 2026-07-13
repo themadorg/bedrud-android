@@ -590,10 +590,11 @@ private fun RecentRoomCard(
     onRemove: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val recentTime = recent.leftAt ?: recent.joinedAt
     val metaText = if (isCurrentServer) {
-        formatRecentRoomTimeAgo(recent.joinedAt)
+        formatRecentRoomTimeAgo(recentTime)
     } else {
-        "${formatRecentRoomTimeAgo(recent.joinedAt)} · ${
+        "${formatRecentRoomTimeAgo(recentTime)} · ${
             stringResource(R.string.dashboard_recent_onServer, recent.instanceName)
         }"
     }
