@@ -377,7 +377,7 @@ fun MeetingScreen(
                     }
 
                     val isAdmin = roomInfo?.let { info ->
-                        room.localParticipant.identity?.value == info.adminId
+                        currentUser?.id == info.adminId
                     } ?: false
                     val roomId = roomInfo?.id ?: ""
                     val audioState = rememberMeetingAudioState(room)
