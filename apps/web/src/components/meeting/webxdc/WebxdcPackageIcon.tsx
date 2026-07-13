@@ -30,28 +30,48 @@ export function WebxdcPackageIcon({ packageId, remoteIconUrl, hasIcon, name, cla
   useEffect(() => {
     setSrc(null)
     const id = (packageId || '').trim()
-    if (!hasIcon || !id || !SAFE_PACKAGE_ID.test(id)) {
-      return
-    }
+    const remote = (remoteIconUrl || '').trim()
     let cancelled = false
     let objectUrl: string | null = null
 
+    const applyBlob = (blob: Blob) => {
+      if (cancelled) return
+      objectUrl = URL.createObjectURL(blob)
+      setSrc(objectUrl)
+    }
+
     const load = async () => {
-      try {
-        const token = useAuthStore.getState().tokens?.accessToken
-        const headers: Record<string, string> = {}
-        if (token) headers.Authorization = `Bearer ${token}`
-        const path = `/api/webxdc/packages/${encodeURIComponent(id)}/icon`
-        const res = await fetch(`${API_URL}${path}`, { credentials: 'include', headers })
-        if (!res.ok || cancelled) return
-        const ct = (res.headers.get('Content-Type') || '').split(';')[0]?.trim().toLowerCase() ?? ''
-        if (!SAFE_IMAGE_TYPES.has(ct)) return
-        const blob = await res.blob()
-        if (cancelled) return
-        objectUrl = URL.createObjectURL(blob)
-        setSrc(objectUrl)
-      } catch {
-        // Optional decoration — leave placeholder.
+      // 1) Same-origin authenticated package icon (works under COEP as blob:).
+      if (hasIcon && id && SAFE_PACKAGE_ID.test(id)) {
+        try {
+          const token = useAuthStore.getState().tokens?.accessToken
+          const headers: Record<string, string> = {}
+          if (token) headers.Authorization = `Bearer ${token}`
+          const path = `/api/webxdc/packages/${encodeURIComponent(id)}/icon`
+          const res = await fetch(`${API_URL}${path}`, { credentials: 'include', headers })
+          if (res.ok && !cancelled) {
+            const ct = (res.headers.get('Content-Type') || '').split(';')[0]?.trim().toLowerCase() ?? ''
+            if (SAFE_IMAGE_TYPES.has(ct)) {
+              applyBlob(await res.blob())
+              return
+            }
+          }
+        } catch {
+          // fall through to remote
+        }
+      }
+      // 2) Remote HTTPS icons: never use as raw <img src> under COEP require-corp
+      // (external hosts lack CORP). Fetch as blob when CORS allows; otherwise placeholder.
+      if (remote && /^https:\/\//i.test(remote)) {
+        try {
+          const res = await fetch(remote, { mode: 'cors', credentials: 'omit', referrerPolicy: 'no-referrer' })
+          if (!res.ok || cancelled) return
+          const ct = (res.headers.get('Content-Type') || '').split(';')[0]?.trim().toLowerCase() ?? ''
+          if (!SAFE_IMAGE_TYPES.has(ct) && !ct.startsWith('image/')) return
+          applyBlob(await res.blob())
+        } catch {
+          // Optional decoration — leave placeholder.
+        }
       }
     }
 
@@ -60,10 +80,9 @@ export function WebxdcPackageIcon({ packageId, remoteIconUrl, hasIcon, name, cla
       cancelled = true
       if (objectUrl) URL.revokeObjectURL(objectUrl)
     }
-  }, [packageId, hasIcon])
+  }, [packageId, hasIcon, remoteIconUrl])
 
-  // Prefer authenticated local icon; fall back to remote HTTPS URL (external gallery only).
-  const displaySrc = src || (remoteIconUrl && /^https:\/\//i.test(remoteIconUrl) ? remoteIconUrl : null)
+  const displaySrc = src
 
   if (!displaySrc) {
     return (

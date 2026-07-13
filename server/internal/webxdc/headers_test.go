@@ -63,6 +63,13 @@ func TestSecurityHeaders_AlwaysIncludeCSPAndNosniff(t *testing.T) {
 	if !strings.Contains(h2["Content-Security-Policy"], "http://localhost:7070") {
 		t.Fatal("CSP should allow SPA origin from frontendURL")
 	}
+	h3 := SecurityHeadersFor(FrameAncestorsFromFrontendURL("https://bedrud.xyz"))
+	if !strings.Contains(h3["Content-Security-Policy"], "https://bedrud.xyz") {
+		t.Fatal("CSP should allow production SPA origin")
+	}
+	if strings.Contains(h3["Content-Security-Policy"], "localhost:7070") {
+		t.Fatal("production frontendURL must not inject localhost frame-ancestors")
+	}
 }
 
 func TestDefaultCSP_RequiredDirectives(t *testing.T) {

@@ -56,6 +56,7 @@ type installConfigYAML struct {
 		JWTSecret     string `yaml:"jwtSecret"`
 		SessionSecret string `yaml:"sessionSecret"`
 		TokenDuration int    `yaml:"tokenDuration"`
+		FrontendURL   string `yaml:"frontendURL,omitempty"`
 	} `yaml:"auth"`
 	Logger struct {
 		Level      string `yaml:"level"`
@@ -264,6 +265,14 @@ func LinuxInstall(cfg *InstallConfig) error {
 	configYAML.Auth.JWTSecret = jwtSecret
 	configYAML.Auth.SessionSecret = sessionSecret
 	configYAML.Auth.TokenDuration = 24
+	// SPA origin for WebXDC CSP frame-ancestors (and OAuth redirects).
+	if cfg.Domain != "" {
+		scheme := "https"
+		if cfg.DisableTLS {
+			scheme = "http"
+		}
+		configYAML.Auth.FrontendURL = scheme + "://" + cfg.Domain
+	}
 
 	configYAML.Logger.Level = "debug"
 	configYAML.Logger.OutputPath = varLogDir + "/bedrud.log"

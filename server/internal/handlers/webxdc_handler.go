@@ -1312,6 +1312,9 @@ func (h *WebxdcHandler) sendPackageIcon(c *fiber.Ctx, pkg *models.WebxdcPackage)
 	c.Set("X-Content-Type-Options", "nosniff")
 	c.Set("Cache-Control", "private, max-age=3600")
 	c.Set("Content-Security-Policy", "default-src 'none'")
+	// Meeting SPA uses COEP require-corp; allow these same-origin-fetched icons
+	// (and any cross-origin embedding of icon URLs) to load under COEP.
+	c.Set("Cross-Origin-Resource-Policy", "cross-origin")
 	return c.Send(data)
 }
 
@@ -1421,9 +1424,19 @@ func hFrontendURL(cfg *config.Config) string {
 		return ""
 	}
 	if u := strings.TrimSpace(cfg.Auth.FrontendURL); u != "" {
-		return u
+		return strings.TrimRight(u, "/")
 	}
-	// Local make dev default
+	// Production: SPA is served from the same host as the API (embedded frontend).
+	// CSP frame-ancestors for WebXDC must list this origin (not localhost).
+	domain := strings.TrimSpace(cfg.Server.Domain)
+	if domain != "" {
+		scheme := "https"
+		if cfg.Server.DisableTLS || (!cfg.Server.EnableTLS && !cfg.Server.UseACME) {
+			scheme = "http"
+		}
+		return scheme + "://" + strings.TrimRight(domain, "/")
+	}
+	// Local make dev default (no domain / no frontendURL)
 	return "http://localhost:7070"
 }
 
