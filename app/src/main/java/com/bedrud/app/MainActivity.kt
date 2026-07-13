@@ -341,9 +341,6 @@ fun BedrudNavHost(
                     // pop while the meeting screen is still the current entry so
                     // the second call can't pop past it and empty the back stack.
                     if (navController.currentDestination?.route == Routes.MEETING) {
-                        instanceManager.store.activeInstance?.let { instance ->
-                            recentRoomsStore.markLeft(roomName, instance.id)
-                        }
                         navController.popBackStack()
                     }
                 }

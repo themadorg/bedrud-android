@@ -20,6 +20,7 @@ import com.bedrud.app.R
 import com.bedrud.app.core.instance.InstanceManager
 import com.bedrud.app.core.livekit.ConnectionState
 import com.bedrud.app.core.livekit.RoomManager
+import com.bedrud.app.core.recent.RecentRoomsStore
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -31,10 +32,12 @@ import org.koin.android.ext.android.inject
 class CallService : Service() {
 
     private val instanceManager: InstanceManager by inject()
+    private val recentRoomsStore: RecentRoomsStore by inject()
     private var roomManager: RoomManager? = null
     private var serviceScope: CoroutineScope? = null
     private var callStartTime: Long = 0L
     private var wakeLock: PowerManager.WakeLock? = null
+    private var activeInstanceId: String? = null
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -83,6 +86,7 @@ class CallService : Service() {
         }
         roomManager = rm
         activeRoomName = roomName
+        activeInstanceId = instanceManager.store.activeInstance?.id
         isRunning = true
         callStartTime = SystemClock.elapsedRealtime()
 
@@ -136,7 +140,14 @@ class CallService : Service() {
     override fun onDestroy() {
         super.onDestroy()
         isRunning = false
+        val endedRoomName = activeRoomName
+        val endedInstanceId = activeInstanceId
         activeRoomName = null
+        activeInstanceId = null
+
+        if (endedRoomName != null && endedInstanceId != null) {
+            recentRoomsStore.markLeft(endedRoomName, endedInstanceId)
+        }
 
         releaseWakeLock()
 
