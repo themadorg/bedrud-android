@@ -209,6 +209,7 @@
   <string name="dashboard_empty_noRecentHint">Rooms you join appear here, including on other servers.</string>
   <string name="dashboard_contentDescription_removeRecent">Remove from recent</string>
   <string name="dashboard_recent_onServer">on <xliff:g id="serverName" example="My Server">%1$s</xliff:g></string>
+  <string name="dashboard_roomSettings_isPublic">Public Room</string>
   <string name="dashboard_roomSettings_allowChat">Allow Chat</string>
   <string name="dashboard_roomSettings_allowVideo">Allow Video</string>
   <string name="dashboard_roomSettings_allowAudio">Allow Audio</string>

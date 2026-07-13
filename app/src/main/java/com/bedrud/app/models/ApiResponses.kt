@@ -86,6 +86,8 @@ data class JoinRoomRequest(
 )
 
 data class UpdateRoomSettingsRequest(
+    @SerializedName("isPublic")
+    val isPublic: Boolean,
     val settings: RoomSettings
 )
 

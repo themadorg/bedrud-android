@@ -27,8 +27,9 @@ import com.bedrud.app.models.UserRoomResponse
 fun RoomSettingsDialog(
     room: UserRoomResponse,
     onDismiss: () -> Unit,
-    onSave: (RoomSettings) -> Unit
+    onSave: (isPublic: Boolean, settings: RoomSettings) -> Unit
 ) {
+    var isPublic by remember { mutableStateOf(room.isPublic ?: true) }
     var allowChat by remember { mutableStateOf(room.settings.allowChat) }
     var allowVideo by remember { mutableStateOf(room.settings.allowVideo) }
     var allowAudio by remember { mutableStateOf(room.settings.allowAudio) }
@@ -40,6 +41,7 @@ fun RoomSettingsDialog(
         title = { Text(stringResource(R.string.dashboard_roomSettings_title)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                SettingsToggleRow(stringResource(R.string.dashboard_roomSettings_isPublic), isPublic) { isPublic = it }
                 SettingsToggleRow(stringResource(R.string.dashboard_roomSettings_allowChat), allowChat) { allowChat = it }
                 SettingsToggleRow(stringResource(R.string.dashboard_roomSettings_allowVideo), allowVideo) { allowVideo = it }
                 SettingsToggleRow(stringResource(R.string.dashboard_roomSettings_allowAudio), allowAudio) { allowAudio = it }
@@ -50,6 +52,7 @@ fun RoomSettingsDialog(
         confirmButton = {
             TextButton(onClick = {
                 onSave(
+                    isPublic,
                     RoomSettings(
                         allowChat = allowChat,
                         allowVideo = allowVideo,

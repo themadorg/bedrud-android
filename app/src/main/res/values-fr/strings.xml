@@ -168,6 +168,7 @@
   <string name="dashboard_feature_private">Privé</string>
   <string name="dashboard_filter_all">Tous</string>
   <string name="dashboard_filter_myRooms">Mes Salons</string>
+  <string name="dashboard_roomSettings_isPublic">Salon public</string>
   <string name="dashboard_roomSettings_allowChat">Autoriser le chat</string>
   <string name="dashboard_roomSettings_allowVideo">Autoriser la vidéo</string>
   <string name="dashboard_roomSettings_allowAudio">Autoriser l\'audio</string>

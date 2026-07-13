@@ -168,6 +168,7 @@
   <string name="dashboard_feature_private">私密</string>
   <string name="dashboard_filter_all">全部</string>
   <string name="dashboard_filter_myRooms">我的房间</string>
+  <string name="dashboard_roomSettings_isPublic">公开房间</string>
   <string name="dashboard_roomSettings_allowChat">允许聊天</string>
   <string name="dashboard_roomSettings_allowVideo">允许视频</string>
   <string name="dashboard_roomSettings_allowAudio">允许音频</string>

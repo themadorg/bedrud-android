@@ -208,12 +208,12 @@ fun DashboardContent(
         RoomSettingsDialog(
             room = room,
             onDismiss = { roomToEdit = null },
-            onSave = { settings ->
+            onSave = { isPublic, settings ->
                 scope.launch {
                     try {
                         val response = roomApi.updateRoomSettings(
                             room.id,
-                            UpdateRoomSettingsRequest(settings = settings)
+                            UpdateRoomSettingsRequest(isPublic = isPublic, settings = settings)
                         )
                         if (response.isSuccessful) {
                             roomToEdit = null

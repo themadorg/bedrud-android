@@ -168,6 +168,7 @@
   <string name="dashboard_feature_private">Закрытая</string>
   <string name="dashboard_filter_all">Все</string>
   <string name="dashboard_filter_myRooms">Мои комнаты</string>
+  <string name="dashboard_roomSettings_isPublic">Публичная комната</string>
   <string name="dashboard_roomSettings_allowChat">Разрешить чат</string>
   <string name="dashboard_roomSettings_allowVideo">Разрешить видео</string>
   <string name="dashboard_roomSettings_allowAudio">Разрешить аудио</string>
