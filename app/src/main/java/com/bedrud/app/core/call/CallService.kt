@@ -18,6 +18,7 @@ import androidx.core.app.NotificationCompat
 import com.bedrud.app.MainActivity
 import com.bedrud.app.R
 import com.bedrud.app.core.instance.InstanceManager
+import com.bedrud.app.core.livekit.ConnectionState
 import com.bedrud.app.core.livekit.RoomManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -110,7 +111,14 @@ class CallService : Service() {
 
         CallConnectionService.muteListener = { muted ->
             serviceScope?.launch {
-                roomManager?.setMicrophoneEnabled(!muted)
+                // Telecom fires an initial onMuteStateChanged(false) while the room is still
+                // connecting; RoomManager's own connect flow already enables the mic by default,
+                // so forwarding this early callback would race the LiveKit engine and surface a
+                // spurious "failed to enable microphone" error. Only forward real mute changes
+                // once we're actually connected.
+                if (roomManager?.connectionState?.value == ConnectionState.CONNECTED) {
+                    roomManager?.setMicrophoneEnabled(!muted)
+                }
                 updateForegroundNotification(isMuted = muted)
             }
         }
