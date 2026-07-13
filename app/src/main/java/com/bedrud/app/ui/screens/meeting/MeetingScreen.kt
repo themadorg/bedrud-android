@@ -1222,6 +1222,9 @@ private fun MeetingHeaderHUD(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
+        // Left spacer, balances the trailing content so the room name centers in the full bar
+        Spacer(modifier = Modifier.weight(1f))
+
         // Room name (monospace)
         Text(
             text = roomName,
@@ -1232,32 +1235,39 @@ private fun MeetingHeaderHUD(
             color = MaterialTheme.colorScheme.onBackground,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
+            textAlign = TextAlign.Center,
             modifier = Modifier.weight(1f)
         )
 
-        // Participant count
-        Row(verticalAlignment = Alignment.CenterVertically) {
+        // Participant count + connection state dot
+        Row(
+            modifier = Modifier.weight(1f),
+            horizontalArrangement = Arrangement.End,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
             Icon(Icons.Default.People, contentDescription = null,
                 modifier = Modifier.size(14.dp),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant)
             Spacer(modifier = Modifier.width(2.dp))
             Text(participantCount.toString(), style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
-        }
 
-        // Connection state dot
-        Box(
-            modifier = Modifier
-                .size(8.dp)
-                .clip(CircleShape)
-                .background(
-                    when (connectionState) {
-                        ConnectionState.CONNECTED -> MaterialTheme.colorScheme.primary
-                        ConnectionState.RECONNECTING -> MaterialTheme.colorScheme.tertiary
-                        else -> MaterialTheme.colorScheme.error
-                    }
-                )
-        )
+            Spacer(modifier = Modifier.width(8.dp))
+
+            // Connection state dot
+            Box(
+                modifier = Modifier
+                    .size(8.dp)
+                    .clip(CircleShape)
+                    .background(
+                        when (connectionState) {
+                            ConnectionState.CONNECTED -> MaterialTheme.colorScheme.primary
+                            ConnectionState.RECONNECTING -> MaterialTheme.colorScheme.tertiary
+                            else -> MaterialTheme.colorScheme.error
+                        }
+                    )
+            )
+        }
     }
 }
 
