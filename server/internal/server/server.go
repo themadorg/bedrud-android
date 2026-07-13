@@ -84,24 +84,41 @@ func Run(configPath, version string) error {
 		log.Warn().Msg("email verification is enabled but SMTP is not configured — verification emails will be logged, not sent")
 	}
 
-	tlsEnabled := cfg.Server.EnableTLS && !cfg.Server.DisableTLS
-	if tlsEnabled && !cfg.Server.UseACME {
-		certFile := cfg.Server.CertFile
-		keyFile := cfg.Server.KeyFile
-		if certFile == "" {
-			certFile = "/etc/bedrud/cert.pem"
+	tlsMode := cfg.Server.TLSMode()
+	if tlsMode == config.TLSModeManual && cfg.Server.UseACME {
+		log.Warn().
+			Str("certFile", cfg.Server.CertFile).
+			Str("keyFile", cfg.Server.KeyFile).
+			Msg("server.certFile and server.keyFile are set — using file-based TLS; ignoring useACME (set useACME: false to silence this)")
+	}
+	if tlsMode == config.TLSModeManual {
+		certFile, keyFile := cfg.Server.ResolveCertPaths()
+		if abs, err := filepath.Abs(certFile); err == nil {
+			certFile = abs
 		}
-		if keyFile == "" {
-			keyFile = "/etc/bedrud/key.pem"
+		if abs, err := filepath.Abs(keyFile); err == nil {
+			keyFile = abs
 		}
 		certInfo, err := utils.ValidateTLSCertPair(certFile, keyFile)
 		if err != nil {
-			return fmt.Errorf("TLS certificate validation failed: %w", err)
+			return fmt.Errorf("TLS certificate validation failed (%s / %s): %w\n\n"+
+				"Fix: provide valid PEM cert/key paths in config:\n"+
+				"  server:\n"+
+				"    enableTLS: true\n"+
+				"    useACME: false\n"+
+				"    certFile: /path/to/fullchain.pem\n"+
+				"    keyFile: /path/to/privkey.pem\n"+
+				"Or enable Let's Encrypt (no cert files):\n"+
+				"  server:\n"+
+				"    useACME: true\n"+
+				"    domain: example.com\n"+
+				"    email: admin@example.com",
+				certFile, keyFile, err)
 		}
 		if certInfo.DaysRemaining <= utils.CertWarnDays {
 			log.Warn().Int("daysRemaining", certInfo.DaysRemaining).Str("expires", certInfo.NotAfter.Format(time.RFC3339)).Msg("TLS certificate is expiring soon")
 		} else {
-			log.Info().Str("subject", certInfo.Subject).Int("daysRemaining", certInfo.DaysRemaining).Str("expires", certInfo.NotAfter.Format(time.RFC3339)).Msg("TLS certificate validated")
+			log.Info().Str("subject", certInfo.Subject).Int("daysRemaining", certInfo.DaysRemaining).Str("expires", certInfo.NotAfter.Format(time.RFC3339)).Str("mode", "manual").Msg("TLS certificate validated")
 		}
 	}
 
@@ -640,7 +657,10 @@ func Run(configPath, version string) error {
 	})
 
 	go func() {
-		if cfg.Server.UseACME && cfg.Server.Domain != "" {
+		// TLS mode: explicit cert files always win over ACME (see config.ServerConfig.TLSMode).
+		mode := cfg.Server.TLSMode()
+
+		if mode == config.TLSModeACME {
 			log.Info().Msgf("➜ Enabling Let's Encrypt for domain: %s", cfg.Server.Domain)
 
 			var tlsConfig *tls.Config
@@ -675,8 +695,8 @@ func Run(configPath, version string) error {
 			if tlsConfig != nil {
 				ln, err := tls.Listen("tcp", ":443", tlsConfig)
 				if err != nil {
-					log.Error().Err(err).Msg("Failed to listen on :443 for ACME — falling back to plain HTTP")
-					// fall through to the plain-HTTP / manual-TLS block below
+					log.Error().Err(err).Msg("Failed to listen on :443 for ACME — falling back to plain HTTP/manual TLS")
+					// fall through
 				} else {
 					log.Info().Msgf("➜ Bedrud is running on HTTPS %s (bound 0.0.0.0:443)", utils.DisplayAddr("0.0.0.0", "443"))
 					if err := app.Listener(ln); err != nil {
@@ -685,11 +705,24 @@ func Run(configPath, version string) error {
 					return
 				}
 			}
+			// ACME failed — try manual cert files if present, else plain HTTP below.
+			if !cfg.Server.HasExplicitCertFiles() {
+				// fall through to HTTP if no manual certs
+				mode = config.TLSModeNone
+			} else {
+				mode = config.TLSModeManual
+			}
 		}
 
 		addr := cfg.Server.Host + ":" + cfg.Server.Port
-		tlsEnabled := cfg.Server.EnableTLS && !cfg.Server.DisableTLS
-		if tlsEnabled {
+		if mode == config.TLSModeManual {
+			certFile, keyFile := cfg.Server.ResolveCertPaths()
+			if abs, err := filepath.Abs(certFile); err == nil {
+				certFile = abs
+			}
+			if abs, err := filepath.Abs(keyFile); err == nil {
+				keyFile = abs
+			}
 			// Start HTTP redirect for bots/local use
 			httpPort := cfg.Server.HTTPPort
 			if httpPort == "" {
@@ -702,10 +735,13 @@ func Run(configPath, version string) error {
 					log.Debug().Err(err).Msg("HTTP server failed")
 				}
 			}()
-			// Start HTTPS on primary port
-			log.Info().Msgf("➜ Bedrud is running on HTTPS %s (bound %s)", utils.DisplayAddr(cfg.Server.Host, cfg.Server.Port), addr)
-			if err := app.ListenTLS(addr, cfg.Server.CertFile, cfg.Server.KeyFile); err != nil {
-				log.Error().Err(err).Str("addr", addr).Msg("TLS listener failed")
+			// Start HTTPS on primary port with operator-supplied (or install) cert files
+			log.Info().
+				Str("certFile", certFile).
+				Str("keyFile", keyFile).
+				Msgf("➜ Bedrud is running on HTTPS %s (manual cert files)", utils.DisplayAddr(cfg.Server.Host, cfg.Server.Port))
+			if err := app.ListenTLS(addr, certFile, keyFile); err != nil {
+				log.Error().Err(err).Str("addr", addr).Str("certFile", certFile).Str("keyFile", keyFile).Msg("TLS listener failed")
 			}
 		} else {
 			log.Info().Msgf("➜ Bedrud is running on HTTP %s (bound %s)", utils.DisplayAddr(cfg.Server.Host, cfg.Server.Port), addr)

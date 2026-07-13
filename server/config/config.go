@@ -138,6 +138,57 @@ func (a ACMEConfig) CloudflareToken() string {
 	return strings.TrimSpace(os.Getenv("CF_API_TOKEN"))
 }
 
+// TLS mode constants for ServerConfig.TLSMode.
+const (
+	TLSModeNone   = "none"
+	TLSModeManual = "manual" // certFile + keyFile (or install defaults)
+	TLSModeACME   = "acme"   // Let's Encrypt HTTP-01 or DNS-01
+)
+
+// HasExplicitCertFiles reports whether both certFile and keyFile are set in config.
+// Explicit files always take precedence over ACME (see TLSMode).
+func (s ServerConfig) HasExplicitCertFiles() bool {
+	return strings.TrimSpace(s.CertFile) != "" && strings.TrimSpace(s.KeyFile) != ""
+}
+
+// ResolveCertPaths returns cert/key paths for manual TLS, applying install defaults
+// when paths are empty.
+func (s ServerConfig) ResolveCertPaths() (certFile, keyFile string) {
+	certFile = strings.TrimSpace(s.CertFile)
+	keyFile = strings.TrimSpace(s.KeyFile)
+	if certFile == "" {
+		certFile = "/etc/bedrud/cert.pem"
+	}
+	if keyFile == "" {
+		keyFile = "/etc/bedrud/key.pem"
+	}
+	return certFile, keyFile
+}
+
+// TLSMode selects how HTTPS is served.
+//
+// Precedence (highest first):
+//  1. none     — TLS disabled
+//  2. manual   — certFile+keyFile explicitly set (wins even if useACME is true)
+//  3. acme     — useACME + domain, no explicit cert files
+//  4. manual   — enableTLS with default /etc/bedrud/{cert,key}.pem paths
+//
+// This prevents ACME from ignoring operator-supplied certificate files when
+// useACME was left enabled from install.
+func (s ServerConfig) TLSMode() string {
+	if !s.EnableTLS || s.DisableTLS {
+		return TLSModeNone
+	}
+	if s.HasExplicitCertFiles() {
+		return TLSModeManual
+	}
+	if s.UseACME && strings.TrimSpace(s.Domain) != "" {
+		return TLSModeACME
+	}
+	// Self-signed / default path install without ACME
+	return TLSModeManual
+}
+
 type DatabaseConfig struct {
 	Host         string `yaml:"host"`
 	Port         string `yaml:"port"`

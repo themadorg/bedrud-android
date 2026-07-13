@@ -89,6 +89,21 @@ When enabled, `data` includes `subject`, `issuer`, `notBefore`, `notAfter`, `day
 
 ---
 
+## Manual certificate files
+
+When both `server.certFile` and `server.keyFile` are set, Bedrud **always** serves those files and **ignores** `useACME` (a warning is logged). Set `useACME: false` explicitly:
+
+```yaml
+server:
+  enableTLS: true
+  useACME: false
+  certFile: /etc/ssl/bedrud/fullchain.pem
+  keyFile: /etc/ssl/bedrud/privkey.pem
+  domain: example.com   # still useful for links / WebXDC
+```
+
+For WebXDC, the cert must include `*.{webxdc.baseDomain}` (or each mini-app hostname). Install with `--cert` / `--key` also forces `useACME: false`.
+
 ## Cloudflare DNS-01 (free wildcards for WebXDC)
 
 HTTP-01 cannot issue `*.domain`. For WebXDC mini-app hosts, use Cloudflare DNS-01:

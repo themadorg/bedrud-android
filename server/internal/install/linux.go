@@ -215,11 +215,16 @@ func LinuxInstall(cfg *InstallConfig) error {
 	configYAML.Server.KeyFile = keyFile
 	configYAML.Server.Domain = cfg.Domain
 	configYAML.Server.Email = cfg.Email
-	// ACME: domain+email, not custom cert files. Cloudflare DNS-01 for WebXDC wildcards.
-	useACME := cfg.Email != "" && !cfg.DisableTLS && cfg.Domain != "" && cfg.CertPath == ""
-	if cfg.PreferCloudflareACME && strings.TrimSpace(cfg.CloudflareAPIToken) != "" {
+	// ACME only when not providing your own cert files. Explicit --cert/--key always wins.
+	manualCerts := cfg.CertPath != "" && cfg.KeyPath != ""
+	useACME := !manualCerts && cfg.Email != "" && !cfg.DisableTLS && cfg.Domain != ""
+	if !manualCerts && cfg.PreferCloudflareACME && strings.TrimSpace(cfg.CloudflareAPIToken) != "" {
 		useACME = true
 		cfg.EnableTLS = true
+		configYAML.Server.EnableTLS = true
+	}
+	if manualCerts {
+		useACME = false // never leave useACME true when operator supplies cert files
 		configYAML.Server.EnableTLS = true
 	}
 	configYAML.Server.UseACME = useACME
