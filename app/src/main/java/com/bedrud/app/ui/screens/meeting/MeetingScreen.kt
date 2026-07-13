@@ -102,9 +102,11 @@ import androidx.compose.ui.zIndex
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDirection
@@ -117,6 +119,7 @@ import com.bedrud.app.core.BidiUtils
 import com.bedrud.app.core.api.RoomApi
 import com.bedrud.app.core.call.CallService
 import com.bedrud.app.core.chat.ChatImageUtils
+import com.bedrud.app.core.deeplink.BedrudURLParser
 import com.bedrud.app.core.instance.InstanceManager
 import com.bedrud.app.ui.components.BedrudScaffoldContentInsets
 import com.bedrud.app.ui.components.ChatImageLightbox
@@ -153,8 +156,10 @@ fun MeetingScreen(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
+    val clipboard = LocalClipboardManager.current
     val screenShareFailedMessage = stringResource(R.string.meeting_error_screenShareFailed)
     val permissionsRequiredMessage = stringResource(R.string.meeting_error_permissionsRequired)
+    val linkCopiedMessage = stringResource(R.string.meeting_toast_linkCopied)
     val isInPipMode by pipStateHolder.isInPipMode.collectAsState()
     val flatFabElevation = FloatingActionButtonDefaults.elevation(
         defaultElevation = 0.dp,
@@ -563,6 +568,11 @@ fun MeetingScreen(
                                 onToggleParticipants = {
                                     showParticipants = !showParticipants
                                     if (showParticipants) showChat = false
+                                },
+                                onCopyRoomLink = {
+                                    val link = BedrudURLParser.buildMeetingLink(serverURL, roomName)
+                                    clipboard.setText(AnnotatedString(link))
+                                    scope.launch { snackbarHostState.showSnackbar(linkCopiedMessage) }
                                 },
                                 onOpenAudioSettings = { showAudioSheet = true },
                                 onEndCall = {

@@ -58,6 +58,7 @@ fun MeetingControlsBar(
     onToggleScreenShare: () -> Unit,
     onToggleChat: () -> Unit,
     onToggleParticipants: () -> Unit,
+    onCopyRoomLink: () -> Unit,
     onOpenAudioSettings: () -> Unit,
     onEndCall: () -> Unit,
     modifier: Modifier = Modifier,
@@ -140,6 +141,7 @@ fun MeetingControlsBar(
                     onSwitchCamera = onSwitchCamera,
                     onToggleChat = onToggleChat,
                     onToggleParticipants = onToggleParticipants,
+                    onCopyRoomLink = onCopyRoomLink,
                     onOpenAudioSettings = {
                         showMoreMenu = false
                         onOpenAudioSettings()

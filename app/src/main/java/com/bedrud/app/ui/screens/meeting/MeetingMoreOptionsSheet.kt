@@ -15,6 +15,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Chat
 import androidx.compose.material.icons.filled.Cameraswitch
 import androidx.compose.material.icons.filled.PersonAdd
+import androidx.compose.material.icons.filled.People
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
@@ -43,6 +44,7 @@ fun MeetingMoreOptionsSheet(
     onSwitchCamera: () -> Unit,
     onToggleChat: () -> Unit,
     onToggleParticipants: () -> Unit,
+    onCopyRoomLink: () -> Unit,
     onOpenAudioSettings: () -> Unit,
 ) {
     val colors = meetingChromeColors()
@@ -78,10 +80,19 @@ fun MeetingMoreOptionsSheet(
                 }
                 SheetCircleAction(
                     colors = colors,
-                    icon = Icons.Default.PersonAdd,
+                    icon = Icons.Default.People,
                     contentDescription = stringResource(R.string.meeting_contentDescription_participants),
                     onClick = {
                         onToggleParticipants()
+                        onDismiss()
+                    },
+                )
+                SheetCircleAction(
+                    colors = colors,
+                    icon = Icons.Default.PersonAdd,
+                    contentDescription = stringResource(R.string.meeting_contentDescription_copyRoomLink),
+                    onClick = {
+                        onCopyRoomLink()
                         onDismiss()
                     },
                 )

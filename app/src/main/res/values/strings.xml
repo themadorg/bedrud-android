@@ -88,6 +88,8 @@
   <string name="meeting_stage_screenShareWaiting">Waiting for <xliff:g id="name" example="Alex">%1$s</xliff:g>\'s screen…</string>
   <string name="meeting_contentDescription_toggleChat">Toggle Chat</string>
   <string name="meeting_contentDescription_participants">Participants</string>
+  <string name="meeting_contentDescription_copyRoomLink">Copy room link</string>
+  <string name="meeting_toast_linkCopied">Room link copied</string>
   <string name="meeting_contentDescription_leaveCall">Leave Call</string>
   <string name="meeting_contentDescription_participantAvatar">
     <xliff:g id="name" example="John Doe">%1$s</xliff:g> avatar</string>
