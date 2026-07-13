@@ -266,11 +266,18 @@ func Run(configPath, version string) error {
 	}
 
 	app.Use(recover.New())
+	// Fiber helmet defaults COEP=require-corp + COOP=same-origin when unset.
+	// That blocks cross-origin WebXDC iframes (webxdc-*.baseDomain) even when the
+	// child sends CORP: cross-origin — browsers show "refused to connect" / blocked
+	// frame. Plan 02: only enable COOP/COEP if required; LiveKit does not need them.
 	app.Use(helmet.New(helmet.Config{
-		XSSProtection:      "1; mode=block",
-		ContentTypeNosniff: "nosniff",
-		XFrameOptions:      "DENY",
-		ReferrerPolicy:     "strict-origin-when-cross-origin",
+		XSSProtection:             "1; mode=block",
+		ContentTypeNosniff:        "nosniff",
+		XFrameOptions:             "DENY",
+		ReferrerPolicy:            "strict-origin-when-cross-origin",
+		CrossOriginEmbedderPolicy: "unsafe-none",
+		CrossOriginOpenerPolicy:   "unsafe-none",
+		CrossOriginResourcePolicy: "same-origin",
 	}))
 	corsConfig := cors.Config{
 		AllowHeaders:     cfg.Cors.AllowedHeaders,

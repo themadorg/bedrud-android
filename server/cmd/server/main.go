@@ -231,11 +231,16 @@ func run() error {
 	// Middleware
 	// ===============================
 	app.Use(recover.New())
+	// Explicit unsafe-none: fiber helmet defaults to COEP require-corp which
+	// blocks cross-origin WebXDC iframes (see plan 02).
 	app.Use(helmet.New(helmet.Config{
-		XSSProtection:      "1; mode=block",
-		ContentTypeNosniff: "nosniff",
-		XFrameOptions:      "DENY",
-		ReferrerPolicy:     "strict-origin-when-cross-origin",
+		XSSProtection:             "1; mode=block",
+		ContentTypeNosniff:        "nosniff",
+		XFrameOptions:             "DENY",
+		ReferrerPolicy:            "strict-origin-when-cross-origin",
+		CrossOriginEmbedderPolicy: "unsafe-none",
+		CrossOriginOpenerPolicy:   "unsafe-none",
+		CrossOriginResourcePolicy: "same-origin",
 	}))
 	app.Use(cors.New(cors.Config{
 		AllowOrigins:     cfg.Cors.AllowedOrigins,

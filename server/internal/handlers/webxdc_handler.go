@@ -1417,6 +1417,13 @@ func (h *WebxdcHandler) applyWebxdcSecurityHeaders(c *fiber.Ctx) {
 	for k, v := range wx.SecurityHeadersFor(ancestors) {
 		c.Set(k, v)
 	}
+	// Helmet sets X-Frame-Options: DENY globally — that blocks SPA embedding even when
+	// CSP frame-ancestors is correct. Plan 02: framing is controlled only by CSP.
+	c.Response().Header.Del("X-Frame-Options")
+	// COEP/COOP on the untrusted webxdc origin are not required (plan 02) and can
+	// interfere with same-origin zip assets / games under a COEP parent SPA.
+	c.Response().Header.Del("Cross-Origin-Embedder-Policy")
+	c.Response().Header.Del("Cross-Origin-Opener-Policy")
 }
 
 func hFrontendURL(cfg *config.Config) string {
