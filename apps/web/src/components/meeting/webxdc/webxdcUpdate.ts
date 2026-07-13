@@ -52,7 +52,8 @@ export function validateSendUpdate(
 
   if (obj.info !== undefined) {
     if (typeof obj.info !== 'string') return { ok: false, reason: 'info must be string' }
-    update.info = obj.info.replace(/[\r\n]+/g, ' ').slice(0, 50)
+    // Spec suggests ~50 chars; OpenArena multiplayer lines are longer — keep chat-safe.
+    update.info = obj.info.replace(/[\r\n]+/g, ' ').slice(0, 200)
   }
   if (obj.document !== undefined) {
     if (typeof obj.document !== 'string') return { ok: false, reason: 'document must be string' }

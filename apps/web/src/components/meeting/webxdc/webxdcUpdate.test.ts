@@ -26,12 +26,13 @@ describe('validateSendUpdate', () => {
     const r = validateSendUpdate({
       payload: 'x',
       href: 'index.html#a',
-      info: `${'a'.repeat(100)}\nline`,
+      info: `${'a'.repeat(300)}\nline`,
     })
     expect(r.ok).toBe(true)
     if (r.ok) {
       expect(r.update.href).toBe('index.html#a')
-      expect(r.update.info?.length).toBeLessThanOrEqual(50)
+      // Chat-safe cap (OpenArena multiplayer lines are longer than the ~50 hint).
+      expect(r.update.info?.length).toBeLessThanOrEqual(200)
       expect(r.update.info).not.toContain('\n')
     }
   })

@@ -15,4 +15,12 @@ describe('WebxdcSendUpdateRateLimiter', () => {
     expect(lim.tryTake('b', 0)).toBe(true)
     expect(lim.tryTake('a', 1)).toBe(false)
   })
+
+  it('reports ms until ready', () => {
+    const lim = new WebxdcSendUpdateRateLimiter(10_000)
+    expect(lim.msUntilReady('x', 0)).toBe(0)
+    expect(lim.tryTake('x', 0)).toBe(true)
+    expect(lim.msUntilReady('x', 3_000)).toBe(7_000)
+    expect(lim.msUntilReady('x', 10_000)).toBe(0)
+  })
 })

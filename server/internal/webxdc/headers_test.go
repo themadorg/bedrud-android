@@ -25,6 +25,13 @@ func TestSecurityHeaders_AlwaysIncludeCSPAndNosniff(t *testing.T) {
 	if !strings.Contains(h["Permissions-Policy"], "microphone=()") {
 		t.Fatal("Permissions-Policy should deny microphone")
 	}
+	// Games need these (Desktop WEBXDC.md).
+	if !strings.Contains(h["Permissions-Policy"], "fullscreen=(self)") {
+		t.Fatal("Permissions-Policy should allow fullscreen for self")
+	}
+	if !strings.Contains(h["Permissions-Policy"], "pointer-lock=(self)") {
+		t.Fatal("Permissions-Policy should allow pointer-lock for self")
+	}
 	// Must allow SPA embedding (different origin) — never X-Frame-Options SAMEORIGIN.
 	if _, ok := h["X-Frame-Options"]; ok {
 		t.Fatal("X-Frame-Options blocks cross-origin meeting iframe")

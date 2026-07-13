@@ -1,6 +1,7 @@
 package webxdc
 
 import (
+	"bytes"
 	"net/url"
 	"regexp"
 	"strings"
@@ -77,4 +78,35 @@ func appendTicketQuery(raw, ticket string) (string, bool) {
 func IsHTMLEntry(entry string) bool {
 	base := strings.ToLower(entry)
 	return strings.HasSuffix(base, ".html") || strings.HasSuffix(base, ".htm")
+}
+
+// IsScriptEntry reports JS assets that may assume Desktop top-level window.top.
+func IsScriptEntry(entry string) bool {
+	base := strings.ToLower(entry)
+	return strings.HasSuffix(base, ".js") || strings.HasSuffix(base, ".mjs")
+}
+
+// SoftenCrossOriginTop rewrites a few Desktop-only window.top usages so apps
+// (notably Quake/OpenArena) do not throw SecurityError inside Bedrud's
+// cross-origin iframe. Only targeted patterns — never a blanket top→self rewrite.
+func SoftenCrossOriginTop(body []byte) []byte {
+	if len(body) == 0 {
+		return body
+	}
+	// OpenArena index.html: pagehide notify on server stop (Desktop: top-level).
+	body = bytes.ReplaceAll(body,
+		[]byte("window.top.addEventListener('pagehide'"),
+		[]byte("window.addEventListener('pagehide'"),
+	)
+	body = bytes.ReplaceAll(body,
+		[]byte(`window.top.addEventListener("pagehide"`),
+		[]byte(`window.addEventListener("pagehide"`),
+	)
+	// OpenArena override-webrtc.js: stash channel across reloads (Desktop top).
+	// We expose the same property on window in HostBridgeJS.
+	body = bytes.ReplaceAll(body,
+		[]byte("window.top.__webxdcRealtimeChannel"),
+		[]byte("window.__webxdcRealtimeChannel"),
+	)
+	return body
 }

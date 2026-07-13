@@ -50,3 +50,35 @@ func TestIsHTMLEntry(t *testing.T) {
 		t.Fatal("js is not html")
 	}
 }
+
+func TestSoftenCrossOriginTop(t *testing.T) {
+	in := []byte(`window.top.addEventListener('pagehide', fn);
+window.top.__webxdcRealtimeChannel = ch;
+other.window.top.foo;`)
+	out := string(SoftenCrossOriginTop(in))
+	if strings.Contains(out, "window.top.addEventListener('pagehide'") {
+		t.Fatal("pagehide still on top")
+	}
+	if !strings.Contains(out, "window.addEventListener('pagehide'") {
+		t.Fatal("pagehide not rewritten to window")
+	}
+	if strings.Contains(out, "window.top.__webxdcRealtimeChannel") {
+		t.Fatal("realtime stash still on top")
+	}
+	if !strings.Contains(out, "window.__webxdcRealtimeChannel") {
+		t.Fatal("realtime stash not on window")
+	}
+	// Unrelated top access must remain (we only soften known patterns).
+	if !strings.Contains(out, "other.window.top.foo") {
+		t.Fatal("must not rewrite unrelated top access")
+	}
+}
+
+func TestIsScriptEntry(t *testing.T) {
+	if !IsScriptEntry("override-webrtc.js") || !IsScriptEntry("x.MJS") {
+		t.Fatal("expected script")
+	}
+	if IsScriptEntry("index.html") {
+		t.Fatal("html is not script")
+	}
+}

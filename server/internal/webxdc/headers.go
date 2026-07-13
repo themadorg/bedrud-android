@@ -40,14 +40,16 @@ const cspBase = "" +
 // DefaultCSP is the CSP with local-dev + self frame-ancestors (tests / fallback).
 var DefaultCSP = BuildCSP(nil)
 
-// PermissionsPolicy denies powerful features by default (Desktop allowlists
-// only pointer lock + fullscreen at the OS webview layer).
+// PermissionsPolicy denies powerful features by default.
+// Desktop allowlists pointer-lock + fullscreen for games (WEBXDC.md).
+// Use (self) for those two so OpenArena/ioquake can request them; keep the rest empty.
 const PermissionsPolicy = "" +
-	"accelerometer=(), autoplay=(), camera=(), display-capture=(), " +
-	"encrypted-media=(), fullscreen=(), geolocation=(), gyroscope=(), " +
+	"accelerometer=(), autoplay=(self), camera=(), display-capture=(), " +
+	"encrypted-media=(), fullscreen=(self), geolocation=(), gyroscope=(), " +
 	"magnetometer=(), microphone=(), midi=(), payment=(), " +
 	"picture-in-picture=(), publickey-credentials-get=(), " +
-	"screen-wake-lock=(), usb=(), web-share=(), xr-spatial-tracking=()"
+	"screen-wake-lock=(), usb=(), xr-spatial-tracking=(), " +
+	"pointer-lock=(self)"
 
 // BuildCSP returns a full Content-Security-Policy for WebXDC assets.
 // frameAncestors lists absolute SPA origins allowed to embed the mini-app.

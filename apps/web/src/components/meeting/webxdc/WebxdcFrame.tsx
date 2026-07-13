@@ -77,6 +77,16 @@ export function WebxdcFrame({
   /** Bump to remount the cross-origin iframe (reload mini-app). */
   const [iframeKey, setIframeKey] = useState(0)
 
+  // Force sandbox tokens on the DOM — some browsers keep a stale sandbox if only
+  // the React prop changes after first mount (pointer-lock must be present).
+  useLayoutEffect(() => {
+    const el = hostRef.current
+    if (!el) return
+    el.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-pointer-lock')
+    el.setAttribute('allow', 'pointer-lock *; fullscreen *; autoplay *; gamepad *')
+    el.setAttribute('allowfullscreen', '')
+  }, [iframeUrl, iframeKey])
+
   const { localParticipant, isMicrophoneEnabled: micEnabled, isCameraEnabled: camEnabled } = useLocalParticipant()
   const { isSelfDeafened, toggleSelfDeafen } = useMeetingRoomContext()
   const { micUiEnabled, micTip, toggleMic } = useMeetingMicKeyboard(localParticipant, isSelfDeafened, micEnabled)
@@ -447,8 +457,13 @@ export function WebxdcFrame({
             title={`${appName} (experimental untrusted mini-app)`}
             src={iframeUrl}
             className="min-h-0 w-full flex-1 bg-white"
-            sandbox="allow-scripts allow-same-origin"
-            allow=""
+            // allow-pointer-lock is required for sandboxed iframes — without it
+            // requestPointerLock always fails (OpenArena mouse look).
+            // Still no allow-top-navigation / popups / forms (sandbox isolation).
+            sandbox="allow-scripts allow-same-origin allow-pointer-lock"
+            // Feature Policy for the cross-origin webxdc document (Desktop: pointer + fullscreen).
+            allow="pointer-lock *; fullscreen *; autoplay *; gamepad *"
+            allowFullScreen
             referrerPolicy="no-referrer"
           />
         </div>

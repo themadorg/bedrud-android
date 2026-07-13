@@ -58,11 +58,20 @@ const HostBridgeJS = `
             return current;
           },
           set: function (v) {
-            // Allow app polyfills (FakeRTCPeerConnection / Proxy of it).
-            // Reject native restoration so STUN sidechannel stays closed.
-            if (typeof v !== "function") return;
-            if (isNativePeerConnection(v, nativePC)) return;
-            current = v;
+            // OpenArena does:
+            //   RTCPeerConnection = FakeRTCPeerConnection           // function
+            //   RTCPeerConnection = new Proxy(RTCPeerConnection, …) // typeof 'object'!
+            // Reject only *native* constructors (STUN sidechannel). Allow Fake + Proxy.
+            if (v == null) return;
+            if (typeof v === "function") {
+              if (isNativePeerConnection(v, nativePC)) return;
+              current = v;
+              return;
+            }
+            if (typeof v === "object") {
+              // Proxy / polyfill instance — never the native function.
+              current = v;
+            }
           },
         });
       } catch (e1) {
@@ -323,8 +332,11 @@ const HostBridgeJS = `
   function post(msg) {
     try {
       var payload = Object.assign({ channel: CHANNEL }, msg);
+      // Always stamp appId so parent never drops rtJoin/rtSend after in-app navigations.
       if (appId) payload.appId = appId;
-      parent.postMessage(payload, parentOrigin === "*" ? "*" : parentOrigin);
+      // Prefer * until init pins parentOrigin — specific origins can race SPA localhost vs 127.0.0.1.
+      var target = parentOrigin && parentOrigin !== "*" ? parentOrigin : "*";
+      parent.postMessage(payload, target);
     } catch (e) {}
   }
 
@@ -338,11 +350,13 @@ const HostBridgeJS = `
     if (typeof d.sendUpdateMaxSize === "number" && d.sendUpdateMaxSize > 0) {
       sendUpdateMaxSize = d.sendUpdateMaxSize;
     }
-    // Plain properties (Desktop style) so apps reading webxdc.selfName always see current values.
-    api.selfAddr = selfAddr;
-    api.selfName = selfName;
-    api.sendUpdateInterval = sendUpdateInterval;
-    api.sendUpdateMaxSize = sendUpdateMaxSize;
+    // Keep plain props in sync (some apps copy them once; getters below are preferred).
+    try {
+      api.selfAddr = selfAddr;
+      api.selfName = selfName;
+      api.sendUpdateInterval = sendUpdateInterval;
+      api.sendUpdateMaxSize = sendUpdateMaxSize;
+    } catch (e) {}
   }
 
   function stopReadyPing() {
@@ -369,6 +383,33 @@ const HostBridgeJS = `
    * Pull updates after lastSerial and deliver to listener (Desktop innerOnStatusUpdate).
    * Resolves setUpdateListener Promise after the first successful catch-up.
    */
+  /**
+   * Deliver one or more status updates to the app listener (Desktop innerOnStatusUpdate).
+   * Dedupes by serial so statusPush + pull-nudge cannot double-fire.
+   */
+  function deliverUpdates(list) {
+    var updates = list || [];
+    var delivered = [];
+    for (var i = 0; i < updates.length; i++) {
+      var u = updates[i];
+      if (!u || typeof u !== "object") continue;
+      var ser = typeof u.serial === "number" ? u.serial : 0;
+      // Skip already-seen serials (local statusPush + later GET can race).
+      if (ser > 0 && ser <= lastSerial) continue;
+      // Desktop advances last_serial from max_serial on each delivered update.
+      if (typeof u.max_serial === "number" && u.max_serial > lastSerial) {
+        lastSerial = u.max_serial;
+      } else if (ser > lastSerial) {
+        lastSerial = ser;
+      }
+      if (typeof updateListener === "function") {
+        try { updateListener(u); } catch (e) {}
+      }
+      delivered.push(u);
+    }
+    return delivered;
+  }
+
   function pullUpdates() {
     return new Promise(function (resolve) {
       var reqId = "u-" + (++pullSeq);
@@ -377,26 +418,13 @@ const HostBridgeJS = `
         if (settled) return;
         settled = true;
         delete pendingPulls[reqId];
-        var updates = list || [];
-        for (var i = 0; i < updates.length; i++) {
-          var u = updates[i];
-          if (!u || typeof u !== "object") continue;
-          // Desktop advances last_serial from max_serial on each delivered update.
-          if (typeof u.max_serial === "number" && u.max_serial > lastSerial) {
-            lastSerial = u.max_serial;
-          } else if (typeof u.serial === "number" && u.serial > lastSerial) {
-            lastSerial = u.serial;
-          }
-          if (typeof updateListener === "function") {
-            try { updateListener(u); } catch (e) {}
-          }
-        }
+        var delivered = deliverUpdates(list);
         if (setUpdateListenerResolve) {
           var r = setUpdateListenerResolve;
           setUpdateListenerResolve = null;
           try { r(); } catch (e) {}
         }
-        resolve(updates);
+        resolve(delivered);
       }
       pendingPulls[reqId] = finish;
       post({ type: "getUpdates", requestId: reqId, after: lastSerial });
@@ -432,16 +460,31 @@ const HostBridgeJS = `
     this.listener = typeof listener === "function" ? listener : null;
   };
   RealtimeListener.prototype.send = function (data) {
-    if (!(data instanceof Uint8Array)) {
+    // Accept Uint8Array, ArrayBuffer, or any ArrayBufferView (OpenArena packets).
+    var bytes;
+    if (data instanceof Uint8Array) {
+      bytes = data;
+    } else if (typeof ArrayBuffer !== "undefined" && data instanceof ArrayBuffer) {
+      bytes = new Uint8Array(data);
+    } else if (data && typeof data === "object" && typeof data.byteLength === "number" && data.buffer) {
+      try {
+        bytes = new Uint8Array(data.buffer, data.byteOffset || 0, data.byteLength);
+      } catch (e0) {
+        throw new Error("realtime listener data must be a Uint8Array");
+      }
+    } else {
       throw new Error("realtime listener data must be a Uint8Array");
     }
     if (this.trashed) {
       throw new Error("realtime listener is trashed and can no longer be used");
     }
-    if (data.byteLength > 128000) {
+    if (bytes.byteLength > 128000) {
       throw new Error("realtime data exceeds 128000 bytes");
     }
-    post({ type: "rtSend", data: Array.prototype.slice.call(data) });
+    // Array.from preserves bytes better than slice.call on some engines.
+    var arr = [];
+    for (var i = 0; i < bytes.length; i++) arr.push(bytes[i]);
+    post({ type: "rtSend", data: arr });
   };
   RealtimeListener.prototype.leave = function () {
     this.trashed = true;
@@ -473,6 +516,12 @@ const HostBridgeJS = `
       stopReadyPing();
       // If app already registered a listener before init completed, catch up now.
       if (updateListener) onStatusNudge();
+      // Re-assert realtime join after parent is ready. OpenArena calls
+      // joinRealtimeChannel in a module script that often races the parent
+      // message listener; without this re-post, WHO_IS never leaves the iframe.
+      if (realtimeListener && !realtimeListener.is_trashed()) {
+        post({ type: "rtJoin" });
+      }
       return;
     }
 
@@ -482,10 +531,19 @@ const HostBridgeJS = `
       return;
     }
 
+    // Immediate local/peer push (Desktop core delivers own updates; we push after POST).
+    // Avoids "current update missing" when pull races rate-limit or LiveKit.
+    if (d.type === "statusPush" && d.update && typeof d.update === "object") {
+      deliverUpdates([d.update]);
+      return;
+    }
+
     // Parent nudge: new status available — pull (Desktop webxdc.statusUpdate).
     if (d.type === "statusNudge" || d.type === "statusUpdate") {
-      // statusUpdate with full body: still nudge-pull for ordering consistency,
-      // but if a full update is provided and we have a listener mid-session, apply via pull only.
+      // If a full update body is included, deliver it then still pull for catch-up.
+      if (d.update && typeof d.update === "object") {
+        deliverUpdates([d.update]);
+      }
       onStatusNudge();
       return;
     }
@@ -658,8 +716,15 @@ const HostBridgeJS = `
     },
 
     joinRealtimeChannel: function () {
+      // OpenArena re-joins after location.replace(?serverAddress=). Fresh page
+      // usually has no listener; if one exists (or leave failed), leave first.
+      // Do NOT require window.top (cross-origin iframe cannot touch top).
       if (realtimeListener && !realtimeListener.is_trashed()) {
-        throw new Error("realtime listener already exists");
+        try {
+          realtimeListener.leave();
+        } catch (eLeave) {
+          realtimeListener = null;
+        }
       }
       realtimeListener = new RealtimeListener();
       // Bind methods so destructuring works (Desktop binds explicitly).
@@ -667,14 +732,41 @@ const HostBridgeJS = `
       realtimeListener.send = realtimeListener.send.bind(realtimeListener);
       realtimeListener.leave = realtimeListener.leave.bind(realtimeListener);
       realtimeListener.is_trashed = realtimeListener.is_trashed.bind(realtimeListener);
+      // Expose for apps that stash the channel (Desktop uses window.top; we use self).
+      try {
+        window.__webxdcRealtimeChannel = realtimeListener;
+      } catch (eEx) {}
       post({ type: "rtJoin" });
+      // Parent may not be listening yet (React effect attaches after iframe load).
+      // Re-post a few times so OpenArena WHO_IS is not stuck with rtJoined=false.
+      var joinRetries = 0;
+      var joinRetryId = setInterval(function () {
+        joinRetries++;
+        if (!realtimeListener || realtimeListener.is_trashed() || joinRetries > 25) {
+          clearInterval(joinRetryId);
+          return;
+        }
+        post({ type: "rtJoin" });
+      }, 200);
       return realtimeListener;
     },
   };
 
+  // Persist appId across in-app navigations that drop query params (OpenArena
+  // rewrites ?basegame= / ?serverAddress= and can lose appId, which breaks realtime).
   try {
+    var APPID_KEY = "__bedrud_webxdc_appid__";
     var q = new URLSearchParams(location.search);
-    if (q.get("appId")) appId = q.get("appId");
+    var qApp = q.get("appId");
+    if (qApp) {
+      appId = qApp;
+      try { sessionStorage.setItem(APPID_KEY, qApp); } catch (eS) {}
+    } else {
+      try {
+        var stored = sessionStorage.getItem(APPID_KEY);
+        if (stored) appId = stored;
+      } catch (eS2) {}
+    }
   } catch (e) {}
 
   /**
@@ -793,6 +885,22 @@ const HostBridgeJS = `
       } catch (e2) {}
     }
   })();
+
+  // Live getters so late init always updates what apps read (OpenArena player name).
+  try {
+    Object.defineProperty(api, "selfAddr", {
+      configurable: true,
+      enumerable: true,
+      get: function () { return selfAddr; },
+      set: function (v) { if (typeof v === "string" && v) selfAddr = v; },
+    });
+    Object.defineProperty(api, "selfName", {
+      configurable: true,
+      enumerable: true,
+      get: function () { return selfName; },
+      set: function (v) { if (typeof v === "string" && v) selfName = v; },
+    });
+  } catch (eGet) {}
 
   window.webxdc = api;
   // Keep pinging ready until parent init (fixes race if parent attaches listener late).

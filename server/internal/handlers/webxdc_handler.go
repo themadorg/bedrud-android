@@ -704,6 +704,11 @@ func (h *WebxdcHandler) serveInstanceAssets(c *fiber.Ctx, label, reqPath, cookie
 	if ticket != "" && wx.IsHTMLEntry(entry) {
 		body = wx.InjectTicketIntoHTML(body, ticket)
 	}
+	// Desktop runs webxdc as top-level; Bedrud uses a cross-origin iframe.
+	// Soften a few known window.top patterns (OpenArena pagehide / realtime stash).
+	if wx.IsHTMLEntry(entry) || wx.IsScriptEntry(entry) {
+		body = wx.SoftenCrossOriginTop(body)
+	}
 	// Fiber Type() can help some clients; always set full Content-Type for charset.
 	setWebxdcContentType(c, entry)
 	return c.Send(body)

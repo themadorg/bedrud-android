@@ -26,6 +26,8 @@ type InstallConfig struct {
 	EnableWebxdc     bool
 	WebxdcBaseDomain string
 	WebxdcDNSAck     bool
+	// Version is recorded to /var/lib/bedrud/version on successful install (from CLI ldflags).
+	Version string
 }
 
 // SetDefaults populates empty fields with their default values.

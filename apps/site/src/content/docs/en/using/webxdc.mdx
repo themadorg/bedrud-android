@@ -22,6 +22,13 @@ webxdc:
 3. DNS: **`*.wx.example.com`** (or your `baseDomain`) must point to the **same IP** as the main Bedrud site  
 4. TLS must cover **`*.{baseDomain}`** (not only the main hostname)
 
+For self-signed installs, regenerate the cert after enabling WebXDC so SANs include the wildcard:
+
+```bash
+sudo bedrud certificate regenerate
+sudo systemctl restart livekit bedrud
+```
+
 Installer prompts for this when a domain is set. See self-host configuration for details.
 
 ## Enable in the web app (user)

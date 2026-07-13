@@ -71,27 +71,32 @@ export function parseWebxdcIframeMessage(
   const o = data as Record<string, unknown>
   if (o.channel !== WEBXDC_POSTMESSAGE_CHANNEL) return null
 
+  // One iframe host is bound to one instance. Prefer explicit appId when present;
+  // if missing (in-app navigations drop query params), fall back to boundAppId.
+  // Reject only when an explicit appId conflicts with this host.
+  if (typeof o.appId === 'string' && o.appId !== '' && o.appId !== boundAppId) {
+    return null
+  }
+  const appId = typeof o.appId === 'string' && o.appId !== '' ? o.appId : boundAppId
+
   // ready may arrive before appId is known; still bind to this host instance.
   if (o.type === 'ready') {
-    if (typeof o.appId === 'string' && o.appId !== '' && o.appId !== boundAppId) return null
     return {
       channel: WEBXDC_POSTMESSAGE_CHANNEL,
       type: 'ready',
-      appId: typeof o.appId === 'string' && o.appId ? o.appId : boundAppId,
+      appId,
     }
   }
 
-  if (typeof o.appId !== 'string' || o.appId !== boundAppId) return null
-
   switch (o.type) {
     case 'ready':
-      return { channel: WEBXDC_POSTMESSAGE_CHANNEL, type: 'ready', appId: o.appId }
+      return { channel: WEBXDC_POSTMESSAGE_CHANNEL, type: 'ready', appId }
     case 'setUpdateListener': {
       const serial = typeof o.serial === 'number' && Number.isFinite(o.serial) ? o.serial : 0
       return {
         channel: WEBXDC_POSTMESSAGE_CHANNEL,
         type: 'setUpdateListener',
-        appId: o.appId,
+        appId,
         serial,
       }
     }
@@ -101,7 +106,7 @@ export function parseWebxdcIframeMessage(
       return {
         channel: WEBXDC_POSTMESSAGE_CHANNEL,
         type: 'getUpdates',
-        appId: o.appId,
+        appId,
         requestId: o.requestId,
         after: Math.max(0, after),
       }
@@ -112,7 +117,7 @@ export function parseWebxdcIframeMessage(
       return {
         channel: WEBXDC_POSTMESSAGE_CHANNEL,
         type: 'sendUpdate',
-        appId: o.appId,
+        appId,
         update: validated.update,
       }
     }
@@ -121,7 +126,7 @@ export function parseWebxdcIframeMessage(
       return {
         channel: WEBXDC_POSTMESSAGE_CHANNEL,
         type: o.type,
-        appId: o.appId,
+        appId,
       }
     case 'rtSend': {
       if (!Array.isArray(o.data)) return null
@@ -134,7 +139,7 @@ export function parseWebxdcIframeMessage(
       return {
         channel: WEBXDC_POSTMESSAGE_CHANNEL,
         type: 'rtSend',
-        appId: o.appId,
+        appId,
         data: dataBytes,
       }
     }
@@ -158,7 +163,7 @@ export function parseWebxdcIframeMessage(
       return {
         channel: WEBXDC_POSTMESSAGE_CHANNEL,
         type: 'sendToChat',
-        appId: o.appId,
+        appId,
         requestId: o.requestId,
         text,
         file,
@@ -171,7 +176,7 @@ export function parseWebxdcIframeMessage(
       return {
         channel: WEBXDC_POSTMESSAGE_CHANNEL,
         type: 'openExternal',
-        appId: o.appId,
+        appId,
         url: url.startsWith('//') ? `https:${url}` : url,
       }
     }
