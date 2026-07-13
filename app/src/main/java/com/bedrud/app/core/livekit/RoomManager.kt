@@ -159,21 +159,23 @@ class RoomManager(private val application: Application) {
             // Enable mic after connecting; camera stays off until the user turns it on.
             try {
                 val micPublished = room.localParticipant.setMicrophoneEnabled(true)
-                syncMicrophoneState()
-                _micMediaError.value = !micPublished && room.localParticipant.isMicrophoneEnabled.not()
+                _isMicEnabled.value = micPublished
+                CallConnectionService.updateMuteState(!micPublished)
+                _micMediaError.value = !micPublished
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to enable microphone", e)
-                syncMicrophoneState()
+                _isMicEnabled.value = false
+                CallConnectionService.updateMuteState(true)
                 _micMediaError.value = true
                 _error.value = "Failed to enable microphone"
             }
 
             try {
                 room.localParticipant.setCameraEnabled(false)
-                syncCameraState()
+                _isCameraEnabled.value = false
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to disable camera", e)
-                syncCameraState()
+                _isCameraEnabled.value = false
             }
 
             // Notify initial participant state
@@ -368,7 +370,9 @@ class RoomManager(private val application: Application) {
         }
         try {
             val published = localParticipant.setMicrophoneEnabled(enabled)
-            syncMicrophoneState()
+            val actuallyEnabled = if (enabled) published else false
+            _isMicEnabled.value = actuallyEnabled
+            CallConnectionService.updateMuteState(!actuallyEnabled)
             if (!published && enabled) {
                 _micMediaError.value = true
                 _error.value = "Failed to enable microphone"
@@ -384,8 +388,7 @@ class RoomManager(private val application: Application) {
     }
 
     suspend fun toggleMicrophone() {
-        val localParticipant = _room?.localParticipant ?: return
-        setMicrophoneEnabled(!localParticipant.isMicrophoneEnabled)
+        setMicrophoneEnabled(!_isMicEnabled.value)
     }
 
     private fun syncCameraState() {
@@ -395,10 +398,10 @@ class RoomManager(private val application: Application) {
 
     suspend fun toggleCamera() {
         val localParticipant = _room?.localParticipant ?: return
-        val enabled = !localParticipant.isCameraEnabled
+        val enabled = !_isCameraEnabled.value
         try {
             val published = localParticipant.setCameraEnabled(enabled)
-            syncCameraState()
+            _isCameraEnabled.value = if (enabled) published else false
             _participantVersion.value++
             if (!published && enabled) {
                 _cameraMediaError.value = true
