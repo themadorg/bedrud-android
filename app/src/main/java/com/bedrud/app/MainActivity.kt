@@ -1,6 +1,5 @@
 package com.bedrud.app
 
-import android.app.KeyguardManager
 import android.app.PictureInPictureParams
 import android.content.Context
 import android.content.Intent
@@ -68,7 +67,7 @@ class MainActivity : ComponentActivity() {
 
         // Return to an ongoing meeting from the call notification
         handleReturnToMeeting(intent)
-        hideUiBehindKeyguard()
+        clearLockScreenFlags()
 
         // Resume meeting if the foreground call service is still running
         CallService.activeRoomName?.let { room ->
@@ -109,17 +108,7 @@ class MainActivity : ComponentActivity() {
         handleDeepLink(intent)
         handleReturnToMeeting(intent)
         handleOAuthCallback(intent)
-        hideUiBehindKeyguard()
-    }
-
-    override fun onStart() {
-        super.onStart()
-        hideUiBehindKeyguard()
-    }
-
-    override fun onResume() {
-        super.onResume()
-        hideUiBehindKeyguard()
+        clearLockScreenFlags()
     }
 
     override fun onPause() {
@@ -137,17 +126,6 @@ class MainActivity : ComponentActivity() {
         if (intent?.action != CallService.ACTION_RETURN_TO_MEETING) return
         val roomName = intent.getStringExtra(CallService.EXTRA_ROOM_NAME) ?: return
         _deepLinkRoomName.value = roomName
-    }
-
-    /** Keep the meeting UI off the lock screen; the call continues via [CallService]. */
-    private fun hideUiBehindKeyguard() {
-        clearLockScreenFlags()
-        if (!CallService.isRunning) return
-        if (intent?.action == CallService.ACTION_RETURN_TO_MEETING) return
-        val keyguard = getSystemService(KeyguardManager::class.java) ?: return
-        if (keyguard.isKeyguardLocked) {
-            moveTaskToBack(false)
-        }
     }
 
     private fun clearLockScreenFlags() {
