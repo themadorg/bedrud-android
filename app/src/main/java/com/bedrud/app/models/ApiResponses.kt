@@ -85,6 +85,10 @@ data class JoinRoomRequest(
     val roomName: String
 )
 
+data class UpdateRoomSettingsRequest(
+    val settings: RoomSettings
+)
+
 data class JoinRoomResponse(
     val id: String,
     val name: String,

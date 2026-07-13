@@ -76,6 +76,7 @@ import com.bedrud.app.core.recent.RecentRoomsStore
 import com.bedrud.app.core.recent.formatRecentRoomTimeAgo
 import com.bedrud.app.core.recent.recentRoomsNotInApiList
 import com.bedrud.app.models.CreateRoomRequest
+import com.bedrud.app.models.UpdateRoomSettingsRequest
 import com.bedrud.app.models.UserRoomResponse
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
@@ -207,7 +208,10 @@ fun DashboardContent(
             onSave = { settings ->
                 scope.launch {
                     try {
-                        val response = roomApi.updateRoomSettings(room.id, settings)
+                        val response = roomApi.updateRoomSettings(
+                            room.id,
+                            UpdateRoomSettingsRequest(settings = settings)
+                        )
                         if (response.isSuccessful) {
                             roomToEdit = null
                             loadRooms()

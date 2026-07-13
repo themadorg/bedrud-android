@@ -5,7 +5,7 @@ import com.bedrud.app.models.CreateRoomRequest
 import com.bedrud.app.models.JoinRoomRequest
 import com.bedrud.app.models.JoinRoomResponse
 import com.bedrud.app.models.Room
-import com.bedrud.app.models.RoomSettings
+import com.bedrud.app.models.UpdateRoomSettingsRequest
 import com.bedrud.app.models.UserRoomResponse
 import okhttp3.MultipartBody
 import retrofit2.Response
@@ -62,7 +62,7 @@ interface RoomApi {
     @PUT("room/{roomId}/settings")
     suspend fun updateRoomSettings(
         @Path("roomId") roomId: String,
-        @Body settings: RoomSettings
+        @Body request: UpdateRoomSettingsRequest
     ): Response<Unit>
 
     @DELETE("room/{roomId}")
