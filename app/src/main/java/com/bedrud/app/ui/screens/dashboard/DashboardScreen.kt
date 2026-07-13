@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -54,6 +55,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -61,6 +63,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
@@ -277,123 +280,145 @@ fun DashboardContent(
                 contentAlignment = Alignment.Center
             ) { CircularProgressIndicator() }
         } else {
-            LazyColumn(
+            // Header height, captured so the empty state below can be centered against the
+            // full screen rather than just the space left over beneath it.
+            var quickJoinHeightPx by remember { mutableIntStateOf(0) }
+            var filterRowHeightPx by remember { mutableIntStateOf(0) }
+
+            Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(innerPadding),
-                contentPadding = PaddingValues(
-                    bottom = if (isKeyboardVisible) 16.dp else 88.dp,
-                )
+                    .padding(innerPadding)
             ) {
                 // ── Quick join bar ────────────────────────────────
-                item {
-                    QuickJoinBar(
-                        value = quickJoinText,
-                        onValueChange = { quickJoinText = it },
-                        onJoin = {
-                            val roomName = BedrudURLParser.parseJoinInput(quickJoinText)
-                            if (!roomName.isNullOrBlank()) {
-                                quickJoinText = ""
-                                onJoinRoom(roomName)
-                            }
-                        },
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
-                    )
-                }
+                QuickJoinBar(
+                    value = quickJoinText,
+                    onValueChange = { quickJoinText = it },
+                    onJoin = {
+                        val roomName = BedrudURLParser.parseJoinInput(quickJoinText)
+                        if (!roomName.isNullOrBlank()) {
+                            quickJoinText = ""
+                            onJoinRoom(roomName)
+                        }
+                    },
+                    modifier = Modifier
+                        .padding(horizontal = 16.dp, vertical = 4.dp)
+                        .onGloballyPositioned { quickJoinHeightPx = it.size.height }
+                )
 
                 // ── Filter tabs ───────────────────────────────────
-                item {
-                    FilterRow(
-                        activeFilter = activeFilter,
-                        onFilterChange = { activeFilter = it },
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
-                    )
-                }
+                FilterRow(
+                    activeFilter = activeFilter,
+                    onFilterChange = { activeFilter = it },
+                    modifier = Modifier
+                        .padding(horizontal = 16.dp, vertical = 4.dp)
+                        .onGloballyPositioned { filterRowHeightPx = it.size.height }
+                )
 
                 // ── Room list ─────────────────────────────────────
-                if (activeFilter == RoomFilter.RECENT) {
-                    if (recentRooms.isEmpty()) {
-                        item {
-                            RecentEmptyState()
-                        }
-                    } else {
-                        items(
-                            recentRooms,
-                            key = { "${it.instanceId}:${it.roomName}" },
-                        ) { recent ->
-                            RecentRoomCard(
-                                recent = recent,
-                                isCurrentServer = recent.instanceId == activeInstanceId,
-                                onJoin = { onJoinRecent(recent) },
-                                onRemove = {
-                                    recentRoomsStore.remove(recent.roomName, recent.instanceId)
-                                },
-                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
-                            )
+                val isCurrentTabEmpty = when (activeFilter) {
+                    RoomFilter.RECENT -> recentRooms.isEmpty()
+                    RoomFilter.ALL -> allTabEntries.isEmpty() && !isLoading
+                    else -> filteredRooms.isEmpty() && !isLoading
+                }
+
+                if (isCurrentTabEmpty) {
+                    // Centering only within this leftover space (below the header) would pull
+                    // the icon+text+button group noticeably above the true center of the
+                    // screen, since nothing balances the header's height at the bottom. Nudge
+                    // the group up by half the header height so its own midpoint lands on the
+                    // screen's midpoint instead.
+                    val pullUp = with(LocalDensity.current) {
+                        ((quickJoinHeightPx + filterRowHeightPx) / 2).toDp()
+                    }
+                    Box(
+                        modifier = Modifier.weight(1f).fillMaxSize(),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Box(modifier = Modifier.offset(y = -pullUp)) {
+                            when (activeFilter) {
+                                RoomFilter.RECENT -> RecentEmptyState()
+                                RoomFilter.ALL -> EmptyState(
+                                    hasFilter = false,
+                                    onCreateRoom = { showCreateDialog = true },
+                                )
+                                else -> EmptyState(
+                                    hasFilter = true,
+                                    onCreateRoom = { showCreateDialog = true },
+                                )
+                            }
                         }
                     }
-                } else if (activeFilter == RoomFilter.ALL) {
-                    if (allTabEntries.isEmpty() && !isLoading) {
-                        item {
-                            EmptyState(
-                                hasFilter = false,
-                                onCreateRoom = { showCreateDialog = true },
-                            )
-                        }
-                    } else {
-                        items(
-                            allTabEntries,
-                            key = { entry ->
-                                when (entry) {
-                                    is RoomListEntry.FromApi -> "api:${entry.room.id}"
-                                    is RoomListEntry.FromRecent ->
-                                        "recent:${entry.recent.instanceId}:${entry.recent.roomName}"
-                                }
-                            },
-                        ) { entry ->
-                            when (entry) {
-                                is RoomListEntry.FromApi -> RoomCard(
-                                    room = entry.room,
-                                    onJoin = { onJoinRoom(entry.room.name) },
-                                    onDelete = { roomToDelete = entry.room },
-                                    onSettings = if (entry.room.createdBy == currentUser?.id) {
-                                        { roomToEdit = entry.room }
-                                    } else null,
-                                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
-                                )
-                                is RoomListEntry.FromRecent -> RecentRoomCard(
-                                    recent = entry.recent,
-                                    isCurrentServer = entry.recent.instanceId == activeInstanceId,
-                                    onJoin = { onJoinRecent(entry.recent) },
+                } else {
+                    LazyColumn(
+                        modifier = Modifier.weight(1f).fillMaxSize(),
+                        contentPadding = PaddingValues(
+                            bottom = if (isKeyboardVisible) 16.dp else 88.dp,
+                        )
+                    ) {
+                        if (activeFilter == RoomFilter.RECENT) {
+                            items(
+                                recentRooms,
+                                key = { "${it.instanceId}:${it.roomName}" },
+                            ) { recent ->
+                                RecentRoomCard(
+                                    recent = recent,
+                                    isCurrentServer = recent.instanceId == activeInstanceId,
+                                    onJoin = { onJoinRecent(recent) },
                                     onRemove = {
-                                        recentRoomsStore.remove(
-                                            entry.recent.roomName,
-                                            entry.recent.instanceId,
-                                        )
+                                        recentRoomsStore.remove(recent.roomName, recent.instanceId)
                                     },
                                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
                                 )
                             }
+                        } else if (activeFilter == RoomFilter.ALL) {
+                            items(
+                                allTabEntries,
+                                key = { entry ->
+                                    when (entry) {
+                                        is RoomListEntry.FromApi -> "api:${entry.room.id}"
+                                        is RoomListEntry.FromRecent ->
+                                            "recent:${entry.recent.instanceId}:${entry.recent.roomName}"
+                                    }
+                                },
+                            ) { entry ->
+                                when (entry) {
+                                    is RoomListEntry.FromApi -> RoomCard(
+                                        room = entry.room,
+                                        onJoin = { onJoinRoom(entry.room.name) },
+                                        onDelete = { roomToDelete = entry.room },
+                                        onSettings = if (entry.room.createdBy == currentUser?.id) {
+                                            { roomToEdit = entry.room }
+                                        } else null,
+                                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                                    )
+                                    is RoomListEntry.FromRecent -> RecentRoomCard(
+                                        recent = entry.recent,
+                                        isCurrentServer = entry.recent.instanceId == activeInstanceId,
+                                        onJoin = { onJoinRecent(entry.recent) },
+                                        onRemove = {
+                                            recentRoomsStore.remove(
+                                                entry.recent.roomName,
+                                                entry.recent.instanceId,
+                                            )
+                                        },
+                                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                                    )
+                                }
+                            }
+                        } else {
+                            items(filteredRooms, key = { it.id }) { room ->
+                                RoomCard(
+                                    room = room,
+                                    onJoin = { onJoinRoom(room.name) },
+                                    onDelete = { roomToDelete = room },
+                                    onSettings = if (room.createdBy == currentUser?.id) {
+                                        { roomToEdit = room }
+                                    } else null,
+                                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
+                                )
+                            }
                         }
-                    }
-                } else if (filteredRooms.isEmpty() && !isLoading) {
-                    item {
-                        EmptyState(
-                            hasFilter = true,
-                            onCreateRoom = { showCreateDialog = true }
-                        )
-                    }
-                } else {
-                    items(filteredRooms, key = { it.id }) { room ->
-                        RoomCard(
-                            room = room,
-                            onJoin = { onJoinRoom(room.name) },
-                            onDelete = { roomToDelete = room },
-                            onSettings = if (room.createdBy == currentUser?.id) {
-                                { roomToEdit = room }
-                            } else null,
-                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
-                        )
                     }
                 }
             }
@@ -635,30 +660,25 @@ private fun RecentRoomCard(
 
 @Composable
 private fun RecentEmptyState() {
-    Box(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 64.dp),
-        contentAlignment = Alignment.Center,
-    ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Icon(
-                Icons.Default.History,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.size(64.dp),
-            )
-            Spacer(modifier = Modifier.height(16.dp))
-            Text(
-                text = stringResource(R.string.dashboard_empty_noRecent),
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = stringResource(R.string.dashboard_empty_noRecentHint),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Icon(
+            Icons.Default.History,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.size(64.dp),
+        )
+        Spacer(modifier = Modifier.height(16.dp))
+        Text(
+            text = stringResource(R.string.dashboard_empty_noRecent),
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(
+            text = stringResource(R.string.dashboard_empty_noRecentHint),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
     }
 }
 
@@ -666,31 +686,26 @@ private fun RecentEmptyState() {
 
 @Composable
 private fun EmptyState(hasFilter: Boolean, onCreateRoom: () -> Unit) {
-    Box(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 64.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Icon(
-                Icons.Default.Groups,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.size(64.dp)
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Icon(
+            Icons.Default.Groups,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.size(64.dp)
+        )
+        Spacer(modifier = Modifier.height(16.dp))
+        Text(
+            text = if (hasFilter) stringResource(R.string.dashboard_empty_noMatch) else stringResource(R.string.dashboard_empty_noRooms),
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        if (!hasFilter) {
+            Spacer(modifier = Modifier.height(4.dp))
+            BedrudButton(
+                text = stringResource(R.string.dashboard_button_createFirstRoom),
+                onClick = onCreateRoom,
+                variant = BedrudButtonVariant.OUTLINE
             )
-            Spacer(modifier = Modifier.height(16.dp))
-            Text(
-                text = if (hasFilter) stringResource(R.string.dashboard_empty_noMatch) else stringResource(R.string.dashboard_empty_noRooms),
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            if (!hasFilter) {
-                Spacer(modifier = Modifier.height(4.dp))
-                BedrudButton(
-                    text = stringResource(R.string.dashboard_button_createFirstRoom),
-                    onClick = onCreateRoom,
-                    variant = BedrudButtonVariant.OUTLINE
-                )
-            }
         }
     }
 }
