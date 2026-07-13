@@ -643,9 +643,22 @@ func Run(configPath, version string) error {
 		if cfg.Server.UseACME && cfg.Server.Domain != "" {
 			log.Info().Msgf("➜ Enabling Let's Encrypt for domain: %s", cfg.Server.Domain)
 
+			// Allow apex + subdomains (e.g. webxdc-<id>.bedrud.xyz). autocert issues
+			// per-host certs via HTTP-01 — not a single wildcard cert — so DNS for
+			// *.<domain> must point at this host for mini-app hosts to succeed.
+			domain := strings.ToLower(strings.TrimSpace(cfg.Server.Domain))
+			hostPolicy := func(ctx context.Context, host string) error {
+				h := strings.ToLower(strings.TrimSpace(host))
+				if h == domain || strings.HasSuffix(h, "."+domain) {
+					return nil
+				}
+				return fmt.Errorf("acme: host %q not allowed (want %s or *.%s)", host, domain, domain)
+			}
+
 			certManager := &autocert.Manager{
 				Prompt:     autocert.AcceptTOS,
-				HostPolicy: autocert.HostWhitelist(cfg.Server.Domain),
+				HostPolicy: hostPolicy,
+				Email:      cfg.Server.Email,
 				Cache:      autocert.DirCache("/var/lib/bedrud/certs"),
 			}
 
