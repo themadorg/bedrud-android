@@ -46,7 +46,6 @@
   <string name="dashboard_dialog_createDescription">Entrez un nom pour votre salon, ou laissez vide pour un nom généré automatiquement.</string>
   <string name="dashboard_label_roomName">Nom du salon (facultatif)</string>
   <string name="dashboard_button_createFirstRoom">Créez votre premier salon</string>
-  <string name="dashboard_contentDescription_refresh">Actualiser</string>
   <string name="dashboard_contentDescription_createRoom">Créer un salon</string>
   <string name="dashboard_contentDescription_settings">Paramètres</string>
   <string name="dashboard_roomSettings_title">Paramètres du salon</string>

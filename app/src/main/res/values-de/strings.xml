@@ -46,7 +46,6 @@
   <string name="dashboard_dialog_createDescription">Geben Sie einen Namen für Ihren Raum ein oder lassen Sie das Feld leer für einen automatisch generierten Namen.</string>
   <string name="dashboard_label_roomName">Raumname (optional)</string>
   <string name="dashboard_button_createFirstRoom">Erstellen Sie Ihren ersten Raum</string>
-  <string name="dashboard_contentDescription_refresh">Aktualisieren</string>
   <string name="dashboard_contentDescription_createRoom">Raum erstellen</string>
   <string name="dashboard_contentDescription_settings">Einstellungen</string>
   <string name="dashboard_roomSettings_title">Raumeinstellungen</string>

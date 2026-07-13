@@ -46,7 +46,6 @@
   <string name="dashboard_dialog_createDescription">Odanız için bir ad girin veya otomatik oluşturulan bir ad için boş bırakın.</string>
   <string name="dashboard_label_roomName">Oda Adı (isteğe bağlı)</string>
   <string name="dashboard_button_createFirstRoom">İlk odanızı oluşturun</string>
-  <string name="dashboard_contentDescription_refresh">Yenile</string>
   <string name="dashboard_contentDescription_createRoom">Oda Oluştur</string>
   <string name="dashboard_contentDescription_settings">Ayarlar</string>
   <string name="dashboard_roomSettings_title">Oda Ayarları</string>

@@ -44,7 +44,6 @@
   <string name="dashboard_dialog_createDescription">نامی برای اتاق خود وارد کنید، یا برای نام خودکار خالی بگذارید.</string>
   <string name="dashboard_label_roomName">نام اتاق (اختیاری)</string>
   <string name="dashboard_button_createFirstRoom">ایجاد اولین اتاق خود</string>
-  <string name="dashboard_contentDescription_refresh">بروزرسانی</string>
   <string name="dashboard_contentDescription_createRoom">ایجاد اتاق</string>
   <string name="dashboard_contentDescription_settings">تنظیمات</string>
   <string name="dashboard_roomSettings_title">تنظیمات اتاق</string>

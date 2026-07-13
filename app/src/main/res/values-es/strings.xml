@@ -46,7 +46,6 @@
   <string name="dashboard_dialog_createDescription">Introduce un nombre para tu sala o déjalo en blanco para un nombre generado automáticamente.</string>
   <string name="dashboard_label_roomName">Nombre de la sala (opcional)</string>
   <string name="dashboard_button_createFirstRoom">Crea tu primera sala</string>
-  <string name="dashboard_contentDescription_refresh">Actualizar</string>
   <string name="dashboard_contentDescription_createRoom">Crear sala</string>
   <string name="dashboard_contentDescription_settings">Ajustes</string>
   <string name="dashboard_roomSettings_title">Ajustes de la sala</string>

@@ -46,7 +46,6 @@
   <string name="dashboard_dialog_createDescription">ルーム名を入力するか、空白のままにすると自動生成されます。</string>
   <string name="dashboard_label_roomName">ルーム名（オプション）</string>
   <string name="dashboard_button_createFirstRoom">最初のルームを作成</string>
-  <string name="dashboard_contentDescription_refresh">更新</string>
   <string name="dashboard_contentDescription_createRoom">ルームを作成</string>
   <string name="dashboard_contentDescription_settings">設定</string>
   <string name="dashboard_roomSettings_title">ルーム設定</string>

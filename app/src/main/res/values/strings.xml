@@ -46,7 +46,6 @@
   <string name="dashboard_dialog_createDescription">Enter a name for your room, or leave blank for an auto-generated name.</string>
   <string name="dashboard_label_roomName">Room Name (optional)</string>
   <string name="dashboard_button_createFirstRoom">Create your first room</string>
-  <string name="dashboard_contentDescription_refresh">Refresh</string>
   <string name="dashboard_contentDescription_createRoom">Create Room</string>
   <string name="dashboard_contentDescription_settings">Settings</string>
   <string name="dashboard_roomSettings_title">Room Settings</string>

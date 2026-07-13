@@ -46,7 +46,6 @@
   <string name="dashboard_dialog_createDescription">أدخل اسماً لغرفتك، أو اتركه فارغاً لإنشاء اسم تلقائي.</string>
   <string name="dashboard_label_roomName">اسم الغرفة (اختياري)</string>
   <string name="dashboard_button_createFirstRoom">أنشئ غرفتك الأولى</string>
-  <string name="dashboard_contentDescription_refresh">تحديث</string>
   <string name="dashboard_contentDescription_createRoom">إنشاء غرفة</string>
   <string name="dashboard_contentDescription_settings">الإعدادات</string>
   <string name="dashboard_roomSettings_title">إعدادات الغرفة</string>

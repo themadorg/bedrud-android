@@ -46,7 +46,6 @@
   <string name="dashboard_dialog_createDescription">输入房间名称，或留空以自动生成名称。</string>
   <string name="dashboard_label_roomName">房间名称（可选）</string>
   <string name="dashboard_button_createFirstRoom">创建您的第一个房间</string>
-  <string name="dashboard_contentDescription_refresh">刷新</string>
   <string name="dashboard_contentDescription_createRoom">创建房间</string>
   <string name="dashboard_contentDescription_settings">设置</string>
   <string name="dashboard_roomSettings_title">房间设置</string>

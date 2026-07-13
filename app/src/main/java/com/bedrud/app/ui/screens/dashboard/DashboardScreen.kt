@@ -27,7 +27,6 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Groups
 import androidx.compose.material.icons.filled.History
-import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.AlertDialog
@@ -49,6 +48,7 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import com.bedrud.app.ui.components.BedrudButton
 import com.bedrud.app.ui.components.BedrudButtonVariant
 import androidx.compose.runtime.Composable
@@ -56,6 +56,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -71,6 +72,8 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import com.bedrud.app.R
 import com.bedrud.app.core.call.CallService
 import com.bedrud.app.core.deeplink.BedrudURLParser
@@ -116,31 +119,60 @@ fun DashboardContent(
 
     var rooms by remember { mutableStateOf<List<UserRoomResponse>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
+    var isRefreshing by remember { mutableStateOf(false) }
+    var lastFetchAtMs by remember { mutableLongStateOf(0L) }
     var showCreateDialog by remember { mutableStateOf(false) }
     var roomToEdit by remember { mutableStateOf<UserRoomResponse?>(null) }
     var roomToDelete by remember { mutableStateOf<UserRoomResponse?>(null) }
     var activeFilter by rememberSaveable { mutableStateOf(RoomFilter.RECENT) }
     var quickJoinText by remember { mutableStateOf("") }
 
-    fun loadRooms() {
-        scope.launch {
-            isLoading = true
-            try {
-                val response = roomApi.listRooms()
-                if (response.isSuccessful) {
-                    rooms = response.body() ?: emptyList()
-                } else {
-                    snackbarHostState.showSnackbar("Failed to load rooms")
-                }
-            } catch (e: Exception) {
-                snackbarHostState.showSnackbar(e.message ?: "Failed to load rooms")
-            } finally {
-                isLoading = false
+    // Returns an error message on failure, or null on success.
+    suspend fun fetchRooms(): String? {
+        return try {
+            val response = roomApi.listRooms()
+            if (response.isSuccessful) {
+                rooms = response.body() ?: emptyList()
+                lastFetchAtMs = System.currentTimeMillis()
+                null
+            } else {
+                "Failed to load rooms"
             }
+        } catch (e: Exception) {
+            e.message ?: "Failed to load rooms"
         }
     }
 
+    fun loadRooms() {
+        scope.launch {
+            isLoading = true
+            fetchRooms()?.let { snackbarHostState.showSnackbar(it) }
+            isLoading = false
+        }
+    }
+
+    fun refreshRooms() {
+        scope.launch {
+            isRefreshing = true
+            fetchRooms()?.let { snackbarHostState.showSnackbar(it) }
+            isRefreshing = false
+        }
+    }
+
+    // Background refresh triggered by natural events (screen/app resumed). Skipped
+    // while a fetch is already in flight, a dialog is open (so we don't yank the
+    // room list out from under an in-progress edit/delete), or the last successful
+    // fetch was too recent — and fails without surfacing a snackbar, so flaky
+    // connectivity or rapid tab switching doesn't spam the user or hammer the server.
+    fun silentlyRefreshRooms() {
+        if (isLoading || isRefreshing) return
+        if (showCreateDialog || roomToEdit != null || roomToDelete != null) return
+        if (System.currentTimeMillis() - lastFetchAtMs < 3_000L) return
+        scope.launch { fetchRooms() }
+    }
+
     LaunchedEffect(Unit) { loadRooms() }
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { silentlyRefreshRooms() }
 
     if (showCreateDialog) {
         CreateRoomDialog(
@@ -256,14 +288,6 @@ fun DashboardContent(
         topBar = {
             BedrudCompactTopBar(
                 title = stringResource(R.string.dashboard_title_rooms),
-                actions = {
-                    IconButton(onClick = { loadRooms() }) {
-                        Icon(
-                            Icons.Default.Refresh,
-                            contentDescription = stringResource(R.string.dashboard_contentDescription_refresh),
-                        )
-                    }
-                },
             )
         },
         floatingActionButton = {
@@ -275,149 +299,155 @@ fun DashboardContent(
         },
         snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { innerPadding ->
-        if (isLoading && rooms.isEmpty() && recentRooms.isEmpty()) {
-            Box(
-                modifier = Modifier.fillMaxSize().padding(innerPadding),
-                contentAlignment = Alignment.Center
-            ) { CircularProgressIndicator() }
-        } else {
-            // Header height, captured so the empty state below can be centered against the
-            // full screen rather than just the space left over beneath it.
-            var quickJoinHeightPx by remember { mutableIntStateOf(0) }
-            var filterRowHeightPx by remember { mutableIntStateOf(0) }
+        PullToRefreshBox(
+            isRefreshing = isRefreshing,
+            onRefresh = { refreshRooms() },
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding),
+        ) {
+            if (isLoading && rooms.isEmpty() && recentRooms.isEmpty()) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) { CircularProgressIndicator() }
+            } else {
+                // Header height, captured so the empty state below can be centered against the
+                // full screen rather than just the space left over beneath it.
+                var quickJoinHeightPx by remember { mutableIntStateOf(0) }
+                var filterRowHeightPx by remember { mutableIntStateOf(0) }
 
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding)
-            ) {
-                // ── Quick join bar ────────────────────────────────
-                QuickJoinBar(
-                    value = quickJoinText,
-                    onValueChange = { quickJoinText = it },
-                    onJoin = {
-                        val roomName = BedrudURLParser.parseJoinInput(quickJoinText)
-                        if (!roomName.isNullOrBlank()) {
-                            quickJoinText = ""
-                            onJoinRoom(roomName)
-                        }
-                    },
-                    modifier = Modifier
-                        .padding(horizontal = 16.dp, vertical = 4.dp)
-                        .onGloballyPositioned { quickJoinHeightPx = it.size.height }
-                )
-
-                // ── Filter tabs ───────────────────────────────────
-                FilterRow(
-                    activeFilter = activeFilter,
-                    onFilterChange = { activeFilter = it },
-                    modifier = Modifier
-                        .padding(horizontal = 16.dp, vertical = 4.dp)
-                        .onGloballyPositioned { filterRowHeightPx = it.size.height }
-                )
-
-                // ── Room list ─────────────────────────────────────
-                val isCurrentTabEmpty = when (activeFilter) {
-                    RoomFilter.RECENT -> recentRooms.isEmpty()
-                    RoomFilter.ALL -> allTabEntries.isEmpty() && !isLoading
-                    else -> filteredRooms.isEmpty() && !isLoading
-                }
-
-                if (isCurrentTabEmpty) {
-                    // Centering only within this leftover space (below the header) would pull
-                    // the icon+text+button group noticeably above the true center of the
-                    // screen, since nothing balances the header's height at the bottom. Nudge
-                    // the group up by half the header height so its own midpoint lands on the
-                    // screen's midpoint instead.
-                    val pullUp = with(LocalDensity.current) {
-                        ((quickJoinHeightPx + filterRowHeightPx) / 2).toDp()
-                    }
-                    Box(
-                        modifier = Modifier.weight(1f).fillMaxSize(),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Box(modifier = Modifier.offset(y = -pullUp)) {
-                            when (activeFilter) {
-                                RoomFilter.RECENT -> RecentEmptyState()
-                                RoomFilter.ALL -> EmptyState(
-                                    hasFilter = false,
-                                    onCreateRoom = { showCreateDialog = true },
-                                )
-                                else -> EmptyState(
-                                    hasFilter = true,
-                                    onCreateRoom = { showCreateDialog = true },
-                                )
+                Column(
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    // ── Quick join bar ────────────────────────────────
+                    QuickJoinBar(
+                        value = quickJoinText,
+                        onValueChange = { quickJoinText = it },
+                        onJoin = {
+                            val roomName = BedrudURLParser.parseJoinInput(quickJoinText)
+                            if (!roomName.isNullOrBlank()) {
+                                quickJoinText = ""
+                                onJoinRoom(roomName)
                             }
-                        }
+                        },
+                        modifier = Modifier
+                            .padding(horizontal = 16.dp, vertical = 4.dp)
+                            .onGloballyPositioned { quickJoinHeightPx = it.size.height }
+                    )
+
+                    // ── Filter tabs ───────────────────────────────────
+                    FilterRow(
+                        activeFilter = activeFilter,
+                        onFilterChange = { activeFilter = it },
+                        modifier = Modifier
+                            .padding(horizontal = 16.dp, vertical = 4.dp)
+                            .onGloballyPositioned { filterRowHeightPx = it.size.height }
+                    )
+
+                    // ── Room list ─────────────────────────────────────
+                    val isCurrentTabEmpty = when (activeFilter) {
+                        RoomFilter.RECENT -> recentRooms.isEmpty()
+                        RoomFilter.ALL -> allTabEntries.isEmpty() && !isLoading
+                        else -> filteredRooms.isEmpty() && !isLoading
                     }
-                } else {
-                    LazyColumn(
-                        modifier = Modifier.weight(1f).fillMaxSize(),
-                        contentPadding = PaddingValues(
-                            bottom = if (isKeyboardVisible) 16.dp else 88.dp,
-                        )
-                    ) {
-                        if (activeFilter == RoomFilter.RECENT) {
-                            items(
-                                recentRooms,
-                                key = { "${it.instanceId}:${it.roomName}" },
-                            ) { recent ->
-                                RecentRoomCard(
-                                    recent = recent,
-                                    isCurrentServer = recent.instanceId == activeInstanceId,
-                                    onJoin = { onJoinRecent(recent) },
-                                    onRemove = {
-                                        recentRoomsStore.remove(recent.roomName, recent.instanceId)
-                                    },
-                                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
-                                )
-                            }
-                        } else if (activeFilter == RoomFilter.ALL) {
-                            items(
-                                allTabEntries,
-                                key = { entry ->
-                                    when (entry) {
-                                        is RoomListEntry.FromApi -> "api:${entry.room.id}"
-                                        is RoomListEntry.FromRecent ->
-                                            "recent:${entry.recent.instanceId}:${entry.recent.roomName}"
-                                    }
-                                },
-                            ) { entry ->
-                                when (entry) {
-                                    is RoomListEntry.FromApi -> RoomCard(
-                                        room = entry.room,
-                                        onJoin = { onJoinRoom(entry.room.name) },
-                                        onDelete = { roomToDelete = entry.room },
-                                        onSettings = if (entry.room.createdBy == currentUser?.id) {
-                                            { roomToEdit = entry.room }
-                                        } else null,
-                                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+
+                    if (isCurrentTabEmpty) {
+                        // Centering only within this leftover space (below the header) would pull
+                        // the icon+text+button group noticeably above the true center of the
+                        // screen, since nothing balances the header's height at the bottom. Nudge
+                        // the group up by half the header height so its own midpoint lands on the
+                        // screen's midpoint instead.
+                        val pullUp = with(LocalDensity.current) {
+                            ((quickJoinHeightPx + filterRowHeightPx) / 2).toDp()
+                        }
+                        Box(
+                            modifier = Modifier.weight(1f).fillMaxSize(),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Box(modifier = Modifier.offset(y = -pullUp)) {
+                                when (activeFilter) {
+                                    RoomFilter.RECENT -> RecentEmptyState()
+                                    RoomFilter.ALL -> EmptyState(
+                                        hasFilter = false,
+                                        onCreateRoom = { showCreateDialog = true },
                                     )
-                                    is RoomListEntry.FromRecent -> RecentRoomCard(
-                                        recent = entry.recent,
-                                        isCurrentServer = entry.recent.instanceId == activeInstanceId,
-                                        onJoin = { onJoinRecent(entry.recent) },
+                                    else -> EmptyState(
+                                        hasFilter = true,
+                                        onCreateRoom = { showCreateDialog = true },
+                                    )
+                                }
+                            }
+                        }
+                    } else {
+                        LazyColumn(
+                            modifier = Modifier.weight(1f).fillMaxSize(),
+                            contentPadding = PaddingValues(
+                                bottom = if (isKeyboardVisible) 16.dp else 88.dp,
+                            )
+                        ) {
+                            if (activeFilter == RoomFilter.RECENT) {
+                                items(
+                                    recentRooms,
+                                    key = { "${it.instanceId}:${it.roomName}" },
+                                ) { recent ->
+                                    RecentRoomCard(
+                                        recent = recent,
+                                        isCurrentServer = recent.instanceId == activeInstanceId,
+                                        onJoin = { onJoinRecent(recent) },
                                         onRemove = {
-                                            recentRoomsStore.remove(
-                                                entry.recent.roomName,
-                                                entry.recent.instanceId,
-                                            )
+                                            recentRoomsStore.remove(recent.roomName, recent.instanceId)
                                         },
                                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
                                     )
                                 }
-                            }
-                        } else {
-                            items(filteredRooms, key = { it.id }) { room ->
-                                RoomCard(
-                                    room = room,
-                                    onJoin = { onJoinRoom(room.name) },
-                                    onDelete = { roomToDelete = room },
-                                    onSettings = if (room.createdBy == currentUser?.id) {
-                                        { roomToEdit = room }
-                                    } else null,
-                                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
-                                )
+                            } else if (activeFilter == RoomFilter.ALL) {
+                                items(
+                                    allTabEntries,
+                                    key = { entry ->
+                                        when (entry) {
+                                            is RoomListEntry.FromApi -> "api:${entry.room.id}"
+                                            is RoomListEntry.FromRecent ->
+                                                "recent:${entry.recent.instanceId}:${entry.recent.roomName}"
+                                        }
+                                    },
+                                ) { entry ->
+                                    when (entry) {
+                                        is RoomListEntry.FromApi -> RoomCard(
+                                            room = entry.room,
+                                            onJoin = { onJoinRoom(entry.room.name) },
+                                            onDelete = { roomToDelete = entry.room },
+                                            onSettings = if (entry.room.createdBy == currentUser?.id) {
+                                                { roomToEdit = entry.room }
+                                            } else null,
+                                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                                        )
+                                        is RoomListEntry.FromRecent -> RecentRoomCard(
+                                            recent = entry.recent,
+                                            isCurrentServer = entry.recent.instanceId == activeInstanceId,
+                                            onJoin = { onJoinRecent(entry.recent) },
+                                            onRemove = {
+                                                recentRoomsStore.remove(
+                                                    entry.recent.roomName,
+                                                    entry.recent.instanceId,
+                                                )
+                                            },
+                                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                                        )
+                                    }
+                                }
+                            } else {
+                                items(filteredRooms, key = { it.id }) { room ->
+                                    RoomCard(
+                                        room = room,
+                                        onJoin = { onJoinRoom(room.name) },
+                                        onDelete = { roomToDelete = room },
+                                        onSettings = if (room.createdBy == currentUser?.id) {
+                                            { roomToEdit = room }
+                                        } else null,
+                                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
+                                    )
+                                }
                             }
                         }
                     }

@@ -46,7 +46,6 @@
   <string name="dashboard_dialog_createDescription">Введите название комнаты или оставьте пустым для автоматического названия.</string>
   <string name="dashboard_label_roomName">Название комнаты (необязательно)</string>
   <string name="dashboard_button_createFirstRoom">Создайте свою первую комнату</string>
-  <string name="dashboard_contentDescription_refresh">Обновить</string>
   <string name="dashboard_contentDescription_createRoom">Создать комнату</string>
   <string name="dashboard_contentDescription_settings">Настройки</string>
   <string name="dashboard_roomSettings_title">Настройки комнаты</string>
