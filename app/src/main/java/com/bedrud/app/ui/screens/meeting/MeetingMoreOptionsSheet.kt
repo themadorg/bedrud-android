@@ -13,6 +13,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Chat
+import androidx.compose.material.icons.automirrored.filled.VolumeOff
+import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.Cameraswitch
 import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.material.icons.filled.People
@@ -39,12 +41,14 @@ import com.bedrud.app.R
 @Composable
 fun MeetingMoreOptionsSheet(
     isCameraEnabled: Boolean,
+    isDeafened: Boolean,
     unreadCount: Int,
     onDismiss: () -> Unit,
     onSwitchCamera: () -> Unit,
     onToggleChat: () -> Unit,
     onToggleParticipants: () -> Unit,
     onCopyRoomLink: () -> Unit,
+    onToggleDeafen: () -> Unit,
     onOpenAudioSettings: () -> Unit,
 ) {
     val colors = meetingChromeColors()
@@ -116,6 +120,18 @@ fun MeetingMoreOptionsSheet(
 
             SheetLabeledButton(
                 colors = colors,
+                icon = if (isDeafened) Icons.AutoMirrored.Filled.VolumeOff else Icons.AutoMirrored.Filled.VolumeUp,
+                label = stringResource(R.string.meeting_sheet_deafen),
+                active = isDeafened,
+                onClick = {
+                    onToggleDeafen()
+                    onDismiss()
+                },
+                modifier = Modifier.fillMaxWidth(),
+            )
+
+            SheetLabeledButton(
+                colors = colors,
                 icon = Icons.Default.Settings,
                 label = stringResource(R.string.meeting_sheet_settings),
                 onClick = {
@@ -161,12 +177,13 @@ private fun SheetLabeledButton(
     modifier: Modifier = Modifier,
     badge: String? = null,
     enabled: Boolean = true,
+    active: Boolean = false,
 ) {
     Surface(
         onClick = onClick,
         enabled = enabled,
         shape = RoundedCornerShape(16.dp),
-        color = colors.button,
+        color = if (active) colors.buttonActive else colors.button,
         modifier = modifier.height(72.dp),
     ) {
         Column(

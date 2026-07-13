@@ -182,6 +182,7 @@ fun MeetingScreen(
     val isCameraEnabled by roomManager.isCameraEnabled.collectAsState()
     val cameraMediaError by roomManager.cameraMediaError.collectAsState()
     val isScreenShareEnabled by roomManager.isScreenShareEnabled.collectAsState()
+    val isDeafened by roomManager.isDeafened.collectAsState()
     val error by roomManager.error.collectAsState()
     val wasKicked by roomManager.wasKicked.collectAsState()
 
@@ -530,6 +531,7 @@ fun MeetingScreen(
                                 micHasError = micMediaError,
                                 cameraHasError = cameraMediaError,
                                 isScreenShareEnabled = isScreenShareEnabled,
+                                isDeafened = isDeafened,
                                 showChat = showChat,
                                 showParticipants = showParticipants,
                                 unreadCount = unreadCount,
@@ -581,6 +583,7 @@ fun MeetingScreen(
                                     clipboard.setText(AnnotatedString(link))
                                     scope.launch { snackbarHostState.showSnackbar(linkCopiedMessage) }
                                 },
+                                onToggleDeafen = { scope.launch { roomManager.toggleDeafen() } },
                                 onOpenAudioSettings = { showAudioSheet = true },
                                 onEndCall = {
                                     if (isAdmin) showLeaveDialog = true

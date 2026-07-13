@@ -173,6 +173,7 @@
   <string name="meeting_share_chooserTitle">Share meeting link</string>
   <string name="meeting_sheet_flipCamera">Flip camera</string>
   <string name="meeting_sheet_settings">Settings</string>
+  <string name="meeting_sheet_deafen">Deafen</string>
   <string name="meeting_sheet_tools">Tools</string>
   <string name="meeting_sheet_report">Report abuse</string>
   <string name="meeting_contentDescription_audioSource">Audio source</string>

@@ -22,6 +22,7 @@ import io.livekit.android.room.track.DataPublishReliability
 import io.livekit.android.room.participant.LocalParticipant
 import io.livekit.android.room.track.CameraPosition
 import io.livekit.android.room.track.LocalVideoTrack
+import io.livekit.android.room.track.RemoteAudioTrack
 import io.livekit.android.room.track.Track
 import io.livekit.android.room.track.screencapture.ScreenCaptureParams
 import kotlinx.coroutines.CoroutineScope
@@ -84,6 +85,10 @@ class RoomManager(private val application: Application) {
 
     private val _isScreenShareEnabled = MutableStateFlow(false)
     val isScreenShareEnabled: StateFlow<Boolean> = _isScreenShareEnabled.asStateFlow()
+
+    private val _isDeafened = MutableStateFlow(false)
+    val isDeafened: StateFlow<Boolean> = _isDeafened.asStateFlow()
+    private var micMutedBeforeDeafen = false
 
     // Incremented on every participant change to trigger recomposition
     private val _participantVersion = MutableStateFlow(0)
@@ -208,7 +213,12 @@ class RoomManager(private val application: Application) {
                             }
                             _participantVersion.value++
                         }
-                        is RoomEvent.TrackSubscribed -> _participantVersion.value++
+                        is RoomEvent.TrackSubscribed -> {
+                            if (_isDeafened.value) {
+                                (event.track as? RemoteAudioTrack)?.setVolume(0.0)
+                            }
+                            _participantVersion.value++
+                        }
                         is RoomEvent.TrackUnsubscribed -> _participantVersion.value++
                         is RoomEvent.TrackPublished -> {
                             if (event.publication.source == Track.Source.SCREEN_SHARE &&
@@ -345,6 +355,8 @@ class RoomManager(private val application: Application) {
         _isCameraEnabled.value = false
         _cameraMediaError.value = false
         _isScreenShareEnabled.value = false
+        _isDeafened.value = false
+        micMutedBeforeDeafen = false
         _participantVersion.value = 0
         _chatMessages.value = emptyList()
         _wasKicked.value = false
@@ -362,6 +374,12 @@ class RoomManager(private val application: Application) {
     }
 
     suspend fun setMicrophoneEnabled(enabled: Boolean) {
+        // Unmuting while deafened is a shortcut to undeafen too, mirroring the
+        // convention most call apps use for the mic button.
+        if (enabled && _isDeafened.value) {
+            _isDeafened.value = false
+            applyDeafenedVolume(false)
+        }
         val localParticipant = _room?.localParticipant ?: return
         if (localParticipant.isMicrophoneEnabled == enabled) {
             syncMicrophoneState()
@@ -389,6 +407,34 @@ class RoomManager(private val application: Application) {
 
     suspend fun toggleMicrophone() {
         setMicrophoneEnabled(!_isMicEnabled.value)
+    }
+
+    suspend fun toggleDeafen() {
+        val deafening = !_isDeafened.value
+        if (deafening) {
+            micMutedBeforeDeafen = !_isMicEnabled.value
+            _isDeafened.value = true
+            applyDeafenedVolume(true)
+            if (_isMicEnabled.value) {
+                setMicrophoneEnabled(false)
+            }
+        } else {
+            _isDeafened.value = false
+            applyDeafenedVolume(false)
+            if (!micMutedBeforeDeafen) {
+                setMicrophoneEnabled(true)
+            }
+        }
+    }
+
+    private fun applyDeafenedVolume(deafened: Boolean) {
+        val room = _room ?: return
+        val volume = if (deafened) 0.0 else 1.0
+        for (participant in room.remoteParticipants.values) {
+            for ((_, track) in participant.audioTrackPublications) {
+                (track as? RemoteAudioTrack)?.setVolume(volume)
+            }
+        }
     }
 
     private fun syncCameraState() {
