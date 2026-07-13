@@ -13,8 +13,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Chat
-import androidx.compose.material.icons.automirrored.filled.ScreenShare
-import androidx.compose.material.icons.automirrored.filled.StopScreenShare
 import androidx.compose.material.icons.filled.Cameraswitch
 import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.material.icons.filled.Settings
@@ -40,10 +38,8 @@ import com.bedrud.app.R
 @Composable
 fun MeetingMoreOptionsSheet(
     isCameraEnabled: Boolean,
-    isScreenShareEnabled: Boolean,
     unreadCount: Int,
     onDismiss: () -> Unit,
-    onToggleScreenShare: () -> Unit,
     onSwitchCamera: () -> Unit,
     onToggleChat: () -> Unit,
     onToggleParticipants: () -> Unit,
@@ -69,16 +65,6 @@ fun MeetingMoreOptionsSheet(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterHorizontally),
             ) {
-                SheetCircleAction(
-                    colors = colors,
-                    icon = if (isScreenShareEnabled) Icons.AutoMirrored.Filled.StopScreenShare
-                    else Icons.AutoMirrored.Filled.ScreenShare,
-                    contentDescription = stringResource(R.string.meeting_contentDescription_toggleScreenShare),
-                    onClick = {
-                        onToggleScreenShare()
-                        onDismiss()
-                    },
-                )
                 if (isCameraEnabled) {
                     SheetCircleAction(
                         colors = colors,

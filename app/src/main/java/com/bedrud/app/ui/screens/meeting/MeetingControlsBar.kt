@@ -15,6 +15,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Chat
+import androidx.compose.material.icons.automirrored.filled.ScreenShare
+import androidx.compose.material.icons.automirrored.filled.StopScreenShare
 import androidx.compose.material.icons.filled.CallEnd
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.MicOff
@@ -78,22 +80,31 @@ fun MeetingControlsBar(
         ) {
             MeetMediaButton(
                 colors = colors,
-                enabled = isMicEnabled,
-                hasError = micHasError,
-                onClick = onToggleMic,
-                enabledIcon = Icons.Default.Mic,
-                disabledIcon = Icons.Default.MicOff,
-                contentDescription = stringResource(R.string.meeting_contentDescription_toggleMic),
-            )
-
-            MeetMediaButton(
-                colors = colors,
                 enabled = isCameraEnabled,
                 hasError = cameraHasError,
                 onClick = onToggleCamera,
                 enabledIcon = Icons.Default.Videocam,
                 disabledIcon = Icons.Default.VideocamOff,
                 contentDescription = stringResource(R.string.meeting_contentDescription_toggleCamera),
+            )
+
+            MeetCircleButton(
+                colors = colors,
+                onClick = onToggleScreenShare,
+                icon = if (isScreenShareEnabled) Icons.AutoMirrored.Filled.StopScreenShare
+                else Icons.AutoMirrored.Filled.ScreenShare,
+                contentDescription = stringResource(R.string.meeting_contentDescription_toggleScreenShare),
+                containerColor = if (isScreenShareEnabled) colors.buttonActive else colors.button,
+            )
+
+            MeetMediaButton(
+                colors = colors,
+                enabled = isMicEnabled,
+                hasError = micHasError,
+                onClick = onToggleMic,
+                enabledIcon = Icons.Default.Mic,
+                disabledIcon = Icons.Default.MicOff,
+                contentDescription = stringResource(R.string.meeting_contentDescription_toggleMic),
             )
 
             MeetCircleButton(
@@ -114,7 +125,7 @@ fun MeetingControlsBar(
                 onClick = { showMoreMenu = true },
                 icon = Icons.Default.MoreHoriz,
                 contentDescription = stringResource(R.string.meeting_contentDescription_moreOptions),
-                containerColor = if (showMoreMenu || showParticipants || isScreenShareEnabled) {
+                containerColor = if (showMoreMenu || showParticipants) {
                     colors.buttonActive
                 } else {
                     colors.button
@@ -124,10 +135,8 @@ fun MeetingControlsBar(
             if (showMoreMenu) {
                 MeetingMoreOptionsSheet(
                     isCameraEnabled = isCameraEnabled,
-                    isScreenShareEnabled = isScreenShareEnabled,
                     unreadCount = unreadCount,
                     onDismiss = { showMoreMenu = false },
-                    onToggleScreenShare = onToggleScreenShare,
                     onSwitchCamera = onSwitchCamera,
                     onToggleChat = onToggleChat,
                     onToggleParticipants = onToggleParticipants,
