@@ -1,13 +1,13 @@
 import { useRoomContext } from '@livekit/components-react'
-import { RoomEvent, type Room } from 'livekit-client'
+import { type Room, RoomEvent } from 'livekit-client'
 import { useCallback, useEffect, useRef } from 'react'
 import { toast } from 'sonner'
 import { api } from '#/lib/api'
 import { isRoomPublishReady, prepareRoomForDataPublish } from '#/lib/livekit-publish'
 import {
+  type ChatAttachment,
   normalizeChatAttachment,
   useMeetingChatContext,
-  type ChatAttachment,
 } from '@/components/meeting/MeetingContext'
 import { listWebxdcUpdates, postWebxdcUpdate } from './webxdcApi'
 import {
@@ -105,15 +105,10 @@ function base64ToBlob(base64: string, mime: string): Blob {
  * - realtime over LiveKit webxdc-rt
  * - sendToChat → meeting chat with confirm
  */
-export function useWebxdcHost(
-  iframeRef: React.RefObject<HTMLIFrameElement | null>,
-  opts: WebxdcHostOpts | null,
-) {
+export function useWebxdcHost(iframeRef: React.RefObject<HTMLIFrameElement | null>, opts: WebxdcHostOpts | null) {
   const room = useRoomContext()
   const { appendSystemMessage, sendChat } = useMeetingChatContext()
-  const rate = useRef(
-    new WebxdcSendUpdateRateLimiter(opts?.sendUpdateIntervalMs ?? WEBXDC_SEND_UPDATE_INTERVAL_MS),
-  )
+  const rate = useRef(new WebxdcSendUpdateRateLimiter(opts?.sendUpdateIntervalMs ?? WEBXDC_SEND_UPDATE_INTERVAL_MS))
   const rtJoined = useRef(false)
   /** Queue realtime packets until LiveKit publish is ready (OpenArena joins early). */
   const rtQueue = useRef<number[][]>([])
@@ -172,11 +167,7 @@ export function useWebxdcHost(
     async (requestId: string, after: number) => {
       if (!opts) return
       try {
-        const { updates, maxSerial } = await listWebxdcUpdates(
-          opts.roomId,
-          opts.instanceId,
-          after,
-        )
+        const { updates, maxSerial } = await listWebxdcUpdates(opts.roomId, opts.instanceId, after)
         const shaped = updates.map((u) => {
           const serial = Number(u.serial ?? 0)
           return {
@@ -350,17 +341,10 @@ export function useWebxdcHost(
   )
 
   const handleSendToChat = useCallback(
-    async (
-      requestId: string,
-      text: string,
-      file: { name: string; base64: string; mime?: string } | null,
-    ) => {
+    async (requestId: string, text: string, file: { name: string; base64: string; mime?: string } | null) => {
       const preview =
-        (text?.trim() ? text.trim().slice(0, 80) : '') +
-        (file ? `${text?.trim() ? ' + ' : ''}file “${file.name}”` : '')
-      const ok = window.confirm(
-        `Send this from the mini-app to the meeting chat?\n\n${preview || '(empty)'}`,
-      )
+        (text?.trim() ? text.trim().slice(0, 80) : '') + (file ? `${text?.trim() ? ' + ' : ''}file “${file.name}”` : '')
+      const ok = window.confirm(`Send this from the mini-app to the meeting chat?\n\n${preview || '(empty)'}`)
       if (!ok) {
         postToIframe({
           type: 'sendToChatResult',
@@ -372,7 +356,7 @@ export function useWebxdcHost(
       }
       try {
         let attachments: ChatAttachment[] | undefined
-        let message = text?.trim() || ''
+        const message = text?.trim() || ''
         if (file) {
           const mime = file.mime || 'application/octet-stream'
           const blob = base64ToBlob(file.base64, mime)
@@ -485,12 +469,7 @@ export function useWebxdcHost(
   // LiveKit realtime + status fan-out
   useEffect(() => {
     if (!opts) return
-    const onData = (
-      payload: Uint8Array,
-      participant?: { identity?: string },
-      _kind?: unknown,
-      topic?: string,
-    ) => {
+    const onData = (payload: Uint8Array, participant?: { identity?: string }, _kind?: unknown, topic?: string) => {
       if (participant?.identity === room.localParticipant.identity) return
 
       if (topic === WEBXDC_REALTIME_TOPIC) {
@@ -566,9 +545,7 @@ export function useWebxdcHost(
         statusFlushTimer.current = null
       }
     }
-    rate.current = new WebxdcSendUpdateRateLimiter(
-      opts.sendUpdateIntervalMs ?? WEBXDC_SEND_UPDATE_INTERVAL_MS,
-    )
+    rate.current = new WebxdcSendUpdateRateLimiter(opts.sendUpdateIntervalMs ?? WEBXDC_SEND_UPDATE_INTERVAL_MS)
 
     const selfAddr =
       (opts.selfAddr && opts.selfAddr.trim()) ||
@@ -588,8 +565,7 @@ export function useWebxdcHost(
         return (
           a.protocol === b.protocol &&
           norm(a.hostname) === norm(b.hostname) &&
-          (a.port || (a.protocol === 'https:' ? '443' : '80')) ===
-            (b.port || (b.protocol === 'https:' ? '443' : '80'))
+          (a.port || (a.protocol === 'https:' ? '443' : '80')) === (b.port || (b.protocol === 'https:' ? '443' : '80'))
         )
       } catch {
         return false
@@ -679,15 +655,7 @@ export function useWebxdcHost(
 
     window.addEventListener('message', onMessage)
     return () => window.removeEventListener('message', onMessage)
-  }, [
-    opts,
-    iframeRef,
-    sendInit,
-    handleGetUpdates,
-    handleSendToChat,
-    enqueueOrSendUpdate,
-    publishRt,
-  ])
+  }, [opts, iframeRef, sendInit, handleGetUpdates, handleSendToChat, enqueueOrSendUpdate, publishRt])
 
   // Peer catch-up: nudge iframe to pull (same as Desktop statusUpdate events).
   useEffect(() => {

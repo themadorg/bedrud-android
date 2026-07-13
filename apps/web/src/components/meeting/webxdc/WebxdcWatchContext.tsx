@@ -4,18 +4,18 @@ import { useExperimentalPreferencesStore } from '#/lib/experimental-preferences.
 import { useMeetingRoomContext } from '@/components/meeting/MeetingContext'
 import { useOptionalMeetingStage } from '@/components/meeting/stage/MeetingStageContext'
 import {
+  startResponseToSession,
+  ticketResponseToSession,
+  type WebxdcSession,
+  WebxdcWatchContext,
+} from './webxdc-watch-context'
+import {
   closeWebxdcInstance,
   fetchWebxdcConfig,
   mintWebxdcTicket,
   startWebxdcInstance,
   uploadWebxdcPackage,
 } from './webxdcApi'
-import {
-  startResponseToSession,
-  ticketResponseToSession,
-  WebxdcWatchContext,
-  type WebxdcSession,
-} from './webxdc-watch-context'
 
 export { useOptionalWebxdcWatch, useWebxdcWatch } from './webxdc-watch-context'
 

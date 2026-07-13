@@ -28,12 +28,7 @@ export function WebxdcStageOverlay() {
   }
 
   const lp = room.localParticipant
-  const selfName =
-    session.selfName?.trim() ||
-    getParticipantDisplayName(lp) ||
-    lp.name ||
-    lp.identity ||
-    'You'
+  const selfName = session.selfName?.trim() || getParticipantDisplayName(lp) || lp.name || lp.identity || 'You'
   const selfAvatarUrl = getParticipantAvatarUrl(lp)
 
   return (

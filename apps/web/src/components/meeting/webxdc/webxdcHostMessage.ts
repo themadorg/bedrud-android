@@ -63,10 +63,7 @@ export type WebxdcIframeToHost =
  * Parse untrusted postMessage data from an iframe.
  * Caller must still check event.source and event.origin.
  */
-export function parseWebxdcIframeMessage(
-  data: unknown,
-  boundAppId: string,
-): WebxdcIframeToHost | null {
+export function parseWebxdcIframeMessage(data: unknown, boundAppId: string): WebxdcIframeToHost | null {
   if (data === null || typeof data !== 'object' || Array.isArray(data)) return null
   const o = data as Record<string, unknown>
   if (o.channel !== WEBXDC_POSTMESSAGE_CHANNEL) return null

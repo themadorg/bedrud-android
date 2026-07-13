@@ -1,8 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import {
-  deriveWebxdcSelfAddrKey,
-  selfAddrsAreUnlinkableAcrossApps,
-} from './webxdcSelfAddr'
+import { deriveWebxdcSelfAddrKey, selfAddrsAreUnlinkableAcrossApps } from './webxdcSelfAddr'
 
 describe('webxdcSelfAddr', () => {
   it('is stable for same user+app+room', () => {

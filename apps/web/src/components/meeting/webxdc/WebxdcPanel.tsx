@@ -260,11 +260,11 @@ export function WebxdcPanel({ roomId, canUpload = true }: Props) {
                   >
                     <span className="min-w-0 flex-1 truncate text-[var(--meet-fg-strong)]">
                       {label}
-                      {i.summary ? (
-                        <span className="text-[var(--meet-fg-muted)]">{` — ${i.summary}`}</span>
-                      ) : null}
+                      {i.summary ? <span className="text-[var(--meet-fg-muted)]">{` — ${i.summary}`}</span> : null}
                     </span>
-                    {opening ? <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin text-[var(--meet-accent)]" /> : null}
+                    {opening ? (
+                      <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin text-[var(--meet-accent)]" />
+                    ) : null}
                   </button>
                 </li>
               )

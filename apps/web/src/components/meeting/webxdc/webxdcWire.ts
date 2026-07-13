@@ -1,5 +1,5 @@
-import { validateSendUpdate, type WebxdcSendUpdate } from './webxdcUpdate'
 import { WEBXDC_SEND_UPDATE_MAX_SIZE } from './webxdcConstants'
+import { validateSendUpdate, type WebxdcSendUpdate } from './webxdcUpdate'
 
 export type WebxdcStatusWire = {
   v: 1
@@ -25,10 +25,7 @@ function isNonEmptyString(x: unknown): x is string {
   return typeof x === 'string' && x.length > 0
 }
 
-export function parseWebxdcWire(
-  raw: unknown,
-  maxUpdateSize: number = WEBXDC_SEND_UPDATE_MAX_SIZE,
-): WebxdcWire | null {
+export function parseWebxdcWire(raw: unknown, maxUpdateSize: number = WEBXDC_SEND_UPDATE_MAX_SIZE): WebxdcWire | null {
   if (raw === null || typeof raw !== 'object' || Array.isArray(raw)) return null
   const o = raw as Record<string, unknown>
   if (o.v !== 1) return null

@@ -3,11 +3,11 @@ import { ConnectionState } from 'livekit-client'
 import { Loader2, X } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { useEffect, useState } from 'react'
+import { meetingPanelScopeClass, settingsDialogScrollClass } from '#/components/settings/settingsPanelTone'
 import { useAudioPreferencesStore } from '#/lib/audio-preferences.store'
 import { useExperimentalPreferencesStore } from '#/lib/experimental-preferences.store'
 import { useRoomPublishReady } from '#/lib/livekit-publish'
 import { liveKitTransportModeLabel, useLiveKitTransportMode } from '#/lib/livekit-transport-type'
-import { meetingPanelScopeClass, settingsDialogScrollClass } from '#/components/settings/settingsPanelTone'
 import { MeetingElevatedLeftDock } from '@/components/meeting/MeetingElevatedLeftDock'
 import {
   formatMeetingClock,
@@ -99,19 +99,15 @@ function RoomInfoSheetHeader({ onClose }: { onClose: () => void }) {
       <div className="flex shrink-0 items-end justify-between gap-4 border-b border-[var(--meet-border)] px-4 py-3.5">
         <div className="min-w-0">
           <p className="text-[11px] font-medium uppercase tracking-wider text-[var(--meet-fg-muted)]">In meeting</p>
-          <p
-            className="mt-1 text-4xl font-bold leading-none tabular-nums tracking-tight text-[var(--meet-fg-strong)]"
-            aria-label={`Meeting duration ${elapsed}`}
-          >
+          <p className="mt-1 text-4xl font-bold leading-none tabular-nums tracking-tight text-[var(--meet-fg-strong)]">
+            <span className="sr-only">Meeting duration </span>
             {elapsed}
           </p>
         </div>
         <div className="shrink-0 self-end pb-0.5 text-end">
           <p className="text-[10px] font-medium uppercase tracking-wider text-[var(--meet-fg-muted)]">Local time</p>
-          <p
-            className="mt-1 text-[13px] tabular-nums text-[var(--meet-fg-muted)]"
-            aria-label={`Current time ${clock}`}
-          >
+          <p className="mt-1 text-[13px] tabular-nums text-[var(--meet-fg-muted)]">
+            <span className="sr-only">Current time </span>
             {clock}
           </p>
         </div>
@@ -135,16 +131,15 @@ function RoomInfoDesktopHeader() {
       <div className="mt-3 flex items-end justify-between gap-4">
         <div className="min-w-0">
           <p className="text-[11px] font-medium uppercase tracking-wider text-[var(--meet-fg-muted)]">In meeting</p>
-          <p
-            className="mt-1 text-4xl font-bold leading-none tabular-nums tracking-tight text-[var(--meet-fg-strong)]"
-            aria-label={`Meeting duration ${elapsed}`}
-          >
+          <p className="mt-1 text-4xl font-bold leading-none tabular-nums tracking-tight text-[var(--meet-fg-strong)]">
+            <span className="sr-only">Meeting duration </span>
             {elapsed}
           </p>
         </div>
         <div className="shrink-0 self-end pb-0.5 text-end">
           <p className="text-[10px] font-medium uppercase tracking-wider text-[var(--meet-fg-muted)]">Local time</p>
-          <p className="mt-1 text-[13px] tabular-nums text-[var(--meet-fg-muted)]" aria-label={`Current time ${clock}`}>
+          <p className="mt-1 text-[13px] tabular-nums text-[var(--meet-fg-muted)]">
+            <span className="sr-only">Current time </span>
             {clock}
           </p>
         </div>
@@ -265,8 +260,8 @@ export function RoomInfoContent({ roomId, active = true }: RoomInfoContentProps)
         ) : (
           <div className="rounded-xl border border-[var(--meet-border)] bg-[var(--meet-surface-muted)] px-3.5 py-3 text-[11px] text-[var(--meet-fg-muted)]">
             WebXDC mini-apps: enable under{' '}
-            <span className="font-medium text-[var(--meet-fg-strong)]">Settings → Experimental</span>
-            . Server must also have webxdc configured (domain + baseDomain).
+            <span className="font-medium text-[var(--meet-fg-strong)]">Settings → Experimental</span>. Server must also
+            have webxdc configured (domain + baseDomain).
           </div>
         )}
       </div>

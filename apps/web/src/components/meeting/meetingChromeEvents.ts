@@ -58,9 +58,5 @@ export function publishMeetingChromeState(panel: MeetingChromePanel) {
 }
 
 export function isWebxdcExpandSource(detail: unknown): boolean {
-  return (
-    !!detail &&
-    typeof detail === 'object' &&
-    (detail as MeetingChromeOpenDetail).source === 'webxdc-expand'
-  )
+  return !!detail && typeof detail === 'object' && (detail as MeetingChromeOpenDetail).source === 'webxdc-expand'
 }

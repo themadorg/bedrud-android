@@ -7,11 +7,7 @@
  */
 
 /** Derive a stable opaque id from parts (not crypto-grade; tests + client cache key). */
-export function deriveWebxdcSelfAddrKey(parts: {
-  roomId: string
-  appId: string
-  userId: string
-}): string {
+export function deriveWebxdcSelfAddrKey(parts: { roomId: string; appId: string; userId: string }): string {
   // Deliberately include appId so two apps for same user differ.
   return `wx:${parts.roomId}:${parts.appId}:${parts.userId}`
 }

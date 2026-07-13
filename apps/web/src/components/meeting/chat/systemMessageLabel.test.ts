@@ -15,11 +15,11 @@ describe('systemMessageLabel', () => {
   })
 
   it('formats kick/ban when message missing', () => {
-    expect(
-      systemMessageLabel({ type: 'system', event: 'kick', actor: 'mod', target: 'user', ts: 1 }),
-    ).toBe('user was kicked by mod')
-    expect(
-      systemMessageLabel({ type: 'system', event: 'ban', actor: 'mod', target: 'user', ts: 1 }),
-    ).toBe('user was banned by mod')
+    expect(systemMessageLabel({ type: 'system', event: 'kick', actor: 'mod', target: 'user', ts: 1 })).toBe(
+      'user was kicked by mod',
+    )
+    expect(systemMessageLabel({ type: 'system', event: 'ban', actor: 'mod', target: 'user', ts: 1 })).toBe(
+      'user was banned by mod',
+    )
   })
 })

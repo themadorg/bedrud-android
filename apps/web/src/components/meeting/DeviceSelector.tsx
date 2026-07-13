@@ -98,22 +98,14 @@ export function DeviceSelector({ kind, menuSide, triggerClassName, elevated = fa
         <Button
           variant="ghost"
           size="icon"
-          className={cn(
-            'h-6 w-4 rounded-sm px-0 text-muted-foreground hover:text-foreground',
-            triggerClassName,
-          )}
+          className={cn('h-6 w-4 rounded-sm px-0 text-muted-foreground hover:text-foreground', triggerClassName)}
           aria-label={`Select ${kindLabel}`}
           title={kindTitle}
         >
           <ChevronDown className="h-3 w-3" />
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent
-        align="center"
-        side={menuSide}
-        sideOffset={8}
-        className={cn('w-56', elevated && 'z-[260]')}
-      >
+      <DropdownMenuContent align="center" side={menuSide} sideOffset={8} className={cn('w-56', elevated && 'z-[260]')}>
         {devices.length === 0 ? (
           <DropdownMenuItem disabled className="text-muted-foreground">
             No devices found

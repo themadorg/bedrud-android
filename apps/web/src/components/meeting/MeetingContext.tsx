@@ -944,11 +944,7 @@ export function MeetingProvider({
               return
             }
             // Stage / free-form event lines (message text; no target required).
-            if (
-              raw.event === 'stage' &&
-              typeof raw.message === 'string' &&
-              raw.message.trim().length > 0
-            ) {
+            if (raw.event === 'stage' && typeof raw.message === 'string' && raw.message.trim().length > 0) {
               const msg: SystemMessage = {
                 type: 'system',
                 event: 'stage',

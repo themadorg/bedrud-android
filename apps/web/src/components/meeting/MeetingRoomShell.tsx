@@ -1,6 +1,8 @@
 import { type ReactNode, useCallback, useEffect, useRef, useState } from 'react'
 import { MeetingHeader } from '@/components/meeting/MeetingHeader'
 import { MeetingPanels } from '@/components/meeting/MeetingPanels'
+import { MeetingUILayoutProvider, participantsDockOffset } from '@/components/meeting/MeetingUILayoutContext'
+import { MeetingViewportPanProvider } from '@/components/meeting/MeetingViewportPan'
 import {
   isWebxdcExpandSource,
   MEETING_CLOSE_ELEVATED_CHROME,
@@ -10,8 +12,6 @@ import {
   publishMeetingChromeState,
   requestCloseMeetingSettings,
 } from '@/components/meeting/meetingChromeEvents'
-import { MeetingUILayoutProvider, participantsDockOffset } from '@/components/meeting/MeetingUILayoutContext'
-import { MeetingViewportPanProvider } from '@/components/meeting/MeetingViewportPan'
 import { ParticipantVideoSidebar } from '@/components/meeting/ParticipantVideoSidebar'
 import { MeetingPresenceCursors } from '@/components/meeting/presence/MeetingPresenceCursors'
 import { useMeetingStage } from '@/components/meeting/stage/MeetingStageContext'

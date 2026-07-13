@@ -1,9 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import {
-  isTrustedWebxdcMessageEvent,
-  parseWebxdcIframeMessage,
-} from './webxdcHostMessage'
 import { WEBXDC_POSTMESSAGE_CHANNEL } from './webxdcConstants'
+import { isTrustedWebxdcMessageEvent, parseWebxdcIframeMessage } from './webxdcHostMessage'
 
 describe('parseWebxdcIframeMessage', () => {
   const appId = 'instance-1'
@@ -22,12 +19,7 @@ describe('parseWebxdcIframeMessage', () => {
   })
 
   it('rejects wrong channel', () => {
-    expect(
-      parseWebxdcIframeMessage(
-        { channel: 'other', type: 'ready', appId },
-        appId,
-      ),
-    ).toBeNull()
+    expect(parseWebxdcIframeMessage({ channel: 'other', type: 'ready', appId }, appId)).toBeNull()
   })
 
   it('rejects cross-appId publish', () => {
@@ -110,10 +102,7 @@ describe('parseWebxdcIframeMessage', () => {
   })
 
   it('accepts ready without appId (early ping)', () => {
-    const msg = parseWebxdcIframeMessage(
-      { channel: WEBXDC_POSTMESSAGE_CHANNEL, type: 'ready' },
-      appId,
-    )
+    const msg = parseWebxdcIframeMessage({ channel: WEBXDC_POSTMESSAGE_CHANNEL, type: 'ready' }, appId)
     expect(msg?.type).toBe('ready')
     expect(msg && 'appId' in msg ? msg.appId : null).toBe(appId)
   })
@@ -144,12 +133,9 @@ describe('parseWebxdcIframeMessage', () => {
   })
 
   it('parses rtJoin and rtSend', () => {
-    expect(
-      parseWebxdcIframeMessage(
-        { channel: WEBXDC_POSTMESSAGE_CHANNEL, type: 'rtJoin', appId },
-        appId,
-      )?.type,
-    ).toBe('rtJoin')
+    expect(parseWebxdcIframeMessage({ channel: WEBXDC_POSTMESSAGE_CHANNEL, type: 'rtJoin', appId }, appId)?.type).toBe(
+      'rtJoin',
+    )
     const send = parseWebxdcIframeMessage(
       {
         channel: WEBXDC_POSTMESSAGE_CHANNEL,
@@ -183,25 +169,13 @@ describe('isTrustedWebxdcMessageEvent', () => {
 
   it('requires matching origin and source', () => {
     expect(
-      isTrustedWebxdcMessageEvent(
-        { origin: 'https://webxdc.example', source },
-        'https://webxdc.example',
-        source,
-      ),
+      isTrustedWebxdcMessageEvent({ origin: 'https://webxdc.example', source }, 'https://webxdc.example', source),
     ).toBe(true)
     expect(
-      isTrustedWebxdcMessageEvent(
-        { origin: 'https://evil.example', source },
-        'https://webxdc.example',
-        source,
-      ),
+      isTrustedWebxdcMessageEvent({ origin: 'https://evil.example', source }, 'https://webxdc.example', source),
     ).toBe(false)
     expect(
-      isTrustedWebxdcMessageEvent(
-        { origin: 'https://webxdc.example', source: null },
-        'https://webxdc.example',
-        source,
-      ),
+      isTrustedWebxdcMessageEvent({ origin: 'https://webxdc.example', source: null }, 'https://webxdc.example', source),
     ).toBe(false)
   })
 })

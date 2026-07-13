@@ -255,10 +255,7 @@ export function WebxdcFrame({
 
       <div className="min-h-2 flex-1" aria-hidden />
 
-      <div
-        className="flex w-full shrink-0 flex-col items-center gap-1.5 border-t border-border pt-2"
-        aria-label="Audio and video"
-      >
+      <div className="flex w-full shrink-0 flex-col items-center gap-1.5 border-t border-border pt-2">
         {/* One voice-input menu: above mic, right-aligned (matches bottom-bar chevron role). */}
         <div className="flex w-full justify-end pe-0.5">
           <DeviceSelector
@@ -441,9 +438,13 @@ export function WebxdcFrame({
     portalReady &&
     createPortal(
       <div
-        role={expanded ? 'dialog' : undefined}
-        aria-modal={expanded || undefined}
-        aria-label={expanded ? `${appName} fullscreen` : undefined}
+        {...(expanded
+          ? {
+              role: 'dialog' as const,
+              'aria-modal': true as const,
+              'aria-label': `${appName} fullscreen`,
+            }
+          : {})}
         className={cn('flex overflow-hidden border border-border bg-background shadow-2xl', expanded && 'border-0')}
         style={shellStyle}
       >

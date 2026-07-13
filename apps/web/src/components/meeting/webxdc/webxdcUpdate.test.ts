@@ -44,8 +44,6 @@ describe('validateSendUpdate', () => {
 
   it('validates notify map', () => {
     expect(validateSendUpdate({ payload: 1, notify: { '*': 'hi' } }).ok).toBe(true)
-    expect(validateSendUpdate({ payload: 1, notify: { a: 1 } as unknown as Record<string, string> }).ok).toBe(
-      false,
-    )
+    expect(validateSendUpdate({ payload: 1, notify: { a: 1 } as unknown as Record<string, string> }).ok).toBe(false)
   })
 })

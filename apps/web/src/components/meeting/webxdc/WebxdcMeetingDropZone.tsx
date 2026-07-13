@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useExperimentalPreferencesStore } from '#/lib/experimental-preferences.store'
 import { cn } from '@/lib/utils'
+import { useOptionalWebxdcWatch } from './webxdc-watch-context'
 import { fetchWebxdcConfig } from './webxdcApi'
 import { pickWebxdcFileFromDataTransfer } from './webxdcFile'
-import { useOptionalWebxdcWatch } from './webxdc-watch-context'
 
 /**
  * Full-meeting drag-and-drop target for .xdc packages.

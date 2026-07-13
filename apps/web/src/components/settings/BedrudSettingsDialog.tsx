@@ -104,7 +104,10 @@ function SettingsListNav({
       </header>
 
       {page && activeTabMeta && (
-        <div key={`title-${page}`} className={cn('shrink-0 border-b border-[var(--meet-border)] px-4 py-2', pageAnimClass)}>
+        <div
+          key={`title-${page}`}
+          className={cn('shrink-0 border-b border-[var(--meet-border)] px-4 py-2', pageAnimClass)}
+        >
           <h2 className="text-[15px] font-semibold text-[var(--meet-fg-strong)]">{activeTabMeta.label}</h2>
         </div>
       )}

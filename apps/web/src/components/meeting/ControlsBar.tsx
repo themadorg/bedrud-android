@@ -41,6 +41,7 @@ import { useRequestNoiseMode } from '#/lib/use-request-noise-mode'
 import { cn } from '#/lib/utils'
 import { DeviceSelector } from '@/components/meeting/DeviceSelector'
 import { useMeetingRoomContext } from '@/components/meeting/MeetingContext'
+import { meetControlsDockClass, useMeetingUILayout } from '@/components/meeting/MeetingUILayoutContext'
 import {
   isWebxdcExpandSource,
   MEETING_CLOSE_ELEVATED_CHROME,
@@ -48,7 +49,6 @@ import {
   MEETING_OPEN_SETTINGS,
   publishMeetingChromeState,
 } from '@/components/meeting/meetingChromeEvents'
-import { meetControlsDockClass, useMeetingUILayout } from '@/components/meeting/MeetingUILayoutContext'
 import { RoomInfoContent } from '@/components/meeting/RoomInfoPanel'
 import { useMeetingStage } from '@/components/meeting/stage/MeetingStageContext'
 import { stageOwnerLabel } from '@/components/meeting/stage/stageWire'
@@ -307,10 +307,7 @@ export function ControlsBar({ onLeave, moreExtras }: Props) {
   const { isSelfDeafened, toggleSelfDeafen, roomId, getParticipantDisplayName } = useMeetingRoomContext()
   const [webxdcAppsOpen, setWebxdcAppsOpen] = useState(false)
   const selfName =
-    getParticipantDisplayName(localParticipant) ||
-    localParticipant.name ||
-    localParticipant.identity ||
-    'You'
+    getParticipantDisplayName(localParticipant) || localParticipant.name || localParticipant.identity || 'You'
 
   const tokens = useAuthStore((s) => s.tokens)
   const canShare = Boolean(tokens) && Boolean(navigator.mediaDevices?.getDisplayMedia)
@@ -636,9 +633,7 @@ export function ControlsBar({ onLeave, moreExtras }: Props) {
           // meet-controls-bar: border-radius needs !important (global * { border-radius: 0 })
           'meet-controls-bar absolute -translate-x-1/2 z-30 flex items-center bg-[var(--meet-chrome)] backdrop-blur-xl border border-[var(--meet-border-subtle)] whitespace-nowrap shadow-[var(--meet-shadow),var(--meet-shadow-inset)] transition-[left] duration-200',
           meetControlsDockClass(layout),
-          isMobile
-            ? 'bottom-[calc(12px+env(safe-area-inset-bottom))] gap-[2px] p-1.5'
-            : 'bottom-5 gap-[3px] p-2',
+          isMobile ? 'bottom-[calc(12px+env(safe-area-inset-bottom))] gap-[2px] p-1.5' : 'bottom-5 gap-[3px] p-2',
           'max-w-[calc(var(--app-width,100svw)-16px)]',
         )}
       >
