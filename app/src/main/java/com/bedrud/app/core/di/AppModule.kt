@@ -12,7 +12,7 @@ import org.koin.dsl.module
 val appModule = module {
     single { InstanceStore(androidContext()) }
     single { RecentRoomsStore(androidContext()) }
-    single { InstanceManager(androidApplication(), get()) }
     single { SettingsStore(androidContext()) }
+    single { InstanceManager(androidApplication(), get(), get()) }
     single { PipStateHolder() }
 }

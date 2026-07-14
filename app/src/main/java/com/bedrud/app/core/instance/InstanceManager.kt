@@ -11,6 +11,7 @@ import com.bedrud.app.core.auth.AuthManager
 import com.bedrud.app.core.auth.PasskeyManager
 import com.bedrud.app.core.livekit.RoomManager
 import com.bedrud.app.models.HealthResponse
+import com.bedrud.app.ui.screens.settings.SettingsStore
 import com.google.gson.GsonBuilder
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -23,7 +24,8 @@ import java.util.concurrent.TimeUnit
 
 class InstanceManager(
     private val application: Application,
-    val store: InstanceStore
+    val store: InstanceStore,
+    private val settingsStore: SettingsStore,
 ) {
     private val _authManager = MutableStateFlow<AuthManager?>(null)
     val authManager: StateFlow<AuthManager?> = _authManager.asStateFlow()
@@ -73,7 +75,7 @@ class InstanceManager(
         val room: RoomApi = factory.createApi(retrofit)
         val admin: AdminApi = factory.createApi(retrofit)
         val pk = PasskeyManager(application, auth, am)
-        val rm = RoomManager(application)
+        val rm = RoomManager(application, settingsStore)
 
         _authManager.value = am
         _authApi.value = auth

@@ -10,6 +10,7 @@ import androidx.core.app.NotificationCompat
 import com.bedrud.app.R
 import com.bedrud.app.core.call.CallConnectionService
 import com.bedrud.app.core.meeting.stage.StageWire
+import com.bedrud.app.ui.screens.settings.SettingsStore
 import io.livekit.android.AudioOptions
 import io.livekit.android.LiveKit
 import io.livekit.android.LiveKitOverrides
@@ -60,7 +61,10 @@ data class ChatMessage(
     val attachments: List<ChatAttachment> = emptyList(),
 )
 
-class RoomManager(private val application: Application) {
+class RoomManager(
+    private val application: Application,
+    private val settingsStore: SettingsStore,
+) {
 
     private var _room: Room? = null
     val room: Room? get() = _room
@@ -73,7 +77,7 @@ class RoomManager(private val application: Application) {
     private val _connectionState = MutableStateFlow(ConnectionState.DISCONNECTED)
     val connectionState: StateFlow<ConnectionState> = _connectionState.asStateFlow()
 
-    private val _isMicEnabled = MutableStateFlow(true)
+    private val _isMicEnabled = MutableStateFlow(settingsStore.getMicEnabled())
     val isMicEnabled: StateFlow<Boolean> = _isMicEnabled.asStateFlow()
 
     private val _micMediaError = MutableStateFlow(false)
@@ -88,7 +92,7 @@ class RoomManager(private val application: Application) {
     private val _isScreenShareEnabled = MutableStateFlow(false)
     val isScreenShareEnabled: StateFlow<Boolean> = _isScreenShareEnabled.asStateFlow()
 
-    private val _isDeafened = MutableStateFlow(false)
+    private val _isDeafened = MutableStateFlow(settingsStore.getDeafened())
     val isDeafened: StateFlow<Boolean> = _isDeafened.asStateFlow()
     private var micMutedBeforeDeafen = false
 
@@ -165,12 +169,15 @@ class RoomManager(private val application: Application) {
                 }
             }
 
-            // Enable mic after connecting; camera stays off until the user turns it on.
+            // Restore the mic to whatever the user last set it to (unmuted by default
+            // on a fresh install); camera stays off until the user turns it on.
             try {
-                val micPublished = room.localParticipant.setMicrophoneEnabled(true)
-                _isMicEnabled.value = micPublished
-                CallConnectionService.updateMuteState(!micPublished)
-                _micMediaError.value = !micPublished
+                val micShouldBeEnabled = settingsStore.getMicEnabled()
+                val micPublished = room.localParticipant.setMicrophoneEnabled(micShouldBeEnabled)
+                val actuallyEnabled = if (micShouldBeEnabled) micPublished else false
+                _isMicEnabled.value = actuallyEnabled
+                CallConnectionService.updateMuteState(!actuallyEnabled)
+                _micMediaError.value = micShouldBeEnabled && !micPublished
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to enable microphone", e)
                 _isMicEnabled.value = false
@@ -355,12 +362,12 @@ class RoomManager(private val application: Application) {
         _audioHandler = null
         _connectionState.value = ConnectionState.DISCONNECTED
         _roomName.value = null
-        _isMicEnabled.value = true
+        _isMicEnabled.value = settingsStore.getMicEnabled()
         _micMediaError.value = false
         _isCameraEnabled.value = false
         _cameraMediaError.value = false
         _isScreenShareEnabled.value = false
-        _isDeafened.value = false
+        _isDeafened.value = settingsStore.getDeafened()
         micMutedBeforeDeafen = false
         _participantVersion.value = 0
         _chatMessages.value = emptyList()
@@ -379,10 +386,12 @@ class RoomManager(private val application: Application) {
     }
 
     suspend fun setMicrophoneEnabled(enabled: Boolean) {
+        settingsStore.setMicEnabled(enabled)
         // Unmuting while deafened is a shortcut to undeafen too, mirroring the
         // convention most call apps use for the mic button.
         if (enabled && _isDeafened.value) {
             _isDeafened.value = false
+            settingsStore.setDeafened(false)
             applyDeafenedVolume(false)
         }
         val localParticipant = _room?.localParticipant ?: return
@@ -416,6 +425,7 @@ class RoomManager(private val application: Application) {
 
     suspend fun toggleDeafen() {
         val deafening = !_isDeafened.value
+        settingsStore.setDeafened(deafening)
         if (deafening) {
             micMutedBeforeDeafen = !_isMicEnabled.value
             _isDeafened.value = true
