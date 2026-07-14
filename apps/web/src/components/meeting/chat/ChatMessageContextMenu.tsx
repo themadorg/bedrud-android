@@ -26,13 +26,7 @@ interface Props {
   children: ReactNode
 }
 
-export function ChatMessageContextMenu({
-  message,
-  senderName,
-  currentIdentity,
-  onReact,
-  children,
-}: Props) {
+export function ChatMessageContextMenu({ message, senderName, currentIdentity, onReact, children }: Props) {
   const [infoOpen, setInfoOpen] = useState(false)
   const [resultsOpen, setResultsOpen] = useState(false)
   const participants = useParticipants()

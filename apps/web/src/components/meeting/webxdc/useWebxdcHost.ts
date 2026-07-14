@@ -139,7 +139,7 @@ export function useWebxdcHost(iframeRef: React.RefObject<HTMLIFrameElement | nul
   const buildInit = useCallback(() => {
     if (!opts) return null
     const selfAddr =
-      (opts.selfAddr && opts.selfAddr.trim()) ||
+      opts.selfAddr?.trim() ||
       deriveWebxdcSelfAddrKey({
         roomId: opts.roomId,
         appId: opts.instanceId,
@@ -548,7 +548,7 @@ export function useWebxdcHost(iframeRef: React.RefObject<HTMLIFrameElement | nul
     rate.current = new WebxdcSendUpdateRateLimiter(opts.sendUpdateIntervalMs ?? WEBXDC_SEND_UPDATE_INTERVAL_MS)
 
     const selfAddr =
-      (opts.selfAddr && opts.selfAddr.trim()) ||
+      opts.selfAddr?.trim() ||
       deriveWebxdcSelfAddrKey({
         roomId: opts.roomId,
         appId: opts.instanceId,

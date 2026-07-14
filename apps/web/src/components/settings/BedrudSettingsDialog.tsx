@@ -1,5 +1,5 @@
 import { useRoomContext } from '@livekit/components-react'
-import { Camera, ChevronLeft, ChevronRight, FlaskConical, Lock, Mic, Palette, User, X } from 'lucide-react'
+import { Camera, ChevronLeft, ChevronRight, FlaskConical, Lock, Mic, Palette, User } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { AppearanceSettingsPanel } from '#/components/settings/AppearanceSettingsPanel'
 import { AudioSettingsPanel } from '#/components/settings/AudioSettingsPanel'
@@ -9,6 +9,11 @@ import { SecuritySettingsPanel } from '#/components/settings/SecuritySettingsPan
 import { VideoSettingsPanel } from '#/components/settings/VideoSettingsPanel'
 import { cn } from '#/lib/utils'
 import { MeetingElevatedLeftDock } from '@/components/meeting/MeetingElevatedLeftDock'
+import {
+  MeetingElevatedMeetingSubheader,
+  MeetingElevatedPanelHeader,
+  MeetingElevatedPanelSectionSubheader,
+} from '@/components/meeting/MeetingElevatedPanelChrome'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { meetingPanelScopeClass, settingsDialogScrollClass, settingsSidebarTabClass } from './settingsPanelTone'
@@ -77,9 +82,12 @@ function SettingsListNav({
 
   return (
     <>
-      <header className="flex shrink-0 items-center gap-1 border-b border-[var(--meet-border)] pt-[env(safe-area-inset-top,0px)]">
-        <div className="flex h-12 w-full items-center px-1">
-          {page ? (
+      <MeetingElevatedPanelHeader
+        title="Settings"
+        onClose={onClose}
+        closeLabel="Close settings"
+        leading={
+          page ? (
             <button
               type="button"
               onClick={onBack}
@@ -89,27 +97,14 @@ function SettingsListNav({
               <ChevronLeft size={22} className="shrink-0" />
               <span className="truncate text-[15px]">Settings</span>
             </button>
-          ) : (
-            <span className="flex-1 px-3 text-[17px] font-semibold text-[var(--meet-fg-strong)]">Settings</span>
-          )}
-          <button
-            type="button"
-            onClick={onClose}
-            className="flex h-11 w-11 shrink-0 items-center justify-center border-none bg-transparent text-[var(--meet-fg-muted)]"
-            aria-label="Close settings"
-          >
-            <X size={20} />
-          </button>
-        </div>
-      </header>
+          ) : undefined
+        }
+      />
+
+      <MeetingElevatedMeetingSubheader />
 
       {page && activeTabMeta && (
-        <div
-          key={`title-${page}`}
-          className={cn('shrink-0 border-b border-[var(--meet-border)] px-4 py-2', pageAnimClass)}
-        >
-          <h2 className="text-[15px] font-semibold text-[var(--meet-fg-strong)]">{activeTabMeta.label}</h2>
-        </div>
+        <MeetingElevatedPanelSectionSubheader title={activeTabMeta.label} className={pageAnimClass} />
       )}
 
       <div

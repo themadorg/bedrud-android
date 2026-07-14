@@ -1,8 +1,9 @@
-import { type ReactNode, useCallback, useEffect, useRef, useState } from 'react'
+import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { MeetingHeader } from '@/components/meeting/MeetingHeader'
 import { MeetingPanels } from '@/components/meeting/MeetingPanels'
 import { MeetingUILayoutProvider, participantsDockOffset } from '@/components/meeting/MeetingUILayoutContext'
 import { MeetingViewportPanProvider } from '@/components/meeting/MeetingViewportPan'
+import { MeetingExpandChromeContext } from '@/components/meeting/meeting-expand-chrome-context'
 import {
   isExpandChromeSource,
   MEETING_CLOSE_ELEVATED_CHROME,
@@ -42,9 +43,11 @@ export function MeetingRoomShell({ meetId, navigate, children }: MeetingRoomShel
   const chatOpenRef = useRef(chatOpen)
   const infoOpenRef = useRef(infoOpen)
   const elevatedPanelRef = useRef(elevatedPanel)
+  const chatStuckRef = useRef(chatStuck)
   chatOpenRef.current = chatOpen
   infoOpenRef.current = infoOpen
   elevatedPanelRef.current = elevatedPanel
+  chatStuckRef.current = chatStuck
 
   const chatDocked = chatOpen && chatStuck
   const videoSidebarDocked = Boolean(stage) && videoSidebarOpen
@@ -89,6 +92,56 @@ export function MeetingRoomShell({ meetId, navigate, children }: MeetingRoomShel
     })
   }, [])
 
+  const openChatFromExpand = useCallback(() => {
+    setParticipantsOpen(false)
+    setInfoOpen(false)
+
+    if (chatOpenRef.current && elevatedPanelRef.current === 'chat') {
+      setChatOpen(false)
+      setChatStuck(false)
+      setElevatedPanel(null)
+      setChatSide('right')
+      publishMeetingChromeState(null)
+      return
+    }
+
+    requestCloseMeetingSettings()
+    setChatStuck(false)
+    setElevatedPanel('chat')
+    setChatSide('left')
+    setChatSurfaceKey((k) => k + 1)
+    setChatOpen(true)
+    publishMeetingChromeState('chat')
+  }, [])
+
+  const openInfoFromExpand = useCallback(() => {
+    setParticipantsOpen(false)
+
+    if (infoOpenRef.current && elevatedPanelRef.current === 'info') {
+      setInfoOpen(false)
+      setElevatedPanel(null)
+      publishMeetingChromeState(null)
+      return
+    }
+
+    requestCloseMeetingSettings()
+    setElevatedPanel('info')
+    setInfoOpen(true)
+    if (!chatStuckRef.current) {
+      setChatOpen(false)
+      setChatSide('right')
+    }
+    publishMeetingChromeState('info')
+  }, [])
+
+  const expandChromeHandlers = useMemo(
+    () => ({
+      openChat: () => openChatFromExpand(),
+      openInfo: () => openInfoFromExpand(),
+    }),
+    [openChatFromExpand, openInfoFromExpand],
+  )
+
   useEffect(() => {
     if (stage && !hadStageRef.current) setVideoSidebarOpen(true)
     if (!stage) setVideoSidebarOpen(true)
@@ -104,63 +157,29 @@ export function MeetingRoomShell({ meetId, navigate, children }: MeetingRoomShel
   // WebXDC left rail (and other chrome) can request panels without prop drilling.
   useEffect(() => {
     const onChat = (e: Event) => {
-      const fromWx = isExpandChromeSource((e as CustomEvent).detail)
-      setParticipantsOpen(false)
-      setInfoOpen(false)
-
-      if (fromWx) {
-        // Second click on left-rail chat while already elevated → close.
-        if (chatOpenRef.current && elevatedPanelRef.current === 'chat') {
-          setChatOpen(false)
-          setChatStuck(false)
-          setElevatedPanel(null)
-          setChatSide('right')
-          publishMeetingChromeState(null)
-          return
-        }
-        requestCloseMeetingSettings()
-        setElevatedPanel('chat')
-        setChatSide('left')
-        // Desktop chat often starts open under the shell; bump key so the elevated
-        // body-portaled panel always mounts fresh above WebXDC (z-200).
-        setChatSurfaceKey((k) => k + 1)
+      if (!isExpandChromeSource((e as CustomEvent).detail)) {
+        setParticipantsOpen(false)
+        setInfoOpen(false)
+        setElevatedPanel(null)
+        setChatSide('right')
         setChatOpen(true)
         return
       }
-
-      setElevatedPanel(null)
-      setChatSide('right')
-      setChatOpen(true)
+      openChatFromExpand()
     }
 
     const onInfo = (e: Event) => {
-      const fromWx = isExpandChromeSource((e as CustomEvent).detail)
-      setParticipantsOpen(false)
-
-      if (fromWx) {
-        // Toggle close when info already elevated.
-        if (infoOpenRef.current && elevatedPanelRef.current === 'info') {
-          setInfoOpen(false)
-          setElevatedPanel(null)
-          publishMeetingChromeState(null)
-          return
-        }
-        requestCloseMeetingSettings()
-        setElevatedPanel('info')
+      if (!isExpandChromeSource((e as CustomEvent).detail)) {
+        setParticipantsOpen(false)
+        setElevatedPanel(null)
         setInfoOpen(true)
-        if (!chatStuck) {
+        if (!chatStuckRef.current) {
           setChatOpen(false)
           setChatSide('right')
         }
         return
       }
-
-      setElevatedPanel(null)
-      setInfoOpen(true)
-      if (!chatStuck) {
-        setChatOpen(false)
-        setChatSide('right')
-      }
+      openInfoFromExpand()
     }
 
     // Settings opened from rail: close elevated chat/info so only one left dock shows.
@@ -168,7 +187,7 @@ export function MeetingRoomShell({ meetId, navigate, children }: MeetingRoomShel
       if (!isExpandChromeSource((e as CustomEvent).detail)) return
       setParticipantsOpen(false)
       setInfoOpen(false)
-      if (!chatStuck) {
+      if (!chatStuckRef.current) {
         setChatOpen(false)
         setChatSide('right')
       }
@@ -200,53 +219,55 @@ export function MeetingRoomShell({ meetId, navigate, children }: MeetingRoomShel
       window.removeEventListener(MEETING_OPEN_SETTINGS, onSettings)
       window.removeEventListener(MEETING_CLOSE_ELEVATED_CHROME, onCloseElevated)
     }
-  }, [chatStuck])
+  }, [openChatFromExpand, openInfoFromExpand])
 
   return (
-    <MeetingUILayoutProvider chatDocked={chatDocked} participantsDocked={videoSidebarDocked}>
-      <MeetingViewportPanProvider>
-        <MeetingPresenceCursors />
-        {children}
-        {stage && videoSidebarOpen && (
-          <ParticipantVideoSidebar
-            stackOffset={participantsDockOffset(chatDocked)}
-            onClose={() => setVideoSidebarOpen(false)}
+    <MeetingExpandChromeContext.Provider value={expandChromeHandlers}>
+      <MeetingUILayoutProvider chatDocked={chatDocked} participantsDocked={videoSidebarDocked}>
+        <MeetingViewportPanProvider>
+          <MeetingPresenceCursors />
+          {children}
+          {stage && videoSidebarOpen && (
+            <ParticipantVideoSidebar
+              stackOffset={participantsDockOffset(chatDocked)}
+              onClose={() => setVideoSidebarOpen(false)}
+            />
+          )}
+          <MeetingHeader meetId={meetId} infoOpen={infoOpen} onToggleInfo={toggleInfo} />
+          <MeetingPanels
+            navigate={navigate}
+            chatOpen={chatOpen}
+            setChatOpen={handleSetChatOpen}
+            chatSurfaceKey={chatSurfaceKey}
+            onChatOpenFromToggle={() => {
+              setChatSide('right')
+              setElevatedPanel(null)
+            }}
+            chatStuck={chatStuck}
+            setChatStuck={setChatStuck}
+            chatSide={chatSide}
+            chatElevated={chatElevated}
+            videoSidebarOpen={videoSidebarOpen}
+            onToggleVideoSidebar={() => setVideoSidebarOpen((open) => !open)}
+            infoOpen={infoOpen}
+            infoElevated={infoElevated}
+            onCloseInfo={() => {
+              setInfoOpen(false)
+              setElevatedPanel((p) => {
+                if (p === 'info') {
+                  publishMeetingChromeState(null)
+                  return null
+                }
+                return p
+              })
+            }}
+            onToggleInfo={toggleInfo}
+            participantsOpen={participantsOpen}
+            onToggleParticipants={toggleParticipants}
+            onCloseParticipants={() => setParticipantsOpen(false)}
           />
-        )}
-        <MeetingHeader meetId={meetId} infoOpen={infoOpen} onToggleInfo={toggleInfo} />
-        <MeetingPanels
-          navigate={navigate}
-          chatOpen={chatOpen}
-          setChatOpen={handleSetChatOpen}
-          chatSurfaceKey={chatSurfaceKey}
-          onChatOpenFromToggle={() => {
-            setChatSide('right')
-            setElevatedPanel(null)
-          }}
-          chatStuck={chatStuck}
-          setChatStuck={setChatStuck}
-          chatSide={chatSide}
-          chatElevated={chatElevated}
-          videoSidebarOpen={videoSidebarOpen}
-          onToggleVideoSidebar={() => setVideoSidebarOpen((open) => !open)}
-          infoOpen={infoOpen}
-          infoElevated={infoElevated}
-          onCloseInfo={() => {
-            setInfoOpen(false)
-            setElevatedPanel((p) => {
-              if (p === 'info') {
-                publishMeetingChromeState(null)
-                return null
-              }
-              return p
-            })
-          }}
-          onToggleInfo={toggleInfo}
-          participantsOpen={participantsOpen}
-          onToggleParticipants={toggleParticipants}
-          onCloseParticipants={() => setParticipantsOpen(false)}
-        />
-      </MeetingViewportPanProvider>
-    </MeetingUILayoutProvider>
+        </MeetingViewportPanProvider>
+      </MeetingUILayoutProvider>
+    </MeetingExpandChromeContext.Provider>
   )
 }

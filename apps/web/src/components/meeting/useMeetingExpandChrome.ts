@@ -1,6 +1,7 @@
 import { type CSSProperties, type RefObject, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import {
   MEETING_CHROME_STATE,
+  type MeetingChromeExpandSource,
   type MeetingChromeOpenDetail,
   type MeetingChromePanel,
   type MeetingChromeStateDetail,
@@ -21,7 +22,7 @@ type Options = {
 
 export function useMeetingExpandChrome(
   placeholderRef: RefObject<HTMLElement | null> | null,
-  source: MeetingChromeOpenDetail['source'],
+  source: MeetingChromeExpandSource,
   options?: Options,
 ) {
   const collapseMode = options?.collapseMode ?? 'portal'
@@ -32,7 +33,7 @@ export function useMeetingExpandChrome(
   const [activePanel, setActivePanel] = useState<MeetingChromePanel>(null)
   const wasExpandedRef = useRef(false)
 
-  const chromeDetail: MeetingChromeOpenDetail = { source }
+  const chromeDetail: MeetingChromeOpenDetail & { source: MeetingChromeExpandSource } = { source }
 
   useEffect(() => {
     setPortalReady(typeof document !== 'undefined')

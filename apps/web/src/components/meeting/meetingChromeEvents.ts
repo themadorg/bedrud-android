@@ -18,7 +18,7 @@ export const MEETING_CLOSE_ELEVATED_CHROME = 'bedrud:meeting-close-elevated-chro
 
 export type MeetingChromePanel = 'chat' | 'settings' | 'info' | null
 
-export type MeetingChromeExpandSource = 'webxdc-expand' | 'screenshare-expand'
+export type MeetingChromeExpandSource = 'webxdc-expand' | 'screenshare-expand' | 'youtube-expand'
 
 export type MeetingChromeOpenDetail = {
   /** Opened from expanded stage chrome — keep surface open; dock panels on the left above it. */
@@ -62,7 +62,7 @@ export function publishMeetingChromeState(panel: MeetingChromePanel) {
 export function isExpandChromeSource(detail: unknown): boolean {
   if (!detail || typeof detail !== 'object') return false
   const source = (detail as MeetingChromeOpenDetail).source
-  return source === 'webxdc-expand' || source === 'screenshare-expand'
+  return source === 'webxdc-expand' || source === 'screenshare-expand' || source === 'youtube-expand'
 }
 
 /** @deprecated Use isExpandChromeSource */

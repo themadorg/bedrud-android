@@ -166,7 +166,7 @@ export function WebxdcPanel({ roomId, canUpload = true }: Props) {
         {packages.length === 0 ? (
           <p className="text-muted-foreground text-sm">No packages yet.</p>
         ) : (
-          <ul
+          <div
             className="m-0 grid list-none grid-cols-2 gap-2 p-0 sm:grid-cols-3"
             role="listbox"
             aria-label="Room apps"
@@ -175,7 +175,7 @@ export function WebxdcPanel({ roomId, canUpload = true }: Props) {
             {packages.map((p) => {
               const opening = openingId === p.id
               return (
-                <li key={p.id} className="min-w-0">
+                <div key={p.id} className="min-w-0" role="presentation">
                   <button
                     type="button"
                     role="option"
@@ -224,10 +224,10 @@ export function WebxdcPanel({ roomId, canUpload = true }: Props) {
                       </span>
                     </span>
                   </button>
-                </li>
+                </div>
               )
             })}
-          </ul>
+          </div>
         )}
       </section>
 
@@ -236,12 +236,12 @@ export function WebxdcPanel({ roomId, canUpload = true }: Props) {
         {instances.length === 0 ? (
           <p className="text-muted-foreground text-sm">None.</p>
         ) : (
-          <ul className="m-0 flex list-none flex-col gap-1.5 p-0" role="listbox" aria-label="Open instances">
+          <div className="m-0 flex list-none flex-col gap-1.5 p-0" role="listbox" aria-label="Open instances">
             {instances.map((i) => {
               const label = i.package?.name ?? i.id
               const opening = openingId === i.packageId
               return (
-                <li key={i.id} className="min-w-0">
+                <div key={i.id} className="min-w-0" role="presentation">
                   <button
                     type="button"
                     role="option"
@@ -266,10 +266,10 @@ export function WebxdcPanel({ roomId, canUpload = true }: Props) {
                       <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin text-[var(--meet-accent)]" />
                     ) : null}
                   </button>
-                </li>
+                </div>
               )
             })}
-          </ul>
+          </div>
         )}
       </section>
     </div>

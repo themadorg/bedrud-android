@@ -1,5 +1,5 @@
 import { useParticipants, useRoomContext } from '@livekit/components-react'
-import { Globe, Lock, MessageSquare, Users, Video } from 'lucide-react'
+import { MessageSquare, Users, Video } from 'lucide-react'
 import { useState } from 'react'
 import { cn } from '#/lib/utils'
 import { ChatPanel } from '@/components/meeting/ChatPanel'
@@ -7,6 +7,7 @@ import { ChatToastNotifier } from '@/components/meeting/ChatToastNotifier'
 import { useMeetingChatContext, useMeetingRoomContext } from '@/components/meeting/MeetingContext'
 import { MeetingControls } from '@/components/meeting/MeetingControls'
 import { ParticipantsList } from '@/components/meeting/ParticipantsList'
+import { RoomAccessBadge } from '@/components/meeting/RoomAccessBadge'
 import { RoomAccessDialog } from '@/components/meeting/RoomAccessDialog'
 import { RoomInfoPanel } from '@/components/meeting/RoomInfoPanel'
 import { useMeetingStage } from '@/components/meeting/stage/MeetingStageContext'
@@ -224,27 +225,6 @@ function ParticipantsToggle({
     >
       <Users size={14} />
       <span>{count}</span>
-    </button>
-  )
-}
-
-function RoomAccessBadge({ onOpen }: { onOpen: () => void }) {
-  const { isPublic } = useMeetingRoomContext()
-  const Icon = isPublic ? Globe : Lock
-
-  return (
-    <button
-      type="button"
-      onClick={onOpen}
-      className={cn(
-        'flex h-8 w-8 items-center justify-center rounded-lg backdrop-blur-lg transition-all duration-150',
-        isPublic
-          ? 'border border-[color-mix(in_oklab,var(--accent-600)_35%,transparent)] bg-[color-mix(in_oklab,var(--accent-600)_18%,transparent)] text-accent-400'
-          : meetChromeButtonClass(false),
-      )}
-      aria-label={isPublic ? 'Public room — change access' : 'Private room — change access'}
-    >
-      <Icon size={14} />
     </button>
   )
 }

@@ -48,6 +48,7 @@ export function WebxdcFrame({
 
   // Force sandbox tokens on the DOM — some browsers keep a stale sandbox if only
   // the React prop changes after first mount (pointer-lock must be present).
+  // biome-ignore lint/correctness/useExhaustiveDependencies: re-apply sandbox when iframe remounts
   useLayoutEffect(() => {
     const el = hostRef.current
     if (!el) return

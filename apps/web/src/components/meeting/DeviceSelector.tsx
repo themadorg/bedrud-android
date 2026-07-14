@@ -1,6 +1,6 @@
 import { useRoomContext } from '@livekit/components-react'
 import { ConnectionState, RoomEvent } from 'livekit-client'
-import { Check, ChevronDown } from 'lucide-react'
+import { Check, ChevronDown, ChevronRight } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 import { readMeetingDeviceId, writeMeetingDeviceId } from '#/lib/meeting-device-storage'
 import { cn } from '#/lib/utils'
@@ -11,6 +11,8 @@ export interface DeviceSelectorProps {
   kind: 'audioinput' | 'videoinput' | 'audiooutput'
   /** Dropdown open direction (default center-aligned below trigger). */
   menuSide?: 'top' | 'right' | 'bottom' | 'left'
+  /** Chevron on the trigger (default down; use right for vertical rails). */
+  chevronDirection?: 'down' | 'right'
   /** Extra classes for the chevron trigger (e.g. rail sizing). */
   triggerClassName?: string
   /**
@@ -20,7 +22,13 @@ export interface DeviceSelectorProps {
   elevated?: boolean
 }
 
-export function DeviceSelector({ kind, menuSide, triggerClassName, elevated = false }: DeviceSelectorProps) {
+export function DeviceSelector({
+  kind,
+  menuSide,
+  chevronDirection = 'down',
+  triggerClassName,
+  elevated = false,
+}: DeviceSelectorProps) {
   const room = useRoomContext()
   const [devices, setDevices] = useState<MediaDeviceInfo[]>([])
   const [activeId, setActiveId] = useState<string>(() => readMeetingDeviceId(kind))
@@ -91,6 +99,8 @@ export function DeviceSelector({ kind, menuSide, triggerClassName, elevated = fa
   const kindTitle = kind === 'audioinput' ? 'Microphone input' : kind === 'videoinput' ? 'Camera' : 'Speaker'
   const kindFallback = kind === 'audioinput' ? 'Microphone' : kind === 'videoinput' ? 'Camera' : 'Speaker'
 
+  const Chevron = chevronDirection === 'right' ? ChevronRight : ChevronDown
+
   // Always show the chevron so the control is discoverable (even with one device).
   return (
     <DropdownMenu>
@@ -102,7 +112,7 @@ export function DeviceSelector({ kind, menuSide, triggerClassName, elevated = fa
           aria-label={`Select ${kindLabel}`}
           title={kindTitle}
         >
-          <ChevronDown className="h-3 w-3" />
+          <Chevron className="h-3 w-3" />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="center" side={menuSide} sideOffset={8} className={cn('w-56', elevated && 'z-[260]')}>

@@ -203,13 +203,7 @@ export function ChatMessageCluster({ cluster, currentIdentity, onImageOpen, onVo
             currentIdentity={currentIdentity}
             onReact={(emoji) => onReactToMessage(msg.id, emoji)}
           >
-            <div
-              className={
-                loneEmoji
-                  ? 'min-w-0 text-[56px] leading-none select-none'
-                  : chromeClass
-              }
-            >
+            <div className={cn(loneEmoji ? 'min-w-0 text-[56px] leading-none select-none' : chromeClass)}>
               {msg.attachments.map((att, ai) => {
                 if (att.kind === 'file') {
                   return <FileAttachmentCard key={ai} att={att} isLocal={isSelf} />

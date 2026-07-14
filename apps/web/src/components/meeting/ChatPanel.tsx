@@ -9,6 +9,11 @@ import {
   type SystemMessage,
 } from '@/components/meeting/MeetingContext'
 import { MeetingElevatedLeftDock } from '@/components/meeting/MeetingElevatedLeftDock'
+import {
+  MeetingElevatedMeetingSubheader,
+  MeetingElevatedPanelBody,
+  MeetingElevatedPanelHeader,
+} from '@/components/meeting/MeetingElevatedPanelChrome'
 import { api } from '@/lib/api'
 import { cn } from '@/lib/utils'
 import { ChatInput, type ChatInputHandle } from './chat/ChatInput'
@@ -114,6 +119,23 @@ export function ChatPanel({
   // Modal / overlay / elevated: trap focus. Docked desktop sidebar: leave focus free.
   const trapRef = useFocusTrap({ enabled: isOverlay || elevated, onClose })
 
+  const chatBody = (
+    <>
+      <ChatMessageList
+        chatMessages={chatMessages}
+        systemMessages={systemMessages}
+        currentIdentity={currentIdentity}
+        onVotePoll={votePoll}
+        onReactToMessage={reactToMessage}
+        onScrollUnreadChange={noop}
+        onDrop={(file) => {
+          inputRef.current?.attachFile(file)
+        }}
+      />
+      <ChatInput ref={inputRef} onSend={sendChat} onUpload={uploadAndSend} />
+    </>
+  )
+
   const body = (
     <>
       <div className="flex h-12 shrink-0 items-center justify-between border-b border-[var(--meet-border-subtle)] px-3 sm:h-[52px] sm:px-4">
@@ -140,28 +162,16 @@ export function ChatPanel({
           </button>
         </div>
       </div>
-
-      <ChatMessageList
-        chatMessages={chatMessages}
-        systemMessages={systemMessages}
-        currentIdentity={currentIdentity}
-        onVotePoll={votePoll}
-        onReactToMessage={reactToMessage}
-        onScrollUnreadChange={noop}
-        onDrop={(file) => {
-          inputRef.current?.attachFile(file)
-        }}
-      />
-
-      <ChatInput ref={inputRef} onSend={sendChat} onUpload={uploadAndSend} />
+      {chatBody}
     </>
   )
 
-  // Expanded WebXDC: shared left dock (same shell/size as settings + room info).
   if (elevated) {
     return (
       <MeetingElevatedLeftDock label="Chat" marker="chat" shellRef={trapRef}>
-        {body}
+        <MeetingElevatedPanelHeader title="Chat" onClose={onClose} closeLabel="Close chat" />
+        <MeetingElevatedMeetingSubheader />
+        <MeetingElevatedPanelBody>{chatBody}</MeetingElevatedPanelBody>
       </MeetingElevatedLeftDock>
     )
   }
