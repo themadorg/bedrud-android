@@ -13,9 +13,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import android.telecom.CallAudioState
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import com.bedrud.app.R
+import com.bedrud.app.core.call.CallConnectionService
 import com.bedrud.app.core.livekit.CallAudioSwitch
 import com.twilio.audioswitch.AudioDevice
 import com.twilio.audioswitch.AudioDeviceChangeListener
@@ -52,6 +54,19 @@ fun rememberMeetingAudioState(audioHandler: CallAudioSwitch?): MeetingAudioState
 
 fun MeetingAudioState.selectDevice(audioHandler: CallAudioSwitch?, device: AudioDevice) {
     audioHandler?.selectDevice(device)
+    // AudioManager-level routing above can lose to a connected Bluetooth SCO headset, which
+    // Telecom's own CallAudioRouteController otherwise auto-prioritizes for any active call.
+    // Driving the route through our self-managed Connection carries the routing authority
+    // needed to actually override that.
+    CallConnectionService.setAudioRoute(device.toCallAudioRoute())
+}
+
+private fun AudioDevice.toCallAudioRoute(): Int = when (this) {
+    is AudioDevice.BluetoothHeadset -> CallAudioState.ROUTE_BLUETOOTH
+    is AudioDevice.WiredHeadset -> CallAudioState.ROUTE_WIRED_HEADSET
+    is AudioDevice.Speakerphone -> CallAudioState.ROUTE_SPEAKER
+    is AudioDevice.Earpiece -> CallAudioState.ROUTE_EARPIECE
+    else -> CallAudioState.ROUTE_WIRED_OR_EARPIECE
 }
 
 /**

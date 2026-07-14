@@ -122,6 +122,22 @@ class CallConnectionService : ConnectionService() {
             }
         }
 
+        /**
+         * Routes call audio via Telecom's [CallAudioState.ROUTE_*] on our self-managed
+         * [Connection]. Plain AudioManager-level routing (AudioSwitch's setSpeakerphoneOn /
+         * setCommunicationDevice) can silently lose to a connected Bluetooth SCO headset,
+         * which the platform's own CallAudioRouteController otherwise auto-prioritizes for
+         * any active call. Going through the Connection gives this app the same routing
+         * authority a system dialer has, which is what actually overrides that priority.
+         */
+        fun setAudioRoute(route: Int) {
+            try {
+                activeConnection?.setAudioRoute(route)
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to set audio route", e)
+            }
+        }
+
         fun roomUri(roomName: String): Uri =
             Uri.parse("$SCHEME://room/${Uri.encode(roomName)}")
 
