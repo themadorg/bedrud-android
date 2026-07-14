@@ -108,13 +108,17 @@ class RoomApiTest {
     fun `updateRoomSettings sends PUT to room settings path`() = runBlocking {
         server.enqueue(MockResponse().setResponseCode(200))
 
-        val settings = RoomSettings(allowChat = false, e2ee = true)
-        val response = roomApi.updateRoomSettings("room123", settings)
+        val updateRequest = UpdateRoomSettingsRequest(
+            isPublic = true,
+            settings = RoomSettings(allowChat = false, e2ee = true)
+        )
+        val response = roomApi.updateRoomSettings("room123", updateRequest)
 
         val request = server.takeRequest()
         assertEquals("PUT", request.method)
         assertEquals("/room/room123/settings", request.path)
         val body = request.body.readUtf8()
+        assertTrue(body.contains("\"isPublic\":true"))
         assertTrue(body.contains("\"allowChat\":false"))
         assertTrue(body.contains("\"e2ee\":true"))
         assertTrue(response.isSuccessful)
