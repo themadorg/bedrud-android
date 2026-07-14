@@ -28,13 +28,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.res.stringResource
 import com.bedrud.app.R
+import com.bedrud.app.core.livekit.CallAudioSwitch
 import com.twilio.audioswitch.AudioDevice
-import io.livekit.android.room.Room
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MeetingAudioSourceSheet(
-    room: Room?,
+    audioHandler: CallAudioSwitch?,
     audioState: MeetingAudioState,
     isMicEnabled: Boolean,
     micHasError: Boolean = false,
@@ -147,7 +147,7 @@ fun MeetingAudioSourceSheet(
                         device = device,
                         selected = selected,
                         onClick = {
-                            audioState.selectDevice(room, device)
+                            audioState.selectDevice(audioHandler, device)
                         },
                     )
                 }

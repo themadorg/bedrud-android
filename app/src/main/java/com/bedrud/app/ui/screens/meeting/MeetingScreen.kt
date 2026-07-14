@@ -388,7 +388,7 @@ fun MeetingScreen(
                         currentUser?.id == info.adminId
                     } ?: false
                     val roomId = roomInfo?.id ?: ""
-                    val audioState = rememberMeetingAudioState(room)
+                    val audioState = rememberMeetingAudioState(roomManager.audioHandler)
 
                     val localIdentity = room.localParticipant.identity?.value
                     val stageScreenShareIdentity = if (activeStage?.kind == "screenshare") {
@@ -599,7 +599,7 @@ fun MeetingScreen(
 
                             if (showAudioSheet) {
                                 MeetingAudioSourceSheet(
-                                    room = room,
+                                    audioHandler = roomManager.audioHandler,
                                     audioState = audioState,
                                     isMicEnabled = isMicEnabled,
                                     micHasError = micMediaError,

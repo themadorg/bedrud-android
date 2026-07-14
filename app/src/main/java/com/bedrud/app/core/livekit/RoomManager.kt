@@ -11,7 +11,6 @@ import com.bedrud.app.R
 import com.bedrud.app.core.call.CallConnectionService
 import com.bedrud.app.core.meeting.stage.StageWire
 import io.livekit.android.AudioOptions
-import io.livekit.android.AudioType
 import io.livekit.android.LiveKit
 import io.livekit.android.LiveKitOverrides
 import io.livekit.android.events.RoomEvent
@@ -65,6 +64,9 @@ class RoomManager(private val application: Application) {
 
     private var _room: Room? = null
     val room: Room? get() = _room
+
+    private var _audioHandler: CallAudioSwitch? = null
+    val audioHandler: CallAudioSwitch? get() = _audioHandler
 
     private var eventScope: CoroutineScope? = null
 
@@ -134,18 +136,20 @@ class RoomManager(private val application: Application) {
             _error.value = null
             _roomName.value = roomName
 
+            val audioHandler = CallAudioSwitch(application)
+            _audioHandler = audioHandler
+
             val room = LiveKit.create(
                 application,
                 overrides = LiveKitOverrides(
                     audioOptions = AudioOptions(
-                        audioOutputType = AudioType.CallAudioType(),
+                        audioHandler = audioHandler,
                     ),
                 ),
             )
             _room = room
 
             room.connect(url, token)
-            room.audioSwitchHandler?.start()
 
             _connectionState.value = ConnectionState.CONNECTED
 
@@ -348,6 +352,7 @@ class RoomManager(private val application: Application) {
         _room?.disconnect()
         _room?.release()
         _room = null
+        _audioHandler = null
         _connectionState.value = ConnectionState.DISCONNECTED
         _roomName.value = null
         _isMicEnabled.value = true

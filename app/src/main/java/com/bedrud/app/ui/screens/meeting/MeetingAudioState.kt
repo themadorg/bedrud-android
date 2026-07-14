@@ -16,9 +16,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import com.bedrud.app.R
+import com.bedrud.app.core.livekit.CallAudioSwitch
 import com.twilio.audioswitch.AudioDevice
 import com.twilio.audioswitch.AudioDeviceChangeListener
-import io.livekit.android.room.Room
 
 data class MeetingAudioState(
     val availableDevices: List<AudioDevice> = emptyList(),
@@ -26,23 +26,21 @@ data class MeetingAudioState(
 )
 
 @Composable
-fun rememberMeetingAudioState(room: Room?): MeetingAudioState {
+fun rememberMeetingAudioState(audioHandler: CallAudioSwitch?): MeetingAudioState {
     var availableDevices by remember { mutableStateOf(emptyList<AudioDevice>()) }
     var selectedDevice by remember { mutableStateOf<AudioDevice?>(null) }
 
-    DisposableEffect(room) {
-        val handler = room?.audioSwitchHandler
-        handler?.start()
+    DisposableEffect(audioHandler) {
         val listener: AudioDeviceChangeListener = { devices, selected ->
-            availableDevices = devices
+            availableDevices = devices.sortedForDisplay()
             selectedDevice = selected
         }
-        handler?.registerAudioDeviceChangeListener(listener)
-        availableDevices = handler?.availableAudioDevices.orEmpty()
-        selectedDevice = handler?.selectedAudioDevice
+        audioHandler?.registerAudioDeviceChangeListener(listener)
+        availableDevices = audioHandler?.availableAudioDevices.orEmpty().sortedForDisplay()
+        selectedDevice = audioHandler?.selectedAudioDevice
 
         onDispose {
-            handler?.unregisterAudioDeviceChangeListener(listener)
+            audioHandler?.unregisterAudioDeviceChangeListener(listener)
         }
     }
 
@@ -52,8 +50,20 @@ fun rememberMeetingAudioState(room: Room?): MeetingAudioState {
     )
 }
 
-fun MeetingAudioState.selectDevice(room: Room?, device: AudioDevice) {
-    room?.audioSwitchHandler?.selectDevice(device)
+fun MeetingAudioState.selectDevice(audioHandler: CallAudioSwitch?, device: AudioDevice) {
+    audioHandler?.selectDevice(device)
+}
+
+/**
+ * Fixed list order for the audio output picker: Phone, then Speaker, then everything else
+ * (wired/Bluetooth devices), independent of which device is currently preferred/selected.
+ */
+private fun List<AudioDevice>.sortedForDisplay(): List<AudioDevice> = sortedBy { device ->
+    when (device) {
+        is AudioDevice.Earpiece -> 0
+        is AudioDevice.Speakerphone -> 1
+        else -> 2
+    }
 }
 
 @Composable
