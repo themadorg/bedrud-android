@@ -51,6 +51,7 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/adaptor"
+	"github.com/gofiber/fiber/v2/middleware/compress"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/filesystem"
 	"github.com/gofiber/fiber/v2/middleware/helmet"
@@ -266,6 +267,8 @@ func Run(configPath, version string) error {
 	}
 
 	app.Use(recover.New())
+	// gzip/brotli for HTML, JS, CSS, JSON API bodies (skips WebSocket upgrades).
+	app.Use(compress.New(compress.Config{Level: compress.LevelDefault}))
 	// Fiber helmet defaults COEP=require-corp + COOP=same-origin when unset.
 	// That blocks cross-origin WebXDC iframes (webxdc-*.baseDomain) even when the
 	// child sends CORP: cross-origin — browsers show "refused to connect" / blocked

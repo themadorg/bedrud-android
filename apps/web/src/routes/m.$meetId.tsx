@@ -6,7 +6,7 @@ import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import type { AudioCaptureOptions } from 'livekit-client'
 import { ConnectionState, DisconnectReason, RoomEvent } from 'livekit-client'
 import { WifiOff } from 'lucide-react'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { api } from '#/lib/api'
 import { useAudioPreferencesStore } from '#/lib/audio-preferences.store'
@@ -53,13 +53,19 @@ import { StageScreenShareOverlay } from '@/components/meeting/stage/StageScreenS
 import { WebxdcMeetingDropZone } from '@/components/meeting/webxdc/WebxdcMeetingDropZone'
 import { WebxdcStageOverlay } from '@/components/meeting/webxdc/WebxdcStageOverlay'
 import { WebxdcWatchProvider } from '@/components/meeting/webxdc/WebxdcWatchContext'
-import { WhiteboardOverlay } from '@/components/meeting/whiteboard/WhiteboardOverlay'
 import { WhiteboardWatchProvider } from '@/components/meeting/whiteboard/WhiteboardWatchContext'
 import { YoutubeShareDialog } from '@/components/meeting/youtube/YoutubeShareDialog'
 import { YoutubeWatchProvider } from '@/components/meeting/youtube/YoutubeWatchContext'
 import { YoutubeWatchOverlay } from '@/components/meeting/youtube/YoutubeWatchOverlay'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+
+/** Defer whiteboard shell + Excalidraw until the meeting route loads (not app shell). */
+const WhiteboardOverlay = lazy(() =>
+  import('@/components/meeting/whiteboard/WhiteboardOverlay').then((m) => ({
+    default: m.WhiteboardOverlay,
+  })),
+)
 
 interface JoinResponse {
   id: string
@@ -879,7 +885,9 @@ function MeetingPage() {
                     <MeetingRoomShell meetId={meetId} navigate={() => navigate({ to: '/dashboard' })}>
                       <MeetingLayout />
                       <YoutubeWatchOverlay />
-                      <WhiteboardOverlay />
+                      <Suspense fallback={null}>
+                        <WhiteboardOverlay />
+                      </Suspense>
                       <StageScreenShareOverlay />
                       <WebxdcStageOverlay />
 

@@ -47,6 +47,7 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/adaptor"
+	"github.com/gofiber/fiber/v2/middleware/compress"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/filesystem"
 	"github.com/gofiber/fiber/v2/middleware/helmet"
@@ -231,6 +232,7 @@ func run() error {
 	// Middleware
 	// ===============================
 	app.Use(recover.New())
+	app.Use(compress.New(compress.Config{Level: compress.LevelDefault}))
 	// Explicit unsafe-none: fiber helmet defaults to COEP require-corp which
 	// blocks cross-origin WebXDC iframes (see plan 02).
 	app.Use(helmet.New(helmet.Config{

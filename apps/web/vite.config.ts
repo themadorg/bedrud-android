@@ -92,6 +92,8 @@ const EXCALIDRAW_RUNTIME_DEPS = [
   '@lezer/highlight',
 ]
 
+const isProdBuild = process.env.NODE_ENV === 'production'
+
 const config = defineConfig({
   resolve: {
     tsconfigPaths: true,
@@ -165,7 +167,8 @@ const config = defineConfig({
     noExternal: ['yjs', 'lib0', 'y-protocols', 'jotai', 'jotai-scope'],
   },
   plugins: [
-    devtools({ eventBusConfig: { port: DEV_PORT_DEVTOOLS } }),
+    // Dev-only — never inject TanStack devtools or source overlays into prod bundles.
+    ...(!isProdBuild ? [devtools({ eventBusConfig: { port: DEV_PORT_DEVTOOLS } })] : []),
     tailwindcss(),
     // Custom client entry without React.StrictMode — required for stable LiveKit/WebRTC.
     tanstackStart({
@@ -219,15 +222,17 @@ const config = defineConfig({
     rollupOptions: {
       output: {
         manualChunks(id: string) {
-          // Never force React/Yjs into isolated chunks — dual copies break hooks & Y.Doc.
+          // Core runtime in one chunk — must win over excalidraw-vendor or main eagerly
+          // loads ~5MB Excalidraw on every page (shared jsx/scheduler got merged there).
           if (
             id.includes('/node_modules/react/') ||
             id.includes('/node_modules/react-dom/') ||
+            id.includes('/node_modules/scheduler/') ||
             id.includes('/node_modules/yjs/') ||
             id.includes('/node_modules/lib0/') ||
             id.includes('/node_modules/jotai/')
           ) {
-            return
+            return 'react-vendor'
           }
           if (id.includes('/components/meeting/MeetingContext')) {
             return 'meeting-context'
@@ -259,9 +264,9 @@ const config = defineConfig({
           ) {
             return 'markdown-vendor'
           }
-          if (id.includes('/src/vendor/excalidraw/')) {
-            return 'excalidraw-vendor'
-          }
+          // Do NOT manual-chunk Excalidraw — forcing it into excalidraw-vendor pulls shared
+          // Radix/jsx helpers into that chunk and makes main.js load ~5MB on every page.
+          // Whiteboard lazy imports already isolate Excalidraw without manualChunks.
           if (
             id.includes('/node_modules/') &&
             !id.includes('/node_modules/@livekit/krisp-noise-filter/') &&
