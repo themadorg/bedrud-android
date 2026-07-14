@@ -62,8 +62,7 @@
   <string name="meeting_dialog_kickMessage">Êtes-vous sûr de vouloir expulser <xliff:g id="participantName" example="John Doe">%1$s</xliff:g> du salon ?</string>
   <string name="meeting_action_mute">Mettre en sourdine</string>
   <string name="meeting_action_disableVideo">Désactiver la vidéo</string>
-  <string name="meeting_action_bringToStage">Amener sur scène</string>
-  <string name="meeting_action_removeFromStage">Retirer de la scène</string>
+  <string name="meeting_action_enableVideo">Activer la vidéo</string>
   <string name="meeting_action_kick">Expulser</string>
   <string name="meeting_action_ban">Bannir</string>
   <string name="meeting_panel_participants">Participants (<xliff:g id="count" example="5">%1$d</xliff:g>)</string>

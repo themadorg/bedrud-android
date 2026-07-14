@@ -62,8 +62,7 @@
   <string name="meeting_dialog_kickMessage">Sind Sie sicher, dass Sie <xliff:g id="participantName" example="John Doe">%1$s</xliff:g> aus dem Raum kicken möchten?</string>
   <string name="meeting_action_mute">Stummschalten</string>
   <string name="meeting_action_disableVideo">Video deaktivieren</string>
-  <string name="meeting_action_bringToStage">Auf die Bühne bringen</string>
-  <string name="meeting_action_removeFromStage">Von der Bühne entfernen</string>
+  <string name="meeting_action_enableVideo">Video aktivieren</string>
   <string name="meeting_action_kick">Kicken</string>
   <string name="meeting_action_ban">Bannen</string>
   <string name="meeting_panel_participants">Teilnehmer (<xliff:g id="count" example="5">%1$d</xliff:g>)</string>

@@ -60,8 +60,7 @@
   <string name="meeting_dialog_kickMessage">آیا مطمئن هستید که می‌خواهید <xliff:g id="participantName" example="John Doe">%1$s</xliff:g> را از اتاق اخراج کنید؟</string>
   <string name="meeting_action_mute">قطع صدا</string>
   <string name="meeting_action_disableVideo">غیرفعال کردن ویدئو</string>
-  <string name="meeting_action_bringToStage">آوردن به صحنه</string>
-  <string name="meeting_action_removeFromStage">حذف از صحنه</string>
+  <string name="meeting_action_enableVideo">فعال کردن ویدئو</string>
   <string name="meeting_action_kick">اخراج</string>
   <string name="meeting_action_ban">ممنوع کردن</string>
   <string name="meeting_panel_participants">شرکت‌کنندگان (<xliff:g id="count" example="5">%1$d</xliff:g>)</string>

@@ -193,6 +193,16 @@ fun MeetingScreen(
     var showParticipants by remember { mutableStateOf(false) }
     var chatInput by remember { mutableStateOf("") }
 
+    // Identities whose video this viewer has locally hidden (does not affect other viewers)
+    var locallyHiddenVideoIdentities by remember { mutableStateOf(setOf<String>()) }
+    val onToggleVideoDisabled: (String) -> Unit = { identity ->
+        locallyHiddenVideoIdentities = if (identity in locallyHiddenVideoIdentities) {
+            locallyHiddenVideoIdentities - identity
+        } else {
+            locallyHiddenVideoIdentities + identity
+        }
+    }
+
     // Unread chat count while panel is closed
     var lastReadCount by rememberSaveable { mutableIntStateOf(0) }
     val unreadCount = if (showChat) 0 else (chatMessages.size - lastReadCount).coerceAtLeast(0)
@@ -425,11 +435,13 @@ fun MeetingScreen(
                                 val cameraTrack = cameraPublication
                                     ?.track as? io.livekit.android.room.track.VideoTrack
                                 val isCameraMuted = cameraPublication?.muted == true
+                                val isPipVideoLocallyDisabled =
+                                    pipParticipant.identity?.value in locallyHiddenVideoIdentities
 
                                 val pipTrack = when {
                                     pipStage != null && screenShareTrack != null && !isScreenShareMuted ->
                                         screenShareTrack
-                                    cameraTrack != null && !isCameraMuted -> cameraTrack
+                                    cameraTrack != null && !isCameraMuted && !isPipVideoLocallyDisabled -> cameraTrack
                                     else -> null
                                 }
 
@@ -518,6 +530,8 @@ fun MeetingScreen(
                                             scope = scope,
                                             room = room,
                                             stageScreenShareIdentity = stageScreenShareIdentity,
+                                            disabledVideoIdentities = locallyHiddenVideoIdentities,
+                                            onToggleVideoDisabled = onToggleVideoDisabled,
                                         )
                                     }
                                 }
@@ -697,6 +711,8 @@ fun MeetingScreen(
                                     roomApi = roomApi,
                                     snackbarHostState = snackbarHostState,
                                     scope = scope,
+                                    disabledVideoIdentities = locallyHiddenVideoIdentities,
+                                    onToggleVideoDisabled = onToggleVideoDisabled,
                                     onClose = { showParticipants = false }
                                 )
                             }
@@ -767,8 +783,11 @@ private fun ParticipantTile(
     scope: kotlinx.coroutines.CoroutineScope? = null,
     room: Room? = null,
     stageScreenShareIdentity: String? = null,
+    disabledVideoIdentities: Set<String> = emptySet(),
+    onToggleVideoDisabled: (String) -> Unit = {},
 ) {
     val identity = participant.identity?.value ?: "Unknown"
+    val isVideoLocallyDisabled = identity in disabledVideoIdentities
 
     val screenShareRef = if (identity != stageScreenShareIdentity) {
         resolveParticipantScreenShare(participant)
@@ -849,7 +868,7 @@ private fun ParticipantTile(
                     scaleType = ScaleType.FitInside,
                 )
             }
-            cameraTrack != null && !isCameraMuted && room != null -> {
+            cameraTrack != null && !isCameraMuted && !isVideoLocallyDisabled && room != null -> {
                 VideoTrackView(
                     videoTrack = cameraTrack,
                     modifier = Modifier.fillMaxSize(),
@@ -924,42 +943,17 @@ private fun ParticipantTile(
                     }
                 )
                 DropdownMenuItem(
-                    text = { Text(stringResource(R.string.meeting_action_disableVideo)) },
+                    text = {
+                        Text(
+                            stringResource(
+                                if (isVideoLocallyDisabled) R.string.meeting_action_enableVideo
+                                else R.string.meeting_action_disableVideo
+                            )
+                        )
+                    },
                     onClick = {
                         showMenu = false
-                        scope?.launch {
-                            try {
-                                roomApi?.disableParticipantVideo(roomId, identity)
-                            } catch (e: Exception) {
-                                snackbarHostState?.showSnackbar(e.message ?: "Failed to disable video")
-                            }
-                        }
-                    }
-                )
-                DropdownMenuItem(
-                    text = { Text(stringResource(R.string.meeting_action_bringToStage)) },
-                    onClick = {
-                        showMenu = false
-                        scope?.launch {
-                            try {
-                                roomApi?.bringToStage(roomId, identity)
-                            } catch (e: Exception) {
-                                snackbarHostState?.showSnackbar(e.message ?: "Failed")
-                            }
-                        }
-                    }
-                )
-                DropdownMenuItem(
-                    text = { Text(stringResource(R.string.meeting_action_removeFromStage)) },
-                    onClick = {
-                        showMenu = false
-                        scope?.launch {
-                            try {
-                                roomApi?.removeFromStage(roomId, identity)
-                            } catch (e: Exception) {
-                                snackbarHostState?.showSnackbar(e.message ?: "Failed")
-                            }
-                        }
+                        onToggleVideoDisabled(identity)
                     }
                 )
                 DropdownMenuItem(
@@ -1026,6 +1020,8 @@ private fun ParticipantsPanel(
     roomApi: RoomApi?,
     snackbarHostState: SnackbarHostState,
     scope: kotlinx.coroutines.CoroutineScope,
+    disabledVideoIdentities: Set<String>,
+    onToggleVideoDisabled: (String) -> Unit,
     onClose: () -> Unit
 ) {
     Column(
@@ -1058,7 +1054,9 @@ private fun ParticipantsPanel(
                     roomId = roomId,
                     roomApi = roomApi,
                     snackbarHostState = snackbarHostState,
-                    scope = scope
+                    scope = scope,
+                    isVideoLocallyDisabled = identity in disabledVideoIdentities,
+                    onToggleVideoDisabled = { onToggleVideoDisabled(identity) }
                 )
             }
         }
@@ -1074,7 +1072,9 @@ private fun ParticipantListRow(
     roomId: String,
     roomApi: RoomApi?,
     snackbarHostState: SnackbarHostState,
-    scope: kotlinx.coroutines.CoroutineScope
+    scope: kotlinx.coroutines.CoroutineScope,
+    isVideoLocallyDisabled: Boolean = false,
+    onToggleVideoDisabled: () -> Unit = {}
 ) {
     var showMenu by remember { mutableStateOf(false) }
     val avatarColor = remember(name) {
@@ -1147,6 +1147,20 @@ private fun ParticipantListRow(
                                 try { roomApi.muteParticipant(roomId, identity) }
                                 catch (e: Exception) { snackbarHostState.showSnackbar(e.message ?: "Failed") }
                             }
+                        }
+                    )
+                    DropdownMenuItem(
+                        text = {
+                            Text(
+                                stringResource(
+                                    if (isVideoLocallyDisabled) R.string.meeting_action_enableVideo
+                                    else R.string.meeting_action_disableVideo
+                                )
+                            )
+                        },
+                        onClick = {
+                            showMenu = false
+                            onToggleVideoDisabled()
                         }
                     )
                     DropdownMenuItem(

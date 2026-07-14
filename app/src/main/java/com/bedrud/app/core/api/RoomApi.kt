@@ -41,24 +41,6 @@ interface RoomApi {
         @Path("identity") identity: String
     ): Response<Unit>
 
-    @POST("room/{roomId}/video/{identity}/off")
-    suspend fun disableParticipantVideo(
-        @Path("roomId") roomId: String,
-        @Path("identity") identity: String
-    ): Response<Unit>
-
-    @POST("room/{roomId}/stage/{identity}/bring")
-    suspend fun bringToStage(
-        @Path("roomId") roomId: String,
-        @Path("identity") identity: String
-    ): Response<Unit>
-
-    @POST("room/{roomId}/stage/{identity}/remove")
-    suspend fun removeFromStage(
-        @Path("roomId") roomId: String,
-        @Path("identity") identity: String
-    ): Response<Unit>
-
     @PUT("room/{roomId}/settings")
     suspend fun updateRoomSettings(
         @Path("roomId") roomId: String,

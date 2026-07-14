@@ -62,8 +62,7 @@
   <string name="meeting_dialog_kickMessage"><xliff:g id="participantName" example="John Doe">%1$s</xliff:g> をルームからキックしてもよろしいですか？</string>
   <string name="meeting_action_mute">ミュート</string>
   <string name="meeting_action_disableVideo">ビデオを無効にする</string>
-  <string name="meeting_action_bringToStage">ステージに上げる</string>
-  <string name="meeting_action_removeFromStage">ステージから降ろす</string>
+  <string name="meeting_action_enableVideo">ビデオを有効にする</string>
   <string name="meeting_action_kick">キック</string>
   <string name="meeting_action_ban">BAN</string>
   <string name="meeting_panel_participants">参加者 (<xliff:g id="count" example="5">%1$d</xliff:g>)</string>

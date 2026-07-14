@@ -62,8 +62,7 @@
   <string name="meeting_dialog_kickMessage"><xliff:g id="participantName" example="John Doe">%1$s</xliff:g> kişisini odadan atmak istediğinize emin misiniz?</string>
   <string name="meeting_action_mute">Sesi Kapat</string>
   <string name="meeting_action_disableVideo">Videoyu Devre Dışı Bırak</string>
-  <string name="meeting_action_bringToStage">Sahneye Çıkar</string>
-  <string name="meeting_action_removeFromStage">Sahneden Kaldır</string>
+  <string name="meeting_action_enableVideo">Videoyu Etkinleştir</string>
   <string name="meeting_action_kick">At</string>
   <string name="meeting_action_ban">Yasakla</string>
   <string name="meeting_panel_participants">Katılımcılar (<xliff:g id="count" example="5">%1$d</xliff:g>)</string>
