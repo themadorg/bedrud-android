@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -85,9 +86,12 @@ import com.bedrud.app.core.recent.recentRoomsNotInApiList
 import com.bedrud.app.models.CreateRoomRequest
 import com.bedrud.app.models.UpdateRoomSettingsRequest
 import com.bedrud.app.models.UserRoomResponse
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
+
+private const val AUTO_REFRESH_INTERVAL_MS = 60_000L
 
 // ── Filter state ─────────────────────────────────────────────────────────────
 
@@ -126,6 +130,28 @@ fun DashboardContent(
     var roomToDelete by remember { mutableStateOf<UserRoomResponse?>(null) }
     var activeFilter by rememberSaveable { mutableStateOf(RoomFilter.RECENT) }
     var quickJoinText by remember { mutableStateOf("") }
+    val listState = rememberLazyListState()
+    // Survives the dispose/recompose Navigation does when leaving for MeetingScreen and
+    // coming back via Back -- listState's own scroll position is restored by that same
+    // mechanism, so without this a newly created room can land above the restored scroll
+    // offset in a long list, out of view until the user manually scrolls up.
+    // Holds the just-created room's name (not just a boolean) so the wait-for-data check
+    // below can confirm *that room* has actually arrived, rather than firing as soon as
+    // the tab's list is merely non-empty -- which, for the server-backed My Rooms/All
+    // tabs, is true immediately from pre-existing rooms, well before the async refetch
+    // actually includes the new one.
+    var pendingScrollToTopFor by rememberSaveable { mutableStateOf<String?>(null) }
+
+    // Drives the "Xm ago" labels on recent-room cards. Compose only recomposes on state
+    // change, so without an explicit ticking clock those labels freeze at whatever they
+    // read on the last recomposition instead of advancing with real time.
+    var nowTickMs by remember { mutableLongStateOf(System.currentTimeMillis()) }
+    LaunchedEffect(Unit) {
+        while (true) {
+            delay(60_000L)
+            nowTickMs = System.currentTimeMillis()
+        }
+    }
 
     // Returns an error message on failure, or null on success.
     suspend fun fetchRooms(): String? {
@@ -152,6 +178,7 @@ fun DashboardContent(
     }
 
     fun refreshRooms() {
+        nowTickMs = System.currentTimeMillis()
         scope.launch {
             isRefreshing = true
             fetchRooms()?.let { snackbarHostState.showSnackbar(it) }
@@ -174,6 +201,16 @@ fun DashboardContent(
     LaunchedEffect(Unit) { loadRooms() }
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { silentlyRefreshRooms() }
 
+    // Keep the list self-healing against server-side eventual consistency (e.g. a
+    // just-created room not yet reflected in listRooms()) without requiring the user
+    // to background/foreground the app or pull to refresh.
+    LaunchedEffect(Unit) {
+        while (true) {
+            delay(AUTO_REFRESH_INTERVAL_MS)
+            silentlyRefreshRooms()
+        }
+    }
+
     if (showCreateDialog) {
         CreateRoomDialog(
             onDismiss = { showCreateDialog = false },
@@ -184,6 +221,8 @@ fun DashboardContent(
                         if (response.isSuccessful) {
                             val room = response.body()!!
                             showCreateDialog = false
+                            pendingScrollToTopFor = room.name
+                            loadRooms()
                             onJoinRoom(room.name)
                         } else {
                             snackbarHostState.showSnackbar("Failed to create room")
@@ -279,7 +318,29 @@ fun DashboardContent(
             rooms.map { it.name }.toSet(),
             activeInstanceId,
         )
-        rooms.map { RoomListEntry.FromApi(it) } + recentOnly.map { RoomListEntry.FromRecent(it) }
+        // recentOnly first: those entries exist precisely because they're newer than the
+        // last successful server sync (e.g. a just-created room), so they belong ahead of
+        // the confirmed list, not appended after it -- keeps "newest first" true here the
+        // same way RecentRoomsStore.add() already keeps it true for the Recent tab.
+        recentOnly.map { RoomListEntry.FromRecent(it) } + rooms.map { RoomListEntry.FromApi(it) }
+    }
+
+    LaunchedEffect(pendingScrollToTopFor, activeFilter, recentRooms, filteredRooms, allTabEntries) {
+        val targetRoomName = pendingScrollToTopFor ?: return@LaunchedEffect
+        val targetRoomVisibleInCurrentTab = when (activeFilter) {
+            RoomFilter.RECENT -> recentRooms.any { it.roomName == targetRoomName }
+            RoomFilter.MY_ROOMS -> filteredRooms.any { it.name == targetRoomName }
+            RoomFilter.ALL -> allTabEntries.any { entry ->
+                when (entry) {
+                    is RoomListEntry.FromApi -> entry.room.name == targetRoomName
+                    is RoomListEntry.FromRecent -> entry.recent.roomName == targetRoomName
+                }
+            }
+        }
+        if (targetRoomVisibleInCurrentTab) {
+            listState.scrollToItem(0)
+            pendingScrollToTopFor = null
+        }
     }
 
     Scaffold(
@@ -381,6 +442,7 @@ fun DashboardContent(
                         }
                     } else {
                         LazyColumn(
+                            state = listState,
                             modifier = Modifier.weight(1f).fillMaxSize(),
                             contentPadding = PaddingValues(
                                 bottom = if (isKeyboardVisible) 16.dp else 88.dp,
@@ -394,6 +456,7 @@ fun DashboardContent(
                                     RecentRoomCard(
                                         recent = recent,
                                         isCurrentServer = recent.instanceId == activeInstanceId,
+                                        now = nowTickMs,
                                         onJoin = { onJoinRecent(recent) },
                                         onRemove = {
                                             recentRoomsStore.remove(recent.roomName, recent.instanceId)
@@ -425,6 +488,7 @@ fun DashboardContent(
                                         is RoomListEntry.FromRecent -> RecentRoomCard(
                                             recent = entry.recent,
                                             isCurrentServer = entry.recent.instanceId == activeInstanceId,
+                                            now = nowTickMs,
                                             onJoin = { onJoinRecent(entry.recent) },
                                             onRemove = {
                                                 recentRoomsStore.remove(
@@ -617,6 +681,7 @@ private fun RoomCard(
 private fun RecentRoomCard(
     recent: RecentRoom,
     isCurrentServer: Boolean,
+    now: Long,
     onJoin: () -> Unit,
     onRemove: () -> Unit,
     modifier: Modifier = Modifier,
@@ -624,11 +689,11 @@ private fun RecentRoomCard(
     val isOngoing = CallService.isRunning &&
         CallService.activeRoomName == recent.roomName &&
         CallService.activeInstanceId == recent.instanceId
-    val recentTime = if (isOngoing) System.currentTimeMillis() else recent.leftAt ?: recent.joinedAt
+    val recentTime = if (isOngoing) now else recent.leftAt ?: recent.joinedAt
     val metaText = if (isCurrentServer) {
-        formatRecentRoomTimeAgo(recentTime)
+        formatRecentRoomTimeAgo(recentTime, now)
     } else {
-        "${formatRecentRoomTimeAgo(recentTime)} · ${
+        "${formatRecentRoomTimeAgo(recentTime, now)} · ${
             stringResource(R.string.dashboard_recent_onServer, recent.instanceName)
         }"
     }
