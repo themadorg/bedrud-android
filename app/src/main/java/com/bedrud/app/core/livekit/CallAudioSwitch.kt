@@ -3,6 +3,8 @@ package com.bedrud.app.core.livekit
 import android.app.Application
 import android.media.AudioAttributes
 import android.media.AudioManager
+import android.telecom.CallAudioState
+import com.bedrud.app.core.call.CallConnectionService
 import com.twilio.audioswitch.AudioDevice
 import com.twilio.audioswitch.AudioDeviceChangeListener
 import com.twilio.audioswitch.AudioSwitch
@@ -23,6 +25,13 @@ class CallAudioSwitch(private val application: Application) : AudioHandler {
 
     private val dispatcher: AudioDeviceChangeListener = { devices, selected ->
         listeners.forEach { it(devices, selected) }
+        // AudioSwitch can change the selected device on its own (its startup default, or a
+        // Bluetooth/wired device connecting/disconnecting), not only when selectDevice() is
+        // called explicitly from the UI. Telecom is the actual routing authority for this
+        // self-managed call, so every change needs to reach it, not just user-driven ones --
+        // otherwise Telecom keeps routing audio to whatever it independently defaulted to
+        // (observed: it defaults new calls to earpiece regardless of what AudioSwitch picks).
+        selected?.let { CallConnectionService.setAudioRoute(it.toCallAudioRoute()) }
     }
 
     val availableAudioDevices: List<AudioDevice>
@@ -72,4 +81,12 @@ class CallAudioSwitch(private val application: Application) : AudioHandler {
     fun unregisterAudioDeviceChangeListener(listener: AudioDeviceChangeListener) {
         listeners.remove(listener)
     }
+}
+
+private fun AudioDevice.toCallAudioRoute(): Int = when (this) {
+    is AudioDevice.BluetoothHeadset -> CallAudioState.ROUTE_BLUETOOTH
+    is AudioDevice.WiredHeadset -> CallAudioState.ROUTE_WIRED_HEADSET
+    is AudioDevice.Speakerphone -> CallAudioState.ROUTE_SPEAKER
+    is AudioDevice.Earpiece -> CallAudioState.ROUTE_EARPIECE
+    else -> CallAudioState.ROUTE_WIRED_OR_EARPIECE
 }
