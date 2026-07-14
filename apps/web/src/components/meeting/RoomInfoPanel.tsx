@@ -249,19 +249,13 @@ export function RoomInfoContent({ roomId, active = true }: RoomInfoContentProps)
           </div>
         </div>
 
-        {webxdcUserEnabled ? (
+        {webxdcUserEnabled && (
           <div className="overflow-hidden rounded-xl border border-[var(--meet-border)] bg-[var(--meet-surface-muted)]">
             <WebxdcPanel
               roomId={roomId}
               selfName={room.localParticipant.name || room.localParticipant.identity}
               userId={room.localParticipant.identity}
             />
-          </div>
-        ) : (
-          <div className="rounded-xl border border-[var(--meet-border)] bg-[var(--meet-surface-muted)] px-3.5 py-3 text-[11px] text-[var(--meet-fg-muted)]">
-            WebXDC mini-apps: enable under{' '}
-            <span className="font-medium text-[var(--meet-fg-strong)]">Settings → Experimental</span>. Server must also
-            have webxdc configured (domain + baseDomain).
           </div>
         )}
       </div>

@@ -83,13 +83,13 @@ export function YoutubeWatchOverlay() {
 
   return (
     <div className={cn(meetStageShellClass(layout, 'p-2 max-sm:p-1.5'))}>
-      <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border border-white/[0.06] bg-black shadow-xl">
-        <div ref={containerRef} className="absolute inset-0 h-full w-full" />
+      <div className="meet-dialog relative flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border border-[var(--meet-border)] bg-[var(--meet-bg-panel)] shadow-[var(--meet-shadow)]">
+        <div ref={containerRef} className="absolute inset-0 h-full w-full bg-black" />
         {isHost && (
           <button
             type="button"
             onClick={() => stopShare()}
-            className="absolute top-2 right-2 z-10 flex h-8 w-8 items-center justify-center rounded-lg border-none bg-black/60 text-white/80 backdrop-blur-sm transition-colors hover:bg-black/80 hover:text-white"
+            className="absolute top-2 right-2 z-10 flex h-8 w-8 items-center justify-center rounded-lg border border-[var(--meet-tile-action-border)] bg-[var(--meet-tile-action-bg)] text-[var(--meet-tile-action-fg)] backdrop-blur-sm transition-opacity hover:opacity-90"
             aria-label="Stop YouTube share"
           >
             <X size={16} />
