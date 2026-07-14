@@ -813,7 +813,7 @@ private fun ParticipantTile(
 
     var showMenu by remember { mutableStateOf(false) }
     var showKickConfirm by remember { mutableStateOf(false) }
-    val showAdminMenu = isAdmin && !isLocalParticipant && roomApi != null
+    val canOpenMenu = !isLocalParticipant && roomApi != null
 
     if (showKickConfirm) {
         AlertDialog(
@@ -849,7 +849,7 @@ private fun ParticipantTile(
             .clip(RoundedCornerShape(12.dp))
             .background(MaterialTheme.colorScheme.surfaceVariant)
             .then(
-                if (showAdminMenu) {
+                if (canOpenMenu) {
                     Modifier.combinedClickable(
                         onClick = {},
                         onLongClick = { showMenu = true }
@@ -923,8 +923,8 @@ private fun ParticipantTile(
             )
         }
 
-        // Admin dropdown menu
-        if (showAdminMenu) {
+        // Participant actions menu
+        if (canOpenMenu) {
             DropdownMenu(
                 expanded = showMenu,
                 onDismissRequest = { showMenu = false }
@@ -956,26 +956,28 @@ private fun ParticipantTile(
                         onToggleVideoDisabled(identity)
                     }
                 )
-                DropdownMenuItem(
-                    text = { Text(stringResource(R.string.meeting_action_kick), color = MaterialTheme.colorScheme.error) },
-                    onClick = {
-                        showMenu = false
-                        showKickConfirm = true
-                    }
-                )
-                DropdownMenuItem(
-                    text = { Text(stringResource(R.string.meeting_action_ban), color = MaterialTheme.colorScheme.error) },
-                    onClick = {
-                        showMenu = false
-                        scope?.launch {
-                            try {
-                                roomApi?.banParticipant(roomId, identity)
-                            } catch (e: Exception) {
-                                snackbarHostState?.showSnackbar(e.message ?: "Failed to ban participant")
+                if (isAdmin) {
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.meeting_action_kick), color = MaterialTheme.colorScheme.error) },
+                        onClick = {
+                            showMenu = false
+                            showKickConfirm = true
+                        }
+                    )
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.meeting_action_ban), color = MaterialTheme.colorScheme.error) },
+                        onClick = {
+                            showMenu = false
+                            scope?.launch {
+                                try {
+                                    roomApi?.banParticipant(roomId, identity)
+                                } catch (e: Exception) {
+                                    snackbarHostState?.showSnackbar(e.message ?: "Failed to ban participant")
+                                }
                             }
                         }
-                    }
-                )
+                    )
+                }
             }
         }
     }
@@ -1124,8 +1126,8 @@ private fun ParticipantListRow(
             }
         }
 
-        // Three-dot menu for admins (on remote participants only)
-        if (isAdmin && !isLocal && roomApi != null) {
+        // Three-dot menu (on remote participants only)
+        if (!isLocal && roomApi != null) {
             Box {
                 IconButton(
                     onClick = { showMenu = true },
@@ -1163,26 +1165,28 @@ private fun ParticipantListRow(
                             onToggleVideoDisabled()
                         }
                     )
-                    DropdownMenuItem(
-                        text = { Text(stringResource(R.string.meeting_action_kick), color = MaterialTheme.colorScheme.error) },
-                        onClick = {
-                            showMenu = false
-                            scope.launch {
-                                try { roomApi.kickParticipant(roomId, identity) }
-                                catch (e: Exception) { snackbarHostState.showSnackbar(e.message ?: "Failed") }
+                    if (isAdmin) {
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.meeting_action_kick), color = MaterialTheme.colorScheme.error) },
+                            onClick = {
+                                showMenu = false
+                                scope.launch {
+                                    try { roomApi.kickParticipant(roomId, identity) }
+                                    catch (e: Exception) { snackbarHostState.showSnackbar(e.message ?: "Failed") }
+                                }
                             }
-                        }
-                    )
-                    DropdownMenuItem(
-                        text = { Text(stringResource(R.string.meeting_action_ban), color = MaterialTheme.colorScheme.error) },
-                        onClick = {
-                            showMenu = false
-                            scope.launch {
-                                try { roomApi.banParticipant(roomId, identity) }
-                                catch (e: Exception) { snackbarHostState.showSnackbar(e.message ?: "Failed") }
+                        )
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.meeting_action_ban), color = MaterialTheme.colorScheme.error) },
+                            onClick = {
+                                showMenu = false
+                                scope.launch {
+                                    try { roomApi.banParticipant(roomId, identity) }
+                                    catch (e: Exception) { snackbarHostState.showSnackbar(e.message ?: "Failed") }
+                                }
                             }
-                        }
-                    )
+                        )
+                    }
                 }
             }
         }
