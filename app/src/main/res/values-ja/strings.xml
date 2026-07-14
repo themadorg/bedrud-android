@@ -207,11 +207,7 @@
   <string name="meeting_sheet_tools">ツール</string>
   <string name="meeting_sheet_report">不正利用を報告</string>
   <string name="meeting_contentDescription_audioSource">オーディオソース</string>
-  <string name="meeting_audio_sheet_title">オーディオ</string>
-  <string name="meeting_audio_sheet_microphone">マイク</string>
-  <string name="meeting_audio_sheet_micOn">ミュート解除</string>
-  <string name="meeting_audio_sheet_micOff">ミュート中</string>
-  <string name="meeting_audio_sheet_output">音声出力</string>
+  <string name="meeting_audio_sheet_title">音声出力を選択</string>
   <string name="meeting_audio_device_speaker">スピーカー</string>
   <string name="meeting_audio_device_earpiece">受話口</string>
   <string name="meeting_audio_device_wired_headset">有線ヘッドセット</string>

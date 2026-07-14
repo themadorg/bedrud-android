@@ -601,20 +601,7 @@ fun MeetingScreen(
                                 MeetingAudioSourceSheet(
                                     audioHandler = roomManager.audioHandler,
                                     audioState = audioState,
-                                    isMicEnabled = isMicEnabled,
-                                    micHasError = micMediaError,
                                     onDismiss = { showAudioSheet = false },
-                                    onToggleMic = {
-                                        val action: () -> Unit = {
-                                            scope.launch { roomManager.toggleMicrophone() }
-                                        }
-                                        if (hasPermission(Manifest.permission.RECORD_AUDIO)) {
-                                            action()
-                                        } else {
-                                            pendingMediaAction = action
-                                            permissionLauncher.launch(arrayOf(Manifest.permission.RECORD_AUDIO))
-                                        }
-                                    },
                                 )
                             }
 

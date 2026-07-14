@@ -207,11 +207,7 @@
   <string name="meeting_sheet_tools">Инструменты</string>
   <string name="meeting_sheet_report">Сообщить о нарушении</string>
   <string name="meeting_contentDescription_audioSource">Источник звука</string>
-  <string name="meeting_audio_sheet_title">Звук</string>
-  <string name="meeting_audio_sheet_microphone">Микрофон</string>
-  <string name="meeting_audio_sheet_micOn">Микрофон включён</string>
-  <string name="meeting_audio_sheet_micOff">Микрофон выключен</string>
-  <string name="meeting_audio_sheet_output">Вывод звука</string>
+  <string name="meeting_audio_sheet_title">Выбор вывода звука</string>
   <string name="meeting_audio_device_speaker">Динамик</string>
   <string name="meeting_audio_device_earpiece">Телефон</string>
   <string name="meeting_audio_device_wired_headset">Проводная гарнитура</string>

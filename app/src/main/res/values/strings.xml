@@ -176,11 +176,7 @@
   <string name="meeting_sheet_tools">Tools</string>
   <string name="meeting_sheet_report">Report abuse</string>
   <string name="meeting_contentDescription_audioSource">Audio source</string>
-  <string name="meeting_audio_sheet_title">Audio</string>
-  <string name="meeting_audio_sheet_microphone">Microphone</string>
-  <string name="meeting_audio_sheet_micOn">Unmuted</string>
-  <string name="meeting_audio_sheet_micOff">Muted</string>
-  <string name="meeting_audio_sheet_output">Audio output</string>
+  <string name="meeting_audio_sheet_title">Select Audio Output</string>
   <string name="meeting_audio_device_speaker">Speaker</string>
   <string name="meeting_audio_device_earpiece">Phone</string>
   <string name="meeting_audio_device_wired_headset">Wired headset</string>

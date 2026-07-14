@@ -207,11 +207,7 @@
   <string name="meeting_sheet_tools">الأدوات</string>
   <string name="meeting_sheet_report">الإبلاغ عن إساءة</string>
   <string name="meeting_contentDescription_audioSource">مصدر الصوت</string>
-  <string name="meeting_audio_sheet_title">الصوت</string>
-  <string name="meeting_audio_sheet_microphone">الميكروفون</string>
-  <string name="meeting_audio_sheet_micOn">غير مكتوم</string>
-  <string name="meeting_audio_sheet_micOff">مكتوم</string>
-  <string name="meeting_audio_sheet_output">مخرج الصوت</string>
+  <string name="meeting_audio_sheet_title">اختر مخرج الصوت</string>
   <string name="meeting_audio_device_speaker">مكبر الصوت</string>
   <string name="meeting_audio_device_earpiece">الهاتف</string>
   <string name="meeting_audio_device_wired_headset">سماعة سلكية</string>

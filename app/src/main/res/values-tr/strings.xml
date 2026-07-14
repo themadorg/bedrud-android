@@ -207,11 +207,7 @@
   <string name="meeting_sheet_tools">Araçlar</string>
   <string name="meeting_sheet_report">Kötüye kullanımı bildir</string>
   <string name="meeting_contentDescription_audioSource">Ses kaynağı</string>
-  <string name="meeting_audio_sheet_title">Ses</string>
-  <string name="meeting_audio_sheet_microphone">Mikrofon</string>
-  <string name="meeting_audio_sheet_micOn">Sessiz değil</string>
-  <string name="meeting_audio_sheet_micOff">Sessizde</string>
-  <string name="meeting_audio_sheet_output">Ses çıkışı</string>
+  <string name="meeting_audio_sheet_title">Ses Çıkışını Seç</string>
   <string name="meeting_audio_device_speaker">Hoparlör</string>
   <string name="meeting_audio_device_earpiece">Telefon</string>
   <string name="meeting_audio_device_wired_headset">Kablolu kulaklık</string>

@@ -204,11 +204,7 @@
   <string name="meeting_sheet_tools">ابزارها</string>
   <string name="meeting_sheet_report">گزارش سوءاستفاده</string>
   <string name="meeting_contentDescription_audioSource">منبع صدا</string>
-  <string name="meeting_audio_sheet_title">صدا</string>
-  <string name="meeting_audio_sheet_microphone">میکروفون</string>
-  <string name="meeting_audio_sheet_micOn">صدا باز</string>
-  <string name="meeting_audio_sheet_micOff">بی‌صدا</string>
-  <string name="meeting_audio_sheet_output">خروجی صدا</string>
+  <string name="meeting_audio_sheet_title">انتخاب خروجی صدا</string>
   <string name="meeting_audio_device_speaker">بلندگو</string>
   <string name="meeting_audio_device_earpiece">گوشی</string>
   <string name="meeting_audio_device_wired_headset">هدست سیمی</string>

@@ -207,11 +207,7 @@
   <string name="meeting_sheet_tools">Werkzeuge</string>
   <string name="meeting_sheet_report">Missbrauch melden</string>
   <string name="meeting_contentDescription_audioSource">Audioquelle</string>
-  <string name="meeting_audio_sheet_title">Audio</string>
-  <string name="meeting_audio_sheet_microphone">Mikrofon</string>
-  <string name="meeting_audio_sheet_micOn">Stummschaltung aus</string>
-  <string name="meeting_audio_sheet_micOff">Stummgeschaltet</string>
-  <string name="meeting_audio_sheet_output">Audioausgabe</string>
+  <string name="meeting_audio_sheet_title">Audioausgabe auswählen</string>
   <string name="meeting_audio_device_speaker">Lautsprecher</string>
   <string name="meeting_audio_device_earpiece">Telefon</string>
   <string name="meeting_audio_device_wired_headset">Kabelgebundenes Headset</string>
