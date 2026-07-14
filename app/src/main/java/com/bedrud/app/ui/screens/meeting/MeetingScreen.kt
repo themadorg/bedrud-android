@@ -203,6 +203,10 @@ fun MeetingScreen(
         }
     }
 
+    // Identities this viewer has locally muted (does not affect what other participants hear)
+    val locallyMutedIdentities by roomManager.locallyMutedIdentities.collectAsState()
+    val onToggleLocalMute: (String) -> Unit = { identity -> roomManager.toggleLocalMute(identity) }
+
     // Unread chat count while panel is closed
     var lastReadCount by rememberSaveable { mutableIntStateOf(0) }
     val unreadCount = if (showChat) 0 else (chatMessages.size - lastReadCount).coerceAtLeast(0)
@@ -532,6 +536,8 @@ fun MeetingScreen(
                                             stageScreenShareIdentity = stageScreenShareIdentity,
                                             disabledVideoIdentities = locallyHiddenVideoIdentities,
                                             onToggleVideoDisabled = onToggleVideoDisabled,
+                                            mutedIdentities = locallyMutedIdentities,
+                                            onToggleLocalMute = onToggleLocalMute,
                                         )
                                     }
                                 }
@@ -713,6 +719,8 @@ fun MeetingScreen(
                                     scope = scope,
                                     disabledVideoIdentities = locallyHiddenVideoIdentities,
                                     onToggleVideoDisabled = onToggleVideoDisabled,
+                                    mutedIdentities = locallyMutedIdentities,
+                                    onToggleLocalMute = onToggleLocalMute,
                                     onClose = { showParticipants = false }
                                 )
                             }
@@ -785,9 +793,12 @@ private fun ParticipantTile(
     stageScreenShareIdentity: String? = null,
     disabledVideoIdentities: Set<String> = emptySet(),
     onToggleVideoDisabled: (String) -> Unit = {},
+    mutedIdentities: Set<String> = emptySet(),
+    onToggleLocalMute: (String) -> Unit = {},
 ) {
     val identity = participant.identity?.value ?: "Unknown"
     val isVideoLocallyDisabled = identity in disabledVideoIdentities
+    val isLocallyMuted = identity in mutedIdentities
 
     val screenShareRef = if (identity != stageScreenShareIdentity) {
         resolveParticipantScreenShare(participant)
@@ -930,16 +941,17 @@ private fun ParticipantTile(
                 onDismissRequest = { showMenu = false }
             ) {
                 DropdownMenuItem(
-                    text = { Text(stringResource(R.string.meeting_action_mute)) },
+                    text = {
+                        Text(
+                            stringResource(
+                                if (isLocallyMuted) R.string.meeting_action_unmute
+                                else R.string.meeting_action_mute
+                            )
+                        )
+                    },
                     onClick = {
                         showMenu = false
-                        scope?.launch {
-                            try {
-                                roomApi?.muteParticipant(roomId, identity)
-                            } catch (e: Exception) {
-                                snackbarHostState?.showSnackbar(e.message ?: "Failed to mute")
-                            }
-                        }
+                        onToggleLocalMute(identity)
                     }
                 )
                 DropdownMenuItem(
@@ -1024,6 +1036,8 @@ private fun ParticipantsPanel(
     scope: kotlinx.coroutines.CoroutineScope,
     disabledVideoIdentities: Set<String>,
     onToggleVideoDisabled: (String) -> Unit,
+    mutedIdentities: Set<String>,
+    onToggleLocalMute: (String) -> Unit,
     onClose: () -> Unit
 ) {
     Column(
@@ -1058,7 +1072,9 @@ private fun ParticipantsPanel(
                     snackbarHostState = snackbarHostState,
                     scope = scope,
                     isVideoLocallyDisabled = identity in disabledVideoIdentities,
-                    onToggleVideoDisabled = { onToggleVideoDisabled(identity) }
+                    onToggleVideoDisabled = { onToggleVideoDisabled(identity) },
+                    isLocallyMuted = identity in mutedIdentities,
+                    onToggleLocalMute = { onToggleLocalMute(identity) }
                 )
             }
         }
@@ -1076,7 +1092,9 @@ private fun ParticipantListRow(
     snackbarHostState: SnackbarHostState,
     scope: kotlinx.coroutines.CoroutineScope,
     isVideoLocallyDisabled: Boolean = false,
-    onToggleVideoDisabled: () -> Unit = {}
+    onToggleVideoDisabled: () -> Unit = {},
+    isLocallyMuted: Boolean = false,
+    onToggleLocalMute: () -> Unit = {}
 ) {
     var showMenu by remember { mutableStateOf(false) }
     val avatarColor = remember(name) {
@@ -1142,13 +1160,17 @@ private fun ParticipantListRow(
                 }
                 DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
                     DropdownMenuItem(
-                        text = { Text(stringResource(R.string.meeting_action_mute)) },
+                        text = {
+                            Text(
+                                stringResource(
+                                    if (isLocallyMuted) R.string.meeting_action_unmute
+                                    else R.string.meeting_action_mute
+                                )
+                            )
+                        },
                         onClick = {
                             showMenu = false
-                            scope.launch {
-                                try { roomApi.muteParticipant(roomId, identity) }
-                                catch (e: Exception) { snackbarHostState.showSnackbar(e.message ?: "Failed") }
-                            }
+                            onToggleLocalMute()
                         }
                     )
                     DropdownMenuItem(

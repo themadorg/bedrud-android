@@ -61,6 +61,7 @@
   <string name="meeting_dialog_kickTitle">Kick Participant</string>
   <string name="meeting_dialog_kickMessage">Are you sure you want to kick <xliff:g id="participantName" example="John Doe">%1$s</xliff:g> from the room?</string>
   <string name="meeting_action_mute">Mute</string>
+  <string name="meeting_action_unmute">Unmute</string>
   <string name="meeting_action_disableVideo">Disable Video</string>
   <string name="meeting_action_enableVideo">Enable Video</string>
   <string name="meeting_action_kick">Kick</string>

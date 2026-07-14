@@ -96,6 +96,10 @@ class RoomManager(
     val isDeafened: StateFlow<Boolean> = _isDeafened.asStateFlow()
     private var micMutedBeforeDeafen = false
 
+    // Identities this viewer has locally muted (does not affect what other participants hear)
+    private val _locallyMutedIdentities = MutableStateFlow<Set<String>>(emptySet())
+    val locallyMutedIdentities: StateFlow<Set<String>> = _locallyMutedIdentities.asStateFlow()
+
     // Incremented on every participant change to trigger recomposition
     private val _participantVersion = MutableStateFlow(0)
     val participantVersion: StateFlow<Int> = _participantVersion.asStateFlow()
@@ -225,7 +229,7 @@ class RoomManager(
                             _participantVersion.value++
                         }
                         is RoomEvent.TrackSubscribed -> {
-                            if (_isDeafened.value) {
+                            if (effectiveVolumeFor(event.participant.identity?.value) == 0.0) {
                                 (event.track as? RemoteAudioTrack)?.setVolume(0.0)
                             }
                             _participantVersion.value++
@@ -369,6 +373,7 @@ class RoomManager(
         _isScreenShareEnabled.value = false
         _isDeafened.value = settingsStore.getDeafened()
         micMutedBeforeDeafen = false
+        _locallyMutedIdentities.value = emptySet()
         _participantVersion.value = 0
         _chatMessages.value = emptyList()
         _wasKicked.value = false
@@ -392,7 +397,7 @@ class RoomManager(
         if (enabled && _isDeafened.value) {
             _isDeafened.value = false
             settingsStore.setDeafened(false)
-            applyDeafenedVolume(false)
+            reapplyAllVolumes()
         }
         val localParticipant = _room?.localParticipant ?: return
         if (localParticipant.isMicrophoneEnabled == enabled) {
@@ -429,23 +434,43 @@ class RoomManager(
         if (deafening) {
             micMutedBeforeDeafen = !_isMicEnabled.value
             _isDeafened.value = true
-            applyDeafenedVolume(true)
+            reapplyAllVolumes()
             if (_isMicEnabled.value) {
                 setMicrophoneEnabled(false)
             }
         } else {
             _isDeafened.value = false
-            applyDeafenedVolume(false)
+            reapplyAllVolumes()
             if (!micMutedBeforeDeafen) {
                 setMicrophoneEnabled(true)
             }
         }
     }
 
-    private fun applyDeafenedVolume(deafened: Boolean) {
+    // Muted-for-me only: does not call the server and does not affect what other participants hear.
+    fun toggleLocalMute(identity: String) {
+        _locallyMutedIdentities.value = if (identity in _locallyMutedIdentities.value) {
+            _locallyMutedIdentities.value - identity
+        } else {
+            _locallyMutedIdentities.value + identity
+        }
+        val participant = _room?.remoteParticipants?.values?.find { it.identity?.value == identity } ?: return
+        val volume = effectiveVolumeFor(identity)
+        for ((_, track) in participant.audioTrackPublications) {
+            (track as? RemoteAudioTrack)?.setVolume(volume)
+        }
+    }
+
+    private fun effectiveVolumeFor(identity: String?): Double {
+        if (_isDeafened.value) return 0.0
+        if (identity != null && identity in _locallyMutedIdentities.value) return 0.0
+        return 1.0
+    }
+
+    private fun reapplyAllVolumes() {
         val room = _room ?: return
-        val volume = if (deafened) 0.0 else 1.0
         for (participant in room.remoteParticipants.values) {
+            val volume = effectiveVolumeFor(participant.identity?.value)
             for ((_, track) in participant.audioTrackPublications) {
                 (track as? RemoteAudioTrack)?.setVolume(volume)
             }

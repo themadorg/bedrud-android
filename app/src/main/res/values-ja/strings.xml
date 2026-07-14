@@ -61,6 +61,7 @@
   <string name="meeting_dialog_kickTitle">参加者をキック</string>
   <string name="meeting_dialog_kickMessage"><xliff:g id="participantName" example="John Doe">%1$s</xliff:g> をルームからキックしてもよろしいですか？</string>
   <string name="meeting_action_mute">ミュート</string>
+  <string name="meeting_action_unmute">ミュート解除</string>
   <string name="meeting_action_disableVideo">ビデオを無効にする</string>
   <string name="meeting_action_enableVideo">ビデオを有効にする</string>
   <string name="meeting_action_kick">キック</string>

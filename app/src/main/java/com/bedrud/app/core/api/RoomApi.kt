@@ -35,12 +35,6 @@ interface RoomApi {
         @Path("identity") identity: String
     ): Response<Unit>
 
-    @POST("room/{roomId}/mute/{identity}")
-    suspend fun muteParticipant(
-        @Path("roomId") roomId: String,
-        @Path("identity") identity: String
-    ): Response<Unit>
-
     @PUT("room/{roomId}/settings")
     suspend fun updateRoomSettings(
         @Path("roomId") roomId: String,

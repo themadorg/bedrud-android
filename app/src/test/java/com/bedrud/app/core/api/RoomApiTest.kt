@@ -125,18 +125,6 @@ class RoomApiTest {
     }
 
     @Test
-    fun `muteParticipant sends POST to correct path`() = runBlocking {
-        server.enqueue(MockResponse().setResponseCode(200))
-
-        val response = roomApi.muteParticipant("room123", "user456")
-
-        val request = server.takeRequest()
-        assertEquals("POST", request.method)
-        assertEquals("/room/room123/mute/user456", request.path)
-        assertTrue(response.isSuccessful)
-    }
-
-    @Test
     fun `banParticipant sends POST to correct path`() = runBlocking {
         server.enqueue(MockResponse().setResponseCode(200))
 

@@ -61,6 +61,7 @@
   <string name="meeting_dialog_kickTitle">Teilnehmer kicken</string>
   <string name="meeting_dialog_kickMessage">Sind Sie sicher, dass Sie <xliff:g id="participantName" example="John Doe">%1$s</xliff:g> aus dem Raum kicken möchten?</string>
   <string name="meeting_action_mute">Stummschalten</string>
+  <string name="meeting_action_unmute">Stummschaltung aufheben</string>
   <string name="meeting_action_disableVideo">Video deaktivieren</string>
   <string name="meeting_action_enableVideo">Video aktivieren</string>
   <string name="meeting_action_kick">Kicken</string>

@@ -61,6 +61,7 @@
   <string name="meeting_dialog_kickTitle">移出参与者</string>
   <string name="meeting_dialog_kickMessage">确定要将 <xliff:g id="participantName" example="John Doe">%1$s</xliff:g> 移出此房间吗？</string>
   <string name="meeting_action_mute">静音</string>
+  <string name="meeting_action_unmute">取消静音</string>
   <string name="meeting_action_disableVideo">关闭视频</string>
   <string name="meeting_action_enableVideo">开启视频</string>
   <string name="meeting_action_kick">移出</string>

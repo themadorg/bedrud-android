@@ -61,6 +61,7 @@
   <string name="meeting_dialog_kickTitle">طرد مشارك</string>
   <string name="meeting_dialog_kickMessage">هل أنت متأكد من رغبتك في طرد <xliff:g id="participantName" example="John Doe">%1$s</xliff:g> من الغرفة؟</string>
   <string name="meeting_action_mute">كتم الصوت</string>
+  <string name="meeting_action_unmute">إلغاء كتم الصوت</string>
   <string name="meeting_action_disableVideo">تعطيل الفيديو</string>
   <string name="meeting_action_enableVideo">تفعيل الفيديو</string>
   <string name="meeting_action_kick">طرد</string>

@@ -61,6 +61,7 @@
   <string name="meeting_dialog_kickTitle">Expulsar participante</string>
   <string name="meeting_dialog_kickMessage">¿Estás seguro de que quieres expulsar a <xliff:g id="participantName" example="John Doe">%1$s</xliff:g> de la sala?</string>
   <string name="meeting_action_mute">Silenciar</string>
+  <string name="meeting_action_unmute">Activar sonido</string>
   <string name="meeting_action_disableVideo">Desactivar video</string>
   <string name="meeting_action_enableVideo">Activar video</string>
   <string name="meeting_action_kick">Expulsar</string>
