@@ -200,7 +200,8 @@
   <string name="meeting_sheet_addOthers">افزودن دیگران</string>
   <string name="meeting_share_chooserTitle">اشتراک لینک جلسه</string>
   <string name="meeting_sheet_flipCamera">چرخش دوربین</string>
-  <string name="meeting_sheet_settings">تنظیمات</string>
+  <string name="meeting_sheet_settings">تنظیمات صدا</string>
+  <string name="meeting_sheet_roomSettings">تنظیمات</string>
   <string name="meeting_sheet_tools">ابزارها</string>
   <string name="meeting_sheet_report">گزارش سوءاستفاده</string>
   <string name="meeting_contentDescription_audioSource">منبع صدا</string>

@@ -16,6 +16,7 @@ import androidx.compose.material.icons.automirrored.filled.Chat
 import androidx.compose.material.icons.automirrored.filled.VolumeOff
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.Cameraswitch
+import androidx.compose.material.icons.filled.Headset
 import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.material.icons.filled.People
 import androidx.compose.material.icons.filled.Settings
@@ -43,6 +44,7 @@ fun MeetingMoreOptionsSheet(
     isCameraEnabled: Boolean,
     isDeafened: Boolean,
     unreadCount: Int,
+    isRoomSettingsAvailable: Boolean,
     onDismiss: () -> Unit,
     onSwitchCamera: () -> Unit,
     onToggleChat: () -> Unit,
@@ -50,6 +52,7 @@ fun MeetingMoreOptionsSheet(
     onCopyRoomLink: () -> Unit,
     onToggleDeafen: () -> Unit,
     onOpenAudioSettings: () -> Unit,
+    onOpenRoomSettings: () -> Unit,
 ) {
     val colors = meetingChromeColors()
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -132,7 +135,7 @@ fun MeetingMoreOptionsSheet(
 
             SheetLabeledButton(
                 colors = colors,
-                icon = Icons.Default.Settings,
+                icon = Icons.Default.Headset,
                 label = stringResource(R.string.meeting_sheet_settings),
                 onClick = {
                     onDismiss()
@@ -140,6 +143,19 @@ fun MeetingMoreOptionsSheet(
                 },
                 modifier = Modifier.fillMaxWidth(),
             )
+
+            if (isRoomSettingsAvailable) {
+                SheetLabeledButton(
+                    colors = colors,
+                    icon = Icons.Default.Settings,
+                    label = stringResource(R.string.meeting_sheet_roomSettings),
+                    onClick = {
+                        onDismiss()
+                        onOpenRoomSettings()
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
         }
     }
 }

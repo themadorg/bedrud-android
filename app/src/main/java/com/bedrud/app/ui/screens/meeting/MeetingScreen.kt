@@ -215,6 +215,7 @@ fun MeetingScreen(
     // Leave/end dialog
     var showLeaveDialog by remember { mutableStateOf(false) }
     var showAudioSheet by remember { mutableStateOf(false) }
+    var showRoomSettingsSheet by remember { mutableStateOf(false) }
     var isScreenShareFullscreen by rememberSaveable { mutableStateOf(false) }
 
     LaunchedEffect(activeStage?.kind) {
@@ -555,6 +556,7 @@ fun MeetingScreen(
                                 showChat = showChat,
                                 showParticipants = showParticipants,
                                 unreadCount = unreadCount,
+                                isRoomSettingsAvailable = isAdmin,
                                 onToggleMic = {
                                     val action: () -> Unit = {
                                         scope.launch { roomManager.toggleMicrophone() }
@@ -605,6 +607,7 @@ fun MeetingScreen(
                                 },
                                 onToggleDeafen = { scope.launch { roomManager.toggleDeafen() } },
                                 onOpenAudioSettings = { showAudioSheet = true },
+                                onOpenRoomSettings = { showRoomSettingsSheet = true },
                                 onEndCall = {
                                     if (isAdmin) showLeaveDialog = true
                                     else {
@@ -623,6 +626,22 @@ fun MeetingScreen(
                                     audioState = audioState,
                                     onDismiss = { showAudioSheet = false },
                                 )
+                            }
+
+                            if (showRoomSettingsSheet) {
+                                roomInfo?.let { info ->
+                                    MeetingRoomSettingsSheet(
+                                        roomId = info.id,
+                                        roomApi = roomApi,
+                                        isPublic = info.isPublic,
+                                        settings = info.settings,
+                                        snackbarHostState = snackbarHostState,
+                                        onDismiss = { showRoomSettingsSheet = false },
+                                        onSaved = { newIsPublic, newSettings ->
+                                            roomInfo = info.copy(isPublic = newIsPublic, settings = newSettings)
+                                        },
+                                    )
+                                }
                             }
 
                             if (showLeaveDialog) {

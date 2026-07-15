@@ -53,6 +53,7 @@ fun MeetingControlsBar(
     showChat: Boolean,
     showParticipants: Boolean,
     unreadCount: Int,
+    isRoomSettingsAvailable: Boolean,
     onToggleMic: () -> Unit,
     onToggleCamera: () -> Unit,
     onSwitchCamera: () -> Unit,
@@ -62,6 +63,7 @@ fun MeetingControlsBar(
     onCopyRoomLink: () -> Unit,
     onToggleDeafen: () -> Unit,
     onOpenAudioSettings: () -> Unit,
+    onOpenRoomSettings: () -> Unit,
     onEndCall: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -140,6 +142,7 @@ fun MeetingControlsBar(
                     isCameraEnabled = isCameraEnabled,
                     isDeafened = isDeafened,
                     unreadCount = unreadCount,
+                    isRoomSettingsAvailable = isRoomSettingsAvailable,
                     onDismiss = { showMoreMenu = false },
                     onSwitchCamera = onSwitchCamera,
                     onToggleChat = onToggleChat,
@@ -149,6 +152,10 @@ fun MeetingControlsBar(
                     onOpenAudioSettings = {
                         showMoreMenu = false
                         onOpenAudioSettings()
+                    },
+                    onOpenRoomSettings = {
+                        showMoreMenu = false
+                        onOpenRoomSettings()
                     },
                 )
             }
