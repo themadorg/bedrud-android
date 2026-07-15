@@ -84,6 +84,7 @@ import com.bedrud.app.core.recent.RecentRoomsStore
 import com.bedrud.app.core.recent.formatRecentRoomTimeAgo
 import com.bedrud.app.core.recent.recentRoomsNotInApiList
 import com.bedrud.app.models.CreateRoomRequest
+import com.bedrud.app.models.RoomSettings
 import com.bedrud.app.models.UpdateRoomSettingsRequest
 import com.bedrud.app.models.UserRoomResponse
 import kotlinx.coroutines.delay
@@ -217,7 +218,17 @@ fun DashboardContent(
             onCreate = { name ->
                 scope.launch {
                     try {
-                        val response = roomApi.createRoom(CreateRoomRequest(name = name.ifBlank { null }))
+                        val response = roomApi.createRoom(
+                            CreateRoomRequest(
+                                name = name.ifBlank { null },
+                                isPublic = true,
+                                // The server has no allow-true default of its own for a
+                                // create call -- an omitted `settings` object is parsed
+                                // as all-false, so without this every new room would be
+                                // created with chat/video/audio silently disabled.
+                                settings = RoomSettings(allowChat = true, allowVideo = true, allowAudio = true)
+                            )
+                        )
                         if (response.isSuccessful) {
                             val room = response.body()!!
                             showCreateDialog = false
@@ -288,6 +299,12 @@ fun DashboardContent(
                             UpdateRoomSettingsRequest(isPublic = isPublic, settings = settings)
                         )
                         if (response.isSuccessful) {
+                            // Apply locally before the async loadRooms() refetch lands, so
+                            // reopening this room's settings (or reading its card) right away
+                            // reflects what was just saved instead of the pre-save snapshot.
+                            rooms = rooms.map {
+                                if (it.id == room.id) it.copy(isPublic = isPublic, settings = settings) else it
+                            }
                             roomToEdit = null
                             loadRooms()
                             snackbarHostState.showSnackbar("Settings saved")

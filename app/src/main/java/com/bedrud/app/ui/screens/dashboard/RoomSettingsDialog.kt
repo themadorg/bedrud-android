@@ -29,10 +29,10 @@ fun RoomSettingsDialog(
     onDismiss: () -> Unit,
     onSave: (isPublic: Boolean, settings: RoomSettings) -> Unit
 ) {
-    var isPublic by remember { mutableStateOf(room.isPublic ?: true) }
-    var allowChat by remember { mutableStateOf(room.settings.allowChat) }
-    var allowVideo by remember { mutableStateOf(room.settings.allowVideo) }
-    var allowAudio by remember { mutableStateOf(room.settings.allowAudio) }
+    // Room's actual state is always present in the API response (no omitempty on the
+    // server side); false is the safe fallback if it's ever missing rather than true,
+    // since defaulting an unknown room to public would be the wrong direction to fail in.
+    var isPublic by remember { mutableStateOf(room.isPublic ?: false) }
     var requireApproval by remember { mutableStateOf(room.settings.requireApproval) }
     var e2ee by remember { mutableStateOf(room.settings.e2ee) }
 
@@ -42,9 +42,6 @@ fun RoomSettingsDialog(
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 SettingsToggleRow(stringResource(R.string.dashboard_roomSettings_isPublic), isPublic) { isPublic = it }
-                SettingsToggleRow(stringResource(R.string.dashboard_roomSettings_allowChat), allowChat) { allowChat = it }
-                SettingsToggleRow(stringResource(R.string.dashboard_roomSettings_allowVideo), allowVideo) { allowVideo = it }
-                SettingsToggleRow(stringResource(R.string.dashboard_roomSettings_allowAudio), allowAudio) { allowAudio = it }
                 SettingsToggleRow(stringResource(R.string.dashboard_roomSettings_requireApproval), requireApproval) { requireApproval = it }
                 SettingsToggleRow(stringResource(R.string.dashboard_roomSettings_e2ee), e2ee) { e2ee = it }
             }
@@ -53,10 +50,10 @@ fun RoomSettingsDialog(
             TextButton(onClick = {
                 onSave(
                     isPublic,
-                    RoomSettings(
-                        allowChat = allowChat,
-                        allowVideo = allowVideo,
-                        allowAudio = allowAudio,
+                    room.settings.copy(
+                        allowChat = true,
+                        allowVideo = true,
+                        allowAudio = true,
                         requireApproval = requireApproval,
                         e2ee = e2ee
                     )
