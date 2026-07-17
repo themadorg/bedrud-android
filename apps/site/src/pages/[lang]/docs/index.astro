@@ -1,9 +1,0 @@
----
-import { supportedLocales } from "../../../i18n/utils";
-
-export function getStaticPaths() {
-  return supportedLocales.map((lang) => ({ params: { lang } }));
-}
-
-return Astro.redirect(`/${Astro.params.lang!}/docs/getting-started/quickstart`, 301);
----

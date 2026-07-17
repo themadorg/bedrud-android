@@ -1,3 +1,0 @@
-[install]
-# Reject package versions published less than 7 days ago (supply-chain hardening)
-minimumReleaseAge = 604800 # 7 days in seconds

@@ -1,315 +1,113 @@
-# Bedrud — Repo Guide
+# Bedrud Android
 
-Single binary vid meeting. Go (Fiber, GORM) + React + embedded LiveKit.
+Kotlin + Jetpack Compose + Material 3. Single `:app` module. minSdk 28, compileSdk/targetSdk 36, JDK 17.
 
----
+## Build & Test
+
+```bash
+./gradlew assembleDebug          # Debug APK → app/build/outputs/apk/debug/
+./gradlew assembleRelease        # Release APK (needs keystore.properties)
+./gradlew test                   # Unit tests only (src/test/)
+```
+
+No instrumented test directory. No `make` target for Android tests — run `./gradlew test` directly.
+
+**Test stack:** JUnit 4, MockK, OkHttp MockWebServer, kotlinx-coroutines-test.
+**Test util:** `InMemorySharedPreferences` in `testutil/` — inject into any class taking `SharedPreferences` (InstanceStore, AuthManager). Avoid Android framework dependency.
+
+**Make aliases from repo root:** `make build-android-debug`, `make build-android`, `make install-android`, `make release-android`.
 
 ## Architecture
 
 ```
-bedrud/
-├── server/               Go backend (module: bedrud)
-│   ├── cmd/bedrud/       CLI entrypoint (run, install, user, --livekit)
-│   ├── cmd/server/       API-only entrypoint (Air hot-reload target)
-│   ├── internal/
-│   │   ├── auth/         AuthService, JWT, session store, OAuth (Goth)
-│   │   ├── database/     GORM init (SQLite/Postgres), auto-migrations
-│   │   ├── handlers/     HTTP route handlers (auth, rooms, users, admin, prefs)
-│   │   ├── install/      Linux installer + update/upgrade
-│   │   ├── livekit/      Embedded LK binary (embed.FS + subprocess mgmt)
-│   │   ├── lkutil/       Shared LiveKit helpers (NewClient, AuthContext, SendSystemMessage)
-│   │   ├── middleware/    JWT auth + RBAC middleware
-│   │   ├── models/       GORM models (User, Room, Passkey, ChatUpload, Settings, etc.)
-│   │   ├── repository/   Data access layer (6 repos)
-│   │   ├── queue/        Job queue: async task processing (room_delete, user_delete, etc.)
-│   │   ├── scheduler/    Background idle-room cleanup + job cleanup (gocron)
-│   │   ├── server/       Bootstrap: Run() wires all subsystems
-│   │   ├── services/     RoomCleanupService (cascade delete, suspend)
-│   │   ├── storage/      Chat image upload (disk/inline/S3) + ChatUploadTracker (Record/DeleteByRoom)
-│   │   ├── templates/    HTML templates (login, index)
-│   │   ├── testutil/     Test db utilities
-│   │   ├── usercli/      CLI user management (promote/demote/create/delete)
-│   │   └── utils/        Self-signed TLS cert generation
-│   ├── migrations/       SQL migrations
-│   ├── config.local.yaml Dev config template (SQLite, local LK)
-│   └── ui.go             //go:embed all:frontend → embed.FS
-├── apps/
-│   ├── web/              React frontend (TanStack Start, TailwindCSS v4, Bun, Biome)
-│   ├── site/             Astro SSG marketing/docs site (bedrud.org, 10-locale i18n)
-│   ├── desktop/          Rust + Slint desktop app
-│   ├── server/           Server installer assets
-│   ├── android/          Android app
-│   └── ios/              iOS app
-├── site/                 Built static output (deployed to GitHub Pages)
-├── agents/               Python LiveKit bots (music, radio, video_stream)
-├── packages/
-│   └── api-types/        Shared TS types (@bedrud/api-types)
-├── tools/cli/            Deployment CLI (pyinfra + Click)
-├── .agents/skills/       Project skills (dispatch + leaves + umbrellas; see Skill Dispatch Guide)
+app/src/main/java/com/bedrud/app/
+├── BedrudApplication.kt        Koin init + instance migration
+├── MainActivity.kt             NavHost, routes, deep links, PiP
+├── core/
+│   ├── di/AppModule.kt         Koin module (4 singletons)
+│   ├── instance/               Multi-instance: InstanceStore → InstanceManager
+│   ├── auth/                   AuthManager (encrypted prefs), PasskeyManager, OAuthLoginHandler
+│   ├── api/                    Retrofit interfaces: AuthApi, RoomApi, AdminApi + ApiClientFactory
+│   ├── livekit/RoomManager.kt  LiveKit room lifecycle, media toggles, chat
+│   ├── pip/PipState.kt         PiP state holder
+│   └── call/                   CallService + CallConnectionService (telecom integration)
+├── models/                     Data classes (Gson-serialized)
+└── ui/
+    ├── theme/                  Color, Type, Theme
+    ├── components/             BedrudButton (5 variants), BedrudCard
+    └── screens/                Compose screens per route
 ```
 
-**Entrypoints:**
-- `cmd/bedrud/main.go` → prod CLI: run, install, uninstall, user, --livekit
-- `cmd/server/main.go` → dev API (Air). No CLI. Swagger here.
+**Navigation routes** in `Routes` object, `MainActivity.kt`:
+`ADD_INSTANCE → LOGIN → REGISTER → GUEST_LOGIN → MAIN (bottom nav) → MEETING/{roomName}`
 
----
+No ViewModels. State in `MutableStateFlow` on manager classes (RoomManager, AuthManager, InstanceManager) and screen-level stores (SettingsStore). Collected in composables via `collectAsState()`.
 
-## Development
+## Multi-Instance Model
 
-**Setup:**
-```bash
-make init      # LK + config + bun + go mod tidy
-make dev       # LK + hot-reload server + web (concurrent)
+App connects to user-chosen Bedrud server instances, not fixed backend.
+
+- `InstanceStore` — persists instance list + active ID in plain `SharedPreferences` ("bedrud_instances")
+- `InstanceManager` — central wiring hub. `rebuild()` creates fresh `AuthManager`, `ApiClientFactory`, Retrofit interfaces, `PasskeyManager`, and `RoomManager` for active instance. All exposed as `StateFlow<T?>`.
+- `AuthManager` — per-instance `EncryptedSharedPreferences` ("bedrud_secure_$instanceId") storing JWT tokens + user JSON.
+- API base URL: `{serverURL}/api` (computed property on `Instance`).
+- Health check (`GET /api/health`) runs before adding new instance.
+
+Switching instances: `instanceManager.switchTo(id)` → sets active → rebuilds all clients → UI reacts to StateFlow changes.
+
+## Networking
+
+Retrofit + OkHttp + Gson (not kotlinx-serialization for HTTP). `kotlin-serialization` plugin enabled but used elsewhere.
+
+- `AuthInterceptor` — attaches `Authorization: Bearer <token>` to every request
+- `TokenAuthenticator` — handles 401 by refreshing token synchronously (creates separate Retrofit to avoid recursion), retries once, forces logout on failure
+- Base URL format: `https://host/api/` (trailing slash appended by `ApiClientFactory`)
+
+## Key Conventions
+
+- **Buttons:** Use `BedrudButton` with `BedrudButtonVariant` enum (PRIMARY, SECONDARY, OUTLINE, GHOST, DESTRUCTIVE). 44dp height, 8dp corner radius, 24dp horizontal padding.
+- **Cards:** Use `BedrudCard`. 12dp corner radius, 1dp outline border, 0dp elevation, 16dp padding.
+- **Colors:** Always `MaterialTheme.colorScheme.*`. Never hardcode hex in screens/components. Theme tokens in `ui/theme/Color.kt` mapped from web CSS HSL variables.
+- **Serialization:** `@SerializedName` annotations on model fields (Gson). Snake_case from server ↔ camelCase in Kotlin.
+- **DI:** Koin. Single module (`appModule`). Inject with `by inject()` in Activities, `by koinViewModel()` or `koinInject()` in composables.
+- **Strings:** No `strings.xml` resource layer — UI strings inline in composables.
+
+## Release Signing
+
+Requires `keystore.properties` at project root (gitignored):
+```properties
+storeFile=path/to/keystore.jks
+storePassword=...
+keyAlias=...
+keyPassword=...
 ```
 
-**Commands:**
-| Command | What |
-|---------|------|
-| `make dev-web` | Frontend only (Vite :7070; proxy `/api`→:7071, `/livekit`→:7072 direct) |
-| `make dev-server` | Backend + LK (no reload) |
-| `make dev-server-hot` | Backend + Air hot-reload |
-| `make dev-api` | Backend only (no LK) |
-| `make dev-livekit` | LK only |
-| `make dev-site` | Astro site dev server |
-
-**Config:** `config.local.yaml` → `config.yaml`. Override: `CONFIG_PATH=/path bedrud run`. Queue: `QueueConfig` in config (pollInterval, maxAttempts, concurrency). Env: `QUEUE_POLL_INTERVAL`, `QUEUE_MAX_ATTEMPTS`, `QUEUE_CONCURRENCY`.
-
----
-
-## Build & Deploy
-
-```bash
-make build         # Frontend → server/frontend/ → Go embed → single binary
-make build-dist    # Compressed linux/amd64 tarball
-```
-
-**Build order:** Frontend first. `make build` copies `apps/web/build/*` → `server/frontend/` → `//go:embed all:frontend`.
-
-**LK placeholder:** `internal/livekit/bin/livekit-server` must exist (even empty). CI: `mkdir -p internal/livekit/bin && touch internal/livekit/bin/livekit-server`.
-
-**Docker:** Multi-stage cross-compile (`tonistiigi/xx`). See `Dockerfile`.
-
----
-
-## Verification & Testing
-
-**Server:**
-```bash
-make test-back     # cd server && go test -v -count=1 ./...
-cd server && go vet ./...
-cd server && go build ./...
-```
-
-**Web:**
-```bash
-cd apps/web && bun run check    # Biome lint + tsc
-cd apps/web && bun run build    # Prod build
-```
-
-**Desktop:**
-```bash
-cargo test -p bedrud-desktop
-cargo build -p bedrud-desktop
-```
-
-**Site:**
-```bash
-cd apps/site && bun run check           # Biome lint + format
-cd apps/site && bun run typecheck:astro  # Astro type checking
-cd apps/site && bun run build            # Prod build
-```
-
-**CI order:** Server: `go vet` → `go build` → `go test -race`. Web: `bun run check` → `bun run build`. Site: `bun run check` → `bun run typecheck:astro` → `bun run build`.
-
----
-
-## Web Frontend Conventions
-
-- **Toolchain:** Bun (not npm/yarn). Biome (not ESLint/Prettier).
-- **Path alias:** `#/*` → `./src/*`. Never `../src/*`.
-- **Routing:** TanStack Router file-based. `routeTree.gen.ts` auto-gen — never edit.
-- **Styling:** TailwindCSS v4. CSS var tokens. See `apps/web/AGENTS.md`.
-- **Components:** shadcn/ui in `components/ui/`. Add: `bunx shadcn@latest add <name>`.
-- **Shadcn/ui compliance overhauled** (2026-05-16, 4 phases). Key rules:
-  - Prefer `Button`, `Input`, `Label`, `Select`, `Switch`, `Badge`, `Card`, `Dialog`, `Tabs`, `RadioGroup` from `@/components/ui/` over raw HTML
-  - No inline `style={}` for static values — use Tailwind
-  - Use `cn()` from `@/lib/utils` for dynamic classNames
-  - No gradient text (`bg-clip-text text-transparent` — banned)
-  - No animated aurora blobs — max one static radial glow per page
-  - Meeting room uses Tailwind classes now (was 100% inline), shared styles in `components/meeting/meeting.css`
-
-| Command | Purpose |
-|---------|---------|
-| `bun run lint` | Biome check |
-| `bun run lint:fix` | Biome auto-fix |
-| `bun run format` | Biome format |
-| `bun run typecheck` | tsc only |
-| `bun run check` | Biome + tsc (CI) |
-
----
-
-## Site Frontend (apps/site)
-
-Astro 6 SSG → `site/` (GitHub Pages). Landing, docs, blog. 10-locale i18n.
-
-- **Toolchain:** Bun. Biome. Not npm/yarn.
-- **Path alias:** `~/*` → `./src/*`, `@/content/*` → `./src/content/*`.
-- **Styling:** TailwindCSS v4. `src/styles/global.css`.
-- **Components:** shadcn/ui (new-york style) in `components/ui/`. Add: `cd apps/site && bunx shadcn@latest add <name>`.
-- **Output:** Static (`output: "static"`). Build → `apps/site/dist/`, deployed from root `site/`.
-
-**i18n:** 10 locales: en, de, fr, es, zh, ja, tr, fa, ar, ru. Default locale prefixed (`/en/...`). Locale strings in `src/i18n/locales/{lang}.ts`.
-
-**Content:**
-- Docs: `src/content/docs/{locale}/*.mdx`. Schema in `src/content.config.ts`.
-- Blog: `src/content/blog/{locale}/*.mdx`. Only `en/` exists currently.
-- Sidebar: `src/content/docs/sidebar.ts` — manually defined, not auto-generated.
-- Fallback: Missing locale doc falls back to `en/` version.
-
-**Search index:** `scripts/generate-search-index.ts` builds per-locale MiniSearch JSON → `public/search-index-{locale}.json`. Runs automatically before `dev` and `build`. Do not edit generated files.
-
-| Command | Purpose |
-|---------|---------|
-| `make dev-site` | Dev server |
-| `make build-site` | Prod build |
-| `bun run check` | Biome lint + format |
-| `bun run typecheck` | tsc only |
-| `bun run typecheck:astro` | Astro type checking |
-
-**CI order:** `bun run check` → `bun run typecheck:astro` → `bun run build`.
-
-**Deploy:** GitHub Pages via `withastro/action`. Triggers after CI success on master. `deploy-site.yml`.
-
----
-
-## API Docs
-
-Swagger in Go handlers. Gen at build.
-
-- Swagger UI: `http://localhost:7071/api/swagger` (dev API port; prod uses server `httpPort`)
-- Scalar UI: `http://localhost:7071/api/scalar`
-
-Regen: `make swagger-gen` (needs `swag` CLI).
-
----
-
-## Common Gotchas
-
-- **Wrong entrypoint:** `cmd/server/` skips CLI. Use `cmd/bedrud/` for prod.
-- **Missing LK placeholder:** Build fails without `internal/livekit/bin/livekit-server` (even empty).
-- **Frontend not embedded:** `go build` without `make build` → no frontend → 404.
-- **Hot reload:** Only `make dev-server-hot` (Air). `make dev-server` no reload.
-- **Path aliases:** Use `#/*` not `../src/*`. TanStack Start resolves via tsconfig paths.
-- **Queue polling:** Worker polls every 500ms. SQLite needs serialized writes. Postgres uses `SKIP LOCKED`. If queue jobs stay `pending`, check DB connection limits.
-- **Queue handlers are async:** Room delete/suspend, user delete, chat upload S3 all enqueue jobs. Frontend sees 202 Accepted, not immediate result.
-- **Config:** Dev config auto-copied. Override: `CONFIG_PATH` env var. LiveKit config override: `LIVEKIT_CONFIG_PATH` env var or `livekit.configPath` in config.yaml.
-- **LiveKit webhook:** Embedded LiveKit auto-configures webhook URL to `http://localhost:<httpPort>/api/livekit/webhook` for disconnect detection. For **external LiveKit** (Cloud or self-hosted), manually configure webhook URL in your LiveKit dashboard → `https://<your-domain>/api/livekit/webhook`. Uses same API key/secret for JWT signing.
-- **Embedded LiveKit TLS:** When server TLS is enabled (`enableTLS: true`), embedded LiveKit process auto-generates temp config with TURN/TLS (port 5349) using server's certificate. TURN `domain` auto-set from `server.host`, UDP port 3478 configured, relative `certFile`/`keyFile` paths resolved to absolute. Set `livekit.nodeIP` / `LIVEKIT_NODE_IP` for explicit RTC node IP (disables STUN). For custom LiveKit YAML, set `livekit.configPath` or `LIVEKIT_CONFIG_PATH`.
-- **Chat message retention:** Config `chat.maxMessageCount` (default 10000) and `chat.messageTTLHours` (default 2160 = 90 days) control frontend-side trimming of chat messages in memory and sessionStorage. LiveKit doesn't persist data channel messages server-side — these are advisory limits enforced client-side. Env: `CHAT_MAX_MESSAGE_COUNT`, `CHAT_MESSAGE_TTL_HOURS`.
-- **Privileged ports:** HTTP listener defaults to `:80`. Non-root can't bind. Fix: set `httpPort: "8080"` in config / `SERVER_HTTP_PORT=8080` env, or `sudo setcap 'cap_net_bind_service=+ep' $(which bedrud)` (re-run after each binary update).
-- **Site search index:** Auto-generated before dev/build. Don't edit `public/search-index-*.json`.
-- **Site sidebar:** Manual in `src/content/docs/sidebar.ts`. Adding doc page? Add sidebar entry too.
-
----
-
-## Skill Dispatch Guide
-
-Prefer **leaf** skills for focused work. Use umbrellas only for broad exploration. Router: `bedrud-dispatch`.
-
-### Router + umbrellas
-
-| Task | Load skill | Provides |
-|------|-----------|----------|
-| Unclear / multi-domain | `bedrud-dispatch` | Keyword → leaf skill map |
-| Broad Go backend | `bedrud-server` | Full backend package map |
-| Broad React frontend | `bedrud-frontend` | Full web app map (ports, routes, stores, meeting) |
-| Broad API reference | `bedrud-api` | Endpoint index (auth/rooms/admin/types) |
-
-### Backend leaves
-
-| Task keywords | Skill |
-|---------------|--------|
-| model, GORM, migration, repo, SQLite/Postgres | `bedrud-data` |
-| JWT, passkey, OAuth, middleware, rate limit | `bedrud-auth` |
-| handlers, routes, Fiber, bootstrap, entrypoints | `bedrud-http` |
-| queue, scheduler, cleanup, storage, SMTP send, recording jobs | `bedrud-jobs` |
-| Cerberus HTML email templates | `bedrud-email-cerberus` |
-| embedded LiveKit binary, TURN/TLS, node IP | `bedrud-realtime` |
-| install, CLI user/room, certs, utils | `bedrud-ops-cli` |
-
-### Frontend leaves
-
-| Task keywords | Skill |
-|---------------|--------|
-| routes, API client, Vite, ports, Excalidraw aliases | `bedrud-fe-platform` |
-| Zustand stores (10), prefs, profile-sync | `bedrud-fe-state` |
-| meeting, chat, whiteboard, YouTube, stage DC, presence, recording UI | `bedrud-fe-meeting` |
-| admin dashboard, tables, settings tabs, recordings stub | `bedrud-fe-admin` |
-| shadcn, theme, design system, settings panels | `bedrud-fe-ui-foundation` |
-
-### API leaves
-
-| Task keywords | Skill |
-|---------------|--------|
-| auth endpoints, verify, avatar, forgot/reset password | `bedrud-api-auth` |
-| room CRUD/join/moderation, recording room API | `bedrud-api-rooms` |
-| admin users/rooms/queue/settings/webhooks | `bedrud-api-admin` |
-| DTOs, Swagger shapes, source file index | `bedrud-api-types` |
-
-### Process leaves
-
-| Task keywords | Skill |
-|---------------|--------|
-| create/open GitHub issue, file bug, feature request, gh issue, issue template, priority | `create-bedrud-issue` |
-
-**Load:** say skill name or describe task. Auto-dispatches via `bedrud-dispatch`.
-
----
-
-## Design System (`DESIGN.md`)
-
-`DESIGN.md` — visual design system source of truth. Read before UI work.
-
-**Covers:** brand color tokens (rose primary, teal accent, status colors), foreground/chrome tokens, dark mode overrides, semantic mapping (token → UI element), accessibility rules (color never sole signal, WCAG AA min), typography, spacing, responsive breakpoints, component patterns (buttons, navigation, cards, inputs), hard rules: zero border-radius, no hardcoded hex outside `theme.css`, destructive reserved for irreversible actions.
-
-**Load when:** adding/modifying UI components, layouts, pages; changing colors, themes, dark mode; self-hosting customization / rebranding; accessibility review/audit.
-
-Per-app design docs: `apps/web/DESIGN.md`, `apps/desktop/DESIGN.md`, `apps/site/DESIGN.md`, `apps/android/DESIGN.md`, `apps/ios/DESIGN.md`.
-
----
-
-## Related Files
-
-- `DESIGN.md` — Project-wide design system (colors, tokens, accessibility, component patterns)
-- `apps/web/DESIGN.md` — Web-specific design details
-- `apps/web/AGENTS.md` — Frontend design system (shadcn tokens, no gradients, minimal animations)
-- `apps/site/AGENTS.md` — Site agent guide (Astro, i18n, content, styling)
-- `apps/site/README.md` — Site dev/build commands
-- `apps/site/src/content.config.ts` — Content collection schemas
-- `apps/site/src/content/docs/sidebar.ts` — Manual sidebar definition
-- `server/config.local.yaml` — Dev config template
-- `Makefile` — All build/dev cmds
-- `Dockerfile` — Multi-stage prod build
-- `.agents/skills/bedrud-dispatch/SKILL.md` — Skill router (keyword → leaf)
-- `.agents/skills/bedrud-server/SKILL.md` — Full Go backend map (umbrella)
-- `.agents/skills/bedrud-frontend/SKILL.md` — Full React frontend map (umbrella)
-- `.agents/skills/bedrud-api/SKILL.md` — Complete API endpoint ref (umbrella)
-- `.agents/skills/create-bedrud-issue/SKILL.md` — GitHub issue filing (`gh`, templates, type/priority)
-- `.agents/skills/bedrud-*/SKILL.md` — Focused leaves (data, auth, http, jobs, fe-*, api-*, …)
-
----
-
-## Commit Messages
-
-Fmt: `<action> <what> for <why>`
-
-Actions: `add`, `delete`, `update`.
-
-```
-add passkey model for WebAuthn auth
-delete unused OAuth helpers for cleaner auth flow
-update room handler for guest join support
-add invite token repo for gated registration
-delete legacy migration for schema v2 migration
-update error handling for clearer debug logs
-```
+Without it, release builds fail. Debug builds work without it.
+
+## ProGuard
+
+Release builds use minification + resource shrinking. Rules in `app/proguard-rules.pro` keep LiveKit, Retrofit interfaces, `models.**`, and Credential Manager classes.
+
+## Deep Links
+
+- `https://bedrud.com/m/{roomName}` → join room
+- `https://bedrud.com/c/{roomName}` → join room
+- `bedrud://oauth` → OAuth callback (expects `?token=...`)
+
+Parsed in `BedrudURLParser`, handled in `MainActivity.handleDeepLink()`.
+
+## Skills Reference
+
+| Skill                         | When to Use                                                             | Example Scenarios for Bedrud                                                                          |
+|-------------------------------|-------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------|
+| **android-accessibility**     | Auditing or fixing accessibility issues in Compose UI                   | Adding contentDescription to buttons, ensuring screen reader compatibility for meeting controls       |
+| **android-architecture**      | Setting up project structure, modules, or dependency injection          | Adding new feature modules, restructuring to support new authentication flow, optimizing Koin modules |
+| **android-gradle-logic**      | Setting up scalable Gradle build configuration                          | Adding Convention Plugins, managing Version Catalogs, optimizing build times                          |
+| **android-jetpack-compose**   | Building new UI screens or managing Compose state                       | Creating new meeting screens, implementing room control UI, handling remember/mutableStateOf          |
+| **android-kotlin**            | General Android Kotlin development, coroutines, testing                 | Writing coroutines for network calls, using MockK for unit tests, Hilt injection                      |
+| **compose-performance-audit** | Diagnosing slow rendering, janky scrolling, or excessive recompositions | Optimizing meeting room list scrolling, reducing RoomManager state collection overhead                |
+| **compose-ui**                | Writing or refactoring Composables with best practices                  | Implementing state hoisting in MeetingScreen, optimizing component recomposition, applying theming    |
+| **kotlin-concurrency-expert** | Reviewing or fixing coroutine/thread-safety issues                      | Resolving race conditions in RoomManager, fixing lifecycle scope issues                               |
+| **gradle-build-performance**  | Debugging slow builds or CI/CD performance                              | Analyzing build scans, identifying compilation bottlenecks in multi-instance setup                    |
+| **xml-to-compose-migration**  | Converting legacy XML layouts to Compose                                | Migrating any old View-based layouts (if any remain) to Compose components                            |
+| **Kotlin Error Debugging**    | Debugging complex Kotlin errors or coroutine stack traces               | Debugging StateFlow emission issues, platform type warnings, or crashes                               |
