@@ -55,8 +55,6 @@ fun MeetingRoomSettingsSheet(
     val scope = rememberCoroutineScope()
 
     var localIsPublic by remember { mutableStateOf(isPublic) }
-    var requireApproval by remember { mutableStateOf(settings.requireApproval) }
-    var e2ee by remember { mutableStateOf(settings.e2ee) }
     var isSaving by remember { mutableStateOf(false) }
 
     ModalBottomSheet(
@@ -94,17 +92,28 @@ fun MeetingRoomSettingsSheet(
                 checked = localIsPublic,
                 onCheckedChange = { localIsPublic = it },
             )
+            // Require Approval, Recording and E2EE are shown but locked off for now --
+            // not ready to be user-controlled yet, tracked for a later pass.
             MeetingSettingsToggleRow(
                 colors = colors,
                 label = stringResource(R.string.dashboard_roomSettings_requireApproval),
-                checked = requireApproval,
-                onCheckedChange = { requireApproval = it },
+                checked = false,
+                enabled = false,
+                onCheckedChange = {},
+            )
+            MeetingSettingsToggleRow(
+                colors = colors,
+                label = stringResource(R.string.dashboard_roomSettings_recording),
+                checked = false,
+                enabled = false,
+                onCheckedChange = {},
             )
             MeetingSettingsToggleRow(
                 colors = colors,
                 label = stringResource(R.string.dashboard_roomSettings_e2ee),
-                checked = e2ee,
-                onCheckedChange = { e2ee = it },
+                checked = false,
+                enabled = false,
+                onCheckedChange = {},
             )
 
             Button(
@@ -114,8 +123,9 @@ fun MeetingRoomSettingsSheet(
                         allowChat = true,
                         allowVideo = true,
                         allowAudio = true,
-                        requireApproval = requireApproval,
-                        e2ee = e2ee,
+                        requireApproval = false,
+                        e2ee = false,
+                        recordingsAllowed = false,
                     )
                     isSaving = true
                     scope.launch {
@@ -154,6 +164,7 @@ private fun MeetingSettingsToggleRow(
     colors: MeetingChromeColors,
     label: String,
     checked: Boolean,
+    enabled: Boolean = true,
     onCheckedChange: (Boolean) -> Unit,
 ) {
     Row(
@@ -169,6 +180,6 @@ private fun MeetingSettingsToggleRow(
             style = MaterialTheme.typography.bodyLarge,
             modifier = Modifier.weight(1f),
         )
-        Switch(checked = checked, onCheckedChange = onCheckedChange)
+        Switch(checked = checked, onCheckedChange = onCheckedChange, enabled = enabled)
     }
 }

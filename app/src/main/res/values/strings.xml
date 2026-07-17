@@ -172,7 +172,7 @@
   <string name="meeting_share_chooserTitle">Share meeting link</string>
   <string name="meeting_sheet_flipCamera">Flip camera</string>
   <string name="meeting_sheet_settings">Audio Settings</string>
-  <string name="meeting_sheet_roomSettings">Settings</string>
+  <string name="meeting_sheet_roomSettings">Room Settings</string>
   <string name="meeting_sheet_deafen">Deafen</string>
   <string name="meeting_sheet_tools">Tools</string>
   <string name="meeting_sheet_report">Report abuse</string>
@@ -213,6 +213,7 @@
   <string name="dashboard_roomSettings_allowVideo">Allow Video</string>
   <string name="dashboard_roomSettings_allowAudio">Allow Audio</string>
   <string name="dashboard_roomSettings_requireApproval">Require Approval</string>
+  <string name="dashboard_roomSettings_recording">Recording</string>
   <string name="dashboard_roomSettings_e2ee">End-to-End Encryption</string>
   <string name="profile_title">Profile</string>
   <string name="profile_contentDescription_profilePicture">Profile picture</string>

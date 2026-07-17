@@ -33,8 +33,6 @@ fun RoomSettingsDialog(
     // server side); false is the safe fallback if it's ever missing rather than true,
     // since defaulting an unknown room to public would be the wrong direction to fail in.
     var isPublic by remember { mutableStateOf(room.isPublic ?: false) }
-    var requireApproval by remember { mutableStateOf(room.settings.requireApproval) }
-    var e2ee by remember { mutableStateOf(room.settings.e2ee) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -42,8 +40,26 @@ fun RoomSettingsDialog(
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 SettingsToggleRow(stringResource(R.string.dashboard_roomSettings_isPublic), isPublic) { isPublic = it }
-                SettingsToggleRow(stringResource(R.string.dashboard_roomSettings_requireApproval), requireApproval) { requireApproval = it }
-                SettingsToggleRow(stringResource(R.string.dashboard_roomSettings_e2ee), e2ee) { e2ee = it }
+                // Require Approval, Recording and E2EE are shown but locked off for now --
+                // not ready to be user-controlled yet, tracked for a later pass.
+                SettingsToggleRow(
+                    stringResource(R.string.dashboard_roomSettings_requireApproval),
+                    checked = false,
+                    enabled = false,
+                    onCheckedChange = {},
+                )
+                SettingsToggleRow(
+                    stringResource(R.string.dashboard_roomSettings_recording),
+                    checked = false,
+                    enabled = false,
+                    onCheckedChange = {},
+                )
+                SettingsToggleRow(
+                    stringResource(R.string.dashboard_roomSettings_e2ee),
+                    checked = false,
+                    enabled = false,
+                    onCheckedChange = {},
+                )
             }
         },
         confirmButton = {
@@ -54,8 +70,9 @@ fun RoomSettingsDialog(
                         allowChat = true,
                         allowVideo = true,
                         allowAudio = true,
-                        requireApproval = requireApproval,
-                        e2ee = e2ee
+                        requireApproval = false,
+                        e2ee = false,
+                        recordingsAllowed = false,
                     )
                 )
             }) {
@@ -74,7 +91,8 @@ fun RoomSettingsDialog(
 private fun SettingsToggleRow(
     label: String,
     checked: Boolean,
-    onCheckedChange: (Boolean) -> Unit
+    enabled: Boolean = true,
+    onCheckedChange: (Boolean) -> Unit,
 ) {
     Row(
         modifier = Modifier
@@ -88,6 +106,6 @@ private fun SettingsToggleRow(
             style = MaterialTheme.typography.bodyLarge,
             modifier = Modifier.weight(1f)
         )
-        Switch(checked = checked, onCheckedChange = onCheckedChange)
+        Switch(checked = checked, onCheckedChange = onCheckedChange, enabled = enabled)
     }
 }

@@ -221,12 +221,29 @@ fun DashboardContent(
                         val response = roomApi.createRoom(
                             CreateRoomRequest(
                                 name = name.ifBlank { null },
+                                // Sent explicitly rather than left to server defaults: 0 is
+                                // the server's own convention for "unlimited" (see
+                                // AddParticipantWithCapacityCheck), there's no UI for this
+                                // yet so we're not narrowing it by accident.
+                                maxParticipants = 0,
                                 isPublic = true,
-                                // The server has no allow-true default of its own for a
-                                // create call -- an omitted `settings` object is parsed
-                                // as all-false, so without this every new room would be
-                                // created with chat/video/audio silently disabled.
-                                settings = RoomSettings(allowChat = true, allowVideo = true, allowAudio = true)
+                                // Only "standard" exists in the app today; sent explicitly
+                                // so adding the other two modes later is a one-line change
+                                // here instead of relying on the server's own default.
+                                mode = "standard",
+                                settings = RoomSettings(
+                                    allowChat = true,
+                                    allowVideo = true,
+                                    allowAudio = true,
+                                    requireApproval = false,
+                                    e2ee = false,
+                                    // Server force-overrides this to false for non-superadmins
+                                    // anyway; sent explicitly so the request isn't relying on
+                                    // that server-side behavior to stay correct.
+                                    isPersistent = false,
+                                    // Locked off in the UI for now -- see RoomSettingsDialog.
+                                    recordingsAllowed = false,
+                                )
                             )
                         )
                         if (response.isSuccessful) {

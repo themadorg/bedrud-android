@@ -169,6 +169,7 @@
   <string name="dashboard_roomSettings_allowVideo">اجازه ویدئو</string>
   <string name="dashboard_roomSettings_allowAudio">اجازه صدا</string>
   <string name="dashboard_roomSettings_requireApproval">نیاز به تایید</string>
+  <string name="dashboard_roomSettings_recording">ضبط</string>
   <string name="dashboard_roomSettings_e2ee">رمزگذاری سرتاسری</string>
   <string name="profile_title">پروفایل</string>
   <string name="profile_contentDescription_profilePicture">تصویر پروفایل</string>
@@ -201,7 +202,7 @@
   <string name="meeting_share_chooserTitle">اشتراک لینک جلسه</string>
   <string name="meeting_sheet_flipCamera">چرخش دوربین</string>
   <string name="meeting_sheet_settings">تنظیمات صدا</string>
-  <string name="meeting_sheet_roomSettings">تنظیمات</string>
+  <string name="meeting_sheet_roomSettings">تنظیمات اتاق</string>
   <string name="meeting_sheet_tools">ابزارها</string>
   <string name="meeting_sheet_report">گزارش سوءاستفاده</string>
   <string name="meeting_contentDescription_audioSource">منبع صدا</string>
