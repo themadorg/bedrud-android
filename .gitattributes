@@ -16,3 +16,9 @@
 *.ts linguist-detectable=true
 *.tsx linguist-detectable=true
 *.js linguist-detectable=true
+
+# Force LF line endings for shell scripts across all sub-projects,
+# regardless of each contributor's local core.autocrlf setting.
+*.sh text eol=lf
+gradlew text eol=lf
+gradle-wrapper.properties text eol=lf

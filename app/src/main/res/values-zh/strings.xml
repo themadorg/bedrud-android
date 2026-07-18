@@ -46,7 +46,6 @@
   <string name="dashboard_dialog_createDescription">输入房间名称，或留空以自动生成名称。</string>
   <string name="dashboard_label_roomName">房间名称（可选）</string>
   <string name="dashboard_button_createFirstRoom">创建您的第一个房间</string>
-  <string name="dashboard_contentDescription_refresh">刷新</string>
   <string name="dashboard_contentDescription_createRoom">创建房间</string>
   <string name="dashboard_contentDescription_settings">设置</string>
   <string name="dashboard_roomSettings_title">房间设置</string>
@@ -62,9 +61,9 @@
   <string name="meeting_dialog_kickTitle">移出参与者</string>
   <string name="meeting_dialog_kickMessage">确定要将 <xliff:g id="participantName" example="John Doe">%1$s</xliff:g> 移出此房间吗？</string>
   <string name="meeting_action_mute">静音</string>
+  <string name="meeting_action_unmute">取消静音</string>
   <string name="meeting_action_disableVideo">关闭视频</string>
-  <string name="meeting_action_bringToStage">上台</string>
-  <string name="meeting_action_removeFromStage">下台</string>
+  <string name="meeting_action_enableVideo">开启视频</string>
   <string name="meeting_action_kick">移出</string>
   <string name="meeting_action_ban">封禁</string>
   <string name="meeting_panel_participants">参与者 (<xliff:g id="count" example="5">%1$d</xliff:g>)</string>
@@ -167,8 +166,8 @@
   <string name="dashboard_feature_e2ee">端到端加密</string>
   <string name="dashboard_feature_private">私密</string>
   <string name="dashboard_filter_all">全部</string>
-  <string name="dashboard_filter_active">活跃</string>
-  <string name="dashboard_filter_private">私密</string>
+  <string name="dashboard_filter_myRooms">我的房间</string>
+  <string name="dashboard_roomSettings_isPublic">公开房间</string>
   <string name="dashboard_roomSettings_allowChat">允许聊天</string>
   <string name="dashboard_roomSettings_allowVideo">允许视频</string>
   <string name="dashboard_roomSettings_allowAudio">允许音频</string>
@@ -208,11 +207,7 @@
   <string name="meeting_sheet_tools">工具</string>
   <string name="meeting_sheet_report">举报滥用</string>
   <string name="meeting_contentDescription_audioSource">音频源</string>
-  <string name="meeting_audio_sheet_title">音频</string>
-  <string name="meeting_audio_sheet_microphone">麦克风</string>
-  <string name="meeting_audio_sheet_micOn">已取消静音</string>
-  <string name="meeting_audio_sheet_micOff">已静音</string>
-  <string name="meeting_audio_sheet_output">音频输出</string>
+  <string name="meeting_audio_sheet_title">选择音频输出</string>
   <string name="meeting_audio_device_speaker">扬声器</string>
   <string name="meeting_audio_device_earpiece">听筒</string>
   <string name="meeting_audio_device_wired_headset">有线耳机</string>

@@ -46,7 +46,6 @@
   <string name="dashboard_dialog_createDescription">Enter a name for your room, or leave blank for an auto-generated name.</string>
   <string name="dashboard_label_roomName">Room Name (optional)</string>
   <string name="dashboard_button_createFirstRoom">Create your first room</string>
-  <string name="dashboard_contentDescription_refresh">Refresh</string>
   <string name="dashboard_contentDescription_createRoom">Create Room</string>
   <string name="dashboard_contentDescription_settings">Settings</string>
   <string name="dashboard_roomSettings_title">Room Settings</string>
@@ -62,9 +61,9 @@
   <string name="meeting_dialog_kickTitle">Kick Participant</string>
   <string name="meeting_dialog_kickMessage">Are you sure you want to kick <xliff:g id="participantName" example="John Doe">%1$s</xliff:g> from the room?</string>
   <string name="meeting_action_mute">Mute</string>
+  <string name="meeting_action_unmute">Unmute</string>
   <string name="meeting_action_disableVideo">Disable Video</string>
-  <string name="meeting_action_bringToStage">Bring to Stage</string>
-  <string name="meeting_action_removeFromStage">Remove from Stage</string>
+  <string name="meeting_action_enableVideo">Enable Video</string>
   <string name="meeting_action_kick">Kick</string>
   <string name="meeting_action_ban">Ban</string>
   <string name="meeting_panel_participants">Participants (<xliff:g id="count" example="5">%1$d</xliff:g>)</string>
@@ -88,6 +87,8 @@
   <string name="meeting_stage_screenShareWaiting">Waiting for <xliff:g id="name" example="Alex">%1$s</xliff:g>\'s screen…</string>
   <string name="meeting_contentDescription_toggleChat">Toggle Chat</string>
   <string name="meeting_contentDescription_participants">Participants</string>
+  <string name="meeting_contentDescription_copyRoomLink">Copy room link</string>
+  <string name="meeting_toast_linkCopied">Room link copied</string>
   <string name="meeting_contentDescription_leaveCall">Leave Call</string>
   <string name="meeting_contentDescription_participantAvatar">
     <xliff:g id="name" example="John Doe">%1$s</xliff:g> avatar</string>
@@ -170,15 +171,13 @@
   <string name="meeting_sheet_addOthers">Add others</string>
   <string name="meeting_share_chooserTitle">Share meeting link</string>
   <string name="meeting_sheet_flipCamera">Flip camera</string>
-  <string name="meeting_sheet_settings">Settings</string>
+  <string name="meeting_sheet_settings">Audio Settings</string>
+  <string name="meeting_sheet_roomSettings">Room Settings</string>
+  <string name="meeting_sheet_deafen">Deafen</string>
   <string name="meeting_sheet_tools">Tools</string>
   <string name="meeting_sheet_report">Report abuse</string>
   <string name="meeting_contentDescription_audioSource">Audio source</string>
-  <string name="meeting_audio_sheet_title">Audio</string>
-  <string name="meeting_audio_sheet_microphone">Microphone</string>
-  <string name="meeting_audio_sheet_micOn">Unmuted</string>
-  <string name="meeting_audio_sheet_micOff">Muted</string>
-  <string name="meeting_audio_sheet_output">Audio output</string>
+  <string name="meeting_audio_sheet_title">Select Audio Output</string>
   <string name="meeting_audio_device_speaker">Speaker</string>
   <string name="meeting_audio_device_earpiece">Phone</string>
   <string name="meeting_audio_device_wired_headset">Wired headset</string>
@@ -201,8 +200,7 @@
   <string name="dashboard_feature_e2ee">E2EE</string>
   <string name="dashboard_feature_private">Private</string>
   <string name="dashboard_filter_all">All</string>
-  <string name="dashboard_filter_active">Active</string>
-  <string name="dashboard_filter_private">Private</string>
+  <string name="dashboard_filter_myRooms">My Rooms</string>
   <string name="dashboard_filter_recent">Recent</string>
   <string name="dashboard_dialog_deleteTitle">Delete room?</string>
   <string name="dashboard_dialog_deleteMessage">Are you sure you want to delete <xliff:g id="roomName" example="team-standup">%1$s</xliff:g>? This cannot be undone.</string>
@@ -210,10 +208,12 @@
   <string name="dashboard_empty_noRecentHint">Rooms you join appear here, including on other servers.</string>
   <string name="dashboard_contentDescription_removeRecent">Remove from recent</string>
   <string name="dashboard_recent_onServer">on <xliff:g id="serverName" example="My Server">%1$s</xliff:g></string>
+  <string name="dashboard_roomSettings_isPublic">Public Room</string>
   <string name="dashboard_roomSettings_allowChat">Allow Chat</string>
   <string name="dashboard_roomSettings_allowVideo">Allow Video</string>
   <string name="dashboard_roomSettings_allowAudio">Allow Audio</string>
   <string name="dashboard_roomSettings_requireApproval">Require Approval</string>
+  <string name="dashboard_roomSettings_recording">Recording</string>
   <string name="dashboard_roomSettings_e2ee">End-to-End Encryption</string>
   <string name="profile_title">Profile</string>
   <string name="profile_contentDescription_profilePicture">Profile picture</string>

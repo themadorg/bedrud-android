@@ -10,8 +10,8 @@ import androidx.core.app.NotificationCompat
 import com.bedrud.app.R
 import com.bedrud.app.core.call.CallConnectionService
 import com.bedrud.app.core.meeting.stage.StageWire
+import com.bedrud.app.ui.screens.settings.SettingsStore
 import io.livekit.android.AudioOptions
-import io.livekit.android.AudioType
 import io.livekit.android.LiveKit
 import io.livekit.android.LiveKitOverrides
 import io.livekit.android.events.RoomEvent
@@ -22,6 +22,7 @@ import io.livekit.android.room.track.DataPublishReliability
 import io.livekit.android.room.participant.LocalParticipant
 import io.livekit.android.room.track.CameraPosition
 import io.livekit.android.room.track.LocalVideoTrack
+import io.livekit.android.room.track.RemoteAudioTrack
 import io.livekit.android.room.track.Track
 import io.livekit.android.room.track.screencapture.ScreenCaptureParams
 import kotlinx.coroutines.CoroutineScope
@@ -60,17 +61,23 @@ data class ChatMessage(
     val attachments: List<ChatAttachment> = emptyList(),
 )
 
-class RoomManager(private val application: Application) {
+class RoomManager(
+    private val application: Application,
+    private val settingsStore: SettingsStore,
+) {
 
     private var _room: Room? = null
     val room: Room? get() = _room
+
+    private var _audioHandler: CallAudioSwitch? = null
+    val audioHandler: CallAudioSwitch? get() = _audioHandler
 
     private var eventScope: CoroutineScope? = null
 
     private val _connectionState = MutableStateFlow(ConnectionState.DISCONNECTED)
     val connectionState: StateFlow<ConnectionState> = _connectionState.asStateFlow()
 
-    private val _isMicEnabled = MutableStateFlow(true)
+    private val _isMicEnabled = MutableStateFlow(settingsStore.getMicEnabled())
     val isMicEnabled: StateFlow<Boolean> = _isMicEnabled.asStateFlow()
 
     private val _micMediaError = MutableStateFlow(false)
@@ -84,6 +91,14 @@ class RoomManager(private val application: Application) {
 
     private val _isScreenShareEnabled = MutableStateFlow(false)
     val isScreenShareEnabled: StateFlow<Boolean> = _isScreenShareEnabled.asStateFlow()
+
+    private val _isDeafened = MutableStateFlow(settingsStore.getDeafened())
+    val isDeafened: StateFlow<Boolean> = _isDeafened.asStateFlow()
+    private var micMutedBeforeDeafen = false
+
+    // Identities this viewer has locally muted (does not affect what other participants hear)
+    private val _locallyMutedIdentities = MutableStateFlow<Set<String>>(emptySet())
+    val locallyMutedIdentities: StateFlow<Set<String>> = _locallyMutedIdentities.asStateFlow()
 
     // Incremented on every participant change to trigger recomposition
     private val _participantVersion = MutableStateFlow(0)
@@ -129,18 +144,20 @@ class RoomManager(private val application: Application) {
             _error.value = null
             _roomName.value = roomName
 
+            val audioHandler = CallAudioSwitch(application)
+            _audioHandler = audioHandler
+
             val room = LiveKit.create(
                 application,
                 overrides = LiveKitOverrides(
                     audioOptions = AudioOptions(
-                        audioOutputType = AudioType.CallAudioType(),
+                        audioHandler = audioHandler,
                     ),
                 ),
             )
             _room = room
 
             room.connect(url, token)
-            room.audioSwitchHandler?.start()
 
             _connectionState.value = ConnectionState.CONNECTED
 
@@ -156,24 +173,29 @@ class RoomManager(private val application: Application) {
                 }
             }
 
-            // Enable mic after connecting; camera stays off until the user turns it on.
+            // Restore the mic to whatever the user last set it to (unmuted by default
+            // on a fresh install); camera stays off until the user turns it on.
             try {
-                val micPublished = room.localParticipant.setMicrophoneEnabled(true)
-                syncMicrophoneState()
-                _micMediaError.value = !micPublished && room.localParticipant.isMicrophoneEnabled.not()
+                val micShouldBeEnabled = settingsStore.getMicEnabled()
+                val micPublished = room.localParticipant.setMicrophoneEnabled(micShouldBeEnabled)
+                val actuallyEnabled = if (micShouldBeEnabled) micPublished else false
+                _isMicEnabled.value = actuallyEnabled
+                CallConnectionService.updateMuteState(!actuallyEnabled)
+                _micMediaError.value = micShouldBeEnabled && !micPublished
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to enable microphone", e)
-                syncMicrophoneState()
+                _isMicEnabled.value = false
+                CallConnectionService.updateMuteState(true)
                 _micMediaError.value = true
                 _error.value = "Failed to enable microphone"
             }
 
             try {
                 room.localParticipant.setCameraEnabled(false)
-                syncCameraState()
+                _isCameraEnabled.value = false
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to disable camera", e)
-                syncCameraState()
+                _isCameraEnabled.value = false
             }
 
             // Notify initial participant state
@@ -206,7 +228,12 @@ class RoomManager(private val application: Application) {
                             }
                             _participantVersion.value++
                         }
-                        is RoomEvent.TrackSubscribed -> _participantVersion.value++
+                        is RoomEvent.TrackSubscribed -> {
+                            if (effectiveVolumeFor(event.participant.identity?.value) == 0.0) {
+                                (event.track as? RemoteAudioTrack)?.setVolume(0.0)
+                            }
+                            _participantVersion.value++
+                        }
                         is RoomEvent.TrackUnsubscribed -> _participantVersion.value++
                         is RoomEvent.TrackPublished -> {
                             if (event.publication.source == Track.Source.SCREEN_SHARE &&
@@ -336,13 +363,17 @@ class RoomManager(private val application: Application) {
         _room?.disconnect()
         _room?.release()
         _room = null
+        _audioHandler = null
         _connectionState.value = ConnectionState.DISCONNECTED
         _roomName.value = null
-        _isMicEnabled.value = true
+        _isMicEnabled.value = settingsStore.getMicEnabled()
         _micMediaError.value = false
         _isCameraEnabled.value = false
         _cameraMediaError.value = false
         _isScreenShareEnabled.value = false
+        _isDeafened.value = settingsStore.getDeafened()
+        micMutedBeforeDeafen = false
+        _locallyMutedIdentities.value = emptySet()
         _participantVersion.value = 0
         _chatMessages.value = emptyList()
         _wasKicked.value = false
@@ -360,6 +391,14 @@ class RoomManager(private val application: Application) {
     }
 
     suspend fun setMicrophoneEnabled(enabled: Boolean) {
+        settingsStore.setMicEnabled(enabled)
+        // Unmuting while deafened is a shortcut to undeafen too, mirroring the
+        // convention most call apps use for the mic button.
+        if (enabled && _isDeafened.value) {
+            _isDeafened.value = false
+            settingsStore.setDeafened(false)
+            reapplyAllVolumes()
+        }
         val localParticipant = _room?.localParticipant ?: return
         if (localParticipant.isMicrophoneEnabled == enabled) {
             syncMicrophoneState()
@@ -368,7 +407,9 @@ class RoomManager(private val application: Application) {
         }
         try {
             val published = localParticipant.setMicrophoneEnabled(enabled)
-            syncMicrophoneState()
+            val actuallyEnabled = if (enabled) published else false
+            _isMicEnabled.value = actuallyEnabled
+            CallConnectionService.updateMuteState(!actuallyEnabled)
             if (!published && enabled) {
                 _micMediaError.value = true
                 _error.value = "Failed to enable microphone"
@@ -384,8 +425,56 @@ class RoomManager(private val application: Application) {
     }
 
     suspend fun toggleMicrophone() {
-        val localParticipant = _room?.localParticipant ?: return
-        setMicrophoneEnabled(!localParticipant.isMicrophoneEnabled)
+        setMicrophoneEnabled(!_isMicEnabled.value)
+    }
+
+    suspend fun toggleDeafen() {
+        val deafening = !_isDeafened.value
+        settingsStore.setDeafened(deafening)
+        if (deafening) {
+            micMutedBeforeDeafen = !_isMicEnabled.value
+            _isDeafened.value = true
+            reapplyAllVolumes()
+            if (_isMicEnabled.value) {
+                setMicrophoneEnabled(false)
+            }
+        } else {
+            _isDeafened.value = false
+            reapplyAllVolumes()
+            if (!micMutedBeforeDeafen) {
+                setMicrophoneEnabled(true)
+            }
+        }
+    }
+
+    // Muted-for-me only: does not call the server and does not affect what other participants hear.
+    fun toggleLocalMute(identity: String) {
+        _locallyMutedIdentities.value = if (identity in _locallyMutedIdentities.value) {
+            _locallyMutedIdentities.value - identity
+        } else {
+            _locallyMutedIdentities.value + identity
+        }
+        val participant = _room?.remoteParticipants?.values?.find { it.identity?.value == identity } ?: return
+        val volume = effectiveVolumeFor(identity)
+        for ((_, track) in participant.audioTrackPublications) {
+            (track as? RemoteAudioTrack)?.setVolume(volume)
+        }
+    }
+
+    private fun effectiveVolumeFor(identity: String?): Double {
+        if (_isDeafened.value) return 0.0
+        if (identity != null && identity in _locallyMutedIdentities.value) return 0.0
+        return 1.0
+    }
+
+    private fun reapplyAllVolumes() {
+        val room = _room ?: return
+        for (participant in room.remoteParticipants.values) {
+            val volume = effectiveVolumeFor(participant.identity?.value)
+            for ((_, track) in participant.audioTrackPublications) {
+                (track as? RemoteAudioTrack)?.setVolume(volume)
+            }
+        }
     }
 
     private fun syncCameraState() {
@@ -395,10 +484,10 @@ class RoomManager(private val application: Application) {
 
     suspend fun toggleCamera() {
         val localParticipant = _room?.localParticipant ?: return
-        val enabled = !localParticipant.isCameraEnabled
+        val enabled = !_isCameraEnabled.value
         try {
             val published = localParticipant.setCameraEnabled(enabled)
-            syncCameraState()
+            _isCameraEnabled.value = if (enabled) published else false
             _participantVersion.value++
             if (!published && enabled) {
                 _cameraMediaError.value = true

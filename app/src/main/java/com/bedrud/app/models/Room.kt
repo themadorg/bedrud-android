@@ -32,7 +32,14 @@ data class RoomSettings(
     val allowAudio: Boolean = true,
     @SerializedName("requireApproval")
     val requireApproval: Boolean = false,
-    val e2ee: Boolean = false
+    val e2ee: Boolean = false,
+    // Server strips/ignores this for non-superadmins on both create and update, but we
+    // still round-trip whatever the server reports so the field is future-proofed for
+    // when the app gains admin-side control over it.
+    @SerializedName("isPersistent")
+    val isPersistent: Boolean = false,
+    @SerializedName("recordingsAllowed")
+    val recordingsAllowed: Boolean = false
 )
 
 data class RoomParticipant(

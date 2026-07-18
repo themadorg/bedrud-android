@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
@@ -28,18 +27,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.res.stringResource
 import com.bedrud.app.R
+import com.bedrud.app.core.livekit.CallAudioSwitch
 import com.twilio.audioswitch.AudioDevice
-import io.livekit.android.room.Room
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MeetingAudioSourceSheet(
-    room: Room?,
+    audioHandler: CallAudioSwitch?,
     audioState: MeetingAudioState,
-    isMicEnabled: Boolean,
-    micHasError: Boolean = false,
     onDismiss: () -> Unit,
-    onToggleMic: () -> Unit,
 ) {
     val colors = meetingChromeColors()
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -73,63 +69,6 @@ fun MeetingAudioSourceSheet(
                 modifier = Modifier.padding(bottom = 4.dp),
             )
 
-            Surface(
-                onClick = onToggleMic,
-                shape = RoundedCornerShape(16.dp),
-                color = if (isMicEnabled) colors.button else colors.buttonMediaOff,
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Row(
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                ) {
-                    Icon(
-                        imageVector = meetingAudioButtonIcon(isMicEnabled, audioState.selectedDevice),
-                        contentDescription = null,
-                        tint = if (isMicEnabled) colors.onButton else colors.onButtonMediaOff,
-                        modifier = Modifier.size(22.dp),
-                    )
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = stringResource(R.string.meeting_audio_sheet_microphone),
-                            color = if (isMicEnabled) colors.onButton else colors.onButtonMediaOff,
-                            style = MaterialTheme.typography.bodyLarge,
-                        )
-                        Text(
-                            text = if (isMicEnabled) {
-                                stringResource(R.string.meeting_audio_sheet_micOn)
-                            } else {
-                                stringResource(R.string.meeting_audio_sheet_micOff)
-                            },
-                            color = colors.onButtonVariant,
-                            style = MaterialTheme.typography.bodySmall,
-                        )
-                    }
-                    if (micHasError) {
-                        Box(
-                            modifier = Modifier
-                                .size(18.dp)
-                                .background(colors.warning, CircleShape),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            Text(
-                                text = "!",
-                                color = colors.onWarning,
-                                style = MaterialTheme.typography.labelSmall,
-                            )
-                        }
-                    }
-                }
-            }
-
-            Text(
-                text = stringResource(R.string.meeting_audio_sheet_output),
-                color = colors.onButtonVariant,
-                style = MaterialTheme.typography.labelMedium,
-                modifier = Modifier.padding(top = 4.dp),
-            )
-
             if (audioState.availableDevices.isEmpty()) {
                 Text(
                     text = stringResource(R.string.meeting_audio_sheet_noDevices),
@@ -147,7 +86,7 @@ fun MeetingAudioSourceSheet(
                         device = device,
                         selected = selected,
                         onClick = {
-                            audioState.selectDevice(room, device)
+                            audioState.selectDevice(audioHandler, device)
                         },
                     )
                 }

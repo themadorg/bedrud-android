@@ -1,6 +1,5 @@
 package com.bedrud.app
 
-import android.app.KeyguardManager
 import android.app.PictureInPictureParams
 import android.content.Context
 import android.content.Intent
@@ -68,7 +67,7 @@ class MainActivity : ComponentActivity() {
 
         // Return to an ongoing meeting from the call notification
         handleReturnToMeeting(intent)
-        hideUiBehindKeyguard()
+        clearLockScreenFlags()
 
         // Resume meeting if the foreground call service is still running
         CallService.activeRoomName?.let { room ->
@@ -109,17 +108,7 @@ class MainActivity : ComponentActivity() {
         handleDeepLink(intent)
         handleReturnToMeeting(intent)
         handleOAuthCallback(intent)
-        hideUiBehindKeyguard()
-    }
-
-    override fun onStart() {
-        super.onStart()
-        hideUiBehindKeyguard()
-    }
-
-    override fun onResume() {
-        super.onResume()
-        hideUiBehindKeyguard()
+        clearLockScreenFlags()
     }
 
     override fun onPause() {
@@ -137,16 +126,6 @@ class MainActivity : ComponentActivity() {
         if (intent?.action != CallService.ACTION_RETURN_TO_MEETING) return
         val roomName = intent.getStringExtra(CallService.EXTRA_ROOM_NAME) ?: return
         _deepLinkRoomName.value = roomName
-    }
-
-    /** Keep the meeting UI off the lock screen; the call continues via [CallService]. */
-    private fun hideUiBehindKeyguard() {
-        clearLockScreenFlags()
-        if (intent?.action == CallService.ACTION_RETURN_TO_MEETING) return
-        val keyguard = getSystemService(KeyguardManager::class.java) ?: return
-        if (keyguard.isKeyguardLocked) {
-            moveTaskToBack(false)
-        }
     }
 
     private fun clearLockScreenFlags() {
@@ -252,7 +231,10 @@ fun BedrudNavHost(
             instanceManager.store.activeInstance?.let { instance ->
                 recentRoomsStore.add(roomName, instance.id, instance.displayName)
             }
-            navController.navigate(Routes.meeting(roomName))
+            navController.navigate(Routes.meeting(roomName)) {
+                launchSingleTop = true
+                popUpTo(Routes.MEETING) { inclusive = true }
+            }
             deepLinkRoomName.value = null
         }
     }
@@ -326,7 +308,10 @@ fun BedrudNavHost(
         composable(Routes.MAIN) {
             MainScreen(
                 onJoinRoom = { roomName ->
-                    navController.navigate(Routes.meeting(roomName))
+                    navController.navigate(Routes.meeting(roomName)) {
+                        launchSingleTop = true
+                        popUpTo(Routes.MEETING) { inclusive = true }
+                    }
                 },
                 onLogout = {
                     instanceManager.authManager.value?.logout()
@@ -350,7 +335,14 @@ fun BedrudNavHost(
             MeetingScreen(
                 roomName = roomName,
                 onLeave = {
-                    navController.popBackStack()
+                    // Leaving can be triggered twice for one action (e.g. the
+                    // button handler pops immediately, then the connection-state
+                    // watcher pops again once the async disconnect lands). Only
+                    // pop while the meeting screen is still the current entry so
+                    // the second call can't pop past it and empty the back stack.
+                    if (navController.currentDestination?.route == Routes.MEETING) {
+                        navController.popBackStack()
+                    }
                 }
             )
         }

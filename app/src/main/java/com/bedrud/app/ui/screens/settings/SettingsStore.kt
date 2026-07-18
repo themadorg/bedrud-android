@@ -88,6 +88,18 @@ class SettingsStore(context: Context) {
         prefs.edit().putInt(KEY_LAST_TAB, index).apply()
     }
 
+    fun getMicEnabled(): Boolean = prefs.getBoolean(KEY_MIC_ENABLED, true)
+
+    fun setMicEnabled(value: Boolean) {
+        prefs.edit().putBoolean(KEY_MIC_ENABLED, value).apply()
+    }
+
+    fun getDeafened(): Boolean = prefs.getBoolean(KEY_DEAFENED, false)
+
+    fun setDeafened(value: Boolean) {
+        prefs.edit().putBoolean(KEY_DEAFENED, value).apply()
+    }
+
     private fun loadAppearance(): AppAppearance {
         val raw = prefs.getString(KEY_APPEARANCE, AppAppearance.SYSTEM.name)
         return try {
@@ -111,5 +123,7 @@ class SettingsStore(context: Context) {
         private const val KEY_NOTIFICATIONS = "bedrud_notifications_enabled"
         private const val KEY_LANGUAGE = "bedrud_language"
         private const val KEY_LAST_TAB = "bedrud_last_tab"
+        private const val KEY_MIC_ENABLED = "bedrud_mic_enabled"
+        private const val KEY_DEAFENED = "bedrud_deafened"
     }
 }

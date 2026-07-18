@@ -13,10 +13,12 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Chat
-import androidx.compose.material.icons.automirrored.filled.ScreenShare
-import androidx.compose.material.icons.automirrored.filled.StopScreenShare
+import androidx.compose.material.icons.automirrored.filled.VolumeOff
+import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.Cameraswitch
+import androidx.compose.material.icons.filled.Headset
 import androidx.compose.material.icons.filled.PersonAdd
+import androidx.compose.material.icons.filled.People
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
@@ -40,14 +42,17 @@ import com.bedrud.app.R
 @Composable
 fun MeetingMoreOptionsSheet(
     isCameraEnabled: Boolean,
-    isScreenShareEnabled: Boolean,
+    isDeafened: Boolean,
     unreadCount: Int,
+    isRoomSettingsAvailable: Boolean,
     onDismiss: () -> Unit,
-    onToggleScreenShare: () -> Unit,
     onSwitchCamera: () -> Unit,
     onToggleChat: () -> Unit,
     onToggleParticipants: () -> Unit,
+    onCopyRoomLink: () -> Unit,
+    onToggleDeafen: () -> Unit,
     onOpenAudioSettings: () -> Unit,
+    onOpenRoomSettings: () -> Unit,
 ) {
     val colors = meetingChromeColors()
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -69,16 +74,6 @@ fun MeetingMoreOptionsSheet(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterHorizontally),
             ) {
-                SheetCircleAction(
-                    colors = colors,
-                    icon = if (isScreenShareEnabled) Icons.AutoMirrored.Filled.StopScreenShare
-                    else Icons.AutoMirrored.Filled.ScreenShare,
-                    contentDescription = stringResource(R.string.meeting_contentDescription_toggleScreenShare),
-                    onClick = {
-                        onToggleScreenShare()
-                        onDismiss()
-                    },
-                )
                 if (isCameraEnabled) {
                     SheetCircleAction(
                         colors = colors,
@@ -92,10 +87,19 @@ fun MeetingMoreOptionsSheet(
                 }
                 SheetCircleAction(
                     colors = colors,
-                    icon = Icons.Default.PersonAdd,
+                    icon = Icons.Default.People,
                     contentDescription = stringResource(R.string.meeting_contentDescription_participants),
                     onClick = {
                         onToggleParticipants()
+                        onDismiss()
+                    },
+                )
+                SheetCircleAction(
+                    colors = colors,
+                    icon = Icons.Default.PersonAdd,
+                    contentDescription = stringResource(R.string.meeting_contentDescription_copyRoomLink),
+                    onClick = {
+                        onCopyRoomLink()
                         onDismiss()
                     },
                 )
@@ -119,7 +123,19 @@ fun MeetingMoreOptionsSheet(
 
             SheetLabeledButton(
                 colors = colors,
-                icon = Icons.Default.Settings,
+                icon = if (isDeafened) Icons.AutoMirrored.Filled.VolumeOff else Icons.AutoMirrored.Filled.VolumeUp,
+                label = stringResource(R.string.meeting_sheet_deafen),
+                active = isDeafened,
+                onClick = {
+                    onToggleDeafen()
+                    onDismiss()
+                },
+                modifier = Modifier.fillMaxWidth(),
+            )
+
+            SheetLabeledButton(
+                colors = colors,
+                icon = Icons.Default.Headset,
                 label = stringResource(R.string.meeting_sheet_settings),
                 onClick = {
                     onDismiss()
@@ -127,6 +143,19 @@ fun MeetingMoreOptionsSheet(
                 },
                 modifier = Modifier.fillMaxWidth(),
             )
+
+            if (isRoomSettingsAvailable) {
+                SheetLabeledButton(
+                    colors = colors,
+                    icon = Icons.Default.Settings,
+                    label = stringResource(R.string.meeting_sheet_roomSettings),
+                    onClick = {
+                        onDismiss()
+                        onOpenRoomSettings()
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
         }
     }
 }
@@ -164,12 +193,13 @@ private fun SheetLabeledButton(
     modifier: Modifier = Modifier,
     badge: String? = null,
     enabled: Boolean = true,
+    active: Boolean = false,
 ) {
     Surface(
         onClick = onClick,
         enabled = enabled,
         shape = RoundedCornerShape(16.dp),
-        color = colors.button,
+        color = if (active) colors.buttonActive else colors.button,
         modifier = modifier.height(72.dp),
     ) {
         Column(

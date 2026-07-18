@@ -15,6 +15,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Chat
+import androidx.compose.material.icons.automirrored.filled.ScreenShare
+import androidx.compose.material.icons.automirrored.filled.StopScreenShare
 import androidx.compose.material.icons.filled.CallEnd
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.MicOff
@@ -47,16 +49,21 @@ fun MeetingControlsBar(
     micHasError: Boolean = false,
     cameraHasError: Boolean = false,
     isScreenShareEnabled: Boolean,
+    isDeafened: Boolean,
     showChat: Boolean,
     showParticipants: Boolean,
     unreadCount: Int,
+    isRoomSettingsAvailable: Boolean,
     onToggleMic: () -> Unit,
     onToggleCamera: () -> Unit,
     onSwitchCamera: () -> Unit,
     onToggleScreenShare: () -> Unit,
     onToggleChat: () -> Unit,
     onToggleParticipants: () -> Unit,
+    onCopyRoomLink: () -> Unit,
+    onToggleDeafen: () -> Unit,
     onOpenAudioSettings: () -> Unit,
+    onOpenRoomSettings: () -> Unit,
     onEndCall: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -78,22 +85,31 @@ fun MeetingControlsBar(
         ) {
             MeetMediaButton(
                 colors = colors,
-                enabled = isMicEnabled,
-                hasError = micHasError,
-                onClick = onToggleMic,
-                enabledIcon = Icons.Default.Mic,
-                disabledIcon = Icons.Default.MicOff,
-                contentDescription = stringResource(R.string.meeting_contentDescription_toggleMic),
-            )
-
-            MeetMediaButton(
-                colors = colors,
                 enabled = isCameraEnabled,
                 hasError = cameraHasError,
                 onClick = onToggleCamera,
                 enabledIcon = Icons.Default.Videocam,
                 disabledIcon = Icons.Default.VideocamOff,
                 contentDescription = stringResource(R.string.meeting_contentDescription_toggleCamera),
+            )
+
+            MeetCircleButton(
+                colors = colors,
+                onClick = onToggleScreenShare,
+                icon = if (isScreenShareEnabled) Icons.AutoMirrored.Filled.StopScreenShare
+                else Icons.AutoMirrored.Filled.ScreenShare,
+                contentDescription = stringResource(R.string.meeting_contentDescription_toggleScreenShare),
+                containerColor = if (isScreenShareEnabled) colors.buttonActive else colors.button,
+            )
+
+            MeetMediaButton(
+                colors = colors,
+                enabled = isMicEnabled,
+                hasError = micHasError,
+                onClick = onToggleMic,
+                enabledIcon = Icons.Default.Mic,
+                disabledIcon = Icons.Default.MicOff,
+                contentDescription = stringResource(R.string.meeting_contentDescription_toggleMic),
             )
 
             MeetCircleButton(
@@ -114,7 +130,7 @@ fun MeetingControlsBar(
                 onClick = { showMoreMenu = true },
                 icon = Icons.Default.MoreHoriz,
                 contentDescription = stringResource(R.string.meeting_contentDescription_moreOptions),
-                containerColor = if (showMoreMenu || showParticipants || isScreenShareEnabled) {
+                containerColor = if (showMoreMenu || showParticipants) {
                     colors.buttonActive
                 } else {
                     colors.button
@@ -124,16 +140,22 @@ fun MeetingControlsBar(
             if (showMoreMenu) {
                 MeetingMoreOptionsSheet(
                     isCameraEnabled = isCameraEnabled,
-                    isScreenShareEnabled = isScreenShareEnabled,
+                    isDeafened = isDeafened,
                     unreadCount = unreadCount,
+                    isRoomSettingsAvailable = isRoomSettingsAvailable,
                     onDismiss = { showMoreMenu = false },
-                    onToggleScreenShare = onToggleScreenShare,
                     onSwitchCamera = onSwitchCamera,
                     onToggleChat = onToggleChat,
                     onToggleParticipants = onToggleParticipants,
+                    onCopyRoomLink = onCopyRoomLink,
+                    onToggleDeafen = onToggleDeafen,
                     onOpenAudioSettings = {
                         showMoreMenu = false
                         onOpenAudioSettings()
+                    },
+                    onOpenRoomSettings = {
+                        showMoreMenu = false
+                        onOpenRoomSettings()
                     },
                 )
             }

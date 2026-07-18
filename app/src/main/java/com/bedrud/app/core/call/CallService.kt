@@ -18,7 +18,9 @@ import androidx.core.app.NotificationCompat
 import com.bedrud.app.MainActivity
 import com.bedrud.app.R
 import com.bedrud.app.core.instance.InstanceManager
+import com.bedrud.app.core.livekit.ConnectionState
 import com.bedrud.app.core.livekit.RoomManager
+import com.bedrud.app.core.recent.RecentRoomsStore
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -30,6 +32,7 @@ import org.koin.android.ext.android.inject
 class CallService : Service() {
 
     private val instanceManager: InstanceManager by inject()
+    private val recentRoomsStore: RecentRoomsStore by inject()
     private var roomManager: RoomManager? = null
     private var serviceScope: CoroutineScope? = null
     private var callStartTime: Long = 0L
@@ -82,6 +85,7 @@ class CallService : Service() {
         }
         roomManager = rm
         activeRoomName = roomName
+        activeInstanceId = instanceManager.store.activeInstance?.id
         isRunning = true
         callStartTime = SystemClock.elapsedRealtime()
 
@@ -110,7 +114,14 @@ class CallService : Service() {
 
         CallConnectionService.muteListener = { muted ->
             serviceScope?.launch {
-                roomManager?.setMicrophoneEnabled(!muted)
+                // Telecom fires an initial onMuteStateChanged(false) while the room is still
+                // connecting; RoomManager's own connect flow already enables the mic by default,
+                // so forwarding this early callback would race the LiveKit engine and surface a
+                // spurious "failed to enable microphone" error. Only forward real mute changes
+                // once we're actually connected.
+                if (roomManager?.connectionState?.value == ConnectionState.CONNECTED) {
+                    roomManager?.setMicrophoneEnabled(!muted)
+                }
                 updateForegroundNotification(isMuted = muted)
             }
         }
@@ -128,7 +139,14 @@ class CallService : Service() {
     override fun onDestroy() {
         super.onDestroy()
         isRunning = false
+        val endedRoomName = activeRoomName
+        val endedInstanceId = activeInstanceId
         activeRoomName = null
+        activeInstanceId = null
+
+        if (endedRoomName != null && endedInstanceId != null) {
+            recentRoomsStore.markLeft(endedRoomName, endedInstanceId)
+        }
 
         releaseWakeLock()
 
@@ -285,6 +303,9 @@ class CallService : Service() {
             private set
 
         var activeRoomName: String? = null
+            private set
+
+        var activeInstanceId: String? = null
             private set
 
         private var userInitiatedHangUp = false

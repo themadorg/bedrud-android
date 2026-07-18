@@ -13,6 +13,7 @@ data class RecentRoom(
     val instanceId: String,
     val instanceName: String,
     val joinedAt: Long = System.currentTimeMillis(),
+    val leftAt: Long? = null,
 )
 
 class RecentRoomsStore(private val prefs: SharedPreferences) {
@@ -42,6 +43,18 @@ class RecentRoomsStore(private val prefs: SharedPreferences) {
             }
         _rooms.value = updated.take(MAX_RECENT)
         saveRooms(updated.take(MAX_RECENT))
+    }
+
+    fun markLeft(roomName: String, instanceId: String) {
+        val updated = _rooms.value.map {
+            if (it.roomName == roomName && it.instanceId == instanceId) {
+                it.copy(leftAt = System.currentTimeMillis())
+            } else {
+                it
+            }
+        }
+        _rooms.value = updated
+        saveRooms(updated)
     }
 
     fun remove(roomName: String, instanceId: String) {

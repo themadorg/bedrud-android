@@ -46,7 +46,6 @@
   <string name="dashboard_dialog_createDescription">Introduce un nombre para tu sala o déjalo en blanco para un nombre generado automáticamente.</string>
   <string name="dashboard_label_roomName">Nombre de la sala (opcional)</string>
   <string name="dashboard_button_createFirstRoom">Crea tu primera sala</string>
-  <string name="dashboard_contentDescription_refresh">Actualizar</string>
   <string name="dashboard_contentDescription_createRoom">Crear sala</string>
   <string name="dashboard_contentDescription_settings">Ajustes</string>
   <string name="dashboard_roomSettings_title">Ajustes de la sala</string>
@@ -62,9 +61,9 @@
   <string name="meeting_dialog_kickTitle">Expulsar participante</string>
   <string name="meeting_dialog_kickMessage">¿Estás seguro de que quieres expulsar a <xliff:g id="participantName" example="John Doe">%1$s</xliff:g> de la sala?</string>
   <string name="meeting_action_mute">Silenciar</string>
+  <string name="meeting_action_unmute">Activar sonido</string>
   <string name="meeting_action_disableVideo">Desactivar video</string>
-  <string name="meeting_action_bringToStage">Traer al escenario</string>
-  <string name="meeting_action_removeFromStage">Eliminar del escenario</string>
+  <string name="meeting_action_enableVideo">Activar video</string>
   <string name="meeting_action_kick">Expulsar</string>
   <string name="meeting_action_ban">Bloquear</string>
   <string name="meeting_panel_participants">Participantes (<xliff:g id="count" example="5">%1$d</xliff:g>)</string>
@@ -167,8 +166,8 @@
   <string name="dashboard_feature_e2ee">E2EE</string>
   <string name="dashboard_feature_private">Privado</string>
   <string name="dashboard_filter_all">Todos</string>
-  <string name="dashboard_filter_active">Activos</string>
-  <string name="dashboard_filter_private">Privados</string>
+  <string name="dashboard_filter_myRooms">Mis Salas</string>
+  <string name="dashboard_roomSettings_isPublic">Sala pública</string>
   <string name="dashboard_roomSettings_allowChat">Permitir chat</string>
   <string name="dashboard_roomSettings_allowVideo">Permitir video</string>
   <string name="dashboard_roomSettings_allowAudio">Permitir audio</string>
@@ -208,11 +207,7 @@
   <string name="meeting_sheet_tools">Herramientas</string>
   <string name="meeting_sheet_report">Reportar abuso</string>
   <string name="meeting_contentDescription_audioSource">Fuente de audio</string>
-  <string name="meeting_audio_sheet_title">Audio</string>
-  <string name="meeting_audio_sheet_microphone">Micrófono</string>
-  <string name="meeting_audio_sheet_micOn">Micrófono activado</string>
-  <string name="meeting_audio_sheet_micOff">Silenciado</string>
-  <string name="meeting_audio_sheet_output">Salida de audio</string>
+  <string name="meeting_audio_sheet_title">Seleccionar salida de audio</string>
   <string name="meeting_audio_device_speaker">Altavoz</string>
   <string name="meeting_audio_device_earpiece">Teléfono</string>
   <string name="meeting_audio_device_wired_headset">Auriculares con cable</string>

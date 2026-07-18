@@ -5,7 +5,7 @@ import com.bedrud.app.models.CreateRoomRequest
 import com.bedrud.app.models.JoinRoomRequest
 import com.bedrud.app.models.JoinRoomResponse
 import com.bedrud.app.models.Room
-import com.bedrud.app.models.RoomSettings
+import com.bedrud.app.models.UpdateRoomSettingsRequest
 import com.bedrud.app.models.UserRoomResponse
 import okhttp3.MultipartBody
 import retrofit2.Response
@@ -35,34 +35,10 @@ interface RoomApi {
         @Path("identity") identity: String
     ): Response<Unit>
 
-    @POST("room/{roomId}/mute/{identity}")
-    suspend fun muteParticipant(
-        @Path("roomId") roomId: String,
-        @Path("identity") identity: String
-    ): Response<Unit>
-
-    @POST("room/{roomId}/video/{identity}/off")
-    suspend fun disableParticipantVideo(
-        @Path("roomId") roomId: String,
-        @Path("identity") identity: String
-    ): Response<Unit>
-
-    @POST("room/{roomId}/stage/{identity}/bring")
-    suspend fun bringToStage(
-        @Path("roomId") roomId: String,
-        @Path("identity") identity: String
-    ): Response<Unit>
-
-    @POST("room/{roomId}/stage/{identity}/remove")
-    suspend fun removeFromStage(
-        @Path("roomId") roomId: String,
-        @Path("identity") identity: String
-    ): Response<Unit>
-
     @PUT("room/{roomId}/settings")
     suspend fun updateRoomSettings(
         @Path("roomId") roomId: String,
-        @Body settings: RoomSettings
+        @Body request: UpdateRoomSettingsRequest
     ): Response<Unit>
 
     @DELETE("room/{roomId}")

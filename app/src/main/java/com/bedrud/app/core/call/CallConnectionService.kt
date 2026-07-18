@@ -71,6 +71,26 @@ class CallConnectionService : ConnectionService() {
 
         override fun onCallAudioStateChanged(state: android.telecom.CallAudioState?) {
             // LiveKit manages capture/playback; system routes call audio.
+            Log.d(
+                TAG,
+                "onCallAudioStateChanged route=${state?.route} " +
+                    "supportedRouteMask=${state?.supportedRouteMask} " +
+                    "isMuted=${state?.isMuted}"
+            )
+            // Telecom silently ignores setAudioRoute() calls made before it has sent this
+            // connection its first audio-state callback (observed: a request made right after
+            // the Connection is created has no effect, even though activeConnection is already
+            // non-null by then). This callback is the actual signal that Telecom is now
+            // listening, so apply anything that was requested before that point now.
+            pendingAudioRoute?.let { route ->
+                pendingAudioRoute = null
+                Log.d(TAG, "Flushing pending audio route=$route")
+                try {
+                    this@BedrudConnection.setAudioRoute(route)
+                } catch (e: Exception) {
+                    Log.e(TAG, "Failed to flush pending audio route", e)
+                }
+            }
         }
     }
 
@@ -78,6 +98,7 @@ class CallConnectionService : ConnectionService() {
         private const val TAG = "CallConnectionService"
         const val SCHEME = "bedrud"
         private var activeConnection: Connection? = null
+        private var pendingAudioRoute: Int? = null
         var muteListener: ((Boolean) -> Unit)? = null
 
         fun placeCall(context: Context, roomName: String): Boolean {
@@ -112,13 +133,40 @@ class CallConnectionService : ConnectionService() {
                 Log.e(TAG, "Failed to end call connection", e)
             }
             activeConnection = null
+            pendingAudioRoute = null
         }
 
         fun updateMuteState(muted: Boolean) {
+            Log.d(TAG, "updateMuteState muted=$muted activeConnection=${activeConnection != null}")
             try {
                 activeConnection?.setActive()
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to update mute state", e)
+            }
+        }
+
+        /**
+         * Routes call audio via Telecom's [CallAudioState.ROUTE_*] on our self-managed
+         * [Connection]. Plain AudioManager-level routing (AudioSwitch's setSpeakerphoneOn /
+         * setCommunicationDevice) can silently lose to a connected Bluetooth SCO headset,
+         * which the platform's own CallAudioRouteController otherwise auto-prioritizes for
+         * any active call. Going through the Connection gives this app the same routing
+         * authority a system dialer has, which is what actually overrides that priority.
+         */
+        fun setAudioRoute(route: Int) {
+            Log.d(TAG, "setAudioRoute requested=$route activeConnection=${activeConnection != null}")
+            val connection = activeConnection
+            if (connection == null) {
+                // AudioSwitch's startup device selection can race ahead of connection
+                // creation; remember the request and apply it once onCreateOutgoingConnection
+                // hands us a Connection, instead of silently dropping it.
+                pendingAudioRoute = route
+                return
+            }
+            try {
+                connection.setAudioRoute(route)
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to set audio route", e)
             }
         }
 

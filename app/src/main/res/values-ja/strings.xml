@@ -46,7 +46,6 @@
   <string name="dashboard_dialog_createDescription">ルーム名を入力するか、空白のままにすると自動生成されます。</string>
   <string name="dashboard_label_roomName">ルーム名（オプション）</string>
   <string name="dashboard_button_createFirstRoom">最初のルームを作成</string>
-  <string name="dashboard_contentDescription_refresh">更新</string>
   <string name="dashboard_contentDescription_createRoom">ルームを作成</string>
   <string name="dashboard_contentDescription_settings">設定</string>
   <string name="dashboard_roomSettings_title">ルーム設定</string>
@@ -62,9 +61,9 @@
   <string name="meeting_dialog_kickTitle">参加者をキック</string>
   <string name="meeting_dialog_kickMessage"><xliff:g id="participantName" example="John Doe">%1$s</xliff:g> をルームからキックしてもよろしいですか？</string>
   <string name="meeting_action_mute">ミュート</string>
+  <string name="meeting_action_unmute">ミュート解除</string>
   <string name="meeting_action_disableVideo">ビデオを無効にする</string>
-  <string name="meeting_action_bringToStage">ステージに上げる</string>
-  <string name="meeting_action_removeFromStage">ステージから降ろす</string>
+  <string name="meeting_action_enableVideo">ビデオを有効にする</string>
   <string name="meeting_action_kick">キック</string>
   <string name="meeting_action_ban">BAN</string>
   <string name="meeting_panel_participants">参加者 (<xliff:g id="count" example="5">%1$d</xliff:g>)</string>
@@ -167,8 +166,8 @@
   <string name="dashboard_feature_e2ee">E2EE</string>
   <string name="dashboard_feature_private">プライベート</string>
   <string name="dashboard_filter_all">すべて</string>
-  <string name="dashboard_filter_active">アクティブ</string>
-  <string name="dashboard_filter_private">プライベート</string>
+  <string name="dashboard_filter_myRooms">マイルーム</string>
+  <string name="dashboard_roomSettings_isPublic">公開ルーム</string>
   <string name="dashboard_roomSettings_allowChat">チャットを許可</string>
   <string name="dashboard_roomSettings_allowVideo">ビデオを許可</string>
   <string name="dashboard_roomSettings_allowAudio">オーディオを許可</string>
@@ -208,11 +207,7 @@
   <string name="meeting_sheet_tools">ツール</string>
   <string name="meeting_sheet_report">不正利用を報告</string>
   <string name="meeting_contentDescription_audioSource">オーディオソース</string>
-  <string name="meeting_audio_sheet_title">オーディオ</string>
-  <string name="meeting_audio_sheet_microphone">マイク</string>
-  <string name="meeting_audio_sheet_micOn">ミュート解除</string>
-  <string name="meeting_audio_sheet_micOff">ミュート中</string>
-  <string name="meeting_audio_sheet_output">音声出力</string>
+  <string name="meeting_audio_sheet_title">音声出力を選択</string>
   <string name="meeting_audio_device_speaker">スピーカー</string>
   <string name="meeting_audio_device_earpiece">受話口</string>
   <string name="meeting_audio_device_wired_headset">有線ヘッドセット</string>

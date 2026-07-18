@@ -46,7 +46,6 @@
   <string name="dashboard_dialog_createDescription">Odanız için bir ad girin veya otomatik oluşturulan bir ad için boş bırakın.</string>
   <string name="dashboard_label_roomName">Oda Adı (isteğe bağlı)</string>
   <string name="dashboard_button_createFirstRoom">İlk odanızı oluşturun</string>
-  <string name="dashboard_contentDescription_refresh">Yenile</string>
   <string name="dashboard_contentDescription_createRoom">Oda Oluştur</string>
   <string name="dashboard_contentDescription_settings">Ayarlar</string>
   <string name="dashboard_roomSettings_title">Oda Ayarları</string>
@@ -62,9 +61,9 @@
   <string name="meeting_dialog_kickTitle">Katılımcıyı At</string>
   <string name="meeting_dialog_kickMessage"><xliff:g id="participantName" example="John Doe">%1$s</xliff:g> kişisini odadan atmak istediğinize emin misiniz?</string>
   <string name="meeting_action_mute">Sesi Kapat</string>
+  <string name="meeting_action_unmute">Sesi Aç</string>
   <string name="meeting_action_disableVideo">Videoyu Devre Dışı Bırak</string>
-  <string name="meeting_action_bringToStage">Sahneye Çıkar</string>
-  <string name="meeting_action_removeFromStage">Sahneden Kaldır</string>
+  <string name="meeting_action_enableVideo">Videoyu Etkinleştir</string>
   <string name="meeting_action_kick">At</string>
   <string name="meeting_action_ban">Yasakla</string>
   <string name="meeting_panel_participants">Katılımcılar (<xliff:g id="count" example="5">%1$d</xliff:g>)</string>
@@ -167,8 +166,8 @@
   <string name="dashboard_feature_e2ee">UÇU</string>
   <string name="dashboard_feature_private">Özel</string>
   <string name="dashboard_filter_all">Tümü</string>
-  <string name="dashboard_filter_active">Aktif</string>
-  <string name="dashboard_filter_private">Özel</string>
+  <string name="dashboard_filter_myRooms">Odalarım</string>
+  <string name="dashboard_roomSettings_isPublic">Herkese Açık Oda</string>
   <string name="dashboard_roomSettings_allowChat">Sohbete İzin Ver</string>
   <string name="dashboard_roomSettings_allowVideo">Videoya İzin Ver</string>
   <string name="dashboard_roomSettings_allowAudio">Sese İzin Ver</string>
@@ -208,11 +207,7 @@
   <string name="meeting_sheet_tools">Araçlar</string>
   <string name="meeting_sheet_report">Kötüye kullanımı bildir</string>
   <string name="meeting_contentDescription_audioSource">Ses kaynağı</string>
-  <string name="meeting_audio_sheet_title">Ses</string>
-  <string name="meeting_audio_sheet_microphone">Mikrofon</string>
-  <string name="meeting_audio_sheet_micOn">Sessiz değil</string>
-  <string name="meeting_audio_sheet_micOff">Sessizde</string>
-  <string name="meeting_audio_sheet_output">Ses çıkışı</string>
+  <string name="meeting_audio_sheet_title">Ses Çıkışını Seç</string>
   <string name="meeting_audio_device_speaker">Hoparlör</string>
   <string name="meeting_audio_device_earpiece">Telefon</string>
   <string name="meeting_audio_device_wired_headset">Kablolu kulaklık</string>

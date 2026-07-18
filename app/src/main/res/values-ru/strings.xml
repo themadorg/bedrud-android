@@ -46,7 +46,6 @@
   <string name="dashboard_dialog_createDescription">Введите название комнаты или оставьте пустым для автоматического названия.</string>
   <string name="dashboard_label_roomName">Название комнаты (необязательно)</string>
   <string name="dashboard_button_createFirstRoom">Создайте свою первую комнату</string>
-  <string name="dashboard_contentDescription_refresh">Обновить</string>
   <string name="dashboard_contentDescription_createRoom">Создать комнату</string>
   <string name="dashboard_contentDescription_settings">Настройки</string>
   <string name="dashboard_roomSettings_title">Настройки комнаты</string>
@@ -62,9 +61,9 @@
   <string name="meeting_dialog_kickTitle">Выгнать участника</string>
   <string name="meeting_dialog_kickMessage">Вы уверены, что хотите выгнать <xliff:g id="participantName" example="John Doe">%1$s</xliff:g> из комнаты?</string>
   <string name="meeting_action_mute">Отключить звук</string>
+  <string name="meeting_action_unmute">Включить звук</string>
   <string name="meeting_action_disableVideo">Отключить видео</string>
-  <string name="meeting_action_bringToStage">Вывести на сцену</string>
-  <string name="meeting_action_removeFromStage">Убрать со сцены</string>
+  <string name="meeting_action_enableVideo">Включить видео</string>
   <string name="meeting_action_kick">Выгнать</string>
   <string name="meeting_action_ban">Заблокировать</string>
   <string name="meeting_panel_participants">Участники (<xliff:g id="count" example="5">%1$d</xliff:g>)</string>
@@ -167,8 +166,8 @@
   <string name="dashboard_feature_e2ee">E2EE</string>
   <string name="dashboard_feature_private">Закрытая</string>
   <string name="dashboard_filter_all">Все</string>
-  <string name="dashboard_filter_active">Активные</string>
-  <string name="dashboard_filter_private">Закрытые</string>
+  <string name="dashboard_filter_myRooms">Мои комнаты</string>
+  <string name="dashboard_roomSettings_isPublic">Публичная комната</string>
   <string name="dashboard_roomSettings_allowChat">Разрешить чат</string>
   <string name="dashboard_roomSettings_allowVideo">Разрешить видео</string>
   <string name="dashboard_roomSettings_allowAudio">Разрешить аудио</string>
@@ -208,11 +207,7 @@
   <string name="meeting_sheet_tools">Инструменты</string>
   <string name="meeting_sheet_report">Сообщить о нарушении</string>
   <string name="meeting_contentDescription_audioSource">Источник звука</string>
-  <string name="meeting_audio_sheet_title">Звук</string>
-  <string name="meeting_audio_sheet_microphone">Микрофон</string>
-  <string name="meeting_audio_sheet_micOn">Микрофон включён</string>
-  <string name="meeting_audio_sheet_micOff">Микрофон выключен</string>
-  <string name="meeting_audio_sheet_output">Вывод звука</string>
+  <string name="meeting_audio_sheet_title">Выбор вывода звука</string>
   <string name="meeting_audio_device_speaker">Динамик</string>
   <string name="meeting_audio_device_earpiece">Телефон</string>
   <string name="meeting_audio_device_wired_headset">Проводная гарнитура</string>

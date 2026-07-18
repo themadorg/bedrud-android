@@ -85,12 +85,18 @@ data class JoinRoomRequest(
     val roomName: String
 )
 
+data class UpdateRoomSettingsRequest(
+    @SerializedName("isPublic")
+    val isPublic: Boolean,
+    val settings: RoomSettings
+)
+
 data class JoinRoomResponse(
     val id: String,
     val name: String,
-    val token: String,
+    val token: String? = null,
     @SerializedName("livekitHost")
-    val livekitHost: String,
+    val livekitHost: String? = null,
     @SerializedName("createdBy")
     val createdBy: String,
     @SerializedName("adminId")
@@ -123,7 +129,11 @@ data class UserRoomResponse(
     @SerializedName("expiresAt")
     val expiresAt: String,
     val settings: RoomSettings,
-    val relationship: String,
+    // The server never actually sends this field (grep of the Go handlers confirms it),
+    // so Gson always leaves it null. It was declared non-null with no default, which was
+    // harmless until anything called .copy() on this type -- that generates a null-check
+    // on every unspecified constructor param and crashes with a Kotlin intrinsics NPE.
+    val relationship: String? = null,
     val mode: String
 )
 

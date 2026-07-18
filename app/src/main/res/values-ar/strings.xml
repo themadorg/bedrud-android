@@ -46,7 +46,6 @@
   <string name="dashboard_dialog_createDescription">أدخل اسماً لغرفتك، أو اتركه فارغاً لإنشاء اسم تلقائي.</string>
   <string name="dashboard_label_roomName">اسم الغرفة (اختياري)</string>
   <string name="dashboard_button_createFirstRoom">أنشئ غرفتك الأولى</string>
-  <string name="dashboard_contentDescription_refresh">تحديث</string>
   <string name="dashboard_contentDescription_createRoom">إنشاء غرفة</string>
   <string name="dashboard_contentDescription_settings">الإعدادات</string>
   <string name="dashboard_roomSettings_title">إعدادات الغرفة</string>
@@ -62,9 +61,9 @@
   <string name="meeting_dialog_kickTitle">طرد مشارك</string>
   <string name="meeting_dialog_kickMessage">هل أنت متأكد من رغبتك في طرد <xliff:g id="participantName" example="John Doe">%1$s</xliff:g> من الغرفة؟</string>
   <string name="meeting_action_mute">كتم الصوت</string>
+  <string name="meeting_action_unmute">إلغاء كتم الصوت</string>
   <string name="meeting_action_disableVideo">تعطيل الفيديو</string>
-  <string name="meeting_action_bringToStage">نقل إلى المنصة</string>
-  <string name="meeting_action_removeFromStage">إزالة من المنصة</string>
+  <string name="meeting_action_enableVideo">تفعيل الفيديو</string>
   <string name="meeting_action_kick">طرد</string>
   <string name="meeting_action_ban">حظر</string>
   <string name="meeting_panel_participants">المشاركون (<xliff:g id="count" example="5">%1$d</xliff:g>)</string>
@@ -167,8 +166,8 @@
   <string name="dashboard_feature_e2ee">التشفير من طرف إلى طرف</string>
   <string name="dashboard_feature_private">خاص</string>
   <string name="dashboard_filter_all">الكل</string>
-  <string name="dashboard_filter_active">نشط</string>
-  <string name="dashboard_filter_private">خاص</string>
+  <string name="dashboard_filter_myRooms">غرفي</string>
+  <string name="dashboard_roomSettings_isPublic">غرفة عامة</string>
   <string name="dashboard_roomSettings_allowChat">السماح بالدردشة</string>
   <string name="dashboard_roomSettings_allowVideo">السماح بالفيديو</string>
   <string name="dashboard_roomSettings_allowAudio">السماح بالصوت</string>
@@ -208,11 +207,7 @@
   <string name="meeting_sheet_tools">الأدوات</string>
   <string name="meeting_sheet_report">الإبلاغ عن إساءة</string>
   <string name="meeting_contentDescription_audioSource">مصدر الصوت</string>
-  <string name="meeting_audio_sheet_title">الصوت</string>
-  <string name="meeting_audio_sheet_microphone">الميكروفون</string>
-  <string name="meeting_audio_sheet_micOn">غير مكتوم</string>
-  <string name="meeting_audio_sheet_micOff">مكتوم</string>
-  <string name="meeting_audio_sheet_output">مخرج الصوت</string>
+  <string name="meeting_audio_sheet_title">اختر مخرج الصوت</string>
   <string name="meeting_audio_device_speaker">مكبر الصوت</string>
   <string name="meeting_audio_device_earpiece">الهاتف</string>
   <string name="meeting_audio_device_wired_headset">سماعة سلكية</string>
