@@ -4,6 +4,17 @@ on:
   pull_request:
     branches: [master]
     types: [opened, synchronize, reopened]
+    # Only build when something that can actually affect the app build changed -
+    # skips docs/CI-template-only PRs entirely instead of wasting a build on them.
+    paths:
+      - "app/**"
+      - "gradle/**"
+      - "build.gradle.kts"
+      - "settings.gradle.kts"
+      - "gradle.properties"
+      - "gradlew"
+      - "gradlew.bat"
+      - ".github/workflows/pr-build.yml"
 
 # Cancel any in-progress run for the same PR when a new commit is pushed.
 concurrency:
@@ -49,17 +60,50 @@ jobs:
         if: always()
         run: rm -f qa-release.jks
 
-      - name: Upload QA APK
+      - name: Upload universal APK
+        id: upload-universal
         uses: actions/upload-artifact@v4
         with:
-          name: bedrud-qa-pr-${{ github.event.pull_request.number }}
+          name: bedrud-qa-pr-${{ github.event.pull_request.number }}-universal
           path: app/build/outputs/apk/qa/app-universal-qa.apk
           retention-days: 14
 
-      - name: Comment build link on PR
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          gh pr comment ${{ github.event.pull_request.number }} \
-            --repo ${{ github.repository }} \
-            --body "QA build ready for this PR. Download \`app-universal-qa.apk\` from the [workflow run artifacts](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}) — installs alongside the real app (package id \`com.bedrud.app.qa\`) without touching it."
+      - name: Upload arm64-v8a APK
+        id: upload-arm64-v8a
+        uses: actions/upload-artifact@v4
+        with:
+          name: bedrud-qa-pr-${{ github.event.pull_request.number }}-arm64-v8a
+          path: app/build/outputs/apk/qa/app-arm64-v8a-qa.apk
+          retention-days: 14
+
+      - name: Upload armeabi-v7a APK
+        id: upload-armeabi-v7a
+        uses: actions/upload-artifact@v4
+        with:
+          name: bedrud-qa-pr-${{ github.event.pull_request.number }}-armeabi-v7a
+          path: app/build/outputs/apk/qa/app-armeabi-v7a-qa.apk
+          retention-days: 14
+
+      - name: Upload x86_64 APK
+        id: upload-x86_64
+        uses: actions/upload-artifact@v4
+        with:
+          name: bedrud-qa-pr-${{ github.event.pull_request.number }}-x86_64
+          path: app/build/outputs/apk/qa/app-x86_64-qa.apk
+          retention-days: 14
+
+      # Edits the same comment on every push to this PR (matched via `header`)
+      # instead of leaving a new one behind each time.
+      - name: Comment build links on PR
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          header: qa-build
+          message: |
+            QA build ready for this PR — installs alongside the real app (package id `com.bedrud.app.qa`) without touching it.
+
+            | Architecture | Download |
+            |---|---|
+            | Universal (any device - use this if unsure) | [Download](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}/artifacts/${{ steps.upload-universal.outputs.artifact-id }}) |
+            | arm64-v8a (most modern phones) | [Download](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}/artifacts/${{ steps.upload-arm64-v8a.outputs.artifact-id }}) |
+            | armeabi-v7a (older 32-bit phones) | [Download](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}/artifacts/${{ steps.upload-armeabi-v7a.outputs.artifact-id }}) |
+            | x86_64 (emulators) | [Download](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}/artifacts/${{ steps.upload-x86_64.outputs.artifact-id }}) |
