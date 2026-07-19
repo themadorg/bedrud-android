@@ -1,0 +1,65 @@
+name: PR QA build
+
+on:
+  pull_request:
+    branches: [master]
+    types: [opened, synchronize, reopened]
+
+# Cancel any in-progress run for the same PR when a new commit is pushed.
+concurrency:
+  group: pr-build-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  build-qa:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      # This key signs QA/test builds only. It is separate from the real Play Store
+      # release key and is never exposed to forked-repo PRs, since `pull_request`
+      # (as opposed to `pull_request_target`) runs without access to repo secrets
+      # for forks.
+      - name: Decode QA signing key
+        run: echo "${{ secrets.BEDRUD_QA_KEYSTORE_BASE64 }}" | base64 -d > qa-release.jks
+
+      - name: Build QA APK
+        env:
+          QA_KEYSTORE_PASSWORD: ${{ secrets.BEDRUD_QA_KEYSTORE_PASSWORD }}
+        # versionCode = this repo's ever-increasing Actions run number, so installing a
+        # newer PR's QA build over an older one is always treated as an update by
+        # Android (never wiping the tester's data/login) rather than a downgrade.
+        run: ./gradlew :app:assembleQa -PqaVersionCode=${{ github.run_number }} --no-daemon
+
+      - name: Remove decoded keystore
+        if: always()
+        run: rm -f qa-release.jks
+
+      - name: Upload QA APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: bedrud-qa-pr-${{ github.event.pull_request.number }}
+          path: app/build/outputs/apk/qa/app-universal-qa.apk
+          retention-days: 14
+
+      - name: Comment build link on PR
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh pr comment ${{ github.event.pull_request.number }} \
+            --repo ${{ github.repository }} \
+            --body "QA build ready for this PR. Download \`app-universal-qa.apk\` from the [workflow run artifacts](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}) — installs alongside the real app (package id \`com.bedrud.app.qa\`) without touching it."
