@@ -29,6 +29,8 @@ android {
         versionName = "1.0.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        resValue("string", "app_name", "Bedrud")
     }
 
     signingConfigs {
@@ -73,6 +75,9 @@ android {
             versionNameSuffix = "-qa"
             signingConfig = signingConfigs.getByName("qa")
             matchingFallbacks += listOf("debug")
+            // Distinct home-screen name so a QA test build is never mistaken for the
+            // real app when both are installed on the same device.
+            resValue("string", "app_name", "Bedrud QA")
         }
     }
 
@@ -84,6 +89,7 @@ android {
     buildFeatures {
         compose = true
         buildConfig = true
+        resValues = true
     }
 
     splits {
