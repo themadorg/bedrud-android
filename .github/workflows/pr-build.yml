@@ -92,6 +92,17 @@ jobs:
           path: app/build/outputs/apk/qa/app-x86_64-qa.apk
           retention-days: 14
 
+      # Multiple files under one artifact name download as a single zip containing
+      # all of them - no manual zipping needed (and avoids double-zipping, since
+      # artifacts are always wrapped in a zip on download regardless of contents).
+      - name: Upload all APKs (zip)
+        id: upload-all
+        uses: actions/upload-artifact@v4
+        with:
+          name: bedrud-qa-pr-${{ github.event.pull_request.number }}-all
+          path: app/build/outputs/apk/qa/*.apk
+          retention-days: 14
+
       # Edits the same comment on every push to this PR (matched via `header`)
       # instead of leaving a new one behind each time.
       - name: Comment build links on PR
@@ -101,8 +112,9 @@ jobs:
           message: |
             QA build ready for this PR — installs alongside the real app (package id `com.bedrud.app.qa`) without touching it.
 
-            | Architecture | Download |
+            | Option | Download |
             |---|---|
+            | All architectures (single zip, all 4 APKs) | [Download](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}/artifacts/${{ steps.upload-all.outputs.artifact-id }}) |
             | Universal (any device - use this if unsure) | [Download](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}/artifacts/${{ steps.upload-universal.outputs.artifact-id }}) |
             | arm64-v8a (most modern phones) | [Download](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}/artifacts/${{ steps.upload-arm64-v8a.outputs.artifact-id }}) |
             | armeabi-v7a (older 32-bit phones) | [Download](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}/artifacts/${{ steps.upload-armeabi-v7a.outputs.artifact-id }}) |
