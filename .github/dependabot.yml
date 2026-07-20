@@ -1,0 +1,30 @@
+version: 2
+
+updates:
+  # Gradle (Kotlin/Android dependencies)
+  - package-ecosystem: "gradle"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    commit-message:
+      prefix: "deps"
+    groups:
+      gradle-all:
+        patterns:
+          - "*"
+    open-pull-requests-limit: 5
+
+  # GitHub Actions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    commit-message:
+      prefix: "deps(ci)"
+    groups:
+      actions-all:
+        patterns:
+          - "*"
+    open-pull-requests-limit: 5
