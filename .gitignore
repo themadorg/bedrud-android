@@ -96,8 +96,6 @@ build/
 /app/build/
 /app/release/
 /captures/
-gradle-wrapper.jar
-!gradle-wrapper.properties
 gradle-daemon-jvm.properties
 
 ## --- C++ / Native Build ---

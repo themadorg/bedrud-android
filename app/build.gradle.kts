@@ -21,10 +21,16 @@ android {
         applicationId = "com.bedrud.app"
         minSdk = 28
         targetSdk = 36
-        versionCode = 2
+        // Overridable by CI so QA builds always carry an increasing versionCode across
+        // PRs (needed so a tester can update from one PR's QA build to the next without
+        // Android refusing the install / wiping app data). Real release builds never pass
+        // this property, so they keep the manually-bumped versionCode below.
+        versionCode = (project.findProperty("qaVersionCode") as String?)?.toIntOrNull() ?: 2
         versionName = "1.0.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        resValue("string", "app_name", "Bedrud")
     }
 
     signingConfigs {
@@ -34,6 +40,18 @@ android {
                 storePassword = keystoreProperties["storePassword"] as String
                 keyAlias = keystoreProperties["keyAlias"] as String
                 keyPassword = keystoreProperties["keyPassword"] as String
+            }
+        }
+        // Dedicated key for QA/PR test builds only - separate from the real release key
+        // above, so CI never needs access to production signing material. Read from env
+        // vars (set by CI, or by a developer locally) rather than a committed file.
+        create("qa") {
+            val qaKeystoreFile = rootProject.file(System.getenv("QA_KEYSTORE_PATH") ?: "qa-release.jks")
+            if (qaKeystoreFile.exists()) {
+                storeFile = qaKeystoreFile
+                storePassword = System.getenv("QA_KEYSTORE_PASSWORD") ?: ""
+                keyAlias = "bedrud-qa"
+                keyPassword = System.getenv("QA_KEYSTORE_PASSWORD") ?: ""
             }
         }
     }
@@ -48,6 +66,19 @@ android {
                 "proguard-rules.pro"
             )
         }
+        // Built on every PR so reviewers have a real APK to install and test.
+        // Own applicationId (".qa" suffix) so it installs side-by-side with a real
+        // release build on the same device instead of colliding with it.
+        create("qa") {
+            initWith(getByName("debug"))
+            applicationIdSuffix = ".qa"
+            versionNameSuffix = "-qa"
+            signingConfig = signingConfigs.getByName("qa")
+            matchingFallbacks += listOf("debug")
+            // Distinct home-screen name so a QA test build is never mistaken for the
+            // real app when both are installed on the same device.
+            resValue("string", "app_name", "Bedrud QA")
+        }
     }
 
     compileOptions {
@@ -58,6 +89,7 @@ android {
     buildFeatures {
         compose = true
         buildConfig = true
+        resValues = true
     }
 
     splits {
