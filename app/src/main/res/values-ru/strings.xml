@@ -81,6 +81,8 @@
   <string name="meeting_contentDescription_toggleScreenShare">Переключить демонстрацию экрана</string>
   <string name="meeting_contentDescription_toggleChat">Переключить чат</string>
   <string name="meeting_contentDescription_participants">Участники</string>
+  <string name="meeting_contentDescription_copyRoomLink">Скопировать ссылку на комнату</string>
+  <string name="meeting_toast_linkCopied">Ссылка на комнату скопирована</string>
   <string name="meeting_contentDescription_leaveCall">Покинуть звонок</string>
   <string name="meeting_contentDescription_participantAvatar">
     <xliff:g id="name" example="John Doe">%1$s</xliff:g> аватар</string>
@@ -172,6 +174,7 @@
   <string name="dashboard_roomSettings_allowVideo">Разрешить видео</string>
   <string name="dashboard_roomSettings_allowAudio">Разрешить аудио</string>
   <string name="dashboard_roomSettings_requireApproval">Требовать одобрения</string>
+  <string name="dashboard_roomSettings_recording">Запись</string>
   <string name="dashboard_roomSettings_e2ee">Сквозное шифрование</string>
   <string name="profile_title">Профиль</string>
   <string name="profile_contentDescription_profilePicture">Фото профиля</string>
@@ -204,6 +207,8 @@
   <string name="meeting_share_chooserTitle">Поделиться ссылкой на встречу</string>
   <string name="meeting_sheet_flipCamera">Переключить камеру</string>
   <string name="meeting_sheet_settings">Настройки</string>
+  <string name="meeting_sheet_roomSettings">Настройки комнаты</string>
+  <string name="meeting_sheet_deafen">Оглушить</string>
   <string name="meeting_sheet_tools">Инструменты</string>
   <string name="meeting_sheet_report">Сообщить о нарушении</string>
   <string name="meeting_contentDescription_audioSource">Источник звука</string>

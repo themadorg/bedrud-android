@@ -81,6 +81,8 @@
   <string name="meeting_contentDescription_toggleScreenShare">تبديل مشاركة الشاشة</string>
   <string name="meeting_contentDescription_toggleChat">تبديل الدردشة</string>
   <string name="meeting_contentDescription_participants">المشاركون</string>
+  <string name="meeting_contentDescription_copyRoomLink">نسخ رابط الغرفة</string>
+  <string name="meeting_toast_linkCopied">تم نسخ رابط الغرفة</string>
   <string name="meeting_contentDescription_leaveCall">مغادرة المكالمة</string>
   <string name="meeting_contentDescription_participantAvatar">
     <xliff:g id="name" example="John Doe">%1$s</xliff:g> الصورة الرمزية</string>
@@ -172,6 +174,7 @@
   <string name="dashboard_roomSettings_allowVideo">السماح بالفيديو</string>
   <string name="dashboard_roomSettings_allowAudio">السماح بالصوت</string>
   <string name="dashboard_roomSettings_requireApproval">طلب الموافقة</string>
+  <string name="dashboard_roomSettings_recording">التسجيل</string>
   <string name="dashboard_roomSettings_e2ee">التشفير من طرف إلى طرف</string>
   <string name="profile_title">الملف الشخصي</string>
   <string name="profile_contentDescription_profilePicture">صورة الملف الشخصي</string>
@@ -204,6 +207,8 @@
   <string name="meeting_share_chooserTitle">مشاركة رابط الاجتماع</string>
   <string name="meeting_sheet_flipCamera">قلب الكاميرا</string>
   <string name="meeting_sheet_settings">الإعدادات</string>
+  <string name="meeting_sheet_roomSettings">إعدادات الغرفة</string>
+  <string name="meeting_sheet_deafen">كتم السماع</string>
   <string name="meeting_sheet_tools">الأدوات</string>
   <string name="meeting_sheet_report">الإبلاغ عن إساءة</string>
   <string name="meeting_contentDescription_audioSource">مصدر الصوت</string>
