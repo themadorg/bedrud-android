@@ -41,6 +41,8 @@ jobs:
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v6
+        with:
+          cache-provider: basic
 
       - name: Run lint
         run: ./gradlew lint --no-daemon
@@ -63,6 +65,8 @@ jobs:
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v6
+        with:
+          cache-provider: basic
 
       # This key signs QA/test builds only. It is separate from the real Play Store
       # release key and is never exposed to forked-repo PRs, since `pull_request`
