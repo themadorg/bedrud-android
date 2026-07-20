@@ -40,7 +40,7 @@ jobs:
           java-version: "17"
 
       - name: Set up Gradle
-        uses: gradle/actions/setup-gradle@v6
+        uses: gradle/actions/setup-gradle@v4
 
       - name: Run lint
         run: ./gradlew lint --no-daemon
@@ -62,7 +62,7 @@ jobs:
           java-version: "17"
 
       - name: Set up Gradle
-        uses: gradle/actions/setup-gradle@v6
+        uses: gradle/actions/setup-gradle@v4
 
       # This key signs QA/test builds only. It is separate from the real Play Store
       # release key and is never exposed to forked-repo PRs, since `pull_request`
