@@ -79,6 +79,8 @@
   <string name="meeting_contentDescription_toggleScreenShare">تغییر اشتراک‌گذاری صفحه</string>
   <string name="meeting_contentDescription_toggleChat">تغییر چت</string>
   <string name="meeting_contentDescription_participants">شرکت‌کنندگان</string>
+  <string name="meeting_contentDescription_copyRoomLink">کپی لینک اتاق</string>
+  <string name="meeting_toast_linkCopied">لینک اتاق کپی شد</string>
   <string name="meeting_contentDescription_leaveCall">خروج از تماس</string>
   <string name="meeting_contentDescription_participantAvatar">آواتار <xliff:g id="name" example="John Doe">%1$s</xliff:g></string>
   <string name="meeting_contentDescription_close">بستن</string>
@@ -203,6 +205,7 @@
   <string name="meeting_sheet_flipCamera">چرخش دوربین</string>
   <string name="meeting_sheet_settings">تنظیمات صدا</string>
   <string name="meeting_sheet_roomSettings">تنظیمات اتاق</string>
+  <string name="meeting_sheet_deafen">قطع شنیدن</string>
   <string name="meeting_sheet_tools">ابزارها</string>
   <string name="meeting_sheet_report">گزارش سوءاستفاده</string>
   <string name="meeting_contentDescription_audioSource">منبع صدا</string>

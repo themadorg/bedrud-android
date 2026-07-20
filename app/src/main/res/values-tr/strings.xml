@@ -81,6 +81,8 @@
   <string name="meeting_contentDescription_toggleScreenShare">Ekran Paylaşımını Aç/Kapat</string>
   <string name="meeting_contentDescription_toggleChat">Sohbeti Aç/Kapat</string>
   <string name="meeting_contentDescription_participants">Katılımcılar</string>
+  <string name="meeting_contentDescription_copyRoomLink">Oda bağlantısını kopyala</string>
+  <string name="meeting_toast_linkCopied">Oda bağlantısı kopyalandı</string>
   <string name="meeting_contentDescription_leaveCall">Aramadan Ayrıl</string>
   <string name="meeting_contentDescription_participantAvatar">
     <xliff:g id="name" example="John Doe">%1$s</xliff:g> avatarı</string>
@@ -172,6 +174,7 @@
   <string name="dashboard_roomSettings_allowVideo">Videoya İzin Ver</string>
   <string name="dashboard_roomSettings_allowAudio">Sese İzin Ver</string>
   <string name="dashboard_roomSettings_requireApproval">Onay Gerektir</string>
+  <string name="dashboard_roomSettings_recording">Kayıt</string>
   <string name="dashboard_roomSettings_e2ee">Uçtan Uca Şifreleme</string>
   <string name="profile_title">Profil</string>
   <string name="profile_contentDescription_profilePicture">Profil resmi</string>
@@ -204,6 +207,8 @@
   <string name="meeting_share_chooserTitle">Toplantı bağlantısını paylaş</string>
   <string name="meeting_sheet_flipCamera">Kamerayı çevir</string>
   <string name="meeting_sheet_settings">Ayarlar</string>
+  <string name="meeting_sheet_roomSettings">Oda Ayarları</string>
+  <string name="meeting_sheet_deafen">Sağırlaştır</string>
   <string name="meeting_sheet_tools">Araçlar</string>
   <string name="meeting_sheet_report">Kötüye kullanımı bildir</string>
   <string name="meeting_contentDescription_audioSource">Ses kaynağı</string>
