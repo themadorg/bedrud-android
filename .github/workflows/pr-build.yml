@@ -49,6 +49,7 @@ jobs:
         run: ./gradlew testDebugUnitTest --no-daemon
 
   build-qa:
+    needs: lint-test
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
