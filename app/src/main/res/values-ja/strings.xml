@@ -81,6 +81,8 @@
   <string name="meeting_contentDescription_toggleScreenShare">画面共有の切り替え</string>
   <string name="meeting_contentDescription_toggleChat">チャットの切り替え</string>
   <string name="meeting_contentDescription_participants">参加者</string>
+  <string name="meeting_contentDescription_copyRoomLink">ルームリンクをコピー</string>
+  <string name="meeting_toast_linkCopied">ルームリンクをコピーしました</string>
   <string name="meeting_contentDescription_leaveCall">通話を切断</string>
   <string name="meeting_contentDescription_participantAvatar">
     <xliff:g id="name" example="John Doe">%1$s</xliff:g> のアバター</string>
@@ -172,6 +174,7 @@
   <string name="dashboard_roomSettings_allowVideo">ビデオを許可</string>
   <string name="dashboard_roomSettings_allowAudio">オーディオを許可</string>
   <string name="dashboard_roomSettings_requireApproval">承認を必須</string>
+  <string name="dashboard_roomSettings_recording">録画</string>
   <string name="dashboard_roomSettings_e2ee">エンドツーエンド暗号化</string>
   <string name="profile_title">プロフィール</string>
   <string name="profile_contentDescription_profilePicture">プロフィール画像</string>
@@ -204,6 +207,8 @@
   <string name="meeting_share_chooserTitle">ミーティングリンクを共有</string>
   <string name="meeting_sheet_flipCamera">カメラを切り替え</string>
   <string name="meeting_sheet_settings">設定</string>
+  <string name="meeting_sheet_roomSettings">ルーム設定</string>
+  <string name="meeting_sheet_deafen">スピーカーミュート</string>
   <string name="meeting_sheet_tools">ツール</string>
   <string name="meeting_sheet_report">不正利用を報告</string>
   <string name="meeting_contentDescription_audioSource">オーディオソース</string>

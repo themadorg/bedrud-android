@@ -81,6 +81,8 @@
   <string name="meeting_contentDescription_toggleScreenShare">Bildschirmfreigabe umschalten</string>
   <string name="meeting_contentDescription_toggleChat">Chat umschalten</string>
   <string name="meeting_contentDescription_participants">Teilnehmer</string>
+  <string name="meeting_contentDescription_copyRoomLink">Raum-Link kopieren</string>
+  <string name="meeting_toast_linkCopied">Raum-Link kopiert</string>
   <string name="meeting_contentDescription_leaveCall">Anruf verlassen</string>
   <string name="meeting_contentDescription_participantAvatar">
     <xliff:g id="name" example="John Doe">%1$s</xliff:g>-Avatar</string>
@@ -172,6 +174,7 @@
   <string name="dashboard_roomSettings_allowVideo">Video erlauben</string>
   <string name="dashboard_roomSettings_allowAudio">Audio erlauben</string>
   <string name="dashboard_roomSettings_requireApproval">Genehmigung erforderlich</string>
+  <string name="dashboard_roomSettings_recording">Aufnahme</string>
   <string name="dashboard_roomSettings_e2ee">Ende-zu-Ende-Verschlüsselung</string>
   <string name="profile_title">Profil</string>
   <string name="profile_contentDescription_profilePicture">Profilbild</string>
@@ -204,6 +207,8 @@
   <string name="meeting_share_chooserTitle">Meeting-Link teilen</string>
   <string name="meeting_sheet_flipCamera">Kamera wechseln</string>
   <string name="meeting_sheet_settings">Einstellungen</string>
+  <string name="meeting_sheet_roomSettings">Raumeinstellungen</string>
+  <string name="meeting_sheet_deafen">Taub schalten</string>
   <string name="meeting_sheet_tools">Werkzeuge</string>
   <string name="meeting_sheet_report">Missbrauch melden</string>
   <string name="meeting_contentDescription_audioSource">Audioquelle</string>
