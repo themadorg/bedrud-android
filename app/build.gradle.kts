@@ -15,12 +15,12 @@ val keystoreProperties = Properties().apply {
 
 android {
     namespace = "com.bedrud.app"
-    compileSdk = 36
+    compileSdk = 37
 
     defaultConfig {
         applicationId = "com.bedrud.app"
         minSdk = 28
-        targetSdk = 36
+        targetSdk = 37
         // Overridable by CI so QA builds always carry an increasing versionCode across
         // PRs (needed so a tester can update from one PR's QA build to the next without
         // Android refusing the install / wiping app data). Real release builds never pass
