@@ -21,7 +21,7 @@ For the server, web app, and other platforms, see the [main Bedrud project](http
 - **Picture-in-Picture** — keep the meeting visible while using other apps
 - **Screen sharing** and an adaptive video grid
 - **In-meeting chat** with image sharing, over the LiveKit data channel
-- **Shared stage** — screenshare, whiteboard, and YouTube "on stage" content, coordinated peer-to-peer
+- **Shared stage** — screenshare and coordinated peer-to-peer
 - **Admin moderation** — kick, ban, mute, and stage controls for room hosts
 - **Flexible sign-in** — email/password, guest access, OAuth, and FIDO2 passkeys
 - **Localized** — 10 languages with right-to-left (Arabic, Persian) support
