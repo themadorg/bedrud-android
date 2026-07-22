@@ -1,0 +1,136 @@
+name: Signed Release
+
+on:
+  push:
+    tags:
+      - "stable-v*"
+      - "beta-v*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Existing tag to build and release (e.g. stable-v1.4.0 or beta-v1.4.0-beta.1)"
+        required: true
+        type: string
+
+concurrency:
+  group: release-${{ github.event.inputs.tag || github.ref_name }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  prepare:
+    name: Determine channel
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.channel.outputs.tag }}
+      channel: ${{ steps.channel.outputs.channel }}
+      environment: ${{ steps.channel.outputs.environment }}
+      prerelease: ${{ steps.channel.outputs.prerelease }}
+    steps:
+      - name: Determine channel from tag
+        id: channel
+        run: |
+          TAG="${{ github.event.inputs.tag || github.ref_name }}"
+          case "$TAG" in
+            stable-*)
+              echo "channel=stable" >> "$GITHUB_OUTPUT"
+              echo "environment=production-signing" >> "$GITHUB_OUTPUT"
+              echo "prerelease=false" >> "$GITHUB_OUTPUT"
+              ;;
+            beta-*)
+              echo "channel=beta" >> "$GITHUB_OUTPUT"
+              echo "environment=beta-signing" >> "$GITHUB_OUTPUT"
+              echo "prerelease=true" >> "$GITHUB_OUTPUT"
+              ;;
+            *)
+              echo "::error::Tag '$TAG' matches neither stable-* nor beta-*"
+              exit 1
+              ;;
+          esac
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+
+  build-and-sign:
+    name: Build & sign (${{ needs.prepare.outputs.channel }})
+    needs: prepare
+    runs-on: ubuntu-latest
+    # Picks production-signing or beta-signing based on the tag prefix above, so each
+    # channel gets its own required-reviewer gate and its own scoped keystore secret.
+    environment: ${{ needs.prepare.outputs.environment }}
+    steps:
+      - name: Checkout ${{ needs.prepare.outputs.tag }}
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ needs.prepare.outputs.tag }}
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95 # v5
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92 # v6
+        with:
+          cache-provider: basic
+
+      # Same production key used by bedrud's own release.yml — stored here as an
+      # environment secret, so it's only reachable after the required reviewer approves.
+      - name: Decode production signing key
+        run: |
+          echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > release.jks
+          echo "${{ secrets.ANDROID_KEYSTORE_PROPERTIES }}" > keystore.properties
+
+      - name: Build release APKs
+        run: ./gradlew :app:assembleRelease --no-daemon
+
+      - name: Remove decoded keystore
+        if: always()
+        run: rm -f release.jks keystore.properties
+
+      - name: Upload universal APK
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: release-universal
+          path: app/build/outputs/apk/release/app-universal-release.apk
+
+      - name: Upload arm64-v8a APK
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: release-arm64-v8a
+          path: app/build/outputs/apk/release/app-arm64-v8a-release.apk
+
+      - name: Upload armeabi-v7a APK
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: release-armeabi-v7a
+          path: app/build/outputs/apk/release/app-armeabi-v7a-release.apk
+
+      - name: Upload x86_64 APK
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: release-x86_64
+          path: app/build/outputs/apk/release/app-x86_64-release.apk
+
+  publish:
+    name: Publish GitHub Release
+    needs: [prepare, build-and-sign]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download signed APKs
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          pattern: release-*
+          path: artifacts
+          merge-multiple: true
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@3d0d9888cb7fd7b750713d6e236d1fcb99157228 # v3
+        with:
+          tag_name: ${{ needs.prepare.outputs.tag }}
+          prerelease: ${{ needs.prepare.outputs.prerelease == 'true' }}
+          generate_release_notes: true
+          files: artifacts/*.apk
