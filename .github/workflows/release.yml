@@ -77,9 +77,11 @@ jobs:
 
       # Same production key used by bedrud's own release.yml — stored here as an
       # environment secret, so it's only reachable after the required reviewer approves.
+      # keystore.properties' storeFile path is resolved from app/build.gradle.kts,
+      # i.e. relative to app/ - not the repo root - so the .jks must live there too.
       - name: Decode production signing key
         run: |
-          echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > release.jks
+          echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > app/keystore.jks
           echo "${{ secrets.ANDROID_KEYSTORE_PROPERTIES }}" > keystore.properties
 
       - name: Build release APKs
@@ -87,7 +89,7 @@ jobs:
 
       - name: Remove decoded keystore
         if: always()
-        run: rm -f release.jks keystore.properties
+        run: rm -f app/keystore.jks keystore.properties
 
       - name: Upload universal APK
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
