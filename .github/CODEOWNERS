@@ -3,4 +3,4 @@
 # Covers the whole .github/ directory, not just workflows/, on purpose: this file itself
 # lives under .github/, so without this it could be edited (e.g. removing a reviewer) with
 # just one ordinary approval. Added at @narseh-ir's request.
-/.github/ @omidz4t @narseh-ir @Carlos-Adams
+/.github/ @omidz4t @narseh-ir @Carlos-Adams @trovalds
