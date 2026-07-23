@@ -22,7 +22,7 @@ permissions:
 jobs:
   prepare:
     name: Determine channel
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     outputs:
       tag: ${{ steps.channel.outputs.tag }}
       channel: ${{ steps.channel.outputs.channel }}
@@ -54,7 +54,7 @@ jobs:
   build-and-sign:
     name: Build & sign (${{ needs.prepare.outputs.channel }})
     needs: prepare
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     # Picks production-signing or beta-signing based on the tag prefix above, so each
     # channel gets its own required-reviewer gate and its own scoped keystore secret.
     environment: ${{ needs.prepare.outputs.environment }}
@@ -124,7 +124,7 @@ jobs:
   publish:
     name: Publish GitHub Release
     needs: [prepare, build-and-sign]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       contents: write
     steps:
