@@ -13,7 +13,7 @@ permissions:
 jobs:
   alert:
     name: Flag CODEOWNERS change
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       # Separate from the normal review request codeowner-review already triggers (which
       # can be missed in a big PR) - this pings @narseh-ir by name specifically, since this
