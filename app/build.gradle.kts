@@ -25,8 +25,11 @@ android {
         // PRs (needed so a tester can update from one PR's QA build to the next without
         // Android refusing the install / wiping app data). Real release builds never pass
         // this property, so they keep the manually-bumped versionCode below.
-        versionCode = (project.findProperty("qaVersionCode") as String?)?.toIntOrNull() ?: 2
-        versionName = "1.0.1"
+        versionCode = (project.findProperty("qaVersionCode") as String?)?.toIntOrNull() ?: 1
+        // release.yml passes releaseChannel=beta/stable (from the tag prefix) so a beta
+        // tag's APK is visibly distinguishable from a stable one; a local/default build
+        // gets no suffix.
+        versionName = "1.2.0" + if (project.findProperty("releaseChannel") == "beta") "-beta" else ""
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
