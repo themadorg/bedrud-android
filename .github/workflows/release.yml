@@ -22,7 +22,7 @@ permissions:
 jobs:
   prepare:
     name: Determine channel
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     outputs:
       tag: ${{ steps.channel.outputs.tag }}
       channel: ${{ steps.channel.outputs.channel }}
@@ -54,7 +54,7 @@ jobs:
   lint-test:
     name: Lint & Test
     needs: prepare
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout ${{ needs.prepare.outputs.tag }}
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -83,7 +83,7 @@ jobs:
     # Never sign with the production key - or ask a reviewer to approve doing so -
     # until lint and unit tests have passed on this exact tag.
     needs: [prepare, lint-test]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     # Picks production-signing or beta-signing based on the tag prefix above, so each
     # channel gets its own required-reviewer gate and its own scoped keystore secret.
     environment: ${{ needs.prepare.outputs.environment }}
@@ -147,7 +147,7 @@ jobs:
   publish:
     name: Publish GitHub Release
     needs: [prepare, build-and-sign]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       contents: write
     steps:
