@@ -84,8 +84,10 @@ jobs:
     # until lint and unit tests have passed on this exact tag.
     needs: [prepare, lint-test]
     runs-on: ubuntu-24.04
-    # Picks production-signing or beta-signing based on the tag prefix above, so each
-    # channel gets its own required-reviewer gate and its own scoped keystore secret.
+    # Picks production-signing or beta-signing based on the tag prefix above. Both
+    # environments hold the same signing key - pre-releases and stable releases are the
+    # same build, signed identically; the only difference is the required-reviewer list
+    # (production-signing: narseh-ir only; beta-signing: narseh-ir or omidz4t).
     environment: ${{ needs.prepare.outputs.environment }}
     steps:
       - name: Checkout ${{ needs.prepare.outputs.tag }}
@@ -104,8 +106,9 @@ jobs:
         with:
           cache-provider: basic
 
-      # Same production key used by bedrud's own release.yml — stored here as an
-      # environment secret, so it's only reachable after the required reviewer approves.
+      # Same key regardless of channel (production-signing and beta-signing hold
+      # identical secrets) - stored as an environment secret, so it's only reachable
+      # after the required reviewer(s) for that environment approve.
       # keystore.properties' storeFile path is resolved from app/build.gradle.kts,
       # i.e. relative to app/ - not the repo root - so the .jks must live there too.
       # Secrets go through env, not inlined into the script - keystore.properties is raw
@@ -120,7 +123,7 @@ jobs:
           echo "$KEYSTORE_PROPERTIES" > keystore.properties
 
       - name: Build release APKs
-        run: ./gradlew :app:assembleRelease -PreleaseChannel=${{ needs.prepare.outputs.channel }} --no-daemon
+        run: ./gradlew :app:assembleRelease --no-daemon
 
       - name: Remove decoded keystore
         if: always()
