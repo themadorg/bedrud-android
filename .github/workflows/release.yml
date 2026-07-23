@@ -22,7 +22,7 @@ permissions:
 jobs:
   prepare:
     name: Determine channel
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     outputs:
       tag: ${{ steps.channel.outputs.tag }}
       channel: ${{ steps.channel.outputs.channel }}
@@ -54,7 +54,7 @@ jobs:
   build-and-sign:
     name: Build & sign (${{ needs.prepare.outputs.channel }})
     needs: prepare
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     # Picks production-signing or beta-signing based on the tag prefix above, so each
     # channel gets its own required-reviewer gate and its own scoped keystore secret.
     environment: ${{ needs.prepare.outputs.environment }}
@@ -79,10 +79,16 @@ jobs:
       # environment secret, so it's only reachable after the required reviewer approves.
       # keystore.properties' storeFile path is resolved from app/build.gradle.kts,
       # i.e. relative to app/ - not the repo root - so the .jks must live there too.
+      # Secrets go through env, not inlined into the script - keystore.properties is raw
+      # text (unlike the base64 blob) and could contain characters like $ or ` that bash
+      # would otherwise try to interpret if spliced directly into the run: block.
       - name: Decode production signing key
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PROPERTIES: ${{ secrets.ANDROID_KEYSTORE_PROPERTIES }}
         run: |
-          echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > app/keystore.jks
-          echo "${{ secrets.ANDROID_KEYSTORE_PROPERTIES }}" > keystore.properties
+          echo "$KEYSTORE_BASE64" | base64 -d > app/keystore.jks
+          echo "$KEYSTORE_PROPERTIES" > keystore.properties
 
       - name: Build release APKs
         run: ./gradlew :app:assembleRelease --no-daemon
@@ -118,7 +124,7 @@ jobs:
   publish:
     name: Publish GitHub Release
     needs: [prepare, build-and-sign]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       contents: write
     steps:
