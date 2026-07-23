@@ -62,6 +62,16 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
+        // A null savedInstanceState means Android had no state to restore for this task —
+        // which is exactly what happens when the task was swiped away / force-stopped (as
+        // opposed to merely backgrounded, where the OS preserves and hands back the saved
+        // Bundle even if it killed the process to reclaim memory in the meantime). Treat
+        // that as "fully closed" and reset the remembered tab so the app lands on Rooms
+        // instead of wherever the user was last, without affecting real background resumes.
+        if (savedInstanceState == null) {
+            settingsStore.setLastTab(0)
+        }
+
         // Parse deep link from initial intent
         handleDeepLink(intent)
 
