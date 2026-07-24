@@ -1,19 +1,24 @@
 name: Signed Release
 
 on:
-  push:
-    tags:
-      - "stable-v*"
-      - "beta-v*"
+  # Tags are plain version numbers (e.g. "1.2.0") and carry no channel info - a tag by
+  # itself never builds anything. To cut a release, dispatch this workflow manually,
+  # picking the tag to build from the "Use workflow from" ref selector (it lists tags,
+  # not just branches) and the channel below. The same tag can be dispatched once as
+  # beta and, later, again as stable once it's promoted - both produce the identical
+  # build, just signed/reviewed/published differently (see the `channel` input).
   workflow_dispatch:
     inputs:
-      tag:
-        description: "Existing tag to build and release (e.g. stable-v1.4.0 or beta-v1.4.0-beta.1)"
+      channel:
+        description: "Release channel for the tag selected above"
         required: true
-        type: string
+        type: choice
+        options:
+          - beta
+          - stable
 
 concurrency:
-  group: release-${{ github.event.inputs.tag || github.ref_name }}
+  group: release-${{ github.ref_name }}-${{ github.event.inputs.channel }}
   cancel-in-progress: false
 
 permissions:
@@ -24,32 +29,24 @@ jobs:
     name: Determine channel
     runs-on: ubuntu-24.04
     outputs:
-      tag: ${{ steps.channel.outputs.tag }}
-      channel: ${{ steps.channel.outputs.channel }}
+      tag: ${{ github.ref_name }}
+      channel: ${{ github.event.inputs.channel }}
       environment: ${{ steps.channel.outputs.environment }}
       prerelease: ${{ steps.channel.outputs.prerelease }}
     steps:
-      - name: Determine channel from tag
+      - name: Determine channel
         id: channel
         run: |
-          TAG="${{ github.event.inputs.tag || github.ref_name }}"
-          case "$TAG" in
-            stable-*)
-              echo "channel=stable" >> "$GITHUB_OUTPUT"
+          case "${{ github.event.inputs.channel }}" in
+            stable)
               echo "environment=production-signing" >> "$GITHUB_OUTPUT"
               echo "prerelease=false" >> "$GITHUB_OUTPUT"
               ;;
-            beta-*)
-              echo "channel=beta" >> "$GITHUB_OUTPUT"
+            beta)
               echo "environment=beta-signing" >> "$GITHUB_OUTPUT"
               echo "prerelease=true" >> "$GITHUB_OUTPUT"
               ;;
-            *)
-              echo "::error::Tag '$TAG' matches neither stable-* nor beta-*"
-              exit 1
-              ;;
           esac
-          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
 
   lint-test:
     name: Lint & Test
@@ -84,8 +81,10 @@ jobs:
     # until lint and unit tests have passed on this exact tag.
     needs: [prepare, lint-test]
     runs-on: ubuntu-24.04
-    # Picks production-signing or beta-signing based on the tag prefix above, so each
-    # channel gets its own required-reviewer gate and its own scoped keystore secret.
+    # Picks production-signing or beta-signing based on the channel input above. Both
+    # environments hold the same signing key - pre-releases and stable releases are the
+    # same build, signed identically; the only difference is the required-reviewer list
+    # (production-signing: narseh-ir only; beta-signing: narseh-ir or omidz4t).
     environment: ${{ needs.prepare.outputs.environment }}
     steps:
       - name: Checkout ${{ needs.prepare.outputs.tag }}
@@ -104,8 +103,9 @@ jobs:
         with:
           cache-provider: basic
 
-      # Same production key used by bedrud's own release.yml — stored here as an
-      # environment secret, so it's only reachable after the required reviewer approves.
+      # Same key regardless of channel (production-signing and beta-signing hold
+      # identical secrets) - stored as an environment secret, so it's only reachable
+      # after the required reviewer(s) for that environment approve.
       # keystore.properties' storeFile path is resolved from app/build.gradle.kts,
       # i.e. relative to app/ - not the repo root - so the .jks must live there too.
       # Secrets go through env, not inlined into the script - keystore.properties is raw
@@ -120,7 +120,7 @@ jobs:
           echo "$KEYSTORE_PROPERTIES" > keystore.properties
 
       - name: Build release APKs
-        run: ./gradlew :app:assembleRelease -PreleaseChannel=${{ needs.prepare.outputs.channel }} --no-daemon
+        run: ./gradlew :app:assembleRelease -PreleaseVersionCode=${{ github.run_number }} -PreleaseVersionName=${{ needs.prepare.outputs.tag }} -PreleaseChannel=${{ needs.prepare.outputs.channel }} --no-daemon
 
       - name: Remove decoded keystore
         if: always()
