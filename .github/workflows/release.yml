@@ -120,7 +120,7 @@ jobs:
           echo "$KEYSTORE_PROPERTIES" > keystore.properties
 
       - name: Build release APKs
-        run: ./gradlew :app:assembleRelease -PreleaseChannel=${{ needs.prepare.outputs.channel }} --no-daemon
+        run: ./gradlew :app:assembleRelease -PreleaseVersionCode=${{ github.run_number }} -PreleaseVersionName=${{ needs.prepare.outputs.tag }} -PreleaseChannel=${{ needs.prepare.outputs.channel }} --no-daemon
 
       - name: Remove decoded keystore
         if: always()

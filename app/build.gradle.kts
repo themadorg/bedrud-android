@@ -21,15 +21,21 @@ android {
         applicationId = "com.bedrud.app"
         minSdk = 28
         targetSdk = 37
-        // Overridable by CI so QA builds always carry an increasing versionCode across
-        // PRs (needed so a tester can update from one PR's QA build to the next without
-        // Android refusing the install / wiping app data). Real release builds never pass
-        // this property, so they keep the manually-bumped versionCode below.
-        versionCode = (project.findProperty("qaVersionCode") as String?)?.toIntOrNull() ?: 1
-        // release.yml passes releaseChannel=beta/stable (the channel picked when the
-        // release is manually dispatched) so a beta build's on-device version string is
-        // visibly distinguishable from a stable one; a local/default build gets no suffix.
-        versionName = "1.2.0" + if (project.findProperty("releaseChannel") == "beta") "-beta" else ""
+        // Both QA and real release builds get an ever-increasing versionCode straight from
+        // CI - QA from pr-build.yml's Actions run number (qaVersionCode), real releases
+        // from release.yml's (releaseVersionCode) - so neither ever needs a manual bump,
+        // and re-dispatching a tag under stable after beta always yields a strictly higher
+        // versionCode than the beta build before it (so a beta tester can update straight
+        // to stable). Only a plain local/debug build falls back to the hardcoded default.
+        versionCode = (project.findProperty("qaVersionCode") as String?)?.toIntOrNull()
+            ?: (project.findProperty("releaseVersionCode") as String?)?.toIntOrNull()
+            ?: 1
+        // release.yml passes releaseVersionName=<the dispatched tag>, so the on-device
+        // version string always matches the tag it was built from instead of a separately
+        // hand-maintained value. "-beta" is appended only when releaseChannel=beta. A
+        // local/default build falls back to the placeholder below.
+        versionName = ((project.findProperty("releaseVersionName") as String?) ?: "1.2.0") +
+            if (project.findProperty("releaseChannel") == "beta") "-beta" else ""
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
