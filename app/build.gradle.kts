@@ -21,19 +21,23 @@ android {
         applicationId = "com.bedrud.app"
         minSdk = 28
         targetSdk = 37
-        // Both QA and real release builds get an ever-increasing versionCode straight from
-        // CI - QA from pr-build.yml's Actions run number (qaVersionCode), real releases
+        // Both dev and real release builds get an ever-increasing versionCode straight from
+        // CI - dev from pr-build.yml's Actions run number (devVersionCode), real releases
         // from release.yml's (releaseVersionCode) - so neither ever needs a manual bump,
         // and re-dispatching a tag under stable after beta always yields a strictly higher
         // versionCode than the beta build before it (so a beta tester can update straight
         // to stable). Only a plain local/debug build falls back to the hardcoded default.
-        versionCode = (project.findProperty("qaVersionCode") as String?)?.toIntOrNull()
+        versionCode = (project.findProperty("devVersionCode") as String?)?.toIntOrNull()
             ?: (project.findProperty("releaseVersionCode") as String?)?.toIntOrNull()
             ?: 1
+        // Three-tier version-name strategy:
+        //   dev     -> "<version>-dev"  (internal/PR builds; "-dev" added by the `dev`
+        //              build type's versionNameSuffix below)
+        //   beta    -> "<version>-beta" (release.yml dispatched with releaseChannel=beta)
+        //   stable  -> "<version>"      (release.yml dispatched with releaseChannel=stable)
         // release.yml passes releaseVersionName=<the dispatched tag>, so the on-device
         // version string always matches the tag it was built from instead of a separately
-        // hand-maintained value. "-beta" is appended only when releaseChannel=beta. A
-        // local/default build falls back to the placeholder below.
+        // hand-maintained value. A local/default build falls back to the placeholder below.
         versionName = ((project.findProperty("releaseVersionName") as String?) ?: "1.2.0") +
             if (project.findProperty("releaseChannel") == "beta") "-beta" else ""
 
@@ -51,16 +55,19 @@ android {
                 keyPassword = keystoreProperties["keyPassword"] as String
             }
         }
-        // Dedicated key for QA/PR test builds only - separate from the real release key
+        // Dedicated key for dev/PR test builds only - separate from the real release key
         // above, so CI never needs access to production signing material. Read from env
         // vars (set by CI, or by a developer locally) rather than a committed file.
-        create("qa") {
-            val qaKeystoreFile = rootProject.file(System.getenv("QA_KEYSTORE_PATH") ?: "qa-release.jks")
-            if (qaKeystoreFile.exists()) {
-                storeFile = qaKeystoreFile
-                storePassword = System.getenv("QA_KEYSTORE_PASSWORD") ?: ""
+        create("dev") {
+            val devKeystoreFile = rootProject.file(System.getenv("DEV_KEYSTORE_PATH") ?: "dev-release.jks")
+            if (devKeystoreFile.exists()) {
+                storeFile = devKeystoreFile
+                storePassword = System.getenv("DEV_KEYSTORE_PASSWORD") ?: ""
+                // Alias is the label baked into the physical keystore (historically
+                // "bedrud-qa"); it identifies the key entry inside the .jks and is
+                // independent of the build-track name.
                 keyAlias = "bedrud-qa"
-                keyPassword = System.getenv("QA_KEYSTORE_PASSWORD") ?: ""
+                keyPassword = System.getenv("DEV_KEYSTORE_PASSWORD") ?: ""
             }
         }
     }
@@ -76,17 +83,17 @@ android {
             )
         }
         // Built on every PR so reviewers have a real APK to install and test.
-        // Own applicationId (".qa" suffix) so it installs side-by-side with a real
+        // Own applicationId (".dev" suffix) so it installs side-by-side with a real
         // release build on the same device instead of colliding with it.
-        create("qa") {
+        create("dev") {
             initWith(getByName("debug"))
-            applicationIdSuffix = ".qa"
-            versionNameSuffix = "-qa"
-            signingConfig = signingConfigs.getByName("qa")
+            applicationIdSuffix = ".dev"
+            versionNameSuffix = "-dev"
+            signingConfig = signingConfigs.getByName("dev")
             matchingFallbacks += listOf("debug")
-            // Distinct home-screen name so a QA test build is never mistaken for the
+            // Distinct home-screen name so a dev test build is never mistaken for the
             // real app when both are installed on the same device.
-            resValue("string", "app_name", "Bedrud QA")
+            resValue("string", "app_name", "Bedrud Dev")
         }
     }
 
