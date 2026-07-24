@@ -1,210 +1,105 @@
-# Bedrud Design System
+# Bedrud Android — Design System
 
-## Aesthetic — Rose + Teal (Retro, Sharp)
+Material 3 (native, expressive), rounded, token-driven. A warm **rose + teal** brand on warm-neutral
+surfaces. Everything visual flows through a token layer under `app/src/main/java/com/bedrud/app/ui/theme/`
+so there are no magic values scattered through screens.
 
-Sharp corners. Bold colors. No purple. Zero border-radius everywhere.
+> This document describes the **Android app**. The original web app used a different, sharper
+> "rose + teal, 0px-radius" system; that is not what this client ships. Treat this file as the source
+> of truth for Android UI work.
 
-- **Primary** — rose: brand CTAs, links, focus rings
-- **Accent** — teal: highlights, badges, secondary actions
+## Token layer (`ui/theme/`)
 
-Accessibility-first. Every status color pairs with an icon, label, or pattern — never color alone.
+| File | Holds | Rule |
+|------|-------|------|
+| `Color.kt` | Reference palette — the raw rose/teal/neutral/red tonal ramps | Never read directly from UI |
+| `Theme.kt` | `BedrudTheme` + the light/dark `ColorScheme` role mapping (full M3 role set) | UI reads `MaterialTheme.colorScheme.*` |
+| `Type.kt` | `Typography` (M3 type scale) + RTL font families | UI reads `MaterialTheme.typography.*` |
+| `Shape.kt` | `BedrudShapes` (M3 scale) + `BedrudShapeTokens` (semantic: card/field/button/pill) | No raw `RoundedCornerShape(n.dp)` |
+| `Dimens.kt` | Spacing scale (4dp grid) + component sizes/heights/icon sizes | No raw `n.dp` for spacing/sizing |
+| `Elevation.kt` | Tonal elevation levels | Surfaces stay low (outline-first) |
+| `Motion.kt` | Durations + easing for transitions | No inline animation timings |
 
-## Brand Tokens (Rose)
+**The rule:** screens and components reference `MaterialTheme.*` + the token objects. Raw hex colors and
+raw `n.dp` literals don't belong in `ui/screens/**` or `ui/components/**`.
 
-| Token | Hex | Use |
-|-------|-----|-----|
-| `--primary-50` | `#FFF1F2` | Light wash, hover bg |
-| `--primary-100` | `#FFE4E6` | Subtle fills, chips |
-| `--primary-200` | `#FECDD3` | Borders, dividers |
-| `--primary-300` | `#FDA4AF` | Muted accents |
-| `--primary-400` | `#FB7185` | Links (dark mode) |
-| `--primary-500` | `#F43F5E` | Focus rings, info |
-| `--primary-600` | `#E11D48` | Primary CTA (6.1:1 on white) |
-| `--primary-700` | `#BE123C` | CTA hover, headings |
-| `--primary-800` | `#9F1239` | Deep rose |
-| `--primary-900` | `#881337` | Darkest rose |
+## Color
 
-## Accent Tokens (Teal)
+Brand seeds:
 
-| Token | Hex | Use |
-|-------|-----|-----|
-| `--accent-50` | `#F0FDFA` | Highlight wash |
-| `--accent-100` | `#CCFBF1` | Chip bg, selection |
-| `--accent-200` | `#99F6E4` | Badges |
-| `--accent-300` | `#5EEAD4` | Raised hand bg |
-| `--accent-400` | `#2DD4BF` | Accent borders |
-| `--accent-500` | `#14B8A6` | Accent (always paired with ink text) |
-| `--accent-600` | `#0D9488` | Accent text on light |
-| `--accent-700` | `#0F766E` | Accent hover |
-| `--accent-800` | `#115E59` | Deep teal |
-| `--accent-900` | `#134E4A` | Darkest teal |
+- **Primary — rose `#E11D48`** — CTAs, selection, focus, brand identity.
+- **Tertiary — teal `#14B8A6`** — accents, "recommended"/info affordances, highlight states.
+- **Secondary — muted rose** — lower-emphasis components that still tie to the brand.
+- **Neutrals — warm stone** — surfaces/text read as part of the rose family, not clinical grey.
+- **Error — red `#DC2626`** — reserved for errors and irreversible/destructive actions.
 
-## Status Tokens
+The full Material 3 role set is specified for light **and** dark (primary/secondary/tertiary + their
+containers, the surface-tonal levels `surfaceContainerLowest…Highest`, `inverse*`, `outline`, `scrim`),
+so any component that reaches for a role gets an on-brand value instead of an M3 default.
 
-| Token | Hex | Use | Required pairing |
-|-------|-----|-----|-----------------|
-| `--success-500` | `#16A34A` | Connected, speaking | Check icon or audio-bar |
-| `--destructive-500` | `#DC2626` | Leave call, delete (irreversible only) | Warning icon + label |
+`dynamicColor` is **off** by default so the brand is preserved; Material You can be opted into per-call
+via `BedrudTheme(dynamicColor = true)`.
 
-## Foreground & Chrome
+### Accessibility (non-negotiable)
 
-| Token | Hex | Use |
-|-------|-----|-----|
-| `--fg-1` | `#1C1917` | Body text (14.5:1 on white) |
-| `--fg-2` | `#57534E` | Muted/secondary text |
-| `--fg-3` | `#A8A29E` | Disabled, placeholders |
-| `--bg` | `#FFFBF9` | Page background (warm white) |
-| `--bg-alt` | `#FFF1F2` | Cards, alt sections |
-| `--line` | `#E7E5E4` | Borders, dividers |
+- **Color is never the only signal** — pair status with an icon, label, ring, or shape (e.g. a selected
+  card uses a filled radio **and** a 2dp primary border, not color alone).
+- Body text on surfaces uses `onSurface`; secondary text uses `onSurfaceVariant` — both meet WCAG AA.
+- Primary CTA is rose `#E11D48` (AA on white; dark mode lifts to `#FB7185`).
+- Every interactive element has a visible focus/selection state and a ≥48dp touch target (`Dimens.minTouchTarget`).
 
-## Dark Mode Overrides
+## Typography (`Type.kt`)
 
-| Token | Dark value |
-|-------|-----------|
-| `--bg` | `#0C0A09` |
-| `--bg-alt` | `#1C1917` |
-| `--fg-1` | `#FAFAF9` |
-| `--fg-2` | `#A8A29E` |
-| `--line` | `#292524` |
-| `--primary-500` | `#FB7185` (lifted for AA on dark) |
-| `--primary-600` | `#F43F5E` |
+Material 3 type scale. `FontFamily.SansSerif` (system) for LTR; **Vazirmatn** / **Shabnam** for RTL
+(Arabic, Persian), selected automatically in `BedrudTheme` from the active `AppLanguage`.
 
-## Semantic Mapping
+## Shape (`Shape.kt`)
 
-| UI element | Token | Style |
-|-----------|-------|-------|
-| CTA / primary button | `--primary` (`--primary-600`) | bg: primary, text: white, hover: primary-hover |
-| Link / inline action | `--primary-500` | text: primary-500, underline on hover |
-| "You" tile in call | `--primary-500` | 3px ring + "YOU" label badge |
-| Active speaker | `--success-500` | 3px ring + audio-bar icon |
-| Raised hand | `--accent-500` | Circle with hand icon, ink border |
-| End / leave call | `--destructive` | bg: destructive, white icon |
-| Connected / OK | `--success-500` | Dot + check icon + label |
-| Warning | `--accent-500` | Warning icon + label |
-| Info | `--primary-500` | Info icon |
+Rounded, Material-3-native. Scale: `xs 4 · sm 8 · md 12 · lg 16 · xl 20 · xxl 28 · full`. Semantic tokens:
+`field = md`, `button = md`, `card = lg`, `chip = sm`, `pill = full`, `sheetTop = xxl (top corners)`.
 
-## Accessibility Rules (Non-Negotiable)
+## Spacing & sizing (`Dimens.kt`)
 
-1. **Color is never the only signal.** Every status must also have an icon, label, ring, or pattern.
-2. **Body text** on `--bg` uses `--fg-1` (14.5:1). Muted text uses `--fg-2` (4.7:1).
-3. **Primary CTA** is `--primary-600` (6.1:1 on white). Hover goes to `--primary-700`.
-4. **Destructive** (`--destructive-500`) is reserved for: leave call, delete, irreversible actions. Never for emphasis.
-5. **Accent teal** (`--accent-500`) ALWAYS pairs with ink text (`--fg-1`) — never white.
-6. **Focus ring**: 3px `--primary-500` at 45% opacity on all interactive elements.
+4dp base grid (`space2…space56`). Layout: `screenPadding 24`, `screenPaddingCompact 16`,
+`maxContentWidth 480` (keeps forms readable on tablets/foldables). Components: `buttonHeight 48`,
+`buttonHeightLarge 56`, `fieldMinHeight 56`, `minTouchTarget 48`, `borderThin 1`, `borderStrong 2`,
+icon sizes `iconXs 16 · iconSm 18 · iconMd 24 · iconLg 32`, `avatar 40`, `brandMark 72`.
 
-### Verification Checklist
+## Elevation (`Elevation.kt`) & Motion (`Motion.kt`)
 
-- [ ] All text/bg combos pass WCAG AA
-- [ ] Disable color in DevTools (grayscale) — every UI state still readable
-- [ ] Test under protanopia + deuteranopia (Chrome DevTools → Rendering → Emulate vision)
-- [ ] No raw hex literals outside `theme.css`
+Elevation is tonal and light — the app leans on outlines + tonal surfaces over shadows; most surfaces
+sit at level 0–1. Motion uses shared duration tokens (`durationShort/Medium/Long`) + `standardEasing`;
+drive `animate*AsState` with `tween(Motion.durationMedium, easing = Motion.standardEasing)`.
 
-## Border Radius
+## Components (`ui/components/`)
 
-**0px.** All components use sharp, square corners. This is enforced globally in `styles.css`:
+- **`BedrudButton`** — 5 variants (PRIMARY, SECONDARY, OUTLINE, GHOST, DESTRUCTIVE). Token-driven height
+  (`defaultMinSize(buttonHeight)`, so callers can grow it, e.g. `height(buttonHeightLarge)` for a full CTA),
+  shape (`BedrudShapeTokens.button`), and padding. Built-in `loading` state.
+- **`BedrudCard` / `BedrudOutlinedCard`** — outline-first cards, tonal surface, minimal elevation.
+- **Selectable cards** (e.g. the server chooser) — a `selectableGroup()` of `Surface`s marked
+  `selectable(role = RadioButton)`, selection shown by a radio **and** a primary border.
+- **`DevOnly` / `DevHintBadge`** — see below.
 
-```css
-* { border-radius: 0 !important; }
-```
+## Dev-only affordances
 
-Individual `rounded-*` Tailwind classes are stripped from all components. `rounded-full` is kept only for avatars and circular elements (which the global override doesn't affect due to `border-radius: 50%` being a different property level).
+Where UI exists but its backend/business logic doesn't yet, build the UI and mark it with a **dev-only**
+hint so it never misleads end users:
 
-The `--radius` token is `0px`. All Tailwind radius scales (`--radius-sm/md/lg/xl`) are `0px`.
+- `DevOnly { … }` renders its content only on debug/`dev` builds.
+- `DevHintBadge("…")` is a small "not wired up yet" pill (icon + label).
 
-## Token Architecture
+Both are gated by `BuildConfig.DEV_HINTS` (`true` on debug + `dev`, `false` on release) via
+`core/DevFlags.kt`. Nothing dev-gated ships to beta/stable users.
 
-The palette is defined in `src/theme.css` — a single file self-hosters can edit or swap.
+## Internationalization
 
-### Semantic Tokens → Tailwind Classes
+User-facing strings live in `res/values/strings.xml` (+ locale variants: ar, de, es, fa, fr, ja, ru, tr,
+zh) — **not** inline in composables. Missing translations fall back to the default (English). RTL is fully
+supported (layout direction + Vazirmatn/Shabnam fonts via `LocaleHelper`).
 
-| CSS variable | Tailwind class | Usage |
-|-------------|---------------|-------|
-| `--primary` | `bg-primary`, `text-primary` | Buttons, links, active states |
-| `--foreground` | `text-foreground` | Body text |
-| `--background` | `bg-background` | Page bg |
-| `--muted-foreground` | `text-muted-foreground` | Secondary text |
-| `--destructive` | `bg-destructive`, `text-destructive` | Error/delete states |
-| `--border` | `border-border` | Borders |
-| `--ring` | `ring-ring` | Focus rings |
+## Self-hosting / rebranding
 
-### Color Scale Utilities
-
-The full rose and teal scales are available as Tailwind utilities:
-
-| Prefix | Source |
-|--------|--------|
-| `bg-primary-{50-900}` | Rose scale via `--primary-*` |
-| `bg-teal-{50-900}` | Teal scale via `--accent-*` |
-
-## Typography
-
-- **Font stack**: `font-sans` (system default via Tailwind)
-- **Monospace**: `font-mono` — room codes, step numbers, technical labels
-- **Heading weights**: `font-bold` (700), `font-semibold` (600)
-- **Body weights**: `font-medium` (500), `font-normal` (400)
-- **Label style**: `text-[10px] tracking-widest uppercase font-semibold` — section headers, nav categories
-
-## Spacing & Layout
-
-- **Radius**: `0px` — all corners sharp
-- **Page padding**: `px-4 sm:px-8 md:px-16 lg:px-24`
-- **Section spacing**: `space-y-20` between page sections
-- **Component spacing**: `space-y-4` for list items, `gap-2` for inline groups
-- **Sidebar width**: `w-52` (208px) — dashboard layout
-- **Content max-width**: `max-w-xl` (pages), `max-w-md` (forms), `max-w-[360px]` (auth forms)
-
-## Component Patterns
-
-### Buttons
-- Primary: `bg-primary text-primary-foreground hover:bg-primary-hover`
-- Secondary: `variant="outline"` — border + transparent bg
-- Destructive: `text-destructive hover:bg-destructive/10`
-
-### Navigation
-- Sidebar: fixed left, `bg-card` with `border-r`
-- Mobile: `Sheet` slide-out from left
-- Active state: `bg-primary/10 text-primary`
-- Inactive: `text-muted-foreground hover:bg-accent`
-
-### Cards
-- Border-only, no shadow on rest state
-- Hover: subtle lift (`hover:-translate-y-0.5`) with faint shadow
-
-### Focus
-- All interactive elements: `focus-visible:ring-2 focus-visible:ring-ring`
-- Ring: 3px `--primary-500` at 45% opacity
-
-### Inputs
-- Bare: `border` only, no background fill
-- Focus: `ring-2 ring-ring`
-- No border-radius
-
-## Dark Mode
-
-- Class-based: `.dark` on `<html>`
-- Anti-flash script inlined in `<head>` (reads localStorage)
-- All tokens have `:root` (light) and `.dark` overrides
-- Meeting room UI is always dark regardless of theme
-- Auth left panel is always dark
-
-## Responsive Breakpoints
-
-| Breakpoint | Width | Usage |
-|-----------|-------|-------|
-| Default | 0–639px | Mobile: compact padding, hidden sidebar |
-| `sm` | 640px+ | Tablet: larger text, show hostname prefix |
-| `md` | 768px+ | Desktop: full headline size |
-| `lg` | 1024px+ | Wide: show sidebar, auth brand panel |
-
-## Self-Hosting Customization
-
-Edit `src/theme.css` to rebrand. One file controls all colors. See `theme.example-blue.css` for an example of a complete brand swap.
-
-## What NOT to Do
-
-- Do NOT add `rounded-*` classes — the design is sharp-cornered. The global `border-radius: 0 !important` enforces this.
-- Do NOT use color alone for status signals — always pair with icons or labels.
-- Do NOT use `--destructive-500` for emphasis — it's reserved for irreversible actions.
-- Do NOT put white text on `--accent-500` — always use ink text (`--fg-1`).
-- Do NOT add hardcoded hex colors outside `theme.css`.
-- Do NOT change the meeting room always-dark theme.
+To re-skin, retune the ramps in `Color.kt` (or reseed with Material Theme Builder from the two brand seeds
+and paste the result into `Theme.kt`). Because every role and token funnels through the theme layer, a brand
+swap is a one-file change — no screen edits.

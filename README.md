@@ -34,7 +34,8 @@ For the server, web app, and other platforms, see the [main Bedrud project](http
 ## Getting started (as a user)
 
 1. Install the app (build it yourself — see below — or grab a release APK).
-2. On first launch, **add a server instance** by entering your Bedrud server URL.
+2. On first launch, **choose a server** — continue with the default public server, or enter your own
+   Bedrud server URL. You can add more servers and switch between them later.
 3. Sign in (or join as a guest), then create or join a room.
 
 ## Building from source

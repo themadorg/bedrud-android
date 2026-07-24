@@ -44,6 +44,10 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         resValue("string", "app_name", "Bedrud")
+
+        // Pre-selected public server offered on first launch. A build constant (not a magic
+        // string in the UI) so a dev/staging build can point elsewhere without touching code.
+        buildConfigField("String", "DEFAULT_SERVER_URL", "\"https://bedrud.xyz\"")
     }
 
     signingConfigs {
@@ -73,7 +77,14 @@ android {
     }
 
     buildTypes {
+        // Dev-only UI affordances ("coming soon" hints, debug captions) are gated on this flag:
+        // debug + dev builds show them, release (beta/stable) hides them. The `dev` build type
+        // inherits this value from debug via initWith below, so setting it here covers both.
+        getByName("debug") {
+            buildConfigField("boolean", "DEV_HINTS", "true")
+        }
         release {
+            buildConfigField("boolean", "DEV_HINTS", "false")
             isMinifyEnabled = true
             isShrinkResources = true
             signingConfig = signingConfigs.getByName("release")

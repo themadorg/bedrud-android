@@ -2,10 +2,9 @@ package com.bedrud.app.ui.components
 
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonColors
 import androidx.compose.material3.ButtonDefaults
@@ -18,6 +17,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import com.bedrud.app.ui.theme.BedrudShapeTokens
+import com.bedrud.app.ui.theme.Dimens
 
 enum class BedrudButtonVariant {
     PRIMARY,
@@ -38,16 +39,16 @@ fun BedrudButton(
     leadingIcon: @Composable (() -> Unit)? = null,
     trailingIcon: @Composable (() -> Unit)? = null
 ) {
-    val shape = RoundedCornerShape(8.dp)
+    val shape = BedrudShapeTokens.button
 
     when (variant) {
         BedrudButtonVariant.PRIMARY -> {
             Button(
                 onClick = onClick,
-                modifier = modifier.height(44.dp),
+                modifier = modifier.defaultMinSize(minHeight = Dimens.buttonHeight),
                 enabled = enabled && !loading,
                 shape = shape,
-                contentPadding = PaddingValues(horizontal = 24.dp, vertical = 0.dp)
+                contentPadding = PaddingValues(horizontal = Dimens.space24, vertical = 0.dp)
             ) {
                 ButtonContent(text, loading, leadingIcon, trailingIcon)
             }
@@ -56,14 +57,14 @@ fun BedrudButton(
         BedrudButtonVariant.SECONDARY -> {
             Button(
                 onClick = onClick,
-                modifier = modifier.height(44.dp),
+                modifier = modifier.defaultMinSize(minHeight = Dimens.buttonHeight),
                 enabled = enabled && !loading,
                 shape = shape,
                 colors = ButtonDefaults.buttonColors(
                     containerColor = MaterialTheme.colorScheme.secondary,
                     contentColor = MaterialTheme.colorScheme.onSecondary
                 ),
-                contentPadding = PaddingValues(horizontal = 24.dp, vertical = 0.dp)
+                contentPadding = PaddingValues(horizontal = Dimens.space24, vertical = 0.dp)
             ) {
                 ButtonContent(text, loading, leadingIcon, trailingIcon)
             }
@@ -72,10 +73,10 @@ fun BedrudButton(
         BedrudButtonVariant.OUTLINE -> {
             OutlinedButton(
                 onClick = onClick,
-                modifier = modifier.height(44.dp),
+                modifier = modifier.defaultMinSize(minHeight = Dimens.buttonHeight),
                 enabled = enabled && !loading,
                 shape = shape,
-                contentPadding = PaddingValues(horizontal = 24.dp, vertical = 0.dp)
+                contentPadding = PaddingValues(horizontal = Dimens.space24, vertical = 0.dp)
             ) {
                 ButtonContent(text, loading, leadingIcon, trailingIcon)
             }
@@ -84,10 +85,10 @@ fun BedrudButton(
         BedrudButtonVariant.GHOST -> {
             TextButton(
                 onClick = onClick,
-                modifier = modifier.height(44.dp),
+                modifier = modifier.defaultMinSize(minHeight = Dimens.buttonHeight),
                 enabled = enabled && !loading,
                 shape = shape,
-                contentPadding = PaddingValues(horizontal = 24.dp, vertical = 0.dp)
+                contentPadding = PaddingValues(horizontal = Dimens.space24, vertical = 0.dp)
             ) {
                 ButtonContent(text, loading, leadingIcon, trailingIcon)
             }
@@ -96,14 +97,14 @@ fun BedrudButton(
         BedrudButtonVariant.DESTRUCTIVE -> {
             Button(
                 onClick = onClick,
-                modifier = modifier.height(44.dp),
+                modifier = modifier.defaultMinSize(minHeight = Dimens.buttonHeight),
                 enabled = enabled && !loading,
                 shape = shape,
                 colors = ButtonDefaults.buttonColors(
                     containerColor = MaterialTheme.colorScheme.error,
                     contentColor = MaterialTheme.colorScheme.onError
                 ),
-                contentPadding = PaddingValues(horizontal = 24.dp, vertical = 0.dp)
+                contentPadding = PaddingValues(horizontal = Dimens.space24, vertical = 0.dp)
             ) {
                 ButtonContent(text, loading, leadingIcon, trailingIcon)
             }
@@ -120,16 +121,16 @@ private fun ButtonContent(
 ) {
     if (loading) {
         CircularProgressIndicator(
-            modifier = Modifier.size(18.dp),
+            modifier = Modifier.size(Dimens.iconSm),
             strokeWidth = 2.dp,
             color = Color.Unspecified
         )
-        Spacer(modifier = Modifier.width(8.dp))
+        Spacer(modifier = Modifier.width(Dimens.space8))
     }
 
     leadingIcon?.let {
         it()
-        Spacer(modifier = Modifier.width(8.dp))
+        Spacer(modifier = Modifier.width(Dimens.space8))
     }
 
     Text(
@@ -138,7 +139,7 @@ private fun ButtonContent(
     )
 
     trailingIcon?.let {
-        Spacer(modifier = Modifier.width(8.dp))
+        Spacer(modifier = Modifier.width(Dimens.space8))
         it()
     }
 }

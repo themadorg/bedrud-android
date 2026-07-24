@@ -40,6 +40,14 @@
   <string name="instance_empty_noServers">No servers configured</string>
   <string name="instance_default_serverName">Server</string>
   <string name="instance_default_displayName" translatable="false">Bedrud</string>
+  <!-- First-run server chooser -->
+  <string name="instance_choice_default_title">Default</string>
+  <string name="instance_choice_default_tag">Recommended</string>
+  <string name="instance_choice_custom_title">Your own server</string>
+  <string name="instance_placeholder_customServer">your own server URL</string>
+  <string name="instance_button_continue">Continue</string>
+  <string name="instance_error_unreachable">Couldn\'t reach this server. Check the address and try again.</string>
+  <string name="instance_note_insecure">This connection won\'t be encrypted.</string>
   <string name="dashboard_title_rooms">Rooms</string>
   <string name="dashboard_placeholder_search">Enter room name or link…</string>
   <string name="dashboard_dialog_createTitle">Create Room</string>
