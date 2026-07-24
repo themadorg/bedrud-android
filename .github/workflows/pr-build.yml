@@ -71,15 +71,14 @@ jobs:
       # This key signs dev/test builds only. It is separate from the real Play Store
       # release key and is never exposed to forked-repo PRs, since `pull_request`
       # (as opposed to `pull_request_target`) runs without access to repo secrets
-      # for forks. The secret is still named BEDRUD_QA_* - it's opaque credential
-      # storage bound to the existing keystore, so renaming it would only mean a repo
-      # admin recreating the same secret under a new name for no functional gain.
+      # for forks. The key itself was regenerated (new keystore, alias bedrud-dev) to
+      # match this dev rename - the old bedrud-qa key/secrets are retired.
       - name: Decode dev signing key
-        run: echo "${{ secrets.BEDRUD_QA_KEYSTORE_BASE64 }}" | base64 -d > dev-release.jks
+        run: echo "${{ secrets.BEDRUD_DEV_KEYSTORE_BASE64 }}" | base64 -d > dev-release.jks
 
       - name: Build dev APK
         env:
-          DEV_KEYSTORE_PASSWORD: ${{ secrets.BEDRUD_QA_KEYSTORE_PASSWORD }}
+          DEV_KEYSTORE_PASSWORD: ${{ secrets.BEDRUD_DEV_KEYSTORE_PASSWORD }}
         # versionCode = this repo's ever-increasing Actions run number, so installing a
         # newer PR's dev build over an older one is always treated as an update by
         # Android (never wiping the tester's data/login) rather than a downgrade.
