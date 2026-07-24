@@ -33,8 +33,8 @@ app/src/main/java/com/bedrud/app/
 │   └── call/                   CallService + CallConnectionService (telecom integration)
 ├── models/                     Data classes (Gson-serialized)
 └── ui/
-    ├── theme/                  Color, Type, Theme
-    ├── components/             BedrudButton (5 variants), BedrudCard
+    ├── theme/                  Design tokens: Color, Theme, Type, Shape, Dimens, Elevation, Motion
+    ├── components/             BedrudButton (5 variants), BedrudCard, DevOnly/DevHintBadge
     └── screens/                Compose screens per route
 ```
 
@@ -65,12 +65,32 @@ Retrofit + OkHttp + Gson (not kotlinx-serialization for HTTP). `kotlin-serializa
 
 ## Key Conventions
 
-- **Buttons:** Use `BedrudButton` with `BedrudButtonVariant` enum (PRIMARY, SECONDARY, OUTLINE, GHOST, DESTRUCTIVE). 44dp height, 8dp corner radius, 24dp horizontal padding.
-- **Cards:** Use `BedrudCard`. 12dp corner radius, 1dp outline border, 0dp elevation, 16dp padding.
-- **Colors:** Always `MaterialTheme.colorScheme.*`. Never hardcode hex in screens/components. Theme tokens in `ui/theme/Color.kt` mapped from web CSS HSL variables.
+- **Design tokens:** All sizes/spacing/curves/colors/motion come from `ui/theme/` (`Dimens`, `BedrudShapeTokens`, `Elevation`, `Motion`, `MaterialTheme.colorScheme/typography/shapes`). No raw `n.dp` or hex literals in `ui/screens/**` or `ui/components/**`. See [DESIGN.md](DESIGN.md).
+- **Buttons:** Use `BedrudButton` with `BedrudButtonVariant` enum (PRIMARY, SECONDARY, OUTLINE, GHOST, DESTRUCTIVE). Height/shape/padding are token-driven (`Dimens.buttonHeight`, `BedrudShapeTokens.button`); grow via `Modifier.height(Dimens.buttonHeightLarge)` for a full CTA.
+- **Cards:** Use `BedrudCard` / `BedrudOutlinedCard` — outline-first, tonal surface, minimal elevation.
+- **Colors:** Always `MaterialTheme.colorScheme.*`. Rose (`#E11D48`) primary + teal (`#14B8A6`) tertiary on warm neutrals; the full M3 role set (light+dark) is mapped in `ui/theme/Theme.kt` from the ramps in `Color.kt`. `dynamicColor` is off by default.
 - **Serialization:** `@SerializedName` annotations on model fields (Gson). Snake_case from server ↔ camelCase in Kotlin.
 - **DI:** Koin. Single module (`appModule`). Inject with `by inject()` in Activities, `by koinViewModel()` or `koinInject()` in composables.
-- **Strings:** No `strings.xml` resource layer — UI strings inline in composables.
+- **Strings:** User-facing strings go in `res/values/strings.xml` (+ locale variants: ar, de, es, fa, fr, ja, ru, tr, zh); missing translations fall back to English. RTL supported (Vazirmatn/Shabnam via `LocaleHelper`).
+- **Dev-only UI:** Gate not-yet-wired UI or QA aids with `DevOnly { … }` / `DevHintBadge("…")` (visible on debug/`dev`, hidden on release) — backed by `BuildConfig.DEV_HINTS` via `core/DevFlags.kt`.
+
+## UI/UX Rewrite — Working Agreement
+
+The app's UI/UX is being reworked screen by screen. When doing this work:
+
+- **Sketches are intent, not spec.** Implement to the **newest official Material 3** guidelines
+  (including M3 Expressive — the Compose BOM is current), not a literal trace of the sketch. Lead with
+  UX/component recommendations before implementing.
+- **Design system first.** Reuse and extend the token layer (`ui/theme/`) and shared components. No
+  magic numbers or hex in screens — see the Design tokens convention above and [DESIGN.md](DESIGN.md).
+- **Keep the brand coherent.** Rose + teal on warm neutrals, rounded, M3-native. Change the palette only
+  in `Color.kt`/`Theme.kt`, never per-screen.
+- **Unbuilt features get a dev-only hint.** If UI has no backing functionality yet, build it and mark it
+  with `DevOnly`/`DevHintBadge` so it never misleads release users.
+- **Keep the repo in sync.** A change that adds/alters a feature also updates the affected docs
+  (README, this file, DESIGN.md) and `strings.xml` in the same PR.
+- **Verify.** `./gradlew :app:compileDebugKotlin` (or `assembleDebug`) and `:app:testDebugUnitTest`
+  before opening a PR.
 
 ## Release Signing
 

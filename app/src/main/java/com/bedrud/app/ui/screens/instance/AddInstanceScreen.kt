@@ -1,12 +1,13 @@
 package com.bedrud.app.ui.screens.instance
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -14,37 +15,28 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Dns
-import androidx.compose.material.icons.filled.Warning
-import androidx.compose.material3.Button
-
-import androidx.compose.material3.CircularProgressIndicator
-import com.bedrud.app.ui.components.BedrudOutlinedCard
-import com.bedrud.app.ui.components.BedrudScaffoldContentInsets
-import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material.icons.rounded.ErrorOutline
+import androidx.compose.material.icons.rounded.LockOpen
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.ListItem
-import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Switch
-import androidx.compose.material3.SwitchDefaults
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -55,340 +47,214 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.focus.FocusDirection
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextDirection
-import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
+import com.bedrud.app.BuildConfig
 import com.bedrud.app.R
 import com.bedrud.app.core.instance.InstanceManager
-import com.bedrud.app.models.Instance
+import com.bedrud.app.ui.components.BedrudButton
+import com.bedrud.app.ui.components.DevOnly
+import com.bedrud.app.ui.theme.BedrudShapeTokens
+import com.bedrud.app.ui.theme.Dimens
+import com.bedrud.app.ui.theme.Motion
+import com.bedrud.app.ui.components.BedrudScaffoldContentInsets
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 
+private enum class ServerChoice { DEFAULT, CUSTOM }
+
+/**
+ * First-run / add-server screen. The user either takes the recommended default server or points
+ * the app at their own, then continues. `Continue` health-checks the chosen server, stores +
+ * activates it, and hands off to sign-in. Server management (switch/remove) lives in the
+ * instance list/switcher, not here.
+ */
 @Composable
 fun AddInstanceScreen(
     onInstanceAdded: () -> Unit,
     instanceManager: InstanceManager = koinInject()
 ) {
     val scope = rememberCoroutineScope()
-    val focusManager = LocalFocusManager.current
     val snackbarHostState = remember { SnackbarHostState() }
+    val scrollState = rememberScrollState()
 
     val instances by instanceManager.store.instances.collectAsState()
-    val activeId by instanceManager.store.activeInstanceId.collectAsState()
 
-    var serverHost by rememberSaveable { mutableStateOf("bedrud.xyz") }
-    var displayName by rememberSaveable { mutableStateOf("Bedrud") }
-    var insecure by rememberSaveable { mutableStateOf(false) }
+    var choice by rememberSaveable { mutableStateOf(ServerChoice.DEFAULT) }
+    var customInput by rememberSaveable { mutableStateOf("") }
     var isChecking by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
+    val customFocusRequester = remember { FocusRequester() }
 
-    val scheme = if (insecure) "http" else "https"
-    val resolvedURL = run {
-        var host = serverHost.trim()
-        listOf("https://", "http://").forEach { prefix ->
-            if (host.startsWith(prefix, ignoreCase = true)) host = host.removePrefix(prefix)
-        }
-        host = host.trimEnd('/')
-        "$scheme://$host/"
+    val defaultUrl = remember { canonicalizeServerUrl(BuildConfig.DEFAULT_SERVER_URL) }
+    val resolvedCustom = canonicalizeServerUrl(customInput)
+    val resolvedUrl = if (choice == ServerChoice.DEFAULT) defaultUrl else resolvedCustom
+    val isInsecure = choice == ServerChoice.CUSTOM && resolvedCustom?.startsWith("http://") == true
+    val canContinue = !isChecking && resolvedUrl != null
+
+    val defaultName = stringResource(R.string.instance_default_displayName)
+    val unreachableMessage = stringResource(R.string.instance_error_unreachable)
+
+    // Selecting "your own server" focuses the field and raises the keyboard immediately.
+    LaunchedEffect(choice) {
+        if (choice == ServerChoice.CUSTOM) customFocusRequester.requestFocus()
     }
-    val isDuplicate = instances.any { it.serverURL.equals(resolvedURL, ignoreCase = true) }
+
+    fun submit() {
+        val url = resolvedUrl ?: return
+        scope.launch {
+            isChecking = true
+            errorMessage = null
+            try {
+                val existing = instances.firstOrNull { it.serverURL.equals(url, ignoreCase = true) }
+                if (existing != null) {
+                    instanceManager.switchTo(existing.id)
+                } else {
+                    val name = if (choice == ServerChoice.DEFAULT) defaultName else deriveDisplayName(url)
+                    instanceManager.addInstance(url, name)
+                }
+                onInstanceAdded()
+            } catch (e: Exception) {
+                errorMessage = unreachableMessage
+            } finally {
+                isChecking = false
+            }
+        }
+    }
 
     Scaffold(
         contentWindowInsets = BedrudScaffoldContentInsets,
         snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { padding ->
-        LazyColumn(
+        Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding),
-            contentPadding = PaddingValues(bottom = 32.dp)
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Header
-            item {
+            // Scrollable content
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth()
+                    .verticalScroll(scrollState)
+                    .padding(horizontal = Dimens.screenPadding),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Spacer(Modifier.height(Dimens.space56))
+                BrandHeader(monogram = defaultName.take(1).uppercase(), wordmark = defaultName)
+                Spacer(Modifier.height(Dimens.space40))
+
                 Column(
                     modifier = Modifier
+                        .widthIn(max = Dimens.maxContentWidth)
                         .fillMaxWidth()
-                        .padding(top = 56.dp, bottom = 32.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
+                        .selectableGroup()
                 ) {
-                    Icon(
-                        Icons.Default.Dns,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(56.dp)
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Text(text = stringResource(R.string.instance_default_displayName), style = MaterialTheme.typography.headlineLarge)
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = stringResource(R.string.instance_subtitle_connectToServer),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
-
-            // Your Servers
-            if (instances.isNotEmpty()) {
-                item {
-                    Text(
-                        text = stringResource(R.string.instance_subtitle_yourServers),
-                        style = MaterialTheme.typography.labelLarge,
-                        color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-                    )
-                }
-
-                item {
-                    BedrudOutlinedCard(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp),
-                        shape = RoundedCornerShape(16.dp)
-                    ) {
-                        instances.forEachIndexed { index, instance ->
-                            ServerRow(
-                                instance = instance,
-                                isActive = instance.id == activeId,
-                                onClick = {
-                                    instanceManager.switchTo(instance.id)
-                                    onInstanceAdded()
-                                },
-                                onDelete = {
-                                    scope.launch { instanceManager.removeInstance(instance.id) }
-                                }
-                            )
-                            if (index < instances.lastIndex) {
-                                HorizontalDivider(
-                                    modifier = Modifier.padding(horizontal = 16.dp),
-                                    color = MaterialTheme.colorScheme.outlineVariant
-                                )
-                            }
-                        }
-                    }
-                }
-
-                item {
-                    Text(
-                        text = stringResource(R.string.instance_subtitle_tapToSignIn),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)
-                    )
-                    Spacer(modifier = Modifier.height(24.dp))
-                }
-            }
-
-            // Add Server Form
-            item {
-                Text(
-                    if (instances.isEmpty()) stringResource(R.string.instance_default_serverName) else stringResource(
-                        R.string.instance_title_addServer
-                    ),
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-                )
-            }
-
-            item {
-                BedrudOutlinedCard(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp),
-                    shape = RoundedCornerShape(16.dp)
-                ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        OutlinedTextField(
-                            value = serverHost,
-                            onValueChange = {
-                                serverHost = it
-                                errorMessage = null
-                            },
-                            label = { Text(text = stringResource(R.string.instance_label_serverAddress)) },
-                            placeholder = { Text(text = stringResource(R.string.instance_placeholder_serverAddress)) },
-                            prefix = {
-                                Text(
-                                    "$scheme://",
-                                    style = MaterialTheme.typography.bodyMedium.copy(
-                                        fontFamily = FontFamily.Monospace,
-                                        textDirection = TextDirection.Ltr
-                                    ),
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            },
-                            keyboardOptions = KeyboardOptions(
-                                keyboardType = KeyboardType.Uri,
-                                imeAction = ImeAction.Next
-                            ),
-                            keyboardActions = KeyboardActions(
-                                onNext = { focusManager.moveFocus(FocusDirection.Down) }
-                            ),
-                            singleLine = true,
-                            shape = RoundedCornerShape(12.dp),
-                            modifier = Modifier.fillMaxWidth(),
-                            textStyle = MaterialTheme.typography.bodyMedium.copy(
+                    ServerChoiceCard(
+                        selected = choice == ServerChoice.DEFAULT,
+                        onSelect = {
+                            choice = ServerChoice.DEFAULT
+                            errorMessage = null
+                        },
+                        title = stringResource(R.string.instance_choice_default_title),
+                        tag = stringResource(R.string.instance_choice_default_tag),
+                    ) { selected ->
+                        Text(
+                            text = displayUrl(defaultUrl ?: BuildConfig.DEFAULT_SERVER_URL),
+                            style = MaterialTheme.typography.bodyLarge.copy(
                                 fontFamily = FontFamily.Monospace,
                                 textDirection = TextDirection.Ltr
-                            )
-                        )
-
-                        Spacer(modifier = Modifier.height(12.dp))
-
-                        OutlinedTextField(
-                            value = displayName,
-                            onValueChange = { displayName = it },
-                            label = { Text(stringResource(R.string.instance_label_displayName)) },
-                            placeholder = { Text(stringResource(R.string.instance_placeholder_displayName)) },
-                            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-                            keyboardActions = KeyboardActions(
-                                onDone = { focusManager.clearFocus() }
                             ),
-                            singleLine = true,
-                            shape = RoundedCornerShape(12.dp),
-                            modifier = Modifier.fillMaxWidth(),
-                            textStyle = MaterialTheme.typography.bodyMedium.copy(textDirection = TextDirection.Content)
+                            color = if (selected) MaterialTheme.colorScheme.onSurface
+                            else MaterialTheme.colorScheme.onSurfaceVariant
                         )
+                    }
 
-                        Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(Modifier.height(Dimens.space16))
 
-                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-
-                        Spacer(modifier = Modifier.height(4.dp))
-
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable { insecure = !insecure }
-                                .padding(vertical = 8.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(
-                                Icons.Default.Warning,
-                                contentDescription = null,
-                                tint = if (insecure) MaterialTheme.colorScheme.error
-                                else MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.size(20.dp)
-                            )
-                            Spacer(modifier = Modifier.width(12.dp))
-                            Text(
-                                text = stringResource(R.string.instance_switch_insecure),
-                                style = MaterialTheme.typography.bodyLarge,
-                                modifier = Modifier.weight(1f)
-                            )
-                            Switch(
-                                checked = insecure,
-                                onCheckedChange = { insecure = it },
-                                colors = SwitchDefaults.colors(
-                                    checkedTrackColor = MaterialTheme.colorScheme.error
-                                )
-                            )
-                        }
-
-                        AnimatedVisibility(visible = insecure) {
-                            Text(
-                                text = stringResource(R.string.instance_warning_insecure),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.error,
-                                modifier = Modifier.padding(top = 4.dp)
-                            )
+                    ServerChoiceCard(
+                        selected = choice == ServerChoice.CUSTOM,
+                        onSelect = {
+                            choice = ServerChoice.CUSTOM
+                            errorMessage = null
+                        },
+                        title = stringResource(R.string.instance_choice_custom_title),
+                        tag = null,
+                    ) { selected ->
+                        CustomServerField(
+                            value = customInput,
+                            onValueChange = {
+                                customInput = it
+                                errorMessage = null
+                            },
+                            enabled = selected,
+                            focusRequester = customFocusRequester,
+                            onSubmit = { if (canContinue) submit() }
+                        )
+                        AnimatedVisibility(visible = selected && isInsecure) {
+                            InsecureNote()
                         }
                     }
                 }
-            }
 
-            // Duplicate warning
-            if (isDuplicate && serverHost.isNotBlank()) {
-                item {
+                AnimatedVisibility(visible = errorMessage != null) {
                     Row(
-                        modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp),
+                        modifier = Modifier
+                            .widthIn(max = Dimens.maxContentWidth)
+                            .fillMaxWidth()
+                            .padding(top = Dimens.space12, start = Dimens.space4, end = Dimens.space4),
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        horizontalArrangement = Arrangement.spacedBy(Dimens.space8)
                     ) {
                         Icon(
-                            Icons.Default.Warning,
-                            contentDescription = null,
-                            tint = Color(0xFFF59E0B),
-                            modifier = Modifier.size(16.dp)
-                        )
-                        Text(
-                            text = stringResource(R.string.instance_error_duplicate),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = Color(0xFFF59E0B)
-                        )
-                    }
-                }
-            }
-
-            // Error message
-            if (errorMessage != null) {
-                item {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        Icon(
-                            Icons.Default.Close,
+                            Icons.Rounded.ErrorOutline,
                             contentDescription = null,
                             tint = MaterialTheme.colorScheme.error,
-                            modifier = Modifier.size(16.dp)
+                            modifier = Modifier.size(Dimens.iconSm)
                         )
                         Text(
-                            errorMessage ?: "",
+                            text = errorMessage ?: "",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.error
                         )
                     }
                 }
+
+                Spacer(Modifier.height(Dimens.space24))
             }
 
-            // Add button
-            item {
-                Button(
-                    onClick = {
-                        scope.launch {
-                            isChecking = true
-                            errorMessage = null
-                            try {
-                                instanceManager.addInstance(resolvedURL, displayName.trim())
-                                serverHost = ""
-                                displayName = ""
-                                insecure = false
-                                onInstanceAdded()
-                            } catch (e: Exception) {
-                                errorMessage = "Could not reach server: ${e.message}"
-                            } finally {
-                                isChecking = false
-                            }
-                        }
-                    },
-                    enabled = serverHost.isNotBlank() && displayName.isNotBlank() && !isDuplicate && !isChecking,
-                    shape = RoundedCornerShape(12.dp),
+            // Pinned action
+            Column(
+                modifier = Modifier
+                    .widthIn(max = Dimens.maxContentWidth)
+                    .fillMaxWidth()
+                    .padding(horizontal = Dimens.screenPadding)
+                    .padding(top = Dimens.space8, bottom = Dimens.space16),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                BedrudButton(
+                    text = stringResource(R.string.instance_button_continue),
+                    onClick = { submit() },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(52.dp)
-                        .padding(horizontal = 16.dp)
-                        .padding(top = 16.dp)
-                ) {
-                    if (isChecking) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(20.dp),
-                            strokeWidth = 2.dp,
-                            color = MaterialTheme.colorScheme.onPrimary
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                    }
+                        .height(Dimens.buttonHeightLarge),
+                    enabled = canContinue,
+                    loading = isChecking
+                )
+                DevOnly {
+                    Spacer(Modifier.height(Dimens.space8))
                     Text(
-                        text = stringResource(R.string.instance_button_addServer),
-                        style = MaterialTheme.typography.labelLarge
+                        text = "dev • ${BuildConfig.VERSION_NAME} • ${resolvedUrl ?: "—"}",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
@@ -397,79 +263,190 @@ fun AddInstanceScreen(
 }
 
 @Composable
-private fun ServerRow(
-    instance: Instance,
-    isActive: Boolean,
-    onClick: () -> Unit,
-    onDelete: () -> Unit
-) {
-    ListItem(
-        headlineContent = {
+private fun BrandHeader(monogram: String, wordmark: String) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Box(
+            modifier = Modifier
+                .size(Dimens.brandMark)
+                .clip(CircleShape)
+                .background(MaterialTheme.colorScheme.primaryContainer),
+            contentAlignment = Alignment.Center
+        ) {
             Text(
-                instance.displayName,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                style = MaterialTheme.typography.bodyLarge.copy(textDirection = TextDirection.Content)
+                text = monogram,
+                style = MaterialTheme.typography.headlineMedium,
+                color = MaterialTheme.colorScheme.onPrimaryContainer
             )
-        },
-        supportingContent = {
-            Text(
-                instance.serverURL,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                style = MaterialTheme.typography.bodySmall.copy(textDirection = TextDirection.Ltr),
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        },
-        leadingContent = {
-            Box(
-                modifier = Modifier
-                    .size(40.dp)
-                    .clip(CircleShape)
-                    .background(parseColor(instance.iconColorHex)),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    instance.displayName.take(1).uppercase(),
-                    style = MaterialTheme.typography.titleSmall,
-                    color = Color.White
-                )
-            }
-        },
-        trailingContent = {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                if (isActive) {
-                    Icon(
-                        Icons.Default.Check,
-                        contentDescription = stringResource(R.string.instance_status_active),
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(20.dp)
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                }
-                IconButton(onClick = onDelete) {
-                    Icon(
-                        Icons.Default.Close,
-                        contentDescription = stringResource(R.string.common_action_remove),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(18.dp)
-                    )
-                }
-            }
-        },
-        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { onClick() }
-    )
-}
-
-private fun parseColor(hex: String): Color {
-    val cleaned = hex.trimStart('#')
-    if (cleaned.length != 6) return Color(0xFF3B82F6)
-    return try {
-        Color(android.graphics.Color.parseColor("#$cleaned"))
-    } catch (_: Exception) {
-        Color(0xFF3B82F6)
+        }
+        Spacer(Modifier.height(Dimens.space16))
+        Text(
+            text = wordmark,
+            style = MaterialTheme.typography.headlineMedium,
+            color = MaterialTheme.colorScheme.onBackground
+        )
+        Spacer(Modifier.height(Dimens.space4))
+        Text(
+            text = stringResource(R.string.instance_subtitle_connectToServer),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
     }
 }
+
+@Composable
+private fun ServerChoiceCard(
+    selected: Boolean,
+    onSelect: () -> Unit,
+    title: String,
+    tag: String?,
+    content: @Composable (selected: Boolean) -> Unit
+) {
+    val borderColor by animateColorAsState(
+        targetValue = if (selected) MaterialTheme.colorScheme.primary
+        else MaterialTheme.colorScheme.outlineVariant,
+        animationSpec = tween(Motion.durationMedium, easing = Motion.standardEasing),
+        label = "cardBorder"
+    )
+    val borderWidth = if (selected) Dimens.borderStrong else Dimens.borderThin
+
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .selectable(
+                selected = selected,
+                role = Role.RadioButton,
+                onClick = onSelect
+            ),
+        shape = BedrudShapeTokens.card,
+        color = MaterialTheme.colorScheme.surface,
+        border = BorderStroke(borderWidth, borderColor)
+    ) {
+        Column(modifier = Modifier.padding(Dimens.cardPadding)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = if (selected) MaterialTheme.colorScheme.onSurface
+                    else MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(end = Dimens.space8)
+                )
+                if (tag != null) {
+                    RecommendedTag(tag)
+                }
+                Spacer(Modifier.weight(1f))
+                RadioButton(selected = selected, onClick = null)
+            }
+            Spacer(Modifier.height(Dimens.space8))
+            content(selected)
+        }
+    }
+}
+
+@Composable
+private fun RecommendedTag(text: String) {
+    Surface(
+        shape = BedrudShapeTokens.pill,
+        color = MaterialTheme.colorScheme.tertiaryContainer,
+        contentColor = MaterialTheme.colorScheme.onTertiaryContainer
+    ) {
+        Text(
+            text = text,
+            style = MaterialTheme.typography.labelSmall,
+            modifier = Modifier.padding(horizontal = Dimens.space8, vertical = Dimens.space2)
+        )
+    }
+}
+
+@Composable
+private fun CustomServerField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    enabled: Boolean,
+    focusRequester: FocusRequester,
+    onSubmit: () -> Unit
+) {
+    val textColor = if (enabled) MaterialTheme.colorScheme.onSurface
+    else MaterialTheme.colorScheme.onSurfaceVariant
+    Box {
+        if (value.isEmpty()) {
+            Text(
+                text = stringResource(R.string.instance_placeholder_customServer),
+                style = MaterialTheme.typography.bodyLarge.copy(
+                    fontFamily = FontFamily.Monospace,
+                    textDirection = TextDirection.Ltr
+                ),
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        BasicTextField(
+            value = value,
+            onValueChange = onValueChange,
+            enabled = enabled,
+            singleLine = true,
+            textStyle = MaterialTheme.typography.bodyLarge.copy(
+                fontFamily = FontFamily.Monospace,
+                textDirection = TextDirection.Ltr,
+                color = textColor
+            ),
+            cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+            keyboardOptions = KeyboardOptions(
+                keyboardType = KeyboardType.Uri,
+                imeAction = ImeAction.Go
+            ),
+            keyboardActions = KeyboardActions(onGo = { onSubmit() }),
+            modifier = Modifier
+                .fillMaxWidth()
+                .focusRequester(focusRequester)
+        )
+    }
+}
+
+@Composable
+private fun InsecureNote() {
+    Row(
+        modifier = Modifier.padding(top = Dimens.space8),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(Dimens.space8)
+    ) {
+        Icon(
+            Icons.Rounded.LockOpen,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.error,
+            modifier = Modifier.size(Dimens.iconXs)
+        )
+        Text(
+            text = stringResource(R.string.instance_note_insecure),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.error
+        )
+    }
+}
+
+/**
+ * Normalizes user/host input to a canonical `scheme://host/` URL. Defaults to https; honors an
+ * explicit http:// (for local/dev servers). Returns null for blank input.
+ */
+private fun canonicalizeServerUrl(input: String): String? {
+    val trimmed = input.trim()
+    if (trimmed.isEmpty()) return null
+    val scheme = if (trimmed.startsWith("http://", ignoreCase = true)) "http" else "https"
+    var rest = trimmed
+    listOf("https://", "http://").forEach { prefix ->
+        if (rest.startsWith(prefix, ignoreCase = true)) rest = rest.substring(prefix.length)
+    }
+    rest = rest.trim().trimEnd('/')
+    if (rest.isEmpty()) return null
+    return "$scheme://$rest/"
+}
+
+/** Human-friendly name derived from a canonical URL — the host (path/scheme stripped). */
+private fun deriveDisplayName(canonicalUrl: String): String {
+    val hostAndPath = canonicalUrl
+        .removePrefix("https://")
+        .removePrefix("http://")
+        .trimEnd('/')
+    return hostAndPath.substringBefore('/').ifBlank { hostAndPath }
+}
+
+/** Strips the trailing slash for display so the URL reads cleanly in a card. */
+private fun displayUrl(canonicalUrl: String): String = canonicalUrl.trimEnd('/')
