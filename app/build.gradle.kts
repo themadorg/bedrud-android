@@ -63,10 +63,7 @@ android {
             if (devKeystoreFile.exists()) {
                 storeFile = devKeystoreFile
                 storePassword = System.getenv("DEV_KEYSTORE_PASSWORD") ?: ""
-                // Alias is the label baked into the physical keystore (historically
-                // "bedrud-qa"); it identifies the key entry inside the .jks and is
-                // independent of the build-track name.
-                keyAlias = "bedrud-qa"
+                keyAlias = "bedrud-dev"
                 keyPassword = System.getenv("DEV_KEYSTORE_PASSWORD") ?: ""
             }
         }
