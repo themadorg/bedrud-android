@@ -116,18 +116,23 @@ android {
 }
 
 // Default output names are derived from the Gradle module name (":app"), e.g.
-// app-arm64-v8a-release.apk - rename to bedrud-* for release/dev (the variants CI
-// distributes) so downloaded APKs are identifiable without relying on the internal
-// module name. Plain "debug" is left alone - it's a local/CI convenience build, and
-// the main bedrud repo's docs/CI already hardcode its "app-*-debug.apk" output names
-// in several places that don't need churn for this.
+// app-arm64-v8a-release.apk. Rebuild as bedrud-<abi>.apk for the release build type
+// (used for both the beta and stable channels - a bare "bedrud" name is the one users
+// actually download) and bedrud-dev-<abi>.apk for dev/PR test builds, so a dev test
+// build can never be mistaken for - or silently overwrite - a real release download
+// sharing the same filename. Plain "debug" is left alone - it's a local/CI convenience
+// build, and the main bedrud repo's docs/CI already hardcode its "app-*-debug.apk"
+// output names in several places that don't need churn for this.
 androidComponents {
     onVariants { variant ->
         if (variant.buildType == "debug") return@onVariants
         variant.outputs.forEach { output ->
-            output.outputFileName.set(
-                output.outputFileName.get().replace("app-", "bedrud-")
-            )
+            val abi = output.filters
+                .find { it.filterType == com.android.build.api.variant.FilterConfiguration.FilterType.ABI }
+                ?.identifier
+                ?: "universal"
+            val prefix = if (variant.buildType == "release") "bedrud" else "bedrud-${variant.buildType}"
+            output.outputFileName.set("$prefix-$abi.apk")
         }
     }
 }
