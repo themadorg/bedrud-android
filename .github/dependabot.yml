@@ -10,6 +10,10 @@ updates:
       time: "00:00"
     commit-message:
       prefix: "deps"
+    reviewers:
+      - "narseh-ir"
+    assignees:
+      - "narseh-ir"
     groups:
       gradle-all:
         patterns:
@@ -25,6 +29,10 @@ updates:
       time: "00:00"
     commit-message:
       prefix: "deps(ci)"
+    reviewers:
+      - "narseh-ir"
+    assignees:
+      - "narseh-ir"
     groups:
       actions-all:
         patterns:
