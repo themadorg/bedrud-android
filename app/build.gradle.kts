@@ -115,6 +115,23 @@ android {
     }
 }
 
+// Default output names are derived from the Gradle module name (":app"), e.g.
+// app-arm64-v8a-release.apk - rename to bedrud-* for release/dev (the variants CI
+// distributes) so downloaded APKs are identifiable without relying on the internal
+// module name. Plain "debug" is left alone - it's a local/CI convenience build, and
+// the main bedrud repo's docs/CI already hardcode its "app-*-debug.apk" output names
+// in several places that don't need churn for this.
+androidComponents {
+    onVariants { variant ->
+        if (variant.buildType == "debug") return@onVariants
+        variant.outputs.forEach { output ->
+            output.outputFileName.set(
+                output.outputFileName.get().replace("app-", "bedrud-")
+            )
+        }
+    }
+}
+
 kotlin {
     jvmToolchain(17)
 }

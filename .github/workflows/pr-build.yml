@@ -93,7 +93,7 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: bedrud-dev-pr-${{ github.event.pull_request.number }}-universal
-          path: app/build/outputs/apk/dev/app-universal-dev.apk
+          path: app/build/outputs/apk/dev/bedrud-universal-dev.apk
           retention-days: 14
 
       - name: Upload arm64-v8a APK
@@ -101,7 +101,7 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: bedrud-dev-pr-${{ github.event.pull_request.number }}-arm64-v8a
-          path: app/build/outputs/apk/dev/app-arm64-v8a-dev.apk
+          path: app/build/outputs/apk/dev/bedrud-arm64-v8a-dev.apk
           retention-days: 14
 
       - name: Upload armeabi-v7a APK
@@ -109,7 +109,7 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: bedrud-dev-pr-${{ github.event.pull_request.number }}-armeabi-v7a
-          path: app/build/outputs/apk/dev/app-armeabi-v7a-dev.apk
+          path: app/build/outputs/apk/dev/bedrud-armeabi-v7a-dev.apk
           retention-days: 14
 
       - name: Upload x86_64 APK
@@ -117,7 +117,7 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: bedrud-dev-pr-${{ github.event.pull_request.number }}-x86_64
-          path: app/build/outputs/apk/dev/app-x86_64-dev.apk
+          path: app/build/outputs/apk/dev/bedrud-x86_64-dev.apk
           retention-days: 14
 
       # Multiple files under one artifact name download as a single zip containing
