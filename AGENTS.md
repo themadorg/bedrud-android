@@ -73,7 +73,7 @@ Retrofit + OkHttp + Gson (not kotlinx-serialization for HTTP). `kotlin-serializa
 - **DI:** Koin. Single module (`appModule`). Inject with `by inject()` in Activities, `by koinViewModel()` or `koinInject()` in composables.
 - **Strings:** User-facing strings go in `res/values/strings.xml` **and must be translated in every locale** (ar, de, es, fa, fr, ja, ru, tr, zh) — CI lint fails on `MissingTranslation`, so English-only is not enough. RTL supported (Vazirmatn/Shabnam via `LocaleHelper`).
 - **Input:** Validate/format user input per its type (trim/strip whitespace, validate URL/email shape); never treat malformed input as valid.
-- **Keyboard:** The IME must not cover the focused input or the primary action button (handle `WindowInsets.ime` / `imePadding` / scroll-into-view); the keyboard action key should dismiss the keyboard and run the primary action. The app is edge-to-edge, so react to ime insets, not window resizing.
+- **Keyboard:** The IME may cover the primary button, but the focused input must stay visible — make content scroll into view (ime-aware: `WindowInsets.ime` / `imePadding`), wherever reasonable, so the user sees what they type. The action key should dismiss the keyboard + run the primary action. App is edge-to-edge → react to ime insets, not window resizing.
 - **Dev-only UI:** Gate not-yet-wired UI or QA aids with `DevOnly { … }` / `DevHintBadge("…")` (visible on debug/`dev`, hidden on release) — backed by `BuildConfig.DEV_HINTS` via `core/DevFlags.kt`.
 
 ## UI/UX Rewrite — Working Agreement
@@ -93,11 +93,11 @@ The app's UI/UX is being reworked screen by screen. When doing this work:
   with `DevOnly`/`DevHintBadge` so it never misleads release users.
 - **Keep the repo in sync.** A change that adds/alters a feature also updates the affected docs
   (README, this file, DESIGN.md) and `strings.xml` in the same PR.
-- **Verify, then get on-device sign-off.** Build, lint + test (`./gradlew :app:compileDebugKotlin`,
-  `:app:lintDebug`, `:app:testDebugUnitTest` — `lintDebug` catches CI blockers like `MissingTranslation`),
-  then install on the maintainer's connected device (`./gradlew installDebug`, launch, hand off) and get
-  their approval **before opening the PR**. Not approved → iterate and re-test on device; open the PR only
-  once approved.
+- **Verify, then hand off for sign-off.** Build, lint + test (`./gradlew :app:compileDebugKotlin`,
+  `:app:lintDebug`, `:app:testDebugUnitTest` — `lintDebug` catches CI blockers like `MissingTranslation`).
+  Then **the maintainer runs it themselves** on the dev channel (`./gradlew installDev`, or the `.run/`
+  "Install Dev" config) and approves — don't self-run/screenshot the device. Not approved → iterate;
+  commit/push only once they approve.
 
 ## Release Signing
 
