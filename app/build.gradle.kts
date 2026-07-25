@@ -100,7 +100,13 @@ android {
             initWith(getByName("debug"))
             applicationIdSuffix = ".dev"
             versionNameSuffix = "-dev"
-            signingConfig = signingConfigs.getByName("dev")
+            // Use the dedicated dev key only when it's actually available (CI, via env). Locally the
+            // keystore is absent, so keep the debug signing inherited from initWith(debug) — that
+            // keeps `installDev` installable side-by-side with a stable build, no CI secrets needed.
+            val devKeystoreFile = rootProject.file(System.getenv("DEV_KEYSTORE_PATH") ?: "dev-release.jks")
+            if (devKeystoreFile.exists()) {
+                signingConfig = signingConfigs.getByName("dev")
+            }
             matchingFallbacks += listOf("debug")
             // Distinct home-screen name so a dev test build is never mistaken for the
             // real app when both are installed on the same device.
