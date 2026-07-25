@@ -6,7 +6,8 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
-      day: "monday"
+      day: "saturday"
+      time: "00:00"
     commit-message:
       prefix: "deps"
     groups:
@@ -20,7 +21,8 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
-      day: "monday"
+      day: "saturday"
+      time: "00:00"
     commit-message:
       prefix: "deps(ci)"
     groups:
