@@ -95,8 +95,9 @@ Both are gated by `BuildConfig.DEV_HINTS` (`true` on debug + `dev`, `false` on r
 ## Internationalization
 
 User-facing strings live in `res/values/strings.xml` (+ locale variants: ar, de, es, fa, fr, ja, ru, tr,
-zh) — **not** inline in composables. Missing translations fall back to the default (English). RTL is fully
-supported (layout direction + Vazirmatn/Shabnam fonts via `LocaleHelper`).
+zh) — **not** inline in composables. Every string must be translated in all locale files: the project's
+lint fails CI on `MissingTranslation`, so shipping English-only is not an option. RTL is fully supported
+(layout direction + Vazirmatn/Shabnam fonts via `LocaleHelper`).
 
 ## Self-hosting / rebranding
 

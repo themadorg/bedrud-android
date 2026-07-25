@@ -71,7 +71,9 @@ Retrofit + OkHttp + Gson (not kotlinx-serialization for HTTP). `kotlin-serializa
 - **Colors:** Always `MaterialTheme.colorScheme.*`. Rose (`#E11D48`) primary + teal (`#14B8A6`) tertiary on warm neutrals; the full M3 role set (light+dark) is mapped in `ui/theme/Theme.kt` from the ramps in `Color.kt`. `dynamicColor` is off by default.
 - **Serialization:** `@SerializedName` annotations on model fields (Gson). Snake_case from server ↔ camelCase in Kotlin.
 - **DI:** Koin. Single module (`appModule`). Inject with `by inject()` in Activities, `by koinViewModel()` or `koinInject()` in composables.
-- **Strings:** User-facing strings go in `res/values/strings.xml` (+ locale variants: ar, de, es, fa, fr, ja, ru, tr, zh); missing translations fall back to English. RTL supported (Vazirmatn/Shabnam via `LocaleHelper`).
+- **Strings:** User-facing strings go in `res/values/strings.xml` **and must be translated in every locale** (ar, de, es, fa, fr, ja, ru, tr, zh) — CI lint fails on `MissingTranslation`, so English-only is not enough. RTL supported (Vazirmatn/Shabnam via `LocaleHelper`).
+- **Input:** Validate/format user input per its type (trim/strip whitespace, validate URL/email shape); never treat malformed input as valid.
+- **Keyboard:** The IME must not cover the focused input or the primary action button (handle `WindowInsets.ime` / `imePadding` / scroll-into-view); the keyboard action key should dismiss the keyboard and run the primary action. The app is edge-to-edge, so react to ime insets, not window resizing.
 - **Dev-only UI:** Gate not-yet-wired UI or QA aids with `DevOnly { … }` / `DevHintBadge("…")` (visible on debug/`dev`, hidden on release) — backed by `BuildConfig.DEV_HINTS` via `core/DevFlags.kt`.
 
 ## UI/UX Rewrite — Working Agreement
@@ -79,8 +81,10 @@ Retrofit + OkHttp + Gson (not kotlinx-serialization for HTTP). `kotlin-serializa
 The app's UI/UX is being reworked screen by screen. When doing this work:
 
 - **Sketches are intent, not spec.** Implement to the **newest official Material 3** guidelines
-  (including M3 Expressive — the Compose BOM is current), not a literal trace of the sketch. Lead with
-  UX/component recommendations before implementing.
+  (including M3 Expressive — the Compose BOM is current), not a literal trace of the sketch.
+- **Recommend, then implement — every change.** Lead with your recommendation/opinion on any UI/UX
+  change (the initial sketch AND any review tweak) and let the maintainer decide before you code it.
+  Don't jump straight to implementing a change request.
 - **Design system first.** Reuse and extend the token layer (`ui/theme/`) and shared components. No
   magic numbers or hex in screens — see the Design tokens convention above and [DESIGN.md](DESIGN.md).
 - **Keep the brand coherent.** Rose + teal on warm neutrals, rounded, M3-native. Change the palette only
@@ -89,8 +93,11 @@ The app's UI/UX is being reworked screen by screen. When doing this work:
   with `DevOnly`/`DevHintBadge` so it never misleads release users.
 - **Keep the repo in sync.** A change that adds/alters a feature also updates the affected docs
   (README, this file, DESIGN.md) and `strings.xml` in the same PR.
-- **Verify.** `./gradlew :app:compileDebugKotlin` (or `assembleDebug`) and `:app:testDebugUnitTest`
-  before opening a PR.
+- **Verify, then get on-device sign-off.** Build, lint + test (`./gradlew :app:compileDebugKotlin`,
+  `:app:lintDebug`, `:app:testDebugUnitTest` — `lintDebug` catches CI blockers like `MissingTranslation`),
+  then install on the maintainer's connected device (`./gradlew installDebug`, launch, hand off) and get
+  their approval **before opening the PR**. Not approved → iterate and re-test on device; open the PR only
+  once approved.
 
 ## Release Signing
 
