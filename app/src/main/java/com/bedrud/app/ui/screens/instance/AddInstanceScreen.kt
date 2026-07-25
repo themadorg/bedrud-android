@@ -65,6 +65,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.bedrud.app.BuildConfig
 import com.bedrud.app.R
 import com.bedrud.app.core.instance.InstanceManager
 import com.bedrud.app.models.Instance
@@ -83,7 +84,7 @@ fun AddInstanceScreen(
     val instances by instanceManager.store.instances.collectAsState()
     val activeId by instanceManager.store.activeInstanceId.collectAsState()
 
-    var serverHost by rememberSaveable { mutableStateOf("bedrud.xyz") }
+    var serverHost by rememberSaveable { mutableStateOf(BuildConfig.DEFAULT_SERVER_HOST) }
     var displayName by rememberSaveable { mutableStateOf("Bedrud") }
     var insecure by rememberSaveable { mutableStateOf(false) }
     var isChecking by remember { mutableStateOf(false) }
