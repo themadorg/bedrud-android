@@ -10,15 +10,16 @@ so there are no magic values scattered through screens.
 
 ## Token layer (`ui/theme/`)
 
-| File | Holds | Rule |
-|------|-------|------|
-| `Color.kt` | Reference palette — the raw rose/teal/neutral/red tonal ramps | Never read directly from UI |
-| `Theme.kt` | `BedrudTheme` + the light/dark `ColorScheme` role mapping (full M3 role set) | UI reads `MaterialTheme.colorScheme.*` |
-| `Type.kt` | `Typography` (M3 type scale) + RTL font families | UI reads `MaterialTheme.typography.*` |
-| `Shape.kt` | `BedrudShapes` (M3 scale) + `BedrudShapeTokens` (semantic: card/field/button/pill) | No raw `RoundedCornerShape(n.dp)` |
-| `Dimens.kt` | Spacing scale (4dp grid) + component sizes/heights/icon sizes | No raw `n.dp` for spacing/sizing |
-| `Elevation.kt` | Tonal elevation levels | Surfaces stay low (outline-first) |
-| `Motion.kt` | Durations + easing for transitions | No inline animation timings |
+| File                | Holds                                                                              | Rule                                    |
+|---------------------|------------------------------------------------------------------------------------|-----------------------------------------|
+| `Color.kt`          | Reference palette — the raw rose/teal/neutral/red/amber tonal ramps                | Never read directly from UI             |
+| `Theme.kt`          | `BedrudTheme` + the light/dark `ColorScheme` role mapping (full M3 role set)       | UI reads `MaterialTheme.colorScheme.*`  |
+| `ExtendedColors.kt` | Non-M3 semantic colors (e.g. `warning`) via `LocalBedrudColors`                    | UI reads `MaterialTheme.bedrudColors.*` |
+| `Type.kt`           | `Typography` (M3 type scale) + RTL font families                                   | UI reads `MaterialTheme.typography.*`   |
+| `Shape.kt`          | `BedrudShapes` (M3 scale) + `BedrudShapeTokens` (semantic: card/field/button/pill) | No raw `RoundedCornerShape(n.dp)`       |
+| `Dimens.kt`         | Spacing scale (4dp grid) + component sizes/heights/icon sizes                      | No raw `n.dp` for spacing/sizing        |
+| `Elevation.kt`      | Tonal elevation levels                                                             | Surfaces stay low (outline-first)       |
+| `Motion.kt`         | Durations + easing for transitions                                                 | No inline animation timings             |
 
 **The rule:** screens and components reference `MaterialTheme.*` + the token objects. Raw hex colors and
 raw `n.dp` literals don't belong in `ui/screens/**` or `ui/components/**`.
@@ -32,6 +33,7 @@ Brand seeds:
 - **Secondary — muted rose** — lower-emphasis components that still tie to the brand.
 - **Neutrals — warm stone** — surfaces/text read as part of the rose family, not clinical grey.
 - **Error — red `#DC2626`** — reserved for errors and irreversible/destructive actions.
+- **Warning — amber `#B45309` (light) / `#FBBF24` (dark)** — non-critical cautions (e.g. insecure http). M3 has no warning role, so it's a custom extended-color token (`MaterialTheme.bedrudColors.warning`, from `ExtendedColors.kt`); never use error-red for a warning.
 
 The full Material 3 role set is specified for light **and** dark (primary/secondary/tertiary + their
 containers, the surface-tonal levels `surfaceContainerLowest…Highest`, `inverse*`, `outline`, `scrim`),

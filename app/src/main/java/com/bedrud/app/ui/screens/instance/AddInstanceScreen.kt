@@ -11,13 +11,11 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
@@ -67,10 +65,12 @@ import com.bedrud.app.BuildConfig
 import com.bedrud.app.R
 import com.bedrud.app.core.instance.InstanceManager
 import com.bedrud.app.ui.components.BedrudButton
+import com.bedrud.app.ui.components.BedrudScaffoldContentInsets
 import com.bedrud.app.ui.components.DevOnly
 import com.bedrud.app.ui.theme.BedrudShapeTokens
 import com.bedrud.app.ui.theme.Dimens
 import com.bedrud.app.ui.theme.Motion
+import com.bedrud.app.ui.theme.bedrudColors
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 
@@ -142,9 +142,9 @@ fun AddInstanceScreen(
     }
 
     Scaffold(
-        // Include the IME inset here so the focused field + Continue button stay above the keyboard
-        // (the app is edge-to-edge, so the window doesn't resize on its own).
-        contentWindowInsets = WindowInsets.safeDrawing,
+        // Standard insets (IME excluded) — the keyboard is allowed to cover the Continue button.
+        // The scrollable content below adds imePadding so the focused input still scrolls into view.
+        contentWindowInsets = BedrudScaffoldContentInsets,
         snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { padding ->
         Column(
@@ -154,8 +154,9 @@ fun AddInstanceScreen(
                 .padding(horizontal = Dimens.screenPadding),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Scrollable content: header + the two compact choice cards. Scrolls so the focused
-            // field is brought into view above the keyboard.
+            // Scrollable content: header + the two compact choice cards. The keyboard is allowed to
+            // cover the Continue button below; the input card sits high enough to stay visible above
+            // the keyboard, and verticalScroll covers the rare short-screen case.
             Column(
                 modifier = Modifier
                     .weight(1f)
@@ -446,13 +447,13 @@ private fun InsecureNote() {
         Icon(
             Icons.Rounded.LockOpen,
             contentDescription = null,
-            tint = MaterialTheme.colorScheme.error,
+            tint = MaterialTheme.bedrudColors.warning,
             modifier = Modifier.size(Dimens.iconXs)
         )
         Text(
             text = stringResource(R.string.instance_note_insecure),
             style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.error
+            color = MaterialTheme.bedrudColors.warning
         )
     }
 }

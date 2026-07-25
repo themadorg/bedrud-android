@@ -56,6 +56,14 @@ val Red700 = Color(0xFFB91C1C)
 val Red900 = Color(0xFF7F1D1D)
 val Red950 = Color(0xFF450A0A)
 
+// ── Amber (warning) ────────────────────────────────────────────────────────
+// Non-critical cautions (e.g. insecure http). Distinct from error red.
+val Amber100 = Color(0xFFFEF3C7)
+val Amber400 = Color(0xFFFBBF24)
+val Amber700 = Color(0xFFB45309)
+val Amber900 = Color(0xFF78350F)
+val Amber950 = Color(0xFF451A03)
+
 // ── Warm neutrals (stone) ──────────────────────────────────────────────────
 // Surfaces + text. Warm-tinted so they read as part of the rose brand family.
 val WarmWhite = Color(0xFFFFFBF9)   // light background / base surface

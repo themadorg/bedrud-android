@@ -136,7 +136,12 @@ fun BedrudTheme(
         else -> BedrudTypography
     }
 
-    CompositionLocalProvider(LocalLayoutDirection provides layoutDirection) {
+    val extendedColors = if (darkTheme) DarkExtendedColors else LightExtendedColors
+
+    CompositionLocalProvider(
+        LocalLayoutDirection provides layoutDirection,
+        LocalBedrudColors provides extendedColors
+    ) {
         MaterialTheme(
             colorScheme = colorScheme,
             typography = typography,
