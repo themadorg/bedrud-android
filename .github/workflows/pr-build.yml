@@ -53,6 +53,13 @@ jobs:
   build-dev:
     needs: lint-test
     runs-on: ubuntu-24.04
+    # GitHub withholds repo secrets from workflow runs triggered by Dependabot (by
+    # design, so an unreviewed dependency bump can never reach signing material) - this
+    # job would otherwise fail with an unsigned/corrupt keystore. Skip it cleanly instead;
+    # Lint & Test above still runs and is enough to validate the bump. A human pushing a
+    # follow-up commit to the same PR runs as that human, not dependabot[bot], and gets a
+    # normal signed build.
+    if: github.actor != 'dependabot[bot]'
     steps:
       - name: Checkout
         uses: actions/checkout@v7
