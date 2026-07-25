@@ -40,6 +40,14 @@
   <string name="instance_empty_noServers">Yapılandırılmış sunucu yok</string>
   <string name="instance_default_serverName">Sunucu</string>
   <string name="instance_default_displayName" translatable="false">Bedrud</string>
+  <!-- First-run server chooser -->
+  <string name="instance_choice_default_title">Resmi sunucu</string>
+  <string name="instance_choice_default_tag">Varsayılan</string>
+  <string name="instance_choice_custom_title">Kendi sunucun</string>
+  <string name="instance_placeholder_customServer">kendi sunucu adresiniz</string>
+  <string name="instance_button_continue">Devam</string>
+  <string name="instance_error_unreachable">Bu sunucuya ulaşılamadı. Adresi kontrol edip tekrar deneyin.</string>
+  <string name="instance_note_insecure">Bu bağlantı şifrelenmeyecek.</string>
   <string name="dashboard_title_rooms">Odalar</string>
   <string name="dashboard_placeholder_search">Oda adı veya bağlantısı girin…</string>
   <string name="dashboard_dialog_createTitle">Oda Oluştur</string>

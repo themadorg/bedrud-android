@@ -9,13 +9,13 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonColors
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.bedrud.app.ui.theme.BedrudShapeTokens
 import com.bedrud.app.ui.theme.Dimens
@@ -123,7 +123,7 @@ private fun ButtonContent(
         CircularProgressIndicator(
             modifier = Modifier.size(Dimens.iconSm),
             strokeWidth = 2.dp,
-            color = Color.Unspecified
+            color = LocalContentColor.current
         )
         Spacer(modifier = Modifier.width(Dimens.space8))
     }

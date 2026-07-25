@@ -40,6 +40,14 @@
   <string name="instance_empty_noServers">サーバーが設定されていません</string>
   <string name="instance_default_serverName">サーバー</string>
   <string name="instance_default_displayName" translatable="false">Bedrud</string>
+  <!-- First-run server chooser -->
+  <string name="instance_choice_default_title">公式サーバー</string>
+  <string name="instance_choice_default_tag">デフォルト</string>
+  <string name="instance_choice_custom_title">自分のサーバー</string>
+  <string name="instance_placeholder_customServer">自分のサーバーのURL</string>
+  <string name="instance_button_continue">続行</string>
+  <string name="instance_error_unreachable">このサーバーに接続できませんでした。アドレスを確認して、もう一度お試しください。</string>
+  <string name="instance_note_insecure">この接続は暗号化されません。</string>
   <string name="dashboard_title_rooms">ルーム</string>
   <string name="dashboard_placeholder_search">ルーム名またはリンクを入力…</string>
   <string name="dashboard_dialog_createTitle">ルームを作成</string>

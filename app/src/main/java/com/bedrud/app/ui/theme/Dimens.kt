@@ -34,6 +34,7 @@ object Dimens {
     val minTouchTarget = 48.dp
     val fieldMinHeight = 56.dp
     val cardPadding = 16.dp
+    val serverCardMinHeight = 112.dp   // roomy tap target for the server-choice cards
     val borderThin = 1.dp
     val borderStrong = 2.dp
 

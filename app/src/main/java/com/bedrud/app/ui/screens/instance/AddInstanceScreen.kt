@@ -4,16 +4,20 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
@@ -49,7 +53,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontFamily
@@ -64,11 +71,13 @@ import com.bedrud.app.ui.components.DevOnly
 import com.bedrud.app.ui.theme.BedrudShapeTokens
 import com.bedrud.app.ui.theme.Dimens
 import com.bedrud.app.ui.theme.Motion
-import com.bedrud.app.ui.components.BedrudScaffoldContentInsets
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 
 private enum class ServerChoice { DEFAULT, CUSTOM }
+
+/** Host[:port] validation for a typed server address — rejects whitespace and stray characters. */
+private val HOST_PORT_REGEX = Regex("^[A-Za-z0-9.-]+(:\\d+)?$")
 
 /**
  * First-run / add-server screen. The user either takes the recommended default server or points
@@ -84,6 +93,7 @@ fun AddInstanceScreen(
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
     val scrollState = rememberScrollState()
+    val keyboardController = LocalSoftwareKeyboardController.current
 
     val instances by instanceManager.store.instances.collectAsState()
 
@@ -108,6 +118,8 @@ fun AddInstanceScreen(
     }
 
     fun submit() {
+        if (isChecking) return
+        keyboardController?.hide()
         val url = resolvedUrl ?: return
         scope.launch {
             isChecking = true
@@ -130,33 +142,37 @@ fun AddInstanceScreen(
     }
 
     Scaffold(
-        contentWindowInsets = BedrudScaffoldContentInsets,
+        // Include the IME inset here so the focused field + Continue button stay above the keyboard
+        // (the app is edge-to-edge, so the window doesn't resize on its own).
+        contentWindowInsets = WindowInsets.safeDrawing,
         snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { padding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(padding),
+                .padding(padding)
+                .padding(horizontal = Dimens.screenPadding),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Scrollable content
+            // Scrollable content: header + the two compact choice cards. Scrolls so the focused
+            // field is brought into view above the keyboard.
             Column(
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxWidth()
-                    .verticalScroll(scrollState)
-                    .padding(horizontal = Dimens.screenPadding),
+                    .verticalScroll(scrollState),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Spacer(Modifier.height(Dimens.space56))
-                BrandHeader(monogram = defaultName.take(1).uppercase(), wordmark = defaultName)
+                BrandHeader(wordmark = defaultName)
                 Spacer(Modifier.height(Dimens.space40))
 
                 Column(
                     modifier = Modifier
                         .widthIn(max = Dimens.maxContentWidth)
                         .fillMaxWidth()
-                        .selectableGroup()
+                        .selectableGroup(),
+                    verticalArrangement = Arrangement.spacedBy(Dimens.space16)
                 ) {
                     ServerChoiceCard(
                         selected = choice == ServerChoice.DEFAULT,
@@ -165,7 +181,7 @@ fun AddInstanceScreen(
                             errorMessage = null
                         },
                         title = stringResource(R.string.instance_choice_default_title),
-                        tag = stringResource(R.string.instance_choice_default_tag),
+                        badge = stringResource(R.string.instance_choice_default_tag),
                     ) { selected ->
                         Text(
                             text = displayUrl(defaultUrl ?: BuildConfig.DEFAULT_SERVER_URL),
@@ -178,8 +194,6 @@ fun AddInstanceScreen(
                         )
                     }
 
-                    Spacer(Modifier.height(Dimens.space16))
-
                     ServerChoiceCard(
                         selected = choice == ServerChoice.CUSTOM,
                         onSelect = {
@@ -187,17 +201,21 @@ fun AddInstanceScreen(
                             errorMessage = null
                         },
                         title = stringResource(R.string.instance_choice_custom_title),
-                        tag = null,
+                        badge = null,
                     ) { selected ->
                         CustomServerField(
                             value = customInput,
                             onValueChange = {
-                                customInput = it
+                                customInput = it.filterNot(Char::isWhitespace)
                                 errorMessage = null
                             },
                             enabled = selected,
                             focusRequester = customFocusRequester,
-                            onSubmit = { if (canContinue) submit() }
+                            // Keyboard action key: dismiss keyboard + run the primary action.
+                            onSubmit = {
+                                keyboardController?.hide()
+                                if (canContinue) submit()
+                            }
                         )
                         AnimatedVisibility(visible = selected && isInsecure) {
                             InsecureNote()
@@ -205,6 +223,7 @@ fun AddInstanceScreen(
                     }
                 }
 
+                // Inline error sits directly under the cards.
                 AnimatedVisibility(visible = errorMessage != null) {
                     Row(
                         modifier = Modifier
@@ -227,17 +246,14 @@ fun AddInstanceScreen(
                         )
                     }
                 }
-
-                Spacer(Modifier.height(Dimens.space24))
             }
 
-            // Pinned action
+            // Pinned action — stays above the keyboard thanks to the IME inset above.
             Column(
                 modifier = Modifier
                     .widthIn(max = Dimens.maxContentWidth)
                     .fillMaxWidth()
-                    .padding(horizontal = Dimens.screenPadding)
-                    .padding(top = Dimens.space8, bottom = Dimens.space16),
+                    .padding(top = Dimens.space16, bottom = Dimens.space16),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 BedrudButton(
@@ -246,7 +262,7 @@ fun AddInstanceScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(Dimens.buttonHeightLarge),
-                    enabled = canContinue,
+                    enabled = resolvedUrl != null,
                     loading = isChecking
                 )
                 DevOnly {
@@ -263,7 +279,7 @@ fun AddInstanceScreen(
 }
 
 @Composable
-private fun BrandHeader(monogram: String, wordmark: String) {
+private fun BrandHeader(wordmark: String) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Box(
             modifier = Modifier
@@ -272,10 +288,12 @@ private fun BrandHeader(monogram: String, wordmark: String) {
                 .background(MaterialTheme.colorScheme.primaryContainer),
             contentAlignment = Alignment.Center
         ) {
-            Text(
-                text = monogram,
-                style = MaterialTheme.typography.headlineMedium,
-                color = MaterialTheme.colorScheme.onPrimaryContainer
+            // The app's logo mark (launcher glyph), tinted into the rose brand avatar.
+            Image(
+                painter = painterResource(R.drawable.ic_launcher_foreground),
+                contentDescription = null,
+                colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.onPrimaryContainer),
+                modifier = Modifier.size(Dimens.brandMark * 1.9f)
             )
         }
         Spacer(Modifier.height(Dimens.space16))
@@ -298,7 +316,8 @@ private fun ServerChoiceCard(
     selected: Boolean,
     onSelect: () -> Unit,
     title: String,
-    tag: String?,
+    badge: String?,
+    modifier: Modifier = Modifier,
     content: @Composable (selected: Boolean) -> Unit
 ) {
     val borderColor by animateColorAsState(
@@ -310,7 +329,7 @@ private fun ServerChoiceCard(
     val borderWidth = if (selected) Dimens.borderStrong else Dimens.borderThin
 
     Surface(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .selectable(
                 selected = selected,
@@ -321,29 +340,45 @@ private fun ServerChoiceCard(
         color = MaterialTheme.colorScheme.surface,
         border = BorderStroke(borderWidth, borderColor)
     ) {
-        Column(modifier = Modifier.padding(Dimens.cardPadding)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.titleMedium,
-                    color = if (selected) MaterialTheme.colorScheme.onSurface
-                    else MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(end = Dimens.space8)
-                )
-                if (tag != null) {
-                    RecommendedTag(tag)
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .defaultMinSize(minHeight = Dimens.serverCardMinHeight)
+                .padding(Dimens.cardPadding)
+        ) {
+            // Radio pinned to the top-end corner; the label + value block is centered vertically.
+            RadioButton(
+                selected = selected,
+                onClick = null,
+                modifier = Modifier.align(Alignment.TopEnd)
+            )
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(end = Dimens.space32)
+                    .align(Alignment.CenterStart)
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = title,
+                        style = MaterialTheme.typography.titleMedium,
+                        color = if (selected) MaterialTheme.colorScheme.onSurface
+                        else MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(end = Dimens.space8)
+                    )
+                    if (badge != null) {
+                        CardBadge(badge)
+                    }
                 }
-                Spacer(Modifier.weight(1f))
-                RadioButton(selected = selected, onClick = null)
+                Spacer(Modifier.height(Dimens.space8))
+                content(selected)
             }
-            Spacer(Modifier.height(Dimens.space8))
-            content(selected)
         }
     }
 }
 
 @Composable
-private fun RecommendedTag(text: String) {
+private fun CardBadge(text: String) {
     Surface(
         shape = BedrudShapeTokens.pill,
         color = MaterialTheme.colorScheme.tertiaryContainer,
@@ -423,19 +458,22 @@ private fun InsecureNote() {
 }
 
 /**
- * Normalizes user/host input to a canonical `scheme://host/` URL. Defaults to https; honors an
- * explicit http:// (for local/dev servers). Returns null for blank input.
+ * Normalizes user/host input to a canonical `scheme://host/` URL. Strips whitespace, defaults to
+ * https (honors an explicit http:// for local/dev servers), and validates the host[:port]. Returns
+ * null for blank or malformed input, which keeps `Continue` disabled.
  */
 private fun canonicalizeServerUrl(input: String): String? {
-    val trimmed = input.trim()
-    if (trimmed.isEmpty()) return null
-    val scheme = if (trimmed.startsWith("http://", ignoreCase = true)) "http" else "https"
-    var rest = trimmed
+    val cleaned = input.filterNot { it.isWhitespace() }
+    if (cleaned.isEmpty()) return null
+    val scheme = if (cleaned.startsWith("http://", ignoreCase = true)) "http" else "https"
+    var rest = cleaned
     listOf("https://", "http://").forEach { prefix ->
         if (rest.startsWith(prefix, ignoreCase = true)) rest = rest.substring(prefix.length)
     }
-    rest = rest.trim().trimEnd('/')
+    rest = rest.trimEnd('/')
     if (rest.isEmpty()) return null
+    val hostPort = rest.substringBefore('/')
+    if (!hostPort.matches(HOST_PORT_REGEX)) return null
     return "$scheme://$rest/"
 }
 

@@ -41,8 +41,8 @@
   <string name="instance_default_serverName">Server</string>
   <string name="instance_default_displayName" translatable="false">Bedrud</string>
   <!-- First-run server chooser -->
-  <string name="instance_choice_default_title">Default</string>
-  <string name="instance_choice_default_tag">Recommended</string>
+  <string name="instance_choice_default_title">Official server</string>
+  <string name="instance_choice_default_tag">Default</string>
   <string name="instance_choice_custom_title">Your own server</string>
   <string name="instance_placeholder_customServer">your own server URL</string>
   <string name="instance_button_continue">Continue</string>

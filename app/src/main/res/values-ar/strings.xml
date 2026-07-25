@@ -40,6 +40,14 @@
   <string name="instance_empty_noServers">لا توجد خوادم مهيأة</string>
   <string name="instance_default_serverName">خادم</string>
   <string name="instance_default_displayName" translatable="false">Bedrud</string>
+  <!-- First-run server chooser -->
+  <string name="instance_choice_default_title">الخادم الرسمي</string>
+  <string name="instance_choice_default_tag">افتراضي</string>
+  <string name="instance_choice_custom_title">خادمك الخاص</string>
+  <string name="instance_placeholder_customServer">عنوان خادمك الخاص</string>
+  <string name="instance_button_continue">متابعة</string>
+  <string name="instance_error_unreachable">تعذّر الوصول إلى هذا الخادم. تحقّق من العنوان وحاول مرة أخرى.</string>
+  <string name="instance_note_insecure">لن يكون هذا الاتصال مشفّرًا.</string>
   <string name="dashboard_title_rooms">الغرف</string>
   <string name="dashboard_placeholder_search">أدخل اسم الغرفة أو الرابط…</string>
   <string name="dashboard_dialog_createTitle">إنشاء غرفة</string>
