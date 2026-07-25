@@ -93,6 +93,10 @@ The app's UI/UX is being reworked screen by screen. When doing this work:
   with `DevOnly`/`DevHintBadge` so it never misleads release users.
 - **Keep the repo in sync.** A change that adds/alters a feature also updates the affected docs
   (README, this file, DESIGN.md) and `strings.xml` in the same PR.
+- **Open the PR only when the page is complete.** Commit + push the branch as you go to back it up,
+  but create the PR (`gh pr create`) once the whole page/feature is done — after all review iterations
+  and on-device approvals — so the PR and its description cover all the work. Don't open a draft early
+  and keep amending it.
 - **Verify, then hand off for sign-off.** Build, lint + test (`./gradlew :app:compileDebugKotlin`,
   `:app:lintDebug`, `:app:testDebugUnitTest` — `lintDebug` catches CI blockers like `MissingTranslation`).
   Then **the maintainer runs it themselves** on the dev channel (`./gradlew installDev`, or the `.run/`
