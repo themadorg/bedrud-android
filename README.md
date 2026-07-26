@@ -13,7 +13,7 @@ For the server, web app, and other platforms, see the [main Bedrud project](http
 
 ---
 
-## Features
+## Feature
 
 - **Video & audio meetings** — WebRTC rooms powered by the [LiveKit Android SDK](https://github.com/livekit/client-sdk-android)
 - **Connect to multiple servers** — add several Bedrud instances and switch between them; each keeps its own login
@@ -34,7 +34,8 @@ For the server, web app, and other platforms, see the [main Bedrud project](http
 ## Getting started (as a user)
 
 1. Install the app (build it yourself — see below — or grab a release APK).
-2. On first launch, **add a server instance** by entering your Bedrud server URL.
+2. On first launch, **choose a server** — continue with the default public server, or enter your own
+   Bedrud server URL. You can add more servers and switch between them later.
 3. Sign in (or join as a guest), then create or join a room.
 
 ## Building from source
@@ -90,16 +91,16 @@ Single-module Kotlin app (`com.bedrud.app`) built with Jetpack Compose and Mater
 There are no ViewModels — screen state lives in `MutableStateFlow` on manager classes and
 is collected with `collectAsState()`.
 
-| Concern       | Choice                                                                    |
-|---------------|---------------------------------------------------------------------------|
-| UI            | Jetpack Compose + Material 3                                               |
-| DI            | Koin                                                                       |
-| Networking    | Retrofit + OkHttp (Gson)                                                   |
-| Realtime media| LiveKit Android SDK                                                        |
-| Calls         | Self-managed telecom `ConnectionService` (foreground service)             |
-| Auth storage  | `EncryptedSharedPreferences`, per instance                                |
-| Passkeys      | AndroidX Credential Manager + Play Services FIDO                          |
-| Images        | Coil                                                                       |
+| Concern        | Choice                                                        |
+|----------------|---------------------------------------------------------------|
+| UI             | Jetpack Compose + Material 3                                  |
+| DI             | Koin                                                          |
+| Networking     | Retrofit + OkHttp (Gson)                                      |
+| Realtime media | LiveKit Android SDK                                           |
+| Calls          | Self-managed telecom `ConnectionService` (foreground service) |
+| Auth storage   | `EncryptedSharedPreferences`, per instance                    |
+| Passkeys       | AndroidX Credential Manager + Play Services FIDO              |
+| Images         | Coil                                                          |
 
 **Multi-instance is the spine of the app.** `InstanceManager` rebuilds the auth manager,
 Retrofit APIs, and the LiveKit `RoomManager` for whichever server is active, and the UI

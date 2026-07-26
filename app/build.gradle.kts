@@ -45,14 +45,12 @@ android {
 
         resValue("string", "app_name", "Bedrud")
 
-        // Falls back to the production instance. Override at build time with
-        // -PdefaultServerHost=... (e.g. to point a build at a staging instance)
-        // instead of editing the Add Instance screen's default directly.
-        buildConfigField(
-            "String",
-            "DEFAULT_SERVER_HOST",
-            "\"${project.findProperty("defaultServerHost") ?: "bedrud.xyz"}\""
-        )
+        // Pre-selected public server offered on first launch. A build constant (not a magic
+        // string in the UI) so a dev/staging build can point elsewhere without touching code.
+        // Override at build time with -PdefaultServerHost=... (e.g. to point a build at a
+        // staging instance) instead of editing the Add Instance screen's default directly.
+        val defaultServerHost = project.findProperty("defaultServerHost") ?: "bedrud.xyz"
+        buildConfigField("String", "DEFAULT_SERVER_HOST", "\"$defaultServerHost\"")
     }
 
     signingConfigs {
@@ -79,7 +77,14 @@ android {
     }
 
     buildTypes {
+        // Dev-only UI affordances ("coming soon" hints, debug captions) are gated on this flag:
+        // debug + dev builds show them, release (beta/stable) hides them. The `dev` build type
+        // inherits this value from debug via initWith below, so setting it here covers both.
+        getByName("debug") {
+            buildConfigField("boolean", "DEV_HINTS", "true")
+        }
         release {
+            buildConfigField("boolean", "DEV_HINTS", "false")
             isMinifyEnabled = true
             isShrinkResources = true
             signingConfig = signingConfigs.getByName("release")
@@ -95,7 +100,13 @@ android {
             initWith(getByName("debug"))
             applicationIdSuffix = ".dev"
             versionNameSuffix = "-dev"
-            signingConfig = signingConfigs.getByName("dev")
+            // Use the dedicated dev key only when it's actually available (CI, via env). Locally the
+            // keystore is absent, so keep the debug signing inherited from initWith(debug) — that
+            // keeps `installDev` installable side-by-side with a stable build, no CI secrets needed.
+            val devKeystoreFile = rootProject.file(System.getenv("DEV_KEYSTORE_PATH") ?: "dev-release.jks")
+            if (devKeystoreFile.exists()) {
+                signingConfig = signingConfigs.getByName("dev")
+            }
             matchingFallbacks += listOf("debug")
             // Distinct home-screen name so a dev test build is never mistaken for the
             // real app when both are installed on the same device.

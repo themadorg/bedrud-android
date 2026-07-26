@@ -40,6 +40,14 @@
   <string name="instance_empty_noServers">Нет настроенных серверов</string>
   <string name="instance_default_serverName">Сервер</string>
   <string name="instance_default_displayName" translatable="false">Bedrud</string>
+  <!-- First-run server chooser -->
+  <string name="instance_choice_default_title">Официальный сервер</string>
+  <string name="instance_choice_default_tag">По умолчанию</string>
+  <string name="instance_choice_custom_title">Свой сервер</string>
+  <string name="instance_placeholder_customServer">URL вашего сервера</string>
+  <string name="instance_button_continue">Продолжить</string>
+  <string name="instance_error_unreachable">Не удалось подключиться к этому серверу. Проверьте адрес и повторите попытку.</string>
+  <string name="instance_note_insecure">Это подключение не будет зашифровано.</string>
   <string name="dashboard_title_rooms">Комнаты</string>
   <string name="dashboard_placeholder_search">Введите название комнаты или ссылку…</string>
   <string name="dashboard_dialog_createTitle">Создать комнату</string>

@@ -145,12 +145,14 @@ jobs:
         with:
           header: dev-build
           message: |
-            Dev build ready for this PR — installs alongside the real app (package id `com.bedrud.app.dev`) without touching it.
+            Dev build ready for this PR — installs alongside the real app (package id `com.bedrud.app.dev`) without touching it. Signed into GitHub, download directly:
 
             | Option | Download |
             |---|---|
-            | All architectures (single zip, all 4 APKs) | [Download](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}/artifacts/${{ steps.upload-all.outputs.artifact-id }}) |
-            | Universal (any device - use this if unsure) | [Download](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}/artifacts/${{ steps.upload-universal.outputs.artifact-id }}) |
-            | arm64-v8a (most modern phones) | [Download](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}/artifacts/${{ steps.upload-arm64-v8a.outputs.artifact-id }}) |
-            | armeabi-v7a (older 32-bit phones) | [Download](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}/artifacts/${{ steps.upload-armeabi-v7a.outputs.artifact-id }}) |
-            | x86_64 (emulators) | [Download](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}/artifacts/${{ steps.upload-x86_64.outputs.artifact-id }}) |
+            | All architectures (single zip, all 4 APKs) | [Download](${{ steps.upload-all.outputs.artifact-url }}) |
+            | Universal (any device — use this if unsure) | [Download](${{ steps.upload-universal.outputs.artifact-url }}) |
+            | arm64-v8a (most modern phones) | [Download](${{ steps.upload-arm64-v8a.outputs.artifact-url }}) |
+            | armeabi-v7a (older 32-bit phones) | [Download](${{ steps.upload-armeabi-v7a.outputs.artifact-url }}) |
+            | x86_64 (emulators) | [Download](${{ steps.upload-x86_64.outputs.artifact-url }}) |
+
+            Each downloads as a `.zip` (GitHub wraps every artifact); unzip to get the `.apk`.
