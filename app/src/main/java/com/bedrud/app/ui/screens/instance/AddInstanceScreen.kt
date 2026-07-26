@@ -103,7 +103,7 @@ fun AddInstanceScreen(
     var errorMessage by remember { mutableStateOf<String?>(null) }
     val customFocusRequester = remember { FocusRequester() }
 
-    val defaultUrl = remember { canonicalizeServerUrl(BuildConfig.DEFAULT_SERVER_URL) }
+    val defaultUrl = remember { canonicalizeServerUrl(BuildConfig.DEFAULT_SERVER_HOST) }
     val resolvedCustom = canonicalizeServerUrl(customInput)
     val resolvedUrl = if (choice == ServerChoice.DEFAULT) defaultUrl else resolvedCustom
     val isInsecure = choice == ServerChoice.CUSTOM && resolvedCustom?.startsWith("http://") == true
@@ -185,7 +185,7 @@ fun AddInstanceScreen(
                         badge = stringResource(R.string.instance_choice_default_tag),
                     ) { selected ->
                         Text(
-                            text = displayUrl(defaultUrl ?: BuildConfig.DEFAULT_SERVER_URL),
+                            text = displayUrl(defaultUrl ?: BuildConfig.DEFAULT_SERVER_HOST),
                             style = MaterialTheme.typography.bodyLarge.copy(
                                 fontFamily = FontFamily.Monospace,
                                 textDirection = TextDirection.Ltr

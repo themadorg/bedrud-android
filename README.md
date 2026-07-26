@@ -59,6 +59,19 @@ From the command line:
 Debug APKs land in `app/build/outputs/apk/`. Builds are split per ABI
 (`arm64-v8a`, `armeabi-v7a`, `x86_64`) with a universal APK also produced.
 
+### Default server host
+
+The Add Instance screen pre-fills `bedrud.xyz` as the server host. To ship a build that
+defaults to a different instance (for example a staging or self-hosted deployment), pass
+`-PdefaultServerHost` at build time — no code changes needed:
+
+```bash
+./gradlew assembleRelease -PdefaultServerHost=meet.example.com
+```
+
+The value is baked into `BuildConfig.DEFAULT_SERVER_HOST`; when the flag is omitted, builds
+fall back to `bedrud.xyz`. Users can still change the host on the Add Instance screen either way.
+
 ### Release signing (optional)
 
 For a signed release build, create a `keystore.properties` file in the project root:

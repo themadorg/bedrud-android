@@ -47,7 +47,10 @@ android {
 
         // Pre-selected public server offered on first launch. A build constant (not a magic
         // string in the UI) so a dev/staging build can point elsewhere without touching code.
-        buildConfigField("String", "DEFAULT_SERVER_URL", "\"https://bedrud.xyz\"")
+        // Override at build time with -PdefaultServerHost=... (e.g. to point a build at a
+        // staging instance) instead of editing the Add Instance screen's default directly.
+        val defaultServerHost = project.findProperty("defaultServerHost") ?: "bedrud.xyz"
+        buildConfigField("String", "DEFAULT_SERVER_HOST", "\"$defaultServerHost\"")
     }
 
     signingConfigs {
@@ -67,10 +70,7 @@ android {
             if (devKeystoreFile.exists()) {
                 storeFile = devKeystoreFile
                 storePassword = System.getenv("DEV_KEYSTORE_PASSWORD") ?: ""
-                // Alias is the label baked into the physical keystore (historically
-                // "bedrud-qa"); it identifies the key entry inside the .jks and is
-                // independent of the build-track name.
-                keyAlias = "bedrud-qa"
+                keyAlias = "bedrud-dev"
                 keyPassword = System.getenv("DEV_KEYSTORE_PASSWORD") ?: ""
             }
         }
@@ -131,6 +131,28 @@ android {
             reset()
             include("arm64-v8a", "armeabi-v7a", "x86_64")
             isUniversalApk = true
+        }
+    }
+}
+
+// Default output names are derived from the Gradle module name (":app"), e.g.
+// app-arm64-v8a-release.apk. Rebuild as bedrud-<abi>.apk for the release build type
+// (used for both the beta and stable channels - a bare "bedrud" name is the one users
+// actually download) and bedrud-dev-<abi>.apk for dev/PR test builds, so a dev test
+// build can never be mistaken for - or silently overwrite - a real release download
+// sharing the same filename. Plain "debug" is left alone - it's a local/CI convenience
+// build, and the main bedrud repo's docs/CI already hardcode its "app-*-debug.apk"
+// output names in several places that don't need churn for this.
+androidComponents {
+    onVariants { variant ->
+        if (variant.buildType == "debug") return@onVariants
+        variant.outputs.forEach { output ->
+            val abi = output.filters
+                .find { it.filterType == com.android.build.api.variant.FilterConfiguration.FilterType.ABI }
+                ?.identifier
+                ?: "universal"
+            val prefix = if (variant.buildType == "release") "bedrud" else "bedrud-${variant.buildType}"
+            output.outputFileName.set("$prefix-$abi.apk")
         }
     }
 }

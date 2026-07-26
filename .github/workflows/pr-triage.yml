@@ -1,0 +1,34 @@
+name: PR Triage
+
+on:
+  pull_request:
+    types: [opened, reopened]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  triage:
+    name: Assign author, request review
+    runs-on: ubuntu-24.04
+    # Dependabot PRs get reviewers/assignees from dependabot.yml itself, not this convention.
+    if: github.event.pull_request.user.login != 'dependabot[bot]'
+    steps:
+      - name: Assign the PR to its author
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh pr edit "${{ github.event.pull_request.number }}" \
+            --repo "${{ github.repository }}" \
+            --add-assignee "${{ github.event.pull_request.user.login }}"
+
+      - name: Request review from narseh-ir
+        # Can't request a review from yourself.
+        if: github.event.pull_request.user.login != 'narseh-ir'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh pr edit "${{ github.event.pull_request.number }}" \
+            --repo "${{ github.repository }}" \
+            --add-reviewer narseh-ir
