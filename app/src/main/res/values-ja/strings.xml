@@ -31,6 +31,9 @@
   <string name="auth_error_guestFailed">ゲストとして参加できませんでした。もう一度お試しください。</string>
   <string name="auth_error_nameTooShort">2文字以上入力してください。</string>
   <string name="auth_error_generic">問題が発生しました。もう一度お試しください。</string>
+  <string name="auth_divider_orContinueWith">またはこちらで続行</string>
+  <string name="auth_hint_methodDisabled">このサーバーでは無効です</string>
+  <string name="auth_oauth_continueWithFormat">%1$sで続行</string>
   <string name="instance_title_servers">サーバー</string>
   <string name="instance_title_addServer">新しいサーバーを追加</string>
   <string name="instance_title_switchServer">サーバーを切り替え</string>

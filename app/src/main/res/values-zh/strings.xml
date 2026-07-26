@@ -31,6 +31,9 @@
   <string name="auth_error_guestFailed">无法以访客身份加入。请重试。</string>
   <string name="auth_error_nameTooShort">请至少输入 2 个字符。</string>
   <string name="auth_error_generic">出错了。请重试。</string>
+  <string name="auth_divider_orContinueWith">或使用以下方式继续</string>
+  <string name="auth_hint_methodDisabled">此服务器未启用</string>
+  <string name="auth_oauth_continueWithFormat">使用 %1$s 继续</string>
   <string name="instance_title_servers">服务器</string>
   <string name="instance_title_addServer">添加新服务器</string>
   <string name="instance_title_switchServer">切换服务器</string>

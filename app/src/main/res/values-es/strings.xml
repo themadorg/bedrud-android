@@ -31,6 +31,9 @@
   <string name="auth_error_guestFailed">No se pudo entrar como invitado. Inténtalo de nuevo.</string>
   <string name="auth_error_nameTooShort">Introduce al menos 2 caracteres.</string>
   <string name="auth_error_generic">Algo salió mal. Inténtalo de nuevo.</string>
+  <string name="auth_divider_orContinueWith">o continúa con</string>
+  <string name="auth_hint_methodDisabled">No habilitado en este servidor</string>
+  <string name="auth_oauth_continueWithFormat">Continuar con %1$s</string>
   <string name="instance_title_servers">Servidores</string>
   <string name="instance_title_addServer">Añadir nuevo servidor</string>
   <string name="instance_title_switchServer">Cambiar de servidor</string>

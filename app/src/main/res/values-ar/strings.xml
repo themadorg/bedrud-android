@@ -31,6 +31,9 @@
   <string name="auth_error_guestFailed">تعذّر الانضمام كضيف. يرجى المحاولة مرة أخرى.</string>
   <string name="auth_error_nameTooShort">الرجاء إدخال حرفين على الأقل.</string>
   <string name="auth_error_generic">حدث خطأ ما. يرجى المحاولة مرة أخرى.</string>
+  <string name="auth_divider_orContinueWith">أو تابع عبر</string>
+  <string name="auth_hint_methodDisabled">غير مُفعّل على هذا الخادم</string>
+  <string name="auth_oauth_continueWithFormat">المتابعة عبر %1$s</string>
   <string name="instance_title_servers">الخوادم</string>
   <string name="instance_title_addServer">إضافة خادم جديد</string>
   <string name="instance_title_switchServer">تبديل الخادم</string>

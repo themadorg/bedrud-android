@@ -31,6 +31,9 @@
   <string name="auth_error_guestFailed">Impossible de rejoindre en tant qu’invité. Réessayez.</string>
   <string name="auth_error_nameTooShort">Veuillez saisir au moins 2 caractères.</string>
   <string name="auth_error_generic">Une erreur s’est produite. Veuillez réessayer.</string>
+  <string name="auth_divider_orContinueWith">ou continuer avec</string>
+  <string name="auth_hint_methodDisabled">Non activé sur ce serveur</string>
+  <string name="auth_oauth_continueWithFormat">Continuer avec %1$s</string>
   <string name="instance_title_servers">Serveurs</string>
   <string name="instance_title_addServer">Ajouter un serveur</string>
   <string name="instance_title_switchServer">Changer de serveur</string>
