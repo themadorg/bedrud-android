@@ -145,14 +145,14 @@ jobs:
         with:
           header: dev-build
           message: |
-            Dev build ready for this PR — installs alongside the real app (package id `com.bedrud.app.dev`) without touching it. Tap to download directly, no GitHub login needed:
+            Dev build ready for this PR — installs alongside the real app (package id `com.bedrud.app.dev`) without touching it. Signed into GitHub, download directly:
 
             | Option | Download |
             |---|---|
-            | All architectures (single zip, all 4 APKs) | [Download](https://nightly.link/${{ github.repository }}/actions/artifacts/${{ steps.upload-all.outputs.artifact-id }}.zip) |
-            | Universal (any device — use this if unsure) | [Download](https://nightly.link/${{ github.repository }}/actions/artifacts/${{ steps.upload-universal.outputs.artifact-id }}.zip) |
-            | arm64-v8a (most modern phones) | [Download](https://nightly.link/${{ github.repository }}/actions/artifacts/${{ steps.upload-arm64-v8a.outputs.artifact-id }}.zip) |
-            | armeabi-v7a (older 32-bit phones) | [Download](https://nightly.link/${{ github.repository }}/actions/artifacts/${{ steps.upload-armeabi-v7a.outputs.artifact-id }}.zip) |
-            | x86_64 (emulators) | [Download](https://nightly.link/${{ github.repository }}/actions/artifacts/${{ steps.upload-x86_64.outputs.artifact-id }}.zip) |
+            | All architectures (single zip, all 4 APKs) | [Download](${{ steps.upload-all.outputs.artifact-url }}) |
+            | Universal (any device — use this if unsure) | [Download](${{ steps.upload-universal.outputs.artifact-url }}) |
+            | arm64-v8a (most modern phones) | [Download](${{ steps.upload-arm64-v8a.outputs.artifact-url }}) |
+            | armeabi-v7a (older 32-bit phones) | [Download](${{ steps.upload-armeabi-v7a.outputs.artifact-url }}) |
+            | x86_64 (emulators) | [Download](${{ steps.upload-x86_64.outputs.artifact-url }}) |
 
-            Each downloads as a `.zip` (GitHub wraps every artifact); unzip to get the `.apk`. Links are served by [nightly.link](https://nightly.link), since GitHub has no login-free artifact URL of its own.
+            Each downloads as a `.zip` (GitHub wraps every artifact); unzip to get the `.apk`.
