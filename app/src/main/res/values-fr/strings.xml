@@ -22,6 +22,15 @@
   <string name="auth_link_alreadyHaveAccount">Déjà un compte ? Connectez-vous</string>
   <string name="auth_title_createAccount">Créer un compte</string>
   <string name="auth_error_passwordMismatch">Les mots de passe ne correspondent pas</string>
+  <string name="auth_subtitle_hubChoose">Connectez-vous à votre compte ou continuez en tant qu’invité.</string>
+  <string name="auth_button_signInWithEmail">Se connecter avec un e-mail</string>
+  <string name="auth_button_continueAsGuest">Continuer en tant qu’invité</string>
+  <string name="auth_divider_or">ou</string>
+  <string name="auth_prompt_noAccount">Pas encore de compte ?</string>
+  <string name="auth_error_loginFailed">Échec de la connexion. Vérifiez vos identifiants.</string>
+  <string name="auth_error_guestFailed">Impossible de rejoindre en tant qu’invité. Réessayez.</string>
+  <string name="auth_error_nameTooShort">Veuillez saisir au moins 2 caractères.</string>
+  <string name="auth_error_generic">Une erreur s’est produite. Veuillez réessayer.</string>
   <string name="instance_title_servers">Serveurs</string>
   <string name="instance_title_addServer">Ajouter un serveur</string>
   <string name="instance_title_switchServer">Changer de serveur</string>

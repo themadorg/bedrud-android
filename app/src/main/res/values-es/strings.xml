@@ -22,6 +22,15 @@
   <string name="auth_link_alreadyHaveAccount">¿Ya tienes una cuenta? Inicia sesión</string>
   <string name="auth_title_createAccount">Crear cuenta</string>
   <string name="auth_error_passwordMismatch">Las contraseñas no coinciden</string>
+  <string name="auth_subtitle_hubChoose">Inicia sesión en tu cuenta o continúa como invitado.</string>
+  <string name="auth_button_signInWithEmail">Iniciar sesión con correo</string>
+  <string name="auth_button_continueAsGuest">Continuar como invitado</string>
+  <string name="auth_divider_or">o</string>
+  <string name="auth_prompt_noAccount">¿Aún no tienes cuenta?</string>
+  <string name="auth_error_loginFailed">Error al iniciar sesión. Comprueba tus credenciales.</string>
+  <string name="auth_error_guestFailed">No se pudo entrar como invitado. Inténtalo de nuevo.</string>
+  <string name="auth_error_nameTooShort">Introduce al menos 2 caracteres.</string>
+  <string name="auth_error_generic">Algo salió mal. Inténtalo de nuevo.</string>
   <string name="instance_title_servers">Servidores</string>
   <string name="instance_title_addServer">Añadir nuevo servidor</string>
   <string name="instance_title_switchServer">Cambiar de servidor</string>

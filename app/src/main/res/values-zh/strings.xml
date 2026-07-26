@@ -22,6 +22,15 @@
   <string name="auth_link_alreadyHaveAccount">已有账户？立即登录</string>
   <string name="auth_title_createAccount">创建账户</string>
   <string name="auth_error_passwordMismatch">密码不匹配</string>
+  <string name="auth_subtitle_hubChoose">登录您的账户，或以访客身份继续。</string>
+  <string name="auth_button_signInWithEmail">使用邮箱登录</string>
+  <string name="auth_button_continueAsGuest">以访客身份继续</string>
+  <string name="auth_divider_or">或</string>
+  <string name="auth_prompt_noAccount">还没有账户？</string>
+  <string name="auth_error_loginFailed">登录失败。请检查您的凭据。</string>
+  <string name="auth_error_guestFailed">无法以访客身份加入。请重试。</string>
+  <string name="auth_error_nameTooShort">请至少输入 2 个字符。</string>
+  <string name="auth_error_generic">出错了。请重试。</string>
   <string name="instance_title_servers">服务器</string>
   <string name="instance_title_addServer">添加新服务器</string>
   <string name="instance_title_switchServer">切换服务器</string>

@@ -22,6 +22,15 @@
   <string name="auth_link_alreadyHaveAccount">Bereits ein Konto? Anmelden</string>
   <string name="auth_title_createAccount">Konto erstellen</string>
   <string name="auth_error_passwordMismatch">Passwörter stimmen nicht überein</string>
+  <string name="auth_subtitle_hubChoose">Melden Sie sich bei Ihrem Konto an oder fahren Sie als Gast fort.</string>
+  <string name="auth_button_signInWithEmail">Mit E-Mail anmelden</string>
+  <string name="auth_button_continueAsGuest">Als Gast fortfahren</string>
+  <string name="auth_divider_or">oder</string>
+  <string name="auth_prompt_noAccount">Noch kein Konto?</string>
+  <string name="auth_error_loginFailed">Anmeldung fehlgeschlagen. Bitte überprüfen Sie Ihre Anmeldedaten.</string>
+  <string name="auth_error_guestFailed">Beitritt als Gast nicht möglich. Bitte versuchen Sie es erneut.</string>
+  <string name="auth_error_nameTooShort">Bitte geben Sie mindestens 2 Zeichen ein.</string>
+  <string name="auth_error_generic">Etwas ist schiefgelaufen. Bitte versuchen Sie es erneut.</string>
   <string name="instance_title_servers">Server</string>
   <string name="instance_title_addServer">Neuen Server hinzufügen</string>
   <string name="instance_title_switchServer">Server wechseln</string>

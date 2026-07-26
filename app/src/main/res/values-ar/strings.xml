@@ -22,6 +22,15 @@
   <string name="auth_link_alreadyHaveAccount">لديك حساب بالفعل؟ سجل الدخول</string>
   <string name="auth_title_createAccount">إنشاء حساب</string>
   <string name="auth_error_passwordMismatch">كلمتا المرور غير متطابقتين</string>
+  <string name="auth_subtitle_hubChoose">سجّل الدخول إلى حسابك أو تابع كضيف.</string>
+  <string name="auth_button_signInWithEmail">تسجيل الدخول بالبريد الإلكتروني</string>
+  <string name="auth_button_continueAsGuest">المتابعة كضيف</string>
+  <string name="auth_divider_or">أو</string>
+  <string name="auth_prompt_noAccount">ليس لديك حساب بعد؟</string>
+  <string name="auth_error_loginFailed">فشل تسجيل الدخول. يرجى التحقق من بيانات اعتمادك.</string>
+  <string name="auth_error_guestFailed">تعذّر الانضمام كضيف. يرجى المحاولة مرة أخرى.</string>
+  <string name="auth_error_nameTooShort">الرجاء إدخال حرفين على الأقل.</string>
+  <string name="auth_error_generic">حدث خطأ ما. يرجى المحاولة مرة أخرى.</string>
   <string name="instance_title_servers">الخوادم</string>
   <string name="instance_title_addServer">إضافة خادم جديد</string>
   <string name="instance_title_switchServer">تبديل الخادم</string>

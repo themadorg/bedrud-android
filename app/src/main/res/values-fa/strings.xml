@@ -22,6 +22,15 @@
   <string name="auth_link_alreadyHaveAccount">قبلاً حساب دارید؟ ورود</string>
   <string name="auth_title_createAccount">ایجاد حساب کاربری</string>
   <string name="auth_error_passwordMismatch">رمزهای عبور مطابقت ندارند</string>
+  <string name="auth_subtitle_hubChoose">وارد حساب خود شوید یا به‌عنوان مهمان ادامه دهید.</string>
+  <string name="auth_button_signInWithEmail">ورود با ایمیل</string>
+  <string name="auth_button_continueAsGuest">ادامه به‌عنوان مهمان</string>
+  <string name="auth_divider_or">یا</string>
+  <string name="auth_prompt_noAccount">هنوز حساب ندارید؟</string>
+  <string name="auth_error_loginFailed">ورود ناموفق بود. لطفاً اطلاعات ورود خود را بررسی کنید.</string>
+  <string name="auth_error_guestFailed">پیوستن به‌عنوان مهمان ممکن نشد. لطفاً دوباره تلاش کنید.</string>
+  <string name="auth_error_nameTooShort">لطفاً حداقل ۲ نویسه وارد کنید.</string>
+  <string name="auth_error_generic">مشکلی پیش آمد. لطفاً دوباره تلاش کنید.</string>
   <string name="instance_title_servers">سرورها</string>
   <string name="instance_title_addServer">افزودن سرور جدید</string>
   <string name="instance_title_switchServer">تغییر سرور</string>
