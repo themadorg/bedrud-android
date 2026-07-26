@@ -11,16 +11,34 @@ import com.bedrud.app.core.auth.AuthManager
 import com.bedrud.app.core.auth.PasskeyManager
 import com.bedrud.app.core.livekit.RoomManager
 import com.bedrud.app.models.HealthResponse
+import com.bedrud.app.models.PublicSettings
 import com.bedrud.app.ui.screens.settings.SettingsStore
 import com.google.gson.GsonBuilder
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import java.util.concurrent.TimeUnit
+
+/** How long to wait for the public-settings fetch before giving up and falling back to defaults. */
+private const val SETTINGS_TIMEOUT_MS = 8_000L
+
+/** Load state of the active server's public settings (see [InstanceManager.publicSettings]). */
+sealed interface PublicSettingsState {
+    data object Loading : PublicSettingsState
+    data class Loaded(val settings: PublicSettings) : PublicSettingsState
+    data object Failed : PublicSettingsState
+}
 
 class InstanceManager(
     private val application: Application,
@@ -45,6 +63,14 @@ class InstanceManager(
     private val _adminApi = MutableStateFlow<AdminApi?>(null)
     val adminApi: StateFlow<AdminApi?> = _adminApi.asStateFlow()
 
+    // Public settings for the active server, fetched on activation (init/add/switch) so screens like
+    // the sign-in hub render ready — whichever route reaches them — instead of loading per-screen.
+    private val _publicSettings = MutableStateFlow<PublicSettingsState>(PublicSettingsState.Loading)
+    val publicSettings: StateFlow<PublicSettingsState> = _publicSettings.asStateFlow()
+
+    private val settingsScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private var settingsJob: Job? = null
+
     init {
         rebuild()
     }
@@ -57,6 +83,8 @@ class InstanceManager(
             _passkeyManager.value = null
             _roomManager.value = null
             _adminApi.value = null
+            settingsJob?.cancel()
+            _publicSettings.value = PublicSettingsState.Loading
             return
         }
 
@@ -83,6 +111,37 @@ class InstanceManager(
         _adminApi.value = admin
         _passkeyManager.value = pk
         _roomManager.value = rm
+
+        refreshPublicSettings(auth)
+    }
+
+    /** Kicks off a fetch of the active server's public settings, published via [publicSettings]. */
+    private fun refreshPublicSettings(api: AuthApi) {
+        settingsJob?.cancel()
+        _publicSettings.value = PublicSettingsState.Loading
+        settingsJob = settingsScope.launch {
+            _publicSettings.value = try {
+                val response = withTimeoutOrNull(SETTINGS_TIMEOUT_MS) { api.getPublicSettings() }
+                if (response != null && response.isSuccessful && response.body() != null) {
+                    PublicSettingsState.Loaded(response.body()!!)
+                } else {
+                    PublicSettingsState.Failed
+                }
+            } catch (_: Exception) {
+                PublicSettingsState.Failed
+            }
+        }
+    }
+
+    /**
+     * Suspends until the active server's public settings finish loading (or the fetch gives up).
+     * Bounded so it never blocks the caller indefinitely — used before navigating into the sign-in
+     * hub so it renders ready.
+     */
+    suspend fun awaitPublicSettings() {
+        withTimeoutOrNull(SETTINGS_TIMEOUT_MS) {
+            publicSettings.first { it !is PublicSettingsState.Loading }
+        }
     }
 
     fun switchTo(instanceId: String) {
