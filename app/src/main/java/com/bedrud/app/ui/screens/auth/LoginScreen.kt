@@ -9,26 +9,19 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Fingerprint
-import androidx.compose.material.icons.filled.Visibility
-import androidx.compose.material.icons.filled.VisibilityOff
-import androidx.compose.material3.Button
-
-import androidx.compose.material3.CircularProgressIndicator
-import com.bedrud.app.ui.components.BedrudOutlinedCard
+import androidx.compose.material.icons.filled.Key
+import androidx.compose.material.icons.filled.Mail
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -39,8 +32,6 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -53,30 +44,38 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.input.PasswordVisualTransformation
-import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextDirection
-import androidx.compose.ui.unit.dp
 import com.bedrud.app.R
-import com.bedrud.app.ui.components.BedrudScaffoldContentInsets
 import com.bedrud.app.core.instance.InstanceManager
-import com.bedrud.app.models.LoginRequest
+import com.bedrud.app.models.GuestLoginRequest
+import com.bedrud.app.ui.components.BedrudButton
+import com.bedrud.app.ui.components.BedrudButtonVariant
+import com.bedrud.app.ui.components.BedrudScaffoldContentInsets
+import com.bedrud.app.ui.theme.BedrudShapeTokens
+import com.bedrud.app.ui.theme.Dimens
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 
+/** Which sign-in action is currently in flight, so only its button shows a spinner. */
+private enum class HubAction { PASSKEY, GUEST }
+
+/**
+ * Sign-in landing / hub for the active server. Presents the ways in as peer choices — email &
+ * password (opens a dedicated form), passkey (one tap), or continue as a guest (name inline) —
+ * plus a sign-up link. The email/password form lives on its own screen; passkey and guest sign-in
+ * happen here.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LoginScreen(
     onLoginSuccess: () -> Unit,
+    onNavigateToEmailLogin: () -> Unit,
     onNavigateToRegister: () -> Unit,
-    onNavigateToGuest: (() -> Unit)? = null,
     onBack: (() -> Unit)? = null,
     instanceManager: InstanceManager = koinInject()
 ) {
@@ -90,11 +89,14 @@ fun LoginScreen(
     val focusManager = LocalFocusManager.current
     val snackbarHostState = remember { SnackbarHostState() }
 
-    var email by rememberSaveable { mutableStateOf("") }
-    var password by rememberSaveable { mutableStateOf("") }
-    var passwordVisible by rememberSaveable { mutableStateOf(false) }
-    var isLoading by remember { mutableStateOf(false) }
+    var guestName by rememberSaveable { mutableStateOf("") }
+    var loadingAction by remember { mutableStateOf<HubAction?>(null) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
+    val isBusy = loadingAction != null
+
+    val nameTooShortMessage = stringResource(R.string.auth_error_nameTooShort)
+    val passkeyFailedMessage = stringResource(R.string.auth_error_generic)
+    val guestFailedMessage = stringResource(R.string.auth_error_guestFailed)
 
     LaunchedEffect(errorMessage) {
         errorMessage?.let {
@@ -103,257 +105,257 @@ fun LoginScreen(
         }
     }
 
+    fun signInWithPasskey() {
+        if (isBusy) return
+        scope.launch {
+            loadingAction = HubAction.PASSKEY
+            val result = passkeyManager.loginWithPasskey(context)
+            result.fold(
+                onSuccess = { onLoginSuccess() },
+                onFailure = { errorMessage = it.message ?: passkeyFailedMessage }
+            )
+            loadingAction = null
+        }
+    }
+
+    fun continueAsGuest() {
+        if (isBusy) return
+        focusManager.clearFocus()
+        val trimmed = guestName.trim()
+        if (trimmed.length < 2) {
+            errorMessage = nameTooShortMessage
+            return
+        }
+        scope.launch {
+            loadingAction = HubAction.GUEST
+            try {
+                val response = authApi.guestLogin(GuestLoginRequest(trimmed))
+                if (response.isSuccessful) {
+                    val body = response.body()!!
+                    authManager.saveTokens(body.tokens)
+                    authManager.saveUser(body.user)
+                    onLoginSuccess()
+                } else {
+                    errorMessage = guestFailedMessage
+                }
+            } catch (e: Exception) {
+                errorMessage = e.message ?: guestFailedMessage
+            } finally {
+                loadingAction = null
+            }
+        }
+    }
+
     Scaffold(
         contentWindowInsets = BedrudScaffoldContentInsets,
-        topBar = {
-            TopAppBar(
-                title = {},
-                navigationIcon = {
-                    if (onBack != null) {
-                        IconButton(onClick = onBack) {
-                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.common_action_back))
-                        }
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color.Transparent
-                )
-            )
-        },
         snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { padding ->
-        Column(
+        Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .padding(horizontal = 24.dp)
-                .verticalScroll(rememberScrollState()),
-            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Server icon
-            if (activeInstance != null) {
-                Box(
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
+                    .imePadding(),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Column(
                     modifier = Modifier
-                        .size(64.dp)
-                        .clip(CircleShape)
-                        .background(parseLoginColor(activeInstance.iconColorHex)),
-                    contentAlignment = Alignment.Center
+                        .widthIn(max = Dimens.maxContentWidth)
+                        .fillMaxWidth()
+                        .padding(horizontal = Dimens.screenPadding),
+                    horizontalAlignment = Alignment.CenterHorizontally
                 ) {
+                    // Match the server chooser's brand-mark position so it doesn't jump between steps.
+                    Spacer(Modifier.height(Dimens.space56))
+
+                    ServerHeader(
+                        displayName = activeInstance?.displayName,
+                        serverUrl = activeInstance?.serverURL,
+                        iconColorHex = activeInstance?.iconColorHex
+                    )
+
+                    Spacer(Modifier.height(Dimens.space8))
                     Text(
-                        activeInstance.displayName.take(1).uppercase(),
-                        style = MaterialTheme.typography.headlineSmall,
-                        color = Color.White
-                    )
-                }
-                Spacer(modifier = Modifier.height(16.dp))
-                Text(
-                    text = activeInstance.displayName,
-                    style = MaterialTheme.typography.headlineMedium.copy(textDirection = TextDirection.Content)
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = activeInstance.serverURL,
-                    style = MaterialTheme.typography.bodySmall.copy(textDirection = TextDirection.Ltr),
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            } else {
-                Text(
-                    text = "Bedrud",
-                    style = MaterialTheme.typography.headlineMedium
-                )
-            }
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Text(
-                text = "Sign in to your account",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-
-            Spacer(modifier = Modifier.height(32.dp))
-
-            // Credentials card
-            BedrudOutlinedCard(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(16.dp)
-            ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    OutlinedTextField(
-                        value = email,
-                        onValueChange = { email = it },
-                        label = { Text(stringResource(R.string.auth_label_email)) },
-                        keyboardOptions = KeyboardOptions(
-                            keyboardType = KeyboardType.Email,
-                            imeAction = ImeAction.Next
-                        ),
-                        keyboardActions = KeyboardActions(
-                            onNext = { focusManager.moveFocus(FocusDirection.Down) }
-                        ),
-                        singleLine = true,
-                        shape = RoundedCornerShape(12.dp),
-                        modifier = Modifier.fillMaxWidth(),
-                        textStyle = MaterialTheme.typography.bodyMedium.copy(textDirection = TextDirection.Ltr)
-                    )
-
-                    Spacer(modifier = Modifier.height(12.dp))
-
-                    OutlinedTextField(
-                        value = password,
-                        onValueChange = { password = it },
-                        label = { Text(stringResource(R.string.auth_label_password)) },
-                        trailingIcon = {
-                            IconButton(onClick = { passwordVisible = !passwordVisible }) {
-                                Icon(
-                                    if (passwordVisible) Icons.Default.VisibilityOff
-                                    else Icons.Default.Visibility,
-                                    contentDescription = if (passwordVisible) stringResource(R.string.auth_password_toggle_hide) else stringResource(R.string.auth_password_toggle_show)
-                                )
-                            }
-                        },
-                        visualTransformation = if (passwordVisible) VisualTransformation.None
-                        else PasswordVisualTransformation(),
-                        keyboardOptions = KeyboardOptions(
-                            keyboardType = KeyboardType.Password,
-                            imeAction = ImeAction.Done
-                        ),
-                        keyboardActions = KeyboardActions(
-                            onDone = { focusManager.clearFocus() }
-                        ),
-                        singleLine = true,
-                        shape = RoundedCornerShape(12.dp),
-                        modifier = Modifier.fillMaxWidth(),
-                        textStyle = MaterialTheme.typography.bodyMedium.copy(textDirection = TextDirection.Ltr)
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(20.dp))
-
-            // Sign In button
-            Button(
-                onClick = {
-                    scope.launch {
-                        isLoading = true
-                        try {
-                            val response = authApi.login(
-                                LoginRequest(email = email.trim(), password = password)
-                            )
-                            if (response.isSuccessful) {
-                                val body = response.body()!!
-                                authManager.saveTokens(body.tokens)
-                                authManager.saveUser(body.user)
-                                onLoginSuccess()
-                            } else {
-                                errorMessage = "Login failed. Please check your credentials."
-                            }
-                        } catch (e: Exception) {
-                            errorMessage = e.message ?: "An error occurred"
-                        } finally {
-                            isLoading = false
-                        }
-                    }
-                },
-                enabled = email.isNotBlank() && password.length >= 6 && !isLoading,
-                shape = RoundedCornerShape(12.dp),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(52.dp)
-            ) {
-                if (isLoading) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(20.dp),
-                        strokeWidth = 2.dp,
-                        color = MaterialTheme.colorScheme.onPrimary
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                }
-                Text(stringResource(R.string.auth_button_signIn), style = MaterialTheme.typography.labelLarge)
-            }
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            // Divider with "or"
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                HorizontalDivider(modifier = Modifier.weight(1f))
-                Text(
-                    "or",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(horizontal = 16.dp)
-                )
-                HorizontalDivider(modifier = Modifier.weight(1f))
-            }
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            // Passkey button
-            FilledTonalButton(
-                onClick = {
-                    scope.launch {
-                        isLoading = true
-                        val result = passkeyManager.loginWithPasskey(context)
-                        result.fold(
-                            onSuccess = { onLoginSuccess() },
-                            onFailure = { errorMessage = it.message ?: "Passkey login failed" }
-                        )
-                        isLoading = false
-                    }
-                },
-                enabled = !isLoading,
-                shape = RoundedCornerShape(12.dp),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(52.dp)
-            ) {
-                Icon(
-                    Icons.Default.Fingerprint,
-                    contentDescription = null,
-                    modifier = Modifier.size(20.dp)
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(stringResource(R.string.auth_button_signInWithPasskey), style = MaterialTheme.typography.labelLarge)
-            }
-
-            Spacer(modifier = Modifier.height(32.dp))
-
-            // Register link
-            Row(
-                horizontalArrangement = Arrangement.Center,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    "Don't have an account?",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                TextButton(onClick = onNavigateToRegister) {
-                    Text(stringResource(R.string.auth_button_signUp), style = MaterialTheme.typography.labelLarge)
-                }
-            }
-
-            // Guest link
-            if (onNavigateToGuest != null) {
-                TextButton(onClick = onNavigateToGuest) {
-                    Text(
-                        "Join as guest",
+                        text = stringResource(R.string.auth_subtitle_hubChoose),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
+
+                    Spacer(Modifier.height(Dimens.space32))
+
+                    // ── Account sign-in ──
+                    BedrudButton(
+                        text = stringResource(R.string.auth_button_signInWithEmail),
+                        onClick = onNavigateToEmailLogin,
+                        variant = BedrudButtonVariant.PRIMARY,
+                        enabled = !isBusy,
+                        leadingIcon = {
+                            Icon(
+                                Icons.Filled.Mail,
+                                contentDescription = null,
+                                modifier = Modifier.size(Dimens.iconSm)
+                            )
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(Dimens.buttonHeightLarge)
+                    )
+                    Spacer(Modifier.height(Dimens.space12))
+                    BedrudButton(
+                        text = stringResource(R.string.auth_button_signInWithPasskey),
+                        onClick = { signInWithPasskey() },
+                        variant = BedrudButtonVariant.OUTLINE,
+                        enabled = !isBusy,
+                        loading = loadingAction == HubAction.PASSKEY,
+                        leadingIcon = {
+                            Icon(
+                                Icons.Filled.Key,
+                                contentDescription = null,
+                                modifier = Modifier.size(Dimens.iconSm)
+                            )
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(Dimens.buttonHeightLarge)
+                    )
+
+                    Spacer(Modifier.height(Dimens.space24))
+                    OrDivider()
+                    Spacer(Modifier.height(Dimens.space24))
+
+                    // ── Guest sign-in ──
+                    OutlinedTextField(
+                        value = guestName,
+                        onValueChange = {
+                            guestName = it
+                            errorMessage = null
+                        },
+                        label = { Text(stringResource(R.string.auth_label_displayName)) },
+                        placeholder = { Text(stringResource(R.string.auth_placeholder_displayName)) },
+                        singleLine = true,
+                        shape = BedrudShapeTokens.field,
+                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Go),
+                        keyboardActions = KeyboardActions(onGo = { continueAsGuest() }),
+                        enabled = !isBusy,
+                        modifier = Modifier.fillMaxWidth(),
+                        textStyle = MaterialTheme.typography.bodyLarge.copy(textDirection = TextDirection.Content)
+                    )
+                    Spacer(Modifier.height(Dimens.space12))
+                    BedrudButton(
+                        text = stringResource(R.string.auth_button_continueAsGuest),
+                        onClick = { continueAsGuest() },
+                        variant = BedrudButtonVariant.TONAL,
+                        enabled = !isBusy && guestName.trim().length >= 2,
+                        loading = loadingAction == HubAction.GUEST,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(Dimens.buttonHeightLarge)
+                    )
+
+                    Spacer(Modifier.height(Dimens.space24))
+
+                    // ── Sign-up ──
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        Text(
+                            text = stringResource(R.string.auth_prompt_noAccount),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        TextButton(onClick = onNavigateToRegister, enabled = !isBusy) {
+                            Text(
+                                text = stringResource(R.string.auth_button_signUp),
+                                style = MaterialTheme.typography.labelLarge
+                            )
+                        }
+                    }
+
+                    Spacer(Modifier.height(Dimens.space32))
                 }
             }
 
-            Spacer(modifier = Modifier.height(32.dp))
+            // Lightweight back affordance — floats over the header without reserving vertical
+            // space, so the brand mark keeps the same position as the server chooser.
+            if (onBack != null) {
+                IconButton(
+                    onClick = onBack,
+                    enabled = !isBusy,
+                    modifier = Modifier.align(Alignment.TopStart)
+                ) {
+                    Icon(
+                        Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = stringResource(R.string.common_action_back)
+                    )
+                }
+            }
         }
     }
 }
 
-private fun parseLoginColor(hex: String): Color {
+@Composable
+private fun ServerHeader(
+    displayName: String?,
+    serverUrl: String?,
+    iconColorHex: String?
+) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Box(
+            modifier = Modifier
+                .size(Dimens.brandMark)
+                .clip(BedrudShapeTokens.pill)
+                .background(
+                    iconColorHex?.let(::parseInstanceColor)
+                        ?: MaterialTheme.colorScheme.primaryContainer
+                ),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = (displayName ?: "B").take(1).uppercase(),
+                style = MaterialTheme.typography.headlineMedium,
+                color = Color.White
+            )
+        }
+        Spacer(Modifier.height(Dimens.space16))
+        Text(
+            text = displayName ?: stringResource(R.string.instance_default_displayName),
+            style = MaterialTheme.typography.headlineMedium.copy(textDirection = TextDirection.Content),
+            color = MaterialTheme.colorScheme.onBackground
+        )
+        if (serverUrl != null) {
+            Spacer(Modifier.height(Dimens.space4))
+            Text(
+                text = serverUrl.trimEnd('/'),
+                style = MaterialTheme.typography.bodySmall.copy(textDirection = TextDirection.Ltr),
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
+@Composable
+private fun OrDivider() {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        HorizontalDivider(modifier = Modifier.weight(1f))
+        Text(
+            text = stringResource(R.string.auth_divider_or),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(horizontal = Dimens.space16)
+        )
+        HorizontalDivider(modifier = Modifier.weight(1f))
+    }
+}
+
+private fun parseInstanceColor(hex: String): Color {
     val cleaned = hex.trimStart('#')
     if (cleaned.length != 6) return Color(0xFF3B82F6)
     return try {

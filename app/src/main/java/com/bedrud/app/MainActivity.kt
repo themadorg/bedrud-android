@@ -31,7 +31,7 @@ import com.bedrud.app.core.deeplink.BedrudURLParser
 import com.bedrud.app.core.instance.InstanceManager
 import com.bedrud.app.core.recent.RecentRoomsStore
 import com.bedrud.app.core.pip.PipStateHolder
-import com.bedrud.app.ui.screens.auth.GuestLoginScreen
+import com.bedrud.app.ui.screens.auth.EmailLoginScreen
 import com.bedrud.app.ui.screens.auth.LoginScreen
 import com.bedrud.app.ui.screens.auth.RegisterScreen
 import com.bedrud.app.ui.screens.instance.AddInstanceScreen
@@ -176,8 +176,8 @@ class MainActivity : ComponentActivity() {
 object Routes {
     const val ADD_INSTANCE = "add_instance"
     const val LOGIN = "login"
+    const val EMAIL_LOGIN = "email_login"
     const val REGISTER = "register"
-    const val GUEST_LOGIN = "guest_login"
     const val MAIN = "main"
     const val MEETING = "meeting/{roomName}"
 
@@ -270,16 +270,29 @@ fun BedrudNavHost(
                         popUpTo(0) { inclusive = true }
                     }
                 },
+                onNavigateToEmailLogin = {
+                    navController.navigate(Routes.EMAIL_LOGIN)
+                },
                 onNavigateToRegister = {
                     navController.navigate(Routes.REGISTER)
-                },
-                onNavigateToGuest = {
-                    navController.navigate(Routes.GUEST_LOGIN)
                 },
                 onBack = {
                     navController.navigate(Routes.ADD_INSTANCE) {
                         popUpTo(0) { inclusive = true }
                     }
+                }
+            )
+        }
+
+        composable(Routes.EMAIL_LOGIN) {
+            EmailLoginScreen(
+                onLoginSuccess = {
+                    navController.navigate(Routes.MAIN) {
+                        popUpTo(0) { inclusive = true }
+                    }
+                },
+                onBack = {
+                    navController.popBackStack()
                 }
             )
         }
@@ -292,24 +305,6 @@ fun BedrudNavHost(
                     }
                 },
                 onNavigateToLogin = {
-                    navController.popBackStack()
-                }
-            )
-        }
-
-        composable(Routes.GUEST_LOGIN) {
-            GuestLoginScreen(
-                onLoginSuccess = {
-                    navController.navigate(Routes.MAIN) {
-                        popUpTo(0) { inclusive = true }
-                    }
-                },
-                onNavigateToLogin = {
-                    navController.navigate(Routes.LOGIN) {
-                        popUpTo(Routes.GUEST_LOGIN) { inclusive = true }
-                    }
-                },
-                onBack = {
                     navController.popBackStack()
                 }
             )
