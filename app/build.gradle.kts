@@ -44,6 +44,15 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         resValue("string", "app_name", "Bedrud")
+
+        // Falls back to the production instance. Override at build time with
+        // -PdefaultServerHost=... (e.g. to point a build at a staging instance)
+        // instead of editing the Add Instance screen's default directly.
+        buildConfigField(
+            "String",
+            "DEFAULT_SERVER_HOST",
+            "\"${project.findProperty("defaultServerHost") ?: "bedrud.xyz"}\""
+        )
     }
 
     signingConfigs {
