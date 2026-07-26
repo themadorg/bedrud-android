@@ -147,10 +147,16 @@ jobs:
           message: |
             Dev build ready for this PR — installs alongside the real app (package id `com.bedrud.app.dev`) without touching it.
 
-            | Option | Download |
+            **➡ [Open this build's Artifacts](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}#artifacts)** — sign in to GitHub, then download from the **Artifacts** section at the bottom of the run. (GitHub only serves artifact downloads to signed-in users, so a direct link would 404 for anyone logged out.)
+
+            Pick the one for your device:
+
+            | Artifact | For |
             |---|---|
-            | All architectures (single zip, all 4 APKs) | [Download](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}/artifacts/${{ steps.upload-all.outputs.artifact-id }}) |
-            | Universal (any device - use this if unsure) | [Download](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}/artifacts/${{ steps.upload-universal.outputs.artifact-id }}) |
-            | arm64-v8a (most modern phones) | [Download](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}/artifacts/${{ steps.upload-arm64-v8a.outputs.artifact-id }}) |
-            | armeabi-v7a (older 32-bit phones) | [Download](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}/artifacts/${{ steps.upload-armeabi-v7a.outputs.artifact-id }}) |
-            | x86_64 (emulators) | [Download](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}/artifacts/${{ steps.upload-x86_64.outputs.artifact-id }}) |
+            | `bedrud-dev-pr-${{ github.event.pull_request.number }}-all` | Every architecture in one zip |
+            | `bedrud-dev-pr-${{ github.event.pull_request.number }}-universal` | Any device — use this if unsure |
+            | `bedrud-dev-pr-${{ github.event.pull_request.number }}-arm64-v8a` | Most modern phones |
+            | `bedrud-dev-pr-${{ github.event.pull_request.number }}-armeabi-v7a` | Older 32-bit phones |
+            | `bedrud-dev-pr-${{ github.event.pull_request.number }}-x86_64` | Emulators |
+
+            Each downloads as a `.zip` (GitHub wraps every artifact); unzip to get the `.apk`.
