@@ -5,6 +5,7 @@ import com.bedrud.app.models.GuestLoginRequest
 import com.bedrud.app.models.LoginRequest
 import com.bedrud.app.models.LoginResponse
 import com.bedrud.app.models.MeResponse
+import com.bedrud.app.models.PublicSettings
 import com.bedrud.app.models.RefreshTokenRequest
 import com.bedrud.app.models.RefreshTokenResponse
 import com.bedrud.app.models.RegisterRequest
@@ -31,6 +32,9 @@ interface AuthApi {
 
     @GET("auth/me")
     suspend fun getMe(): Response<MeResponse>
+
+    @GET("auth/settings")
+    suspend fun getPublicSettings(): Response<PublicSettings>
 
     @PUT("auth/password")
     suspend fun changePassword(@Body request: ChangePasswordRequest): Response<Unit>

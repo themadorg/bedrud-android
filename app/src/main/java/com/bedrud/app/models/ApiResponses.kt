@@ -54,6 +54,18 @@ data class MeResponse(
     val provider: String? = null
 )
 
+/**
+ * Public server settings from GET /api/auth/settings (visible to unauthenticated visitors).
+ * Drives which sign-in methods the login hub shows/enables. Fields default to the most permissive
+ * value so a missing field — or a failed fetch — never hides a working method.
+ */
+data class PublicSettings(
+    val registrationEnabled: Boolean = true,
+    val guestLoginEnabled: Boolean = true,
+    val passkeysEnabled: Boolean = true,
+    val oauthProviders: List<String> = emptyList()
+)
+
 data class ChangePasswordRequest(
     @SerializedName("currentPassword")
     val currentPassword: String,
