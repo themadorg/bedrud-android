@@ -132,6 +132,8 @@ fun AddInstanceScreen(
                     val name = if (choice == ServerChoice.DEFAULT) defaultName else deriveDisplayName(url)
                     instanceManager.addInstance(url, name)
                 }
+                // Wait for the server's public settings so the sign-in hub renders ready (bounded).
+                instanceManager.awaitPublicSettings()
                 onInstanceAdded()
             } catch (e: Exception) {
                 errorMessage = unreachableMessage

@@ -9,6 +9,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonColors
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -23,6 +24,7 @@ import com.bedrud.app.ui.theme.Dimens
 enum class BedrudButtonVariant {
     PRIMARY,
     SECONDARY,
+    TONAL,
     OUTLINE,
     GHOST,
     DESTRUCTIVE
@@ -64,6 +66,18 @@ fun BedrudButton(
                     containerColor = MaterialTheme.colorScheme.secondary,
                     contentColor = MaterialTheme.colorScheme.onSecondary
                 ),
+                contentPadding = PaddingValues(horizontal = Dimens.space24, vertical = 0.dp)
+            ) {
+                ButtonContent(text, loading, leadingIcon, trailingIcon)
+            }
+        }
+
+        BedrudButtonVariant.TONAL -> {
+            FilledTonalButton(
+                onClick = onClick,
+                modifier = modifier.defaultMinSize(minHeight = Dimens.buttonHeight),
+                enabled = enabled && !loading,
+                shape = shape,
                 contentPadding = PaddingValues(horizontal = Dimens.space24, vertical = 0.dp)
             ) {
                 ButtonContent(text, loading, leadingIcon, trailingIcon)
@@ -128,9 +142,11 @@ private fun ButtonContent(
         Spacer(modifier = Modifier.width(Dimens.space8))
     }
 
-    leadingIcon?.let {
-        it()
-        Spacer(modifier = Modifier.width(Dimens.space8))
+    if (!loading) {
+        leadingIcon?.let {
+            it()
+            Spacer(modifier = Modifier.width(Dimens.space8))
+        }
     }
 
     Text(
