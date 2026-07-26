@@ -13,7 +13,7 @@ For the server, web app, and other platforms, see the [main Bedrud project](http
 
 ---
 
-## Features
+## Feature
 
 - **Video & audio meetings** — WebRTC rooms powered by the [LiveKit Android SDK](https://github.com/livekit/client-sdk-android)
 - **Connect to multiple servers** — add several Bedrud instances and switch between them; each keeps its own login
@@ -78,16 +78,16 @@ Single-module Kotlin app (`com.bedrud.app`) built with Jetpack Compose and Mater
 There are no ViewModels — screen state lives in `MutableStateFlow` on manager classes and
 is collected with `collectAsState()`.
 
-| Concern       | Choice                                                                    |
-|---------------|---------------------------------------------------------------------------|
-| UI            | Jetpack Compose + Material 3                                               |
-| DI            | Koin                                                                       |
-| Networking    | Retrofit + OkHttp (Gson)                                                   |
-| Realtime media| LiveKit Android SDK                                                        |
-| Calls         | Self-managed telecom `ConnectionService` (foreground service)             |
-| Auth storage  | `EncryptedSharedPreferences`, per instance                                |
-| Passkeys      | AndroidX Credential Manager + Play Services FIDO                          |
-| Images        | Coil                                                                       |
+| Concern        | Choice                                                        |
+|----------------|---------------------------------------------------------------|
+| UI             | Jetpack Compose + Material 3                                  |
+| DI             | Koin                                                          |
+| Networking     | Retrofit + OkHttp (Gson)                                      |
+| Realtime media | LiveKit Android SDK                                           |
+| Calls          | Self-managed telecom `ConnectionService` (foreground service) |
+| Auth storage   | `EncryptedSharedPreferences`, per instance                    |
+| Passkeys       | AndroidX Credential Manager + Play Services FIDO              |
+| Images         | Coil                                                          |
 
 **Multi-instance is the spine of the app.** `InstanceManager` rebuilds the auth manager,
 Retrofit APIs, and the LiveKit `RoomManager` for whichever server is active, and the UI
