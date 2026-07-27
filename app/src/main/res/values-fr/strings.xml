@@ -28,6 +28,13 @@
   <string name="auth_divider_or">ou</string>
   <string name="auth_prompt_noAccount">Pas encore de compte ?</string>
   <string name="auth_error_loginFailed">Échec de la connexion. Vérifiez vos identifiants.</string>
+  <string name="auth_email_subtitle">Connectez-vous à votre compte</string>
+  <string name="auth_forgot_link">Mot de passe oublié ?</string>
+  <string name="auth_forgot_action">Réinitialiser</string>
+  <string name="auth_forgot_title">Réinitialiser votre mot de passe</string>
+  <string name="auth_forgot_description">Saisissez votre e-mail et nous vous enverrons un lien pour réinitialiser votre mot de passe.</string>
+  <string name="auth_forgot_submit">Envoyer le lien</string>
+  <string name="auth_forgot_sent">Si un compte existe pour %1$s, nous avons envoyé un lien de réinitialisation du mot de passe. Vérifiez vos e-mails.</string>
   <string name="auth_error_guestFailed">Impossible de rejoindre en tant qu’invité. Réessayez.</string>
   <string name="auth_error_nameTooShort">Veuillez saisir au moins 2 caractères.</string>
   <string name="auth_error_generic">Une erreur s’est produite. Veuillez réessayer.</string>

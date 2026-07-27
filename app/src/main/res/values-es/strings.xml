@@ -28,6 +28,13 @@
   <string name="auth_divider_or">o</string>
   <string name="auth_prompt_noAccount">¿Aún no tienes cuenta?</string>
   <string name="auth_error_loginFailed">Error al iniciar sesión. Comprueba tus credenciales.</string>
+  <string name="auth_email_subtitle">Inicia sesión en tu cuenta</string>
+  <string name="auth_forgot_link">¿Olvidaste tu contraseña?</string>
+  <string name="auth_forgot_action">Restablecer</string>
+  <string name="auth_forgot_title">Restablece tu contraseña</string>
+  <string name="auth_forgot_description">Introduce tu correo electrónico y te enviaremos un enlace para restablecer tu contraseña.</string>
+  <string name="auth_forgot_submit">Enviar enlace</string>
+  <string name="auth_forgot_sent">Si existe una cuenta para %1$s, te hemos enviado un enlace para restablecer la contraseña. Revisa tu correo electrónico.</string>
   <string name="auth_error_guestFailed">No se pudo entrar como invitado. Inténtalo de nuevo.</string>
   <string name="auth_error_nameTooShort">Introduce al menos 2 caracteres.</string>
   <string name="auth_error_generic">Algo salió mal. Inténtalo de nuevo.</string>

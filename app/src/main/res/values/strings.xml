@@ -34,6 +34,13 @@
   <string name="auth_divider_orContinueWith">or continue with</string>
   <string name="auth_hint_methodDisabled">Not enabled on this server</string>
   <string name="auth_oauth_continueWithFormat">Continue with %1$s</string>
+  <string name="auth_email_subtitle">Sign in to your account</string>
+  <string name="auth_forgot_link">Forgot password?</string>
+  <string name="auth_forgot_action">Reset</string>
+  <string name="auth_forgot_title">Reset your password</string>
+  <string name="auth_forgot_description">Enter your email and we\'ll send you a link to reset your password.</string>
+  <string name="auth_forgot_submit">Send reset link</string>
+  <string name="auth_forgot_sent">If an account exists for %1$s, we\'ve sent a password reset link. Check your email.</string>
   <string name="instance_title_servers">Servers</string>
   <string name="instance_title_addServer">Add New Server</string>
   <string name="instance_title_switchServer">Switch Server</string>
