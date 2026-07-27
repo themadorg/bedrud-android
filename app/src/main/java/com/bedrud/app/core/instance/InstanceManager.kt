@@ -112,18 +112,26 @@ class InstanceManager(
         _passkeyManager.value = pk
         _roomManager.value = rm
 
-        refreshPublicSettings(auth)
+        refreshPublicSettings(auth, instance.id)
     }
 
     /** Kicks off a fetch of the active server's public settings, published via [publicSettings]. */
-    private fun refreshPublicSettings(api: AuthApi) {
+    private fun refreshPublicSettings(api: AuthApi, instanceId: String) {
         settingsJob?.cancel()
         _publicSettings.value = PublicSettingsState.Loading
         settingsJob = settingsScope.launch {
             _publicSettings.value = try {
                 val response = withTimeoutOrNull(SETTINGS_TIMEOUT_MS) { api.getPublicSettings() }
                 if (response != null && response.isSuccessful && response.body() != null) {
-                    PublicSettingsState.Loaded(response.body()!!)
+                    val settings = response.body()!!
+                    // Adopt the server's own name as the instance's display name, so the brand mark
+                    // and every instance list show the operator's branding, not the URL-derived name.
+                    // Captured instanceId, not the live active one, so a mid-flight switch can't
+                    // rename the wrong server.
+                    settings.serverName?.trim()?.takeIf { it.isNotEmpty() }?.let { name ->
+                        store.updateDisplayName(instanceId, name)
+                    }
+                    PublicSettingsState.Loaded(settings)
                 } else {
                     PublicSettingsState.Failed
                 }

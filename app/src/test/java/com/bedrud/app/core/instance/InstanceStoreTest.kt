@@ -121,4 +121,30 @@ class InstanceStoreTest {
         assertEquals("i2", store2.activeInstanceId.value)
         assertEquals("B", store2.activeInstance?.displayName)
     }
+
+    @Test
+    fun `updateDisplayName renames matching instance and persists`() {
+        val i1 = Instance(id = "i1", serverURL = "https://a.com", displayName = "a.com")
+        val i2 = Instance(id = "i2", serverURL = "https://b.com", displayName = "b.com")
+        store.addInstance(i1)
+        store.addInstance(i2)
+
+        store.updateDisplayName("i2", "Acme Meet")
+
+        assertEquals("a.com", store.instances.value.first { it.id == "i1" }.displayName)
+        assertEquals("Acme Meet", store.instances.value.first { it.id == "i2" }.displayName)
+        // survives a reload from the same prefs
+        val reloaded = InstanceStore(prefs)
+        assertEquals("Acme Meet", reloaded.instances.value.first { it.id == "i2" }.displayName)
+    }
+
+    @Test
+    fun `updateDisplayName with unknown id is no-op`() {
+        val i1 = Instance(id = "i1", serverURL = "https://a.com", displayName = "a.com")
+        store.addInstance(i1)
+
+        store.updateDisplayName("nonexistent", "Whatever")
+
+        assertEquals("a.com", store.instances.value.first { it.id == "i1" }.displayName)
+    }
 }

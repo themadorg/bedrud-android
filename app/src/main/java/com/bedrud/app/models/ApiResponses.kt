@@ -56,10 +56,12 @@ data class MeResponse(
 
 /**
  * Public server settings from GET /api/auth/settings (visible to unauthenticated visitors).
- * Drives which sign-in methods the login hub shows/enables. Fields default to the most permissive
- * value so a missing field — or a failed fetch — never hides a working method.
+ * [serverName] is the operator's own name for the server, adopted as the instance's display name.
+ * The flags drive which sign-in methods the login hub shows/enables; they default to the most
+ * permissive value so a missing field — or a failed fetch — never hides a working method.
  */
 data class PublicSettings(
+    val serverName: String? = null,
     val registrationEnabled: Boolean = true,
     val guestLoginEnabled: Boolean = true,
     val passkeysEnabled: Boolean = true,

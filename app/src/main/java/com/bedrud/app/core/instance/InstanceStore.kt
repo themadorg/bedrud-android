@@ -52,6 +52,20 @@ class InstanceStore(private val prefs: SharedPreferences) {
         }
     }
 
+    /**
+     * Renames the instance with [id] — e.g. adopting the server's own name once public settings
+     * load. No-op when unchanged, so it never triggers a redundant write or state emission.
+     */
+    fun updateDisplayName(id: String, displayName: String) {
+        val updated = _instances.value.map {
+            if (it.id == id) it.copy(displayName = displayName) else it
+        }
+        if (updated != _instances.value) {
+            _instances.value = updated
+            saveInstances(updated)
+        }
+    }
+
     private fun saveInstances(instances: List<Instance>) {
         val json = gson.toJson(instances)
         prefs.edit().putString(KEY_INSTANCES, json).apply()
