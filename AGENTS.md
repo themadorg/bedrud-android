@@ -40,7 +40,7 @@ app/src/main/java/com/bedrud/app/
 
 **Navigation routes** in `Routes` object, `MainActivity.kt`:
 `ADD_INSTANCE → LOGIN → {EMAIL_LOGIN, REGISTER} → MAIN (bottom nav) → MEETING/{roomName}`
-(LOGIN is the sign-in hub: email/password opens EMAIL_LOGIN, passkey + continue-as-guest happen inline.)
+(LOGIN is the sign-in hub: email/password opens EMAIL_LOGIN, passkey + continue-as-guest happen inline. EMAIL_LOGIN also offers password recovery — "Forgot password?" requests a reset email via `auth/forgot-password`; the reset link itself is completed on the server's web page.)
 
 No ViewModels. State in `MutableStateFlow` on manager classes (RoomManager, AuthManager, InstanceManager) and screen-level stores (SettingsStore). Collected in composables via `collectAsState()`.
 
