@@ -28,6 +28,13 @@
   <string name="auth_divider_or">یا</string>
   <string name="auth_prompt_noAccount">هنوز حساب ندارید؟</string>
   <string name="auth_error_loginFailed">ورود ناموفق بود. لطفاً اطلاعات ورود خود را بررسی کنید.</string>
+  <string name="auth_email_subtitle">وارد حساب خود شوید</string>
+  <string name="auth_forgot_link">رمز عبور را فراموش کرده‌اید؟</string>
+  <string name="auth_forgot_action">بازنشانی</string>
+  <string name="auth_forgot_title">بازنشانی رمز عبور</string>
+  <string name="auth_forgot_description">ایمیل خود را وارد کنید تا لینکی برای بازنشانی رمز عبور برایتان ارسال کنیم.</string>
+  <string name="auth_forgot_submit">ارسال لینک بازنشانی</string>
+  <string name="auth_forgot_sent">اگر حسابی برای %1$s وجود داشته باشد، لینک بازنشانی رمز عبور را ارسال کرده‌ایم. ایمیل خود را بررسی کنید.</string>
   <string name="auth_error_guestFailed">پیوستن به‌عنوان مهمان ممکن نشد. لطفاً دوباره تلاش کنید.</string>
   <string name="auth_error_nameTooShort">لطفاً حداقل ۲ نویسه وارد کنید.</string>
   <string name="auth_error_generic">مشکلی پیش آمد. لطفاً دوباره تلاش کنید.</string>

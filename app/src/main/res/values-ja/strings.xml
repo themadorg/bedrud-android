@@ -28,6 +28,13 @@
   <string name="auth_divider_or">または</string>
   <string name="auth_prompt_noAccount">アカウントをお持ちではありませんか？</string>
   <string name="auth_error_loginFailed">サインインに失敗しました。認証情報を確認してください。</string>
+  <string name="auth_email_subtitle">アカウントにサインイン</string>
+  <string name="auth_forgot_link">パスワードをお忘れですか？</string>
+  <string name="auth_forgot_action">リセット</string>
+  <string name="auth_forgot_title">パスワードをリセット</string>
+  <string name="auth_forgot_description">メールアドレスを入力してください。パスワードをリセットするためのリンクをお送りします。</string>
+  <string name="auth_forgot_submit">リセットリンクを送信</string>
+  <string name="auth_forgot_sent">%1$s のアカウントが存在する場合、パスワードリセットのリンクを送信しました。メールをご確認ください。</string>
   <string name="auth_error_guestFailed">ゲストとして参加できませんでした。もう一度お試しください。</string>
   <string name="auth_error_nameTooShort">2文字以上入力してください。</string>
   <string name="auth_error_generic">問題が発生しました。もう一度お試しください。</string>

@@ -28,6 +28,13 @@
   <string name="auth_divider_or">أو</string>
   <string name="auth_prompt_noAccount">ليس لديك حساب بعد؟</string>
   <string name="auth_error_loginFailed">فشل تسجيل الدخول. يرجى التحقق من بيانات اعتمادك.</string>
+  <string name="auth_email_subtitle">سجّل الدخول إلى حسابك</string>
+  <string name="auth_forgot_link">هل نسيت كلمة المرور؟</string>
+  <string name="auth_forgot_action">إعادة التعيين</string>
+  <string name="auth_forgot_title">إعادة تعيين كلمة المرور</string>
+  <string name="auth_forgot_description">أدخل بريدك الإلكتروني وسنرسل لك رابطًا لإعادة تعيين كلمة المرور.</string>
+  <string name="auth_forgot_submit">إرسال رابط إعادة التعيين</string>
+  <string name="auth_forgot_sent">إذا كان هناك حساب مرتبط بـ %1$s، فقد أرسلنا رابطًا لإعادة تعيين كلمة المرور. تحقّق من بريدك الإلكتروني.</string>
   <string name="auth_error_guestFailed">تعذّر الانضمام كضيف. يرجى المحاولة مرة أخرى.</string>
   <string name="auth_error_nameTooShort">الرجاء إدخال حرفين على الأقل.</string>
   <string name="auth_error_generic">حدث خطأ ما. يرجى المحاولة مرة أخرى.</string>

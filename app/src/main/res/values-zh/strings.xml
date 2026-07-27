@@ -28,6 +28,13 @@
   <string name="auth_divider_or">或</string>
   <string name="auth_prompt_noAccount">还没有账户？</string>
   <string name="auth_error_loginFailed">登录失败。请检查您的凭据。</string>
+  <string name="auth_email_subtitle">登录您的账户</string>
+  <string name="auth_forgot_link">忘记密码？</string>
+  <string name="auth_forgot_action">重置</string>
+  <string name="auth_forgot_title">重置密码</string>
+  <string name="auth_forgot_description">输入您的邮箱，我们将向您发送重置密码的链接。</string>
+  <string name="auth_forgot_submit">发送重置链接</string>
+  <string name="auth_forgot_sent">如果 %1$s 存在账户，我们已发送密码重置链接。请查收您的邮件。</string>
   <string name="auth_error_guestFailed">无法以访客身份加入。请重试。</string>
   <string name="auth_error_nameTooShort">请至少输入 2 个字符。</string>
   <string name="auth_error_generic">出错了。请重试。</string>

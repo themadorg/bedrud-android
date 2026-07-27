@@ -135,4 +135,18 @@ class AuthApiTest {
         assertEquals("u1", response.body()!!.id)
         assertEquals("Alice", response.body()!!.name)
     }
+
+    @Test
+    fun `forgotPassword sends POST to auth-forgot-password with email body`() = runBlocking {
+        // Server answers uniformly (no account enumeration); the client only needs a 2xx.
+        server.enqueue(MockResponse().setResponseCode(200).setBody("{\"message\":\"ok\"}"))
+
+        val response = authApi.forgotPassword(ForgotPasswordRequest(email = "a@b.com"))
+
+        val request = server.takeRequest()
+        assertEquals("POST", request.method)
+        assertEquals("/auth/forgot-password", request.path)
+        assertTrue(request.body.readUtf8().contains("a@b.com"))
+        assertTrue(response.isSuccessful)
+    }
 }
