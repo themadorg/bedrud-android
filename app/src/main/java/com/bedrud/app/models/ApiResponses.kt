@@ -73,6 +73,14 @@ data class ChangePasswordRequest(
     val newPassword: String
 )
 
+/**
+ * Body for POST /api/auth/forgot-password. The server replies with a uniform 200 whether or not
+ * the account exists (no enumeration), so the client only needs to send the email.
+ */
+data class ForgotPasswordRequest(
+    val email: String
+)
+
 // --- Passkeys ---
 
 data class PasskeySignupBeginRequest(

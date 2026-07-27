@@ -1,6 +1,7 @@
 package com.bedrud.app.core.api
 
 import com.bedrud.app.models.ChangePasswordRequest
+import com.bedrud.app.models.ForgotPasswordRequest
 import com.bedrud.app.models.GuestLoginRequest
 import com.bedrud.app.models.LoginRequest
 import com.bedrud.app.models.LoginResponse
@@ -38,6 +39,9 @@ interface AuthApi {
 
     @PUT("auth/password")
     suspend fun changePassword(@Body request: ChangePasswordRequest): Response<Unit>
+
+    @POST("auth/forgot-password")
+    suspend fun forgotPassword(@Body request: ForgotPasswordRequest): Response<Unit>
 
     @POST("auth/passkey/login/begin")
     suspend fun passkeyLoginBegin(): Response<Map<String, Any>>
