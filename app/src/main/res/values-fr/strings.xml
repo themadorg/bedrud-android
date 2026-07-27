@@ -35,6 +35,9 @@
   <string name="auth_forgot_description">Saisissez votre e-mail et nous vous enverrons un lien pour réinitialiser votre mot de passe.</string>
   <string name="auth_forgot_submit">Envoyer le lien</string>
   <string name="auth_forgot_sent">Si un compte existe pour %1$s, nous avons envoyé un lien de réinitialisation du mot de passe. Vérifiez vos e-mails.</string>
+  <string name="auth_register_subtitle">Inscrivez-vous pour un nouveau compte</string>
+  <string name="auth_hint_passwordMinLength">Au moins 6 caractères</string>
+  <string name="auth_error_emailInvalid">Saisissez une adresse e-mail valide</string>
   <string name="auth_error_guestFailed">Impossible de rejoindre en tant qu’invité. Réessayez.</string>
   <string name="auth_error_nameTooShort">Veuillez saisir au moins 2 caractères.</string>
   <string name="auth_error_generic">Une erreur s’est produite. Veuillez réessayer.</string>

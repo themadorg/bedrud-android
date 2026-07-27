@@ -41,6 +41,9 @@
   <string name="auth_forgot_description">Enter your email and we\'ll send you a link to reset your password.</string>
   <string name="auth_forgot_submit">Send reset link</string>
   <string name="auth_forgot_sent">If an account exists for %1$s, we\'ve sent a password reset link. Check your email.</string>
+  <string name="auth_register_subtitle">Sign up for a new account</string>
+  <string name="auth_hint_passwordMinLength">At least 6 characters</string>
+  <string name="auth_error_emailInvalid">Enter a valid email address</string>
   <string name="instance_title_servers">Servers</string>
   <string name="instance_title_addServer">Add New Server</string>
   <string name="instance_title_switchServer">Switch Server</string>
