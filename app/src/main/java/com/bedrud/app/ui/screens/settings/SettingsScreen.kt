@@ -18,6 +18,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenuItem
 import com.bedrud.app.ui.components.BedrudOutlinedCard
+import com.bedrud.app.core.auth.PasswordPolicy
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
@@ -271,14 +272,19 @@ fun SettingsContent(
                             modifier = Modifier.fillMaxWidth()
                         )
                         Spacer(modifier = Modifier.height(12.dp))
+                        val passwordTooShortMessage =
+                            stringResource(R.string.auth_hint_passwordMinLength, PasswordPolicy.MIN_LENGTH)
+                        val passwordMismatchMessage = stringResource(R.string.auth_error_passwordMismatch)
+                        val passwordChangedMessage = stringResource(R.string.settings_password_changeSuccess)
+                        val passwordChangeFailedMessage = stringResource(R.string.settings_password_changeFailed)
                         Button(
                             onClick = {
                                 when {
-                                    newPassword.length < 8 -> scope.launch {
-                                        snackbarHostState.showSnackbar("Password must be at least 8 characters")
+                                    newPassword.length < PasswordPolicy.MIN_LENGTH -> scope.launch {
+                                        snackbarHostState.showSnackbar(passwordTooShortMessage)
                                     }
                                     newPassword != confirmPassword -> scope.launch {
-                                        snackbarHostState.showSnackbar("Passwords do not match")
+                                        snackbarHostState.showSnackbar(passwordMismatchMessage)
                                     }
                                     else -> scope.launch {
                                         try {
@@ -289,12 +295,12 @@ fun SettingsContent(
                                                 currentPassword = ""
                                                 newPassword = ""
                                                 confirmPassword = ""
-                                                snackbarHostState.showSnackbar("Password changed successfully")
+                                                snackbarHostState.showSnackbar(passwordChangedMessage)
                                             } else {
-                                                snackbarHostState.showSnackbar("Failed to change password")
+                                                snackbarHostState.showSnackbar(passwordChangeFailedMessage)
                                             }
                                         } catch (e: Exception) {
-                                            snackbarHostState.showSnackbar(e.message ?: "Failed to change password")
+                                            snackbarHostState.showSnackbar(e.message ?: passwordChangeFailedMessage)
                                         }
                                     }
                                 }

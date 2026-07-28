@@ -171,6 +171,8 @@
   <string name="settings_label_newPassword">新しいパスワード</string>
   <string name="settings_label_confirmNewPassword">新しいパスワード（確認）</string>
   <string name="settings_button_changePassword">パスワードを変更</string>
+  <string name="settings_password_changeSuccess">パスワードを変更しました</string>
+  <string name="settings_password_changeFailed">パスワードの変更に失敗しました</string>
   <string name="settings_section_about">このアプリについて</string>
   <string name="settings_label_version">バージョン</string>
   <string name="settings_label_build">ビルド</string>

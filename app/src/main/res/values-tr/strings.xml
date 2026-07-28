@@ -171,6 +171,8 @@
   <string name="settings_label_newPassword">Yeni şifre</string>
   <string name="settings_label_confirmNewPassword">Yeni şifreyi onayla</string>
   <string name="settings_button_changePassword">Şifre Değiştir</string>
+  <string name="settings_password_changeSuccess">Şifre başarıyla değiştirildi</string>
+  <string name="settings_password_changeFailed">Şifre değiştirilemedi</string>
   <string name="settings_section_about">Hakkında</string>
   <string name="settings_label_version">Sürüm</string>
   <string name="settings_label_build">Yapı</string>

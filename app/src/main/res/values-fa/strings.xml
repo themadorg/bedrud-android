@@ -168,6 +168,8 @@
   <string name="settings_label_newPassword">رمز عبور جدید</string>
   <string name="settings_label_confirmNewPassword">تایید رمز عبور جدید</string>
   <string name="settings_button_changePassword">تغییر رمز عبور</string>
+  <string name="settings_password_changeSuccess">رمز عبور با موفقیت تغییر کرد</string>
+  <string name="settings_password_changeFailed">تغییر رمز عبور ناموفق بود</string>
   <string name="settings_section_about">درباره</string>
   <string name="settings_label_version">نسخه</string>
   <string name="settings_label_build">Build</string>
