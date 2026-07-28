@@ -205,11 +205,25 @@ fun DashboardContent(
         return try {
             val response = api.listRooms()
             if (response.isSuccessful) {
+                val body = response.body() ?: emptyList()
                 // Drop dead rooms the server still returns: ones already stamped deletedAt
                 // (room/list never filters them) and ones deleted from this device moments ago
                 // that the async delete hasn't stamped yet.
-                rooms = (response.body() ?: emptyList()).filterNot { room ->
+                rooms = body.filterNot { room ->
                     room.deletedAt != null || DeletedRoomTombstones.isTombstoned(room.id)
+                }
+                // Self-heal recents: a deleted room also lingers as a recent card (local history
+                // the deletedAt filter above can't reach). Whenever the active server reports one
+                // of its rooms deleted, drop the matching recent — clearing it on this server now,
+                // and clearing a cross-server one the next time that server is the active one.
+                val activeId = activeInstanceId
+                if (activeId != null) {
+                    val deletedNames = body.filter { it.deletedAt != null }.map { it.name }.toSet()
+                    if (deletedNames.isNotEmpty()) {
+                        recentRoomsStore.rooms.value
+                            .filter { it.instanceId == activeId && it.roomName in deletedNames }
+                            .forEach { recentRoomsStore.remove(it.roomName, it.instanceId) }
+                    }
                 }
                 lastFetchAtMs = System.currentTimeMillis()
                 lastFetchFailed = false
