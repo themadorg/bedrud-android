@@ -113,6 +113,11 @@ import org.koin.compose.koinInject
 
 private const val AUTO_REFRESH_INTERVAL_MS = 60_000L
 
+// How long a deleted room's id keeps being filtered out of fetch results. The server's list
+// endpoint can still return a just-deleted room for a while (eventual consistency), which would
+// otherwise resurrect it on the next background refresh.
+private const val DELETED_ROOM_TOMBSTONE_MS = 10 * 60_000L
+
 // ── Filter state ─────────────────────────────────────────────────────────────
 
 // ALL merges the active server's rooms with recent rooms from every server (recency/live first);
@@ -189,13 +194,20 @@ fun DashboardContent(
         }
     }
 
+    // Recently deleted room ids -> deletion time. Not compose state: it never drives UI directly,
+    // it only filters what fetchRooms() accepts from the server.
+    val deletedRoomTombstones = remember { mutableMapOf<String, Long>() }
+
     // Returns an error message on failure, or null on success.
     suspend fun fetchRooms(): String? {
         return try {
             val response = roomApi.listRooms()
             if (response.isSuccessful) {
-                rooms = response.body() ?: emptyList()
-                lastFetchAtMs = System.currentTimeMillis()
+                val now = System.currentTimeMillis()
+                deletedRoomTombstones.entries.removeAll { now - it.value > DELETED_ROOM_TOMBSTONE_MS }
+                rooms = (response.body() ?: emptyList())
+                    .filterNot { it.id in deletedRoomTombstones }
+                lastFetchAtMs = now
                 null
             } else {
                 "Failed to load rooms"
@@ -315,7 +327,17 @@ fun DashboardContent(
                             try {
                                 val response = roomApi.deleteRoom(deleting.id)
                                 if (response.isSuccessful) {
+                                    // Keep refreshes from resurrecting it while the server's list
+                                    // endpoint catches up...
+                                    deletedRoomTombstones[deleting.id] = System.currentTimeMillis()
                                     rooms = rooms.filter { it.id != deleting.id }
+                                    // ...and drop its local recent entry, or the All tab would
+                                    // immediately weave the deleted room back in as a recent card.
+                                    if (deleting.name.isNotEmpty()) {
+                                        activeInstanceId?.let {
+                                            recentRoomsStore.remove(deleting.name, it)
+                                        }
+                                    }
                                 } else {
                                     snackbarHostState.showSnackbar("Failed to delete room")
                                 }
