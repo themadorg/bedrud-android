@@ -205,10 +205,13 @@ fun DashboardContent(
     // Steers the auto-refresh loop onto the short retry delay after a failure.
     var lastFetchFailed by remember { mutableStateOf(false) }
 
-    // Returns an error message on failure, or null on success.
+    // Returns an error message on failure, or null on success. Resolves the client from the flow
+    // at call time so a long-lived caller (the auto-refresh loop) can never fetch through a stale
+    // client after the active instance's clients are rebuilt.
     suspend fun fetchRooms(): String? {
+        val api = instanceManager.roomApi.value ?: return null
         return try {
-            val response = roomApi.listRooms()
+            val response = api.listRooms()
             if (response.isSuccessful) {
                 val now = System.currentTimeMillis()
                 deletedRoomTombstones.entries.removeAll { now - it.value > DELETED_ROOM_TOMBSTONE_MS }
@@ -221,6 +224,10 @@ fun DashboardContent(
                 lastFetchFailed = true
                 "Failed to load rooms"
             }
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            // Never swallow cancellation: a cancelled fetch must die quietly, not be recorded as
+            // a network failure (which would put the refresh loop on the fast retry cadence).
+            throw e
         } catch (e: Exception) {
             lastFetchFailed = true
             e.message ?: "Failed to load rooms"
@@ -256,9 +263,14 @@ fun DashboardContent(
         scope.launch { fetchRooms() }
     }
 
-    // Keyed on the API client: switching the active server rebuilds it, and the list must drop
-    // the old server's rooms and refetch immediately instead of showing them until the next tick.
-    LaunchedEffect(roomApi) {
+    // Keyed on the active instance ID — a stable String — NEVER on the Retrofit client object:
+    // Retrofit's dynamic proxies route Object.equals through their invocation handler and are
+    // not even equal to themselves, so a proxy key restarts the effect on every recomposition.
+    // With the empty+reload body below, that fed itself (each restart invalidates, scheduling
+    // the next recomposition) into an endless visible reload storm. The String key restarts the
+    // load only when the active server actually changes, dropping the old server's rooms and
+    // refetching immediately instead of showing them until the next tick.
+    LaunchedEffect(activeInstanceId) {
         rooms = emptyList()
         loadRooms()
     }
@@ -268,7 +280,7 @@ fun DashboardContent(
     // just-created room not yet reflected in listRooms()) without requiring the user
     // to background/foreground the app or pull to refresh. A failed fetch retries on
     // the short delay rather than waiting out the full interval.
-    LaunchedEffect(roomApi) {
+    LaunchedEffect(activeInstanceId) {
         while (true) {
             delay(if (lastFetchFailed) FAILED_FETCH_RETRY_MS else AUTO_REFRESH_INTERVAL_MS)
             silentlyRefreshRooms()
