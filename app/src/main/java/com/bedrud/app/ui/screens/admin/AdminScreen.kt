@@ -185,7 +185,10 @@ private fun AdminOverviewContent(
         isLoading = false
     }
 
-    LaunchedEffect(adminApi) {
+    // Keyed on Unit like the sibling tabs — never on the Retrofit client: its dynamic proxy is
+    // not equals()-stable, so a proxy key restarts the effect (and re-runs load()) on every
+    // recomposition, including the ones this effect's own 30s online-count writes trigger.
+    LaunchedEffect(Unit) {
         load()
         // Auto-refresh online count every 30s
         while (true) {
