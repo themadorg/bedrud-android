@@ -32,6 +32,7 @@ val BedrudShapes = Shapes(
 object BedrudShapeTokens {
     val field = RoundedCornerShape(BedrudRadius.md)   // text fields
     val button = RoundedCornerShape(BedrudRadius.md)  // buttons
+    val snackbar = RoundedCornerShape(BedrudRadius.md) // snackbars / toasts
     val card = RoundedCornerShape(BedrudRadius.lg)    // cards / selectable tiles
     val chip = RoundedCornerShape(BedrudRadius.sm)
     val pill = RoundedCornerShape(BedrudRadius.full)  // badges, FABs, avatars
