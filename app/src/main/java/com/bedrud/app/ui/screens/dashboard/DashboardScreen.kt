@@ -902,18 +902,18 @@ private fun RoomCardScaffold(
                 .height(IntrinsicSize.Min),
             verticalAlignment = Alignment.CenterVertically,
         ) {
+            // Fused to the card's leading edge, full height — the card's own shape clips the
+            // band's corners, so it reads as part of the card rather than a floating pill.
             Box(
                 modifier = Modifier
-                    .padding(start = Dimens.space6, top = Dimens.space8, bottom = Dimens.space8)
                     .width(Dimens.roomCardStripe)
                     .fillMaxHeight()
-                    .clip(BedrudShapeTokens.pill)
                     .background(serverColor),
             )
             Row(
                 modifier = Modifier
                     .weight(1f)
-                    .padding(start = Dimens.space12, end = Dimens.space4, top = Dimens.space12, bottom = Dimens.space12),
+                    .padding(start = Dimens.space16, end = Dimens.space4, top = Dimens.space12, bottom = Dimens.space12),
                 verticalAlignment = Alignment.CenterVertically,
                 content = content,
             )

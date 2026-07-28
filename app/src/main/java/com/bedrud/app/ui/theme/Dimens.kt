@@ -42,7 +42,7 @@ object Dimens {
     val topBarHeight = 64.dp           // M3 small-top-app-bar content height (below the status bar)
 
     // ── Rooms list ──
-    val roomCardStripe = 4.dp          // per-server accent stripe on the leading edge of a room card
+    val roomCardStripe = 6.dp          // per-server edge band fused to a room card's leading edge
     val roomCardMinHeight = 72.dp      // uniform card height: 48dp trailing control + 2×12dp padding
     val roomListBottomSpace = 88.dp    // trailing space so the last card clears the create-room FAB
 
