@@ -287,7 +287,7 @@ fun RegisterScreen(
                         singleLine = true,
                         isError = passwordTooShort,
                         // Always-on helper doubles as the too-short error (it turns red via isError).
-                        supportingText = { Text(stringResource(R.string.auth_hint_passwordMinLength)) },
+                        supportingText = { Text(stringResource(R.string.auth_hint_passwordMinLength, MIN_PASSWORD_LENGTH)) },
                         shape = BedrudShapeTokens.field,
                         keyboardOptions = KeyboardOptions(
                             keyboardType = KeyboardType.Password,
@@ -380,4 +380,4 @@ fun RegisterScreen(
 }
 
 /** Minimum password length enforced locally before hitting the server. */
-private const val MIN_PASSWORD_LENGTH = 6
+private const val MIN_PASSWORD_LENGTH = 12

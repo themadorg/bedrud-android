@@ -36,7 +36,7 @@
   <string name="auth_forgot_submit">ارسال لینک بازنشانی</string>
   <string name="auth_forgot_sent">اگر حسابی برای %1$s وجود داشته باشد، لینک بازنشانی رمز عبور را ارسال کرده‌ایم. ایمیل خود را بررسی کنید.</string>
   <string name="auth_register_subtitle">برای یک حساب جدید ثبت‌نام کنید</string>
-  <string name="auth_hint_passwordMinLength">حداقل ۶ نویسه</string>
+  <string name="auth_hint_passwordMinLength">حداقل %1$d نویسه</string>
   <string name="auth_error_emailInvalid">یک ایمیل معتبر وارد کنید</string>
   <string name="auth_error_guestFailed">پیوستن به‌عنوان مهمان ممکن نشد. لطفاً دوباره تلاش کنید.</string>
   <string name="auth_error_nameTooShort">لطفاً حداقل ۲ نویسه وارد کنید.</string>

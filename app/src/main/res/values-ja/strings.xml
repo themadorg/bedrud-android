@@ -36,7 +36,7 @@
   <string name="auth_forgot_submit">リセットリンクを送信</string>
   <string name="auth_forgot_sent">%1$s のアカウントが存在する場合、パスワードリセットのリンクを送信しました。メールをご確認ください。</string>
   <string name="auth_register_subtitle">新しいアカウントを登録</string>
-  <string name="auth_hint_passwordMinLength">6文字以上</string>
+  <string name="auth_hint_passwordMinLength">%1$d文字以上</string>
   <string name="auth_error_emailInvalid">有効なメールアドレスを入力してください</string>
   <string name="auth_error_guestFailed">ゲストとして参加できませんでした。もう一度お試しください。</string>
   <string name="auth_error_nameTooShort">2文字以上入力してください。</string>
