@@ -43,6 +43,7 @@ object Dimens {
 
     // ── Rooms list ──
     val roomCardStripe = 4.dp          // per-server accent stripe on the leading edge of a room card
+    val roomCardMinHeight = 72.dp      // uniform card height: 48dp trailing control + 2×12dp padding
     val roomListBottomSpace = 88.dp    // trailing space so the last card clears the create-room FAB
 
     // ── Icons / avatars ──
@@ -50,6 +51,7 @@ object Dimens {
     val iconSm = 18.dp
     val iconMd = 24.dp
     val iconLg = 32.dp
+    val iconXl = 56.dp                 // empty-state illustrations
     val avatarSm = 36.dp               // top-bar avatar circle (inside a 48dp touch target)
     val avatar = 40.dp
 

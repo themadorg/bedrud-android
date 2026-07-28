@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
@@ -35,7 +36,6 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
@@ -577,7 +577,6 @@ fun DashboardContent(
                                     when (entry) {
                                         is RoomListEntry.FromApi -> RoomCard(
                                             room = entry.room,
-                                            serverName = activeServerName,
                                             serverColor = activeServerColor,
                                             isOwner = entry.room.createdBy == currentUser?.id,
                                             onJoin = { onJoinRoom(entry.room.name) },
@@ -607,7 +606,6 @@ fun DashboardContent(
                                 items(filteredRooms, key = { it.id }) { room ->
                                     RoomCard(
                                         room = room,
-                                        serverName = activeServerName,
                                         serverColor = activeServerColor,
                                         isOwner = room.createdBy == currentUser?.id,
                                         onJoin = { onJoinRoom(room.name) },
@@ -701,10 +699,14 @@ private fun QuickJoinBar(
             modifier = Modifier.weight(1f)
         )
         Spacer(modifier = Modifier.width(Dimens.space8))
-        FilledTonalButton(
+        // Matches the field: same 56dp height, same corner token, so the row reads as one control.
+        BedrudButton(
+            text = stringResource(R.string.common_button_join),
             onClick = onJoin,
-            enabled = value.isNotBlank()
-        ) { Text(stringResource(R.string.common_button_join)) }
+            variant = BedrudButtonVariant.TONAL,
+            enabled = value.isNotBlank(),
+            modifier = Modifier.height(Dimens.buttonHeightLarge),
+        )
     }
 }
 
@@ -739,7 +741,6 @@ private fun FilterRow(
 @Composable
 private fun RoomCard(
     room: UserRoomResponse,
-    serverName: String?,
     serverColor: Color,
     isOwner: Boolean,
     onJoin: () -> Unit,
@@ -785,7 +786,8 @@ private fun RoomCard(
     SwipeableRoomRow(action = swipeAction, modifier = modifier.fillMaxWidth()) {
         RoomCardScaffold(serverColor = serverColor, onClick = onJoin) {
             Column(modifier = Modifier.weight(1f)) {
-                RoomTitleLine(title = title, serverName = serverName, serverColor = serverColor)
+                // API rooms always belong to the active server, which the header already names.
+                RoomTitleLine(title = title, serverName = null, serverColor = serverColor)
                 Text(
                     text = metaText,
                     style = MaterialTheme.typography.labelSmall,
@@ -796,7 +798,7 @@ private fun RoomCard(
             }
 
             if (onSettings != null) {
-                IconButton(onClick = onSettings, modifier = Modifier.size(Dimens.space40)) {
+                IconButton(onClick = onSettings, modifier = Modifier.size(Dimens.minTouchTarget)) {
                     Icon(
                         Icons.Default.Settings,
                         contentDescription = stringResource(R.string.dashboard_contentDescription_settings),
@@ -878,6 +880,9 @@ private fun RoomCardScaffold(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
+                // Min height first so it wins: every card renders the same height whether or not
+                // it carries a trailing 48dp control (the settings button inflated owned cards).
+                .heightIn(min = Dimens.roomCardMinHeight)
                 .height(IntrinsicSize.Min),
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -915,17 +920,37 @@ private fun RoomTitleLine(title: String, serverName: String?, serverColor: Color
             modifier = Modifier.weight(1f, fill = false),
         )
         if (serverName != null) {
+            // Split the localized "on %1$s" template around its placeholder so the connective
+            // word stays muted while only the server name carries the server's accent color.
+            val template = stringResource(R.string.dashboard_recent_onServer)
+            val mutedColor = MaterialTheme.colorScheme.onSurfaceVariant
+            val placeholderIndex = template.indexOf(SERVER_NAME_PLACEHOLDER)
             Spacer(modifier = Modifier.width(Dimens.space8))
             Text(
-                text = stringResource(R.string.dashboard_recent_onServer, serverName),
+                text = buildAnnotatedString {
+                    if (placeholderIndex >= 0) {
+                        withStyle(SpanStyle(color = mutedColor)) {
+                            append(template.substring(0, placeholderIndex))
+                        }
+                        withStyle(SpanStyle(color = serverColor)) { append(serverName) }
+                        withStyle(SpanStyle(color = mutedColor)) {
+                            append(template.substring(placeholderIndex + SERVER_NAME_PLACEHOLDER.length))
+                        }
+                    } else {
+                        withStyle(SpanStyle(color = serverColor)) {
+                            append(template.format(serverName))
+                        }
+                    }
+                },
                 style = MaterialTheme.typography.labelMedium,
-                color = serverColor,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
         }
     }
 }
+
+private const val SERVER_NAME_PLACEHOLDER = "%1\$s"
 
 @Composable
 private fun TrailingChevron() {
@@ -1006,21 +1031,23 @@ private fun SwipeActionBackground(action: SwipeAction, state: SwipeToDismissBoxS
 
 @Composable
 private fun EmptyState(hasFilter: Boolean, onCreateRoom: () -> Unit) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+    // One consistent gap between icon, phrase, and call to action.
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(Dimens.space16),
+    ) {
         Icon(
             Icons.Default.Groups,
             contentDescription = null,
             tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.size(Dimens.space56)
+            modifier = Modifier.size(Dimens.iconXl)
         )
-        Spacer(modifier = Modifier.height(Dimens.space16))
         Text(
             text = if (hasFilter) stringResource(R.string.dashboard_empty_noMatch) else stringResource(R.string.dashboard_empty_noRooms),
             style = MaterialTheme.typography.titleMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         if (!hasFilter) {
-            Spacer(modifier = Modifier.height(Dimens.space4))
             BedrudButton(
                 text = stringResource(R.string.dashboard_button_createFirstRoom),
                 onClick = onCreateRoom,
