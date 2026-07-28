@@ -798,7 +798,15 @@ fun MeetingScreen(
                             modifier = Modifier.padding(horizontal = 32.dp)
                         )
                         Spacer(modifier = Modifier.height(24.dp))
-                        androidx.compose.material3.FilledTonalButton(onClick = onLeave) {
+                        androidx.compose.material3.FilledTonalButton(
+                            // Leaving a failed connection must also tear down the foreground
+                            // CallService -- otherwise the "ongoing call" notification lingers
+                            // after returning to the dashboard for a call that never connected.
+                            onClick = {
+                                CallService.stop(context)
+                                onLeave()
+                            }
+                        ) {
                             Text(stringResource(R.string.meeting_button_goBack))
                         }
                     }
