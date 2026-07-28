@@ -799,11 +799,11 @@ fun MeetingScreen(
                         )
                         Spacer(modifier = Modifier.height(24.dp))
                         androidx.compose.material3.FilledTonalButton(
-                            // Leaving a failed connection must also tear down the foreground
-                            // CallService -- otherwise the "ongoing call" notification lingers
-                            // after returning to the dashboard for a call that never connected.
+                            // The service normally self-stops the instant the connection fails
+                            // (see CallService); this is a guarded safety net for any case where
+                            // it is still up, so we never navigate back leaving its notification.
                             onClick = {
-                                CallService.stop(context)
+                                if (CallService.isRunning) CallService.stop(context)
                                 onLeave()
                             }
                         ) {

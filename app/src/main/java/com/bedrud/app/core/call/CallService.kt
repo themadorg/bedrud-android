@@ -107,6 +107,20 @@ class CallService : Service() {
             rm.connectIfNeeded(url, token, roomName, avatarUrl)
         }
 
+        // Tear the foreground service + ongoing-call notification down the moment the connection
+        // fails (e.g. the media server's TLS certificate is untrusted), instead of leaving it up
+        // for a call that never connected. stopSelf() here deliberately does NOT flag a user
+        // hang-up, so RoomManager stays FAILED and the meeting screen keeps showing the error
+        // until the user leaves.
+        serviceScope?.launch {
+            rm.connectionState.collectLatest { state ->
+                if (state == ConnectionState.FAILED) {
+                    Log.d(TAG, "Connection failed; stopping foreground service")
+                    stopSelf()
+                }
+            }
+        }
+
         rm.onDisconnected = {
             Log.d(TAG, "Room disconnected by server, stopping service")
             hangUp()
