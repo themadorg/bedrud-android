@@ -35,6 +35,9 @@
   <string name="auth_forgot_description">E-posta adresinizi girin, size şifrenizi sıfırlamanız için bir bağlantı gönderelim.</string>
   <string name="auth_forgot_submit">Bağlantı gönder</string>
   <string name="auth_forgot_sent">%1$s için bir hesap varsa, şifre sıfırlama bağlantısı gönderdik. E-postanızı kontrol edin.</string>
+  <string name="auth_register_subtitle">Yeni bir hesaba kaydolun</string>
+  <string name="auth_hint_passwordMinLength">En az %1$d karakter</string>
+  <string name="auth_error_emailInvalid">Geçerli bir e-posta adresi girin</string>
   <string name="auth_error_guestFailed">Misafir olarak katılınamadı. Lütfen tekrar deneyin.</string>
   <string name="auth_error_nameTooShort">Lütfen en az 2 karakter girin.</string>
   <string name="auth_error_generic">Bir şeyler ters gitti. Lütfen tekrar deneyin.</string>

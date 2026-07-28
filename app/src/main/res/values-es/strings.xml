@@ -35,6 +35,9 @@
   <string name="auth_forgot_description">Introduce tu correo electrónico y te enviaremos un enlace para restablecer tu contraseña.</string>
   <string name="auth_forgot_submit">Enviar enlace</string>
   <string name="auth_forgot_sent">Si existe una cuenta para %1$s, te hemos enviado un enlace para restablecer la contraseña. Revisa tu correo electrónico.</string>
+  <string name="auth_register_subtitle">Regístrate para una cuenta nueva</string>
+  <string name="auth_hint_passwordMinLength">Al menos %1$d caracteres</string>
+  <string name="auth_error_emailInvalid">Introduce un correo electrónico válido</string>
   <string name="auth_error_guestFailed">No se pudo entrar como invitado. Inténtalo de nuevo.</string>
   <string name="auth_error_nameTooShort">Introduce al menos 2 caracteres.</string>
   <string name="auth_error_generic">Algo salió mal. Inténtalo de nuevo.</string>

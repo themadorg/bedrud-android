@@ -35,6 +35,9 @@
   <string name="auth_forgot_description">Введите свой адрес электронной почты, и мы отправим вам ссылку для сброса пароля.</string>
   <string name="auth_forgot_submit">Отправить ссылку</string>
   <string name="auth_forgot_sent">Если учётная запись для %1$s существует, мы отправили ссылку для сброса пароля. Проверьте свою почту.</string>
+  <string name="auth_register_subtitle">Зарегистрируйте новую учётную запись</string>
+  <string name="auth_hint_passwordMinLength">Не менее %1$d символов</string>
+  <string name="auth_error_emailInvalid">Введите действительный адрес электронной почты</string>
   <string name="auth_error_guestFailed">Не удалось присоединиться как гость. Попробуйте снова.</string>
   <string name="auth_error_nameTooShort">Введите не менее 2 символов.</string>
   <string name="auth_error_generic">Что-то пошло не так. Попробуйте снова.</string>

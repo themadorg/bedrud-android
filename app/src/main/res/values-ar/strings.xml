@@ -35,6 +35,9 @@
   <string name="auth_forgot_description">أدخل بريدك الإلكتروني وسنرسل لك رابطًا لإعادة تعيين كلمة المرور.</string>
   <string name="auth_forgot_submit">إرسال رابط إعادة التعيين</string>
   <string name="auth_forgot_sent">إذا كان هناك حساب مرتبط بـ %1$s، فقد أرسلنا رابطًا لإعادة تعيين كلمة المرور. تحقّق من بريدك الإلكتروني.</string>
+  <string name="auth_register_subtitle">أنشئ حسابًا جديدًا</string>
+  <string name="auth_hint_passwordMinLength">%1$d حرفًا على الأقل</string>
+  <string name="auth_error_emailInvalid">أدخل بريدًا إلكترونيًا صالحًا</string>
   <string name="auth_error_guestFailed">تعذّر الانضمام كضيف. يرجى المحاولة مرة أخرى.</string>
   <string name="auth_error_nameTooShort">الرجاء إدخال حرفين على الأقل.</string>
   <string name="auth_error_generic">حدث خطأ ما. يرجى المحاولة مرة أخرى.</string>

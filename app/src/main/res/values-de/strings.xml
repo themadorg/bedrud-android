@@ -35,6 +35,9 @@
   <string name="auth_forgot_description">Geben Sie Ihre E-Mail-Adresse ein und wir senden Ihnen einen Link zum Zurücksetzen Ihres Passworts.</string>
   <string name="auth_forgot_submit">Link zum Zurücksetzen senden</string>
   <string name="auth_forgot_sent">Wenn ein Konto für %1$s existiert, haben wir einen Link zum Zurücksetzen des Passworts gesendet. Überprüfen Sie Ihre E-Mails.</string>
+  <string name="auth_register_subtitle">Registrieren Sie ein neues Konto</string>
+  <string name="auth_hint_passwordMinLength">Mindestens %1$d Zeichen</string>
+  <string name="auth_error_emailInvalid">Geben Sie eine gültige E-Mail-Adresse ein</string>
   <string name="auth_error_guestFailed">Beitritt als Gast nicht möglich. Bitte versuchen Sie es erneut.</string>
   <string name="auth_error_nameTooShort">Bitte geben Sie mindestens 2 Zeichen ein.</string>
   <string name="auth_error_generic">Etwas ist schiefgelaufen. Bitte versuchen Sie es erneut.</string>
