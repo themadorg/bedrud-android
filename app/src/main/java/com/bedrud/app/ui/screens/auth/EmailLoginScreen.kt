@@ -52,6 +52,7 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDirection
 import com.bedrud.app.R
+import com.bedrud.app.core.auth.PasswordPolicy
 import com.bedrud.app.core.instance.InstanceManager
 import com.bedrud.app.models.ForgotPasswordRequest
 import com.bedrud.app.models.LoginRequest
@@ -101,7 +102,7 @@ fun EmailLoginScreen(
     val genericMessage = stringResource(R.string.auth_error_generic)
     val resetActionLabel = stringResource(R.string.auth_forgot_action)
 
-    val canSubmit = email.isNotBlank() && password.length >= 6 && !isLoading
+    val canSubmit = email.isNotBlank() && password.length >= PasswordPolicy.MIN_LENGTH && !isLoading
 
     // Login errors surface as a snackbar. A wrong-password failure additionally offers a "Reset"
     // action, so recovery is right where the user hits the wall — without hiding it from the people
