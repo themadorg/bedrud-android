@@ -239,7 +239,7 @@ fun BedrudNavHost(
         val roomName = deepLink ?: return@LaunchedEffect
         if (isLoggedIn) {
             instanceManager.store.activeInstance?.let { instance ->
-                recentRoomsStore.add(roomName, instance.id, instance.displayName)
+                recentRoomsStore.add(roomName, instance.id, instance.displayName, instance.iconColorHex)
             }
             navController.navigate(Routes.meeting(roomName)) {
                 launchSingleTop = true
