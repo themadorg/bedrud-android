@@ -79,8 +79,19 @@ drive `animate*AsState` with `tween(Motion.durationMedium, easing = Motion.stand
   (`defaultMinSize(buttonHeight)`, so callers can grow it, e.g. `height(buttonHeightLarge)` for a full CTA),
   shape (`BedrudShapeTokens.button`), and padding. Built-in `loading` state.
 - **`BedrudCard` / `BedrudOutlinedCard`** — outline-first cards, tonal surface, minimal elevation.
+- **`BedrudCompactTopBar`** — compact status-bar-aware header. Takes either a `title: String` or a
+  slot `title` composable (the rooms header uses the slot for its two-tone, server-colored name),
+  plus an `actions` row.
+- **`BedrudSnackbarHost`** — Material 3 snackbar with the rounded shape token; used across the auth
+  screens and the rooms dashboard.
 - **Selectable cards** (e.g. the server chooser) — a `selectableGroup()` of `Surface`s marked
   `selectable(role = RadioButton)`, selection shown by a radio **and** a primary border.
+- **Per-server color** — `parseInstanceColor("#RRGGBB")` in `ui/theme/InstanceColor.kt` is the single
+  source of truth for an instance's accent color (server header, profile row, and each rooms card's
+  leading stripe + colored "on {server}" tag).
+- **Rooms cards** — an outlined card with a per-server accent stripe on the leading edge; swiped left
+  (M3 `SwipeToDismissBox`) for a contextual action — **Remove** a recent from local history (instant),
+  or **Delete** a room you own (routed through a confirm dialog).
 - **`DevOnly` / `DevHintBadge`** — see below.
 
 ## Dev-only affordances
