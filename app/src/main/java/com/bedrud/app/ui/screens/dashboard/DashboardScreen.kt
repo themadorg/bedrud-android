@@ -2,17 +2,21 @@ package com.bedrud.app.ui.screens.dashboard
 
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.ime
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -20,38 +24,33 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Groups
-import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
-import com.bedrud.app.ui.components.BedrudOutlinedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import com.bedrud.app.ui.components.BedrudCompactTopBar
-import com.bedrud.app.ui.components.BedrudTabScaffoldContentInsets
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Surface
+import androidx.compose.material3.SwipeToDismissBox
+import androidx.compose.material3.SwipeToDismissBoxState
+import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
-import com.bedrud.app.ui.components.BedrudButton
-import com.bedrud.app.ui.components.BedrudButtonVariant
+import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -65,16 +64,25 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
+import androidx.compose.ui.text.withStyle
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
+import coil.compose.AsyncImage
 import com.bedrud.app.R
 import com.bedrud.app.core.call.CallService
 import com.bedrud.app.core.deeplink.BedrudURLParser
@@ -86,7 +94,18 @@ import com.bedrud.app.core.recent.recentRoomsNotInApiList
 import com.bedrud.app.models.CreateRoomRequest
 import com.bedrud.app.models.RoomSettings
 import com.bedrud.app.models.UpdateRoomSettingsRequest
+import com.bedrud.app.models.User
 import com.bedrud.app.models.UserRoomResponse
+import com.bedrud.app.ui.components.BedrudButton
+import com.bedrud.app.ui.components.BedrudButtonVariant
+import com.bedrud.app.ui.components.BedrudCompactTopBar
+import com.bedrud.app.ui.components.BedrudOutlinedCard
+import com.bedrud.app.ui.components.BedrudSnackbarHost
+import com.bedrud.app.ui.components.BedrudTabScaffoldContentInsets
+import com.bedrud.app.ui.theme.BedrudShapeTokens
+import com.bedrud.app.ui.theme.Dimens
+import com.bedrud.app.ui.theme.Motion
+import com.bedrud.app.ui.theme.parseInstanceColor
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
@@ -96,7 +115,9 @@ private const val AUTO_REFRESH_INTERVAL_MS = 60_000L
 
 // ── Filter state ─────────────────────────────────────────────────────────────
 
-private enum class RoomFilter { RECENT, MY_ROOMS, ALL }
+// ALL merges the active server's rooms with recent rooms from every server (recency/live first);
+// MY_ROOMS is the subset the signed-in user created on the active server.
+private enum class RoomFilter { ALL, MY_ROOMS }
 
 private sealed interface RoomListEntry {
     data class FromApi(val room: UserRoomResponse) : RoomListEntry
@@ -111,6 +132,7 @@ fun DashboardContent(
     modifier: Modifier = Modifier,
     onJoinRoom: (String) -> Unit,
     onJoinRecent: (RecentRoom) -> Unit,
+    onOpenProfile: () -> Unit,
     instanceManager: InstanceManager = koinInject(),
     recentRoomsStore: RecentRoomsStore = koinInject(),
 ) {
@@ -118,7 +140,19 @@ fun DashboardContent(
     val authManager = instanceManager.authManager.collectAsState().value
     val currentUser by (authManager?.currentUser ?: MutableStateFlow(null)).collectAsState()
     val recentRooms by recentRoomsStore.rooms.collectAsState()
+    val instances by instanceManager.store.instances.collectAsState()
     val activeInstanceId by instanceManager.store.activeInstanceId.collectAsState()
+    val activeInstance = remember(instances, activeInstanceId) {
+        instances.firstOrNull { it.id == activeInstanceId }
+    }
+    // Resolves a stored recent's color; falls back to the live instance, then a neutral color.
+    fun colorForRecent(recent: RecentRoom): Color =
+        parseInstanceColor(
+            recent.instanceColorHex ?: instances.firstOrNull { it.id == recent.instanceId }?.iconColorHex,
+        )
+    val activeServerColor = parseInstanceColor(activeInstance?.iconColorHex)
+    val activeServerName = activeInstance?.displayName
+
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
 
@@ -129,7 +163,9 @@ fun DashboardContent(
     var showCreateDialog by remember { mutableStateOf(false) }
     var roomToEdit by remember { mutableStateOf<UserRoomResponse?>(null) }
     var roomToDelete by remember { mutableStateOf<UserRoomResponse?>(null) }
-    var activeFilter by rememberSaveable { mutableStateOf(RoomFilter.RECENT) }
+    // A cross-server recent the user tapped: hold it here to confirm the server switch before joining.
+    var pendingSwitchJoin by remember { mutableStateOf<RecentRoom?>(null) }
+    var activeFilter by rememberSaveable { mutableStateOf(RoomFilter.ALL) }
     var quickJoinText by remember { mutableStateOf("") }
     val listState = rememberLazyListState()
     // Survives the dispose/recompose Navigation does when leaving for MeetingScreen and
@@ -138,9 +174,8 @@ fun DashboardContent(
     // offset in a long list, out of view until the user manually scrolls up.
     // Holds the just-created room's name (not just a boolean) so the wait-for-data check
     // below can confirm *that room* has actually arrived, rather than firing as soon as
-    // the tab's list is merely non-empty -- which, for the server-backed My Rooms/All
-    // tabs, is true immediately from pre-existing rooms, well before the async refetch
-    // actually includes the new one.
+    // the tab's list is merely non-empty -- which, for the server-backed My Rooms tab,
+    // is true immediately from pre-existing rooms, well before the async refetch includes it.
     var pendingScrollToTopFor by rememberSaveable { mutableStateOf<String?>(null) }
 
     // Drives the "Xm ago" labels on recent-room cards. Compose only recomposes on state
@@ -304,6 +339,30 @@ fun DashboardContent(
         )
     }
 
+    pendingSwitchJoin?.let { recent ->
+        AlertDialog(
+            onDismissRequest = { pendingSwitchJoin = null },
+            title = { Text(stringResource(R.string.dashboard_dialog_switchServerTitle)) },
+            text = {
+                Text(stringResource(R.string.dashboard_dialog_switchServerMessage, recent.instanceName))
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        val target = recent
+                        pendingSwitchJoin = null
+                        onJoinRecent(target)
+                    },
+                ) { Text(stringResource(R.string.dashboard_button_switchAndJoin)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { pendingSwitchJoin = null }) {
+                    Text(stringResource(R.string.common_button_cancel))
+                }
+            },
+        )
+    }
+
     roomToEdit?.let { room ->
         RoomSettingsDialog(
             room = room,
@@ -340,7 +399,6 @@ fun DashboardContent(
 
     val filteredRooms = remember(rooms, activeFilter, currentUser) {
         when (activeFilter) {
-            RoomFilter.RECENT -> emptyList()
             RoomFilter.MY_ROOMS -> rooms.filter { it.createdBy == currentUser?.id }
             RoomFilter.ALL -> rooms
         }
@@ -355,14 +413,13 @@ fun DashboardContent(
         // recentOnly first: those entries exist precisely because they're newer than the
         // last successful server sync (e.g. a just-created room), so they belong ahead of
         // the confirmed list, not appended after it -- keeps "newest first" true here the
-        // same way RecentRoomsStore.add() already keeps it true for the Recent tab.
+        // same way RecentRoomsStore.add() already keeps it true.
         recentOnly.map { RoomListEntry.FromRecent(it) } + rooms.map { RoomListEntry.FromApi(it) }
     }
 
     LaunchedEffect(pendingScrollToTopFor, activeFilter, recentRooms, filteredRooms, allTabEntries) {
         val targetRoomName = pendingScrollToTopFor ?: return@LaunchedEffect
         val targetRoomVisibleInCurrentTab = when (activeFilter) {
-            RoomFilter.RECENT -> recentRooms.any { it.roomName == targetRoomName }
             RoomFilter.MY_ROOMS -> filteredRooms.any { it.name == targetRoomName }
             RoomFilter.ALL -> allTabEntries.any { entry ->
                 when (entry) {
@@ -377,12 +434,22 @@ fun DashboardContent(
         }
     }
 
+    // Tapping a room joins it. A recent on another server needs a confirmed instance switch first.
+    fun joinRecent(recent: RecentRoom) {
+        if (recent.instanceId != activeInstanceId) {
+            pendingSwitchJoin = recent
+        } else {
+            onJoinRecent(recent)
+        }
+    }
+
     Scaffold(
         modifier = modifier,
         contentWindowInsets = BedrudTabScaffoldContentInsets,
         topBar = {
             BedrudCompactTopBar(
-                title = stringResource(R.string.dashboard_title_rooms),
+                actions = { ProfileAvatarButton(user = currentUser, onClick = onOpenProfile) },
+                title = { RoomsHeaderTitle(serverName = activeServerName, serverColor = activeServerColor) },
             )
         },
         floatingActionButton = {
@@ -392,7 +459,7 @@ fun DashboardContent(
                 contentColor = MaterialTheme.colorScheme.onPrimaryContainer
             ) { Icon(Icons.Default.Add, contentDescription = stringResource(R.string.dashboard_contentDescription_createRoom)) }
         },
-        snackbarHost = { SnackbarHost(snackbarHostState) }
+        snackbarHost = { BedrudSnackbarHost(snackbarHostState) }
     ) { innerPadding ->
         PullToRefreshBox(
             isRefreshing = isRefreshing,
@@ -427,24 +494,23 @@ fun DashboardContent(
                             }
                         },
                         modifier = Modifier
-                            .padding(horizontal = 16.dp, vertical = 4.dp)
+                            .padding(horizontal = Dimens.space16, vertical = Dimens.space4)
                             .onGloballyPositioned { quickJoinHeightPx = it.size.height }
                     )
 
-                    // ── Filter tabs ───────────────────────────────────
+                    // ── Filter chips ──────────────────────────────────
                     FilterRow(
                         activeFilter = activeFilter,
                         onFilterChange = { activeFilter = it },
                         modifier = Modifier
-                            .padding(horizontal = 16.dp, vertical = 4.dp)
+                            .padding(horizontal = Dimens.space16, vertical = Dimens.space4)
                             .onGloballyPositioned { filterRowHeightPx = it.size.height }
                     )
 
                     // ── Room list ─────────────────────────────────────
                     val isCurrentTabEmpty = when (activeFilter) {
-                        RoomFilter.RECENT -> recentRooms.isEmpty()
                         RoomFilter.ALL -> allTabEntries.isEmpty() && !isLoading
-                        else -> filteredRooms.isEmpty() && !isLoading
+                        RoomFilter.MY_ROOMS -> filteredRooms.isEmpty() && !isLoading
                     }
 
                     if (isCurrentTabEmpty) {
@@ -461,17 +527,10 @@ fun DashboardContent(
                             contentAlignment = Alignment.Center,
                         ) {
                             Box(modifier = Modifier.offset(y = -pullUp)) {
-                                when (activeFilter) {
-                                    RoomFilter.RECENT -> RecentEmptyState()
-                                    RoomFilter.ALL -> EmptyState(
-                                        hasFilter = false,
-                                        onCreateRoom = { showCreateDialog = true },
-                                    )
-                                    else -> EmptyState(
-                                        hasFilter = true,
-                                        onCreateRoom = { showCreateDialog = true },
-                                    )
-                                }
+                                EmptyState(
+                                    hasFilter = activeFilter == RoomFilter.MY_ROOMS,
+                                    onCreateRoom = { showCreateDialog = true },
+                                )
                             }
                         }
                     } else {
@@ -479,26 +538,10 @@ fun DashboardContent(
                             state = listState,
                             modifier = Modifier.weight(1f).fillMaxSize(),
                             contentPadding = PaddingValues(
-                                bottom = if (isKeyboardVisible) 16.dp else 88.dp,
+                                bottom = if (isKeyboardVisible) Dimens.space16 else Dimens.roomListBottomSpace,
                             )
                         ) {
-                            if (activeFilter == RoomFilter.RECENT) {
-                                items(
-                                    recentRooms,
-                                    key = { "${it.instanceId}:${it.roomName}" },
-                                ) { recent ->
-                                    RecentRoomCard(
-                                        recent = recent,
-                                        isCurrentServer = recent.instanceId == activeInstanceId,
-                                        now = nowTickMs,
-                                        onJoin = { onJoinRecent(recent) },
-                                        onRemove = {
-                                            recentRoomsStore.remove(recent.roomName, recent.instanceId)
-                                        },
-                                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
-                                    )
-                                }
-                            } else if (activeFilter == RoomFilter.ALL) {
+                            if (activeFilter == RoomFilter.ALL) {
                                 items(
                                     allTabEntries,
                                     key = { entry ->
@@ -512,25 +555,29 @@ fun DashboardContent(
                                     when (entry) {
                                         is RoomListEntry.FromApi -> RoomCard(
                                             room = entry.room,
+                                            serverName = activeServerName,
+                                            serverColor = activeServerColor,
+                                            isOwner = entry.room.createdBy == currentUser?.id,
                                             onJoin = { onJoinRoom(entry.room.name) },
                                             onDelete = { roomToDelete = entry.room },
                                             onSettings = if (entry.room.createdBy == currentUser?.id) {
                                                 { roomToEdit = entry.room }
                                             } else null,
-                                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                                            modifier = Modifier.padding(horizontal = Dimens.space16, vertical = Dimens.space4),
                                         )
                                         is RoomListEntry.FromRecent -> RecentRoomCard(
                                             recent = entry.recent,
+                                            serverColor = colorForRecent(entry.recent),
                                             isCurrentServer = entry.recent.instanceId == activeInstanceId,
                                             now = nowTickMs,
-                                            onJoin = { onJoinRecent(entry.recent) },
+                                            onJoin = { joinRecent(entry.recent) },
                                             onRemove = {
                                                 recentRoomsStore.remove(
                                                     entry.recent.roomName,
                                                     entry.recent.instanceId,
                                                 )
                                             },
-                                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                                            modifier = Modifier.padding(horizontal = Dimens.space16, vertical = Dimens.space4),
                                         )
                                     }
                                 }
@@ -538,18 +585,75 @@ fun DashboardContent(
                                 items(filteredRooms, key = { it.id }) { room ->
                                     RoomCard(
                                         room = room,
+                                        serverName = activeServerName,
+                                        serverColor = activeServerColor,
+                                        isOwner = room.createdBy == currentUser?.id,
                                         onJoin = { onJoinRoom(room.name) },
                                         onDelete = { roomToDelete = room },
                                         onSettings = if (room.createdBy == currentUser?.id) {
                                             { roomToEdit = room }
                                         } else null,
-                                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
+                                        modifier = Modifier.padding(horizontal = Dimens.space16, vertical = Dimens.space4)
                                     )
                                 }
                             }
                         }
                     }
                 }
+            }
+        }
+    }
+}
+
+// ── Header ──────────────────────────────────────────────────────────────────
+
+/** Two-tone rooms header: the active server's name (in its own accent color) + "rooms". */
+@Composable
+private fun RoomsHeaderTitle(serverName: String?, serverColor: Color) {
+    val name = serverName ?: stringResource(R.string.instance_default_displayName)
+    val suffix = stringResource(R.string.dashboard_header_roomsSuffix)
+    val suffixColor = MaterialTheme.colorScheme.onSurface
+    Text(
+        text = buildAnnotatedString {
+            withStyle(SpanStyle(color = serverColor, fontWeight = FontWeight.SemiBold)) { append(name) }
+            append(" ")
+            withStyle(SpanStyle(color = suffixColor)) { append(suffix) }
+        },
+        style = MaterialTheme.typography.titleLarge,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
+    )
+}
+
+/** Circular profile shortcut in the top bar — the user's photo, or their colored initial. */
+@Composable
+private fun ProfileAvatarButton(user: User?, onClick: () -> Unit) {
+    val desc = stringResource(R.string.dashboard_contentDescription_profile)
+    val avatarUrl = user?.avatarUrl
+    IconButton(onClick = onClick, modifier = Modifier.size(Dimens.avatar)) {
+        Box(
+            modifier = Modifier
+                .size(Dimens.iconLg)
+                .clip(BedrudShapeTokens.pill)
+                .background(MaterialTheme.colorScheme.primary)
+                .semantics { contentDescription = desc },
+            contentAlignment = Alignment.Center,
+        ) {
+            if (!avatarUrl.isNullOrBlank()) {
+                AsyncImage(
+                    model = avatarUrl,
+                    contentDescription = null,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .clip(BedrudShapeTokens.pill),
+                    contentScale = ContentScale.Crop,
+                )
+            } else {
+                Text(
+                    text = (user?.name?.take(1) ?: "?").uppercase(),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onPrimary,
+                )
             }
         }
     }
@@ -569,12 +673,12 @@ private fun QuickJoinBar(
             value = value,
             onValueChange = onValueChange,
             placeholder = { Text(stringResource(R.string.dashboard_placeholder_search)) },
-            leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, modifier = Modifier.size(18.dp)) },
+            leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, modifier = Modifier.size(Dimens.iconSm)) },
             singleLine = true,
-            shape = RoundedCornerShape(12.dp),
+            shape = BedrudShapeTokens.field,
             modifier = Modifier.weight(1f)
         )
-        Spacer(modifier = Modifier.width(8.dp))
+        Spacer(modifier = Modifier.width(Dimens.space8))
         FilledTonalButton(
             onClick = onJoin,
             enabled = value.isNotBlank()
@@ -582,7 +686,7 @@ private fun QuickJoinBar(
     }
 }
 
-// ── Filter tabs ───────────────────────────────────────────────────────────────
+// ── Filter chips ────────────────────────────────────────────────────────────
 
 @Composable
 private fun FilterRow(
@@ -590,7 +694,7 @@ private fun FilterRow(
     onFilterChange: (RoomFilter) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Row(modifier = modifier, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+    Row(modifier = modifier, horizontalArrangement = Arrangement.spacedBy(Dimens.space8)) {
         RoomFilter.entries.forEach { filter ->
             FilterChip(
                 selected = activeFilter == filter,
@@ -598,9 +702,8 @@ private fun FilterRow(
                 label = {
                     Text(
                         when (filter) {
-                            RoomFilter.RECENT -> stringResource(R.string.dashboard_filter_recent)
-                            RoomFilter.MY_ROOMS -> stringResource(R.string.dashboard_filter_myRooms)
                             RoomFilter.ALL -> stringResource(R.string.dashboard_filter_all)
+                            RoomFilter.MY_ROOMS -> stringResource(R.string.dashboard_filter_myRooms)
                         }
                     )
                 }
@@ -609,11 +712,14 @@ private fun FilterRow(
     }
 }
 
-// ── Room card ─────────────────────────────────────────────────────────────────
+// ── Room card (server-backed) ─────────────────────────────────────────────────
 
 @Composable
 private fun RoomCard(
     room: UserRoomResponse,
+    serverName: String?,
+    serverColor: Color,
+    isOwner: Boolean,
     onJoin: () -> Unit,
     onDelete: () -> Unit,
     onSettings: (() -> Unit)? = null,
@@ -627,7 +733,7 @@ private fun RoomCard(
     val activeTint by animateColorAsState(
         targetValue = if (room.isActive) MaterialTheme.colorScheme.primary
         else MaterialTheme.colorScheme.onSurfaceVariant,
-        animationSpec = tween(400),
+        animationSpec = tween(Motion.durationLong),
         label = "activeTint"
     )
 
@@ -642,26 +748,22 @@ private fun RoomCard(
         statusText
     }
 
-    BedrudOutlinedCard(
-        onClick = onJoin,
-        modifier = modifier.fillMaxWidth(),
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(start = 14.dp, end = 4.dp, top = 10.dp, bottom = 10.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
+    // Only rooms the user owns get the swipe-to-delete affordance (the server rejects other deletes).
+    val swipeAction = if (isOwner) {
+        SwipeAction(
+            label = stringResource(R.string.common_button_delete),
+            icon = Icons.Default.Delete,
+            containerColor = MaterialTheme.colorScheme.errorContainer,
+            contentColor = MaterialTheme.colorScheme.onErrorContainer,
+            // Route through the confirm dialog (destructive), so snap back rather than dismiss.
+            onTriggered = { onDelete(); false },
+        )
+    } else null
+
+    SwipeableRoomRow(action = swipeAction, modifier = modifier.fillMaxWidth()) {
+        RoomCardScaffold(serverColor = serverColor, onClick = onJoin) {
             Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.bodyLarge.copy(
-                        fontFamily = FontFamily.Monospace,
-                        textDirection = TextDirection.Ltr,
-                    ),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
+                RoomTitleLine(title = title, serverName = serverName, serverColor = serverColor)
                 Text(
                     text = metaText,
                     style = MaterialTheme.typography.labelSmall,
@@ -672,48 +774,27 @@ private fun RoomCard(
             }
 
             if (onSettings != null) {
-                IconButton(
-                    onClick = onSettings,
-                    modifier = Modifier.size(36.dp),
-                ) {
+                IconButton(onClick = onSettings, modifier = Modifier.size(Dimens.space40)) {
                     Icon(
                         Icons.Default.Settings,
                         contentDescription = stringResource(R.string.dashboard_contentDescription_settings),
-                        modifier = Modifier.size(18.dp),
+                        modifier = Modifier.size(Dimens.iconSm),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
             }
 
-            IconButton(
-                onClick = onDelete,
-                modifier = Modifier.size(36.dp),
-            ) {
-                Icon(
-                    Icons.Default.Delete,
-                    contentDescription = stringResource(R.string.common_button_delete),
-                    modifier = Modifier.size(18.dp),
-                    tint = MaterialTheme.colorScheme.error,
-                )
-            }
-
-            Icon(
-                Icons.Default.ChevronRight,
-                contentDescription = null,
-                modifier = Modifier
-                    .padding(end = 6.dp)
-                    .size(20.dp),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+            TrailingChevron()
         }
     }
 }
 
-// ── Recent room card ──────────────────────────────────────────────────────────
+// ── Recent room card (cross-server, from local history) ────────────────────────
 
 @Composable
 private fun RecentRoomCard(
     recent: RecentRoom,
+    serverColor: Color,
     isCurrentServer: Boolean,
     now: Long,
     onJoin: () -> Unit,
@@ -724,40 +805,25 @@ private fun RecentRoomCard(
         CallService.activeRoomName == recent.roomName &&
         CallService.activeInstanceId == recent.instanceId
     val recentTime = if (isOngoing) now else recent.leftAt ?: recent.joinedAt
-    val metaText = if (isCurrentServer) {
-        formatRecentRoomTimeAgo(recentTime, now)
-    } else {
-        "${formatRecentRoomTimeAgo(recentTime, now)} · ${
-            stringResource(R.string.dashboard_recent_onServer, recent.instanceName)
-        }"
-    }
+    val metaText = formatRecentRoomTimeAgo(recentTime, now)
 
-    BedrudOutlinedCard(
-        onClick = onJoin,
-        modifier = modifier.fillMaxWidth(),
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(start = 14.dp, end = 4.dp, top = 10.dp, bottom = 10.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Icon(
-                Icons.Default.History,
-                contentDescription = null,
-                modifier = Modifier.size(18.dp),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Spacer(modifier = Modifier.width(10.dp))
+    val swipeAction = SwipeAction(
+        label = stringResource(R.string.dashboard_action_remove),
+        icon = Icons.Default.Close,
+        containerColor = MaterialTheme.colorScheme.secondaryContainer,
+        contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+        // Non-destructive (only drops it from local history): remove immediately and dismiss.
+        onTriggered = { onRemove(); true },
+    )
+
+    SwipeableRoomRow(action = swipeAction, modifier = modifier.fillMaxWidth()) {
+        RoomCardScaffold(serverColor = serverColor, onClick = onJoin) {
             Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = recent.roomName,
-                    style = MaterialTheme.typography.bodyLarge.copy(
-                        fontFamily = FontFamily.Monospace,
-                        textDirection = TextDirection.Ltr,
-                    ),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
+                RoomTitleLine(
+                    title = recent.roomName,
+                    // On the active server the "on {server}" label is redundant with the header.
+                    serverName = if (isCurrentServer) null else recent.instanceName,
+                    serverColor = serverColor,
                 )
                 Text(
                     text = metaText,
@@ -768,51 +834,149 @@ private fun RecentRoomCard(
                 )
             }
 
-            IconButton(
-                onClick = onRemove,
-                modifier = Modifier.size(36.dp),
-            ) {
-                Icon(
-                    Icons.Default.Close,
-                    contentDescription = stringResource(R.string.dashboard_contentDescription_removeRecent),
-                    modifier = Modifier.size(18.dp),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
+            TrailingChevron()
+        }
+    }
+}
 
-            Icon(
-                Icons.Default.ChevronRight,
-                contentDescription = null,
+// ── Shared card pieces ─────────────────────────────────────────────────────────
+
+/** Outlined card with the per-server accent stripe on its leading edge. */
+@Composable
+private fun RoomCardScaffold(
+    serverColor: Color,
+    onClick: () -> Unit,
+    content: @Composable RowScope.() -> Unit,
+) {
+    BedrudOutlinedCard(
+        onClick = onClick,
+        shape = BedrudShapeTokens.card,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(IntrinsicSize.Min),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Box(
                 modifier = Modifier
-                    .padding(end = 6.dp)
-                    .size(20.dp),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    .padding(start = Dimens.space6, top = Dimens.space8, bottom = Dimens.space8)
+                    .width(Dimens.roomCardStripe)
+                    .fillMaxHeight()
+                    .clip(BedrudShapeTokens.pill)
+                    .background(serverColor),
+            )
+            Row(
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(start = Dimens.space12, end = Dimens.space4, top = Dimens.space12, bottom = Dimens.space12),
+                verticalAlignment = Alignment.CenterVertically,
+                content = content,
+            )
+        }
+    }
+}
+
+/** Line 1 of a room card: the monospace room name + the colored "on {server}" tag. */
+@Composable
+private fun RoomTitleLine(title: String, serverName: String?, serverColor: Color) {
+    Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        Text(
+            text = title,
+            style = MaterialTheme.typography.bodyLarge.copy(
+                fontFamily = FontFamily.Monospace,
+                textDirection = TextDirection.Ltr,
+            ),
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f, fill = false),
+        )
+        if (serverName != null) {
+            Spacer(modifier = Modifier.width(Dimens.space8))
+            Text(
+                text = stringResource(R.string.dashboard_recent_onServer, serverName),
+                style = MaterialTheme.typography.labelMedium,
+                color = serverColor,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
             )
         }
     }
 }
 
 @Composable
-private fun RecentEmptyState() {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Icon(
-            Icons.Default.History,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.size(64.dp),
-        )
-        Spacer(modifier = Modifier.height(16.dp))
-        Text(
-            text = stringResource(R.string.dashboard_empty_noRecent),
-            style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        Spacer(modifier = Modifier.height(4.dp))
-        Text(
-            text = stringResource(R.string.dashboard_empty_noRecentHint),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
+private fun TrailingChevron() {
+    Icon(
+        Icons.Default.ChevronRight,
+        contentDescription = null,
+        modifier = Modifier
+            .padding(end = Dimens.space6)
+            .size(Dimens.iconMd),
+        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
+}
+
+// ── Swipe-to-action ────────────────────────────────────────────────────────────
+
+private data class SwipeAction(
+    val label: String,
+    val icon: ImageVector,
+    val containerColor: Color,
+    val contentColor: Color,
+    // Returns true to let the row dismiss (instant action), false to snap back (deferred/confirmed).
+    val onTriggered: () -> Boolean,
+)
+
+/** Wraps a card in a leading-edge swipe gesture that reveals [action]; no swipe when it's null. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun SwipeableRoomRow(
+    action: SwipeAction?,
+    modifier: Modifier = Modifier,
+    content: @Composable () -> Unit,
+) {
+    if (action == null) {
+        Box(modifier = modifier) { content() }
+        return
+    }
+    val state = rememberSwipeToDismissBoxState(
+        confirmValueChange = { value ->
+            if (value == SwipeToDismissBoxValue.EndToStart) action.onTriggered() else false
+        },
+    )
+    SwipeToDismissBox(
+        state = state,
+        modifier = modifier,
+        enableDismissFromStartToEnd = false,
+        enableDismissFromEndToStart = true,
+        backgroundContent = { SwipeActionBackground(action, state) },
+    ) {
+        content()
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun SwipeActionBackground(action: SwipeAction, state: SwipeToDismissBoxState) {
+    // Only paint the panel while it's the gesture's target — a settled row shows nothing behind it.
+    val revealed = state.targetValue == SwipeToDismissBoxValue.EndToStart
+    val container = if (revealed) action.containerColor else Color.Transparent
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .clip(BedrudShapeTokens.card)
+            .background(container)
+            .padding(horizontal = Dimens.space20),
+        contentAlignment = Alignment.CenterEnd,
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(Dimens.space8),
+        ) {
+            Text(action.label, style = MaterialTheme.typography.labelLarge, color = action.contentColor)
+            Icon(action.icon, contentDescription = null, tint = action.contentColor, modifier = Modifier.size(Dimens.iconSm))
+        }
     }
 }
 
@@ -825,16 +989,16 @@ private fun EmptyState(hasFilter: Boolean, onCreateRoom: () -> Unit) {
             Icons.Default.Groups,
             contentDescription = null,
             tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.size(64.dp)
+            modifier = Modifier.size(Dimens.space56)
         )
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(Dimens.space16))
         Text(
             text = if (hasFilter) stringResource(R.string.dashboard_empty_noMatch) else stringResource(R.string.dashboard_empty_noRooms),
             style = MaterialTheme.typography.titleMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         if (!hasFilter) {
-            Spacer(modifier = Modifier.height(4.dp))
+            Spacer(modifier = Modifier.height(Dimens.space4))
             BedrudButton(
                 text = stringResource(R.string.dashboard_button_createFirstRoom),
                 onClick = onCreateRoom,
@@ -850,20 +1014,20 @@ private fun EmptyState(hasFilter: Boolean, onCreateRoom: () -> Unit) {
 private fun CreateRoomDialog(onDismiss: () -> Unit, onCreate: (String) -> Unit) {
     var roomName by remember { mutableStateOf("") }
 
-    androidx.compose.material3.AlertDialog(
+    AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.dashboard_dialog_createTitle)) },
         text = {
             Column {
                 Text(stringResource(R.string.dashboard_dialog_createDescription),
                     style = MaterialTheme.typography.bodyMedium)
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(Dimens.space16))
                 OutlinedTextField(
                     value = roomName,
                     onValueChange = { roomName = it },
                     label = { Text(stringResource(R.string.dashboard_label_roomName)) },
                     singleLine = true,
-                    shape = RoundedCornerShape(12.dp),
+                    shape = BedrudShapeTokens.field,
                     modifier = Modifier.fillMaxWidth(),
                     textStyle = MaterialTheme.typography.bodyMedium.copy(textDirection = TextDirection.Ltr)
                 )

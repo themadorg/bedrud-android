@@ -38,6 +38,10 @@ object Dimens {
     val borderThin = 1.dp
     val borderStrong = 2.dp
 
+    // ── Rooms list ──
+    val roomCardStripe = 4.dp          // per-server accent stripe on the leading edge of a room card
+    val roomListBottomSpace = 88.dp    // trailing space so the last card clears the create-room FAB
+
     // ── Icons / avatars ──
     val iconXs = 16.dp
     val iconSm = 18.dp
