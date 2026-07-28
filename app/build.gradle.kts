@@ -125,6 +125,17 @@ android {
         resValues = true
     }
 
+    androidResources {
+        // Ship only the languages the app itself is translated into (values-*/ below plus the
+        // untranslated default). Without this, every transitive dependency - play-services,
+        // credentials, androidx - drags in its own ~80 locales, none of which the app can
+        // pair with a matching UI: a device set to, say, Italian already sees an all-English
+        // Bedrud, so an Italian passkey dialog in the middle of it is inconsistent, not
+        // helpful. Keep this list in sync when adding a new values-<tag>/ directory,
+        // otherwise the new translation is silently dropped from the APK.
+        localeFilters += listOf("en", "fa", "ar", "de", "es", "fr", "ja", "ru", "tr", "zh")
+    }
+
     splits {
         abi {
             isEnable = true
@@ -154,6 +165,32 @@ androidComponents {
             val prefix = if (variant.buildType == "release") "bedrud" else "bedrud-${variant.buildType}"
             output.outputFileName.set("$prefix-$abi.apk")
         }
+    }
+}
+
+// Because minSdk is 28, AGP defaults to storing both the .so files and the dex uncompressed
+// in the APK, on the assumption the APK is delivered as a Play App Bundle where the store
+// handles compression on the wire. Bedrud ships raw APKs off a GitHub Release instead, so
+// that default means users download ~19 MB of literally uncompressed payload. Turning legacy
+// (compressed) packaging back on roughly halves every download - see the PR for measurements.
+//
+// The trade is install footprint, and it differs per entry:
+//   jniLibs - close to free. The installer extracts the .so, so on-disk usage stays about
+//             the same; only the bytes on the wire shrink.
+//   dex     - a real trade. ART keeps the extracted dex in its vdex, so the install grows by
+//             roughly the uncompressed dex size while the download shrinks by ~4.5 MB.
+// For an app distributed by direct download to users on metered or slow connections, download
+// size is the one the user actually pays for, so both are enabled.
+//
+// Applied per-variant rather than through the android.packaging {} DSL so it lands only on
+// `release` - the build type behind both the beta and stable channels, i.e. the only APKs an
+// actual user downloads. `debug` and `dev` keep AGP's default uncompressed packaging: both are
+// throwaway test builds, and deflating ~90 MB of dex buys nothing there beyond slower builds.
+androidComponents {
+    onVariants { variant ->
+        if (variant.buildType != "release") return@onVariants
+        variant.packaging.jniLibs.useLegacyPackaging.set(true)
+        variant.packaging.dex.useLegacyPackaging.set(true)
     }
 }
 
