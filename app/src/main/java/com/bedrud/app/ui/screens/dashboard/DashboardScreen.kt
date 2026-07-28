@@ -448,17 +448,28 @@ fun DashboardContent(
         }
     }
 
+    // One recency-ordered list: every room with local history — whether it renders as an API card
+    // (active server) or a recent card (other servers / not yet in the API list) — is positioned
+    // by when it was last used. This keeps a room's rank stable across server switches; the old
+    // recents-first-then-server-order split made the same room jump sections (and the list
+    // visibly reshuffle) every time the active server changed. Server rooms never joined from
+    // this device have no recency, so they follow at the end in server order.
     val allTabEntries = remember(rooms, recentRooms, activeInstanceId) {
+        val recencyByName = recentRooms
+            .filter { it.instanceId == activeInstanceId }
+            .associate { it.roomName to (it.leftAt ?: it.joinedAt) }
         val recentOnly = recentRoomsNotInApiList(
             recentRooms,
             rooms.map { it.name }.toSet(),
             activeInstanceId,
         )
-        // recentOnly first: those entries exist precisely because they're newer than the
-        // last successful server sync (e.g. a just-created room), so they belong ahead of
-        // the confirmed list, not appended after it -- keeps "newest first" true here the
-        // same way RecentRoomsStore.add() already keeps it true.
-        recentOnly.map { RoomListEntry.FromRecent(it) } + rooms.map { RoomListEntry.FromApi(it) }
+        val dated = recentOnly.map { RoomListEntry.FromRecent(it) to (it.leftAt ?: it.joinedAt) } +
+            rooms.mapNotNull { room ->
+                recencyByName[room.name]?.let { RoomListEntry.FromApi(room) to it }
+            }
+        val neverJoined = rooms.filter { it.name !in recencyByName }.map { RoomListEntry.FromApi(it) }
+        dated.sortedByDescending { (_, lastUsedAt) -> lastUsedAt }.map { (entry, _) -> entry } +
+            neverJoined
     }
 
     LaunchedEffect(pendingScrollToTopFor, activeFilter, recentRooms, filteredRooms, allTabEntries) {
