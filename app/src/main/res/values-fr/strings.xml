@@ -171,6 +171,8 @@
   <string name="settings_label_newPassword">Nouveau mot de passe</string>
   <string name="settings_label_confirmNewPassword">Confirmer le nouveau mot de passe</string>
   <string name="settings_button_changePassword">Changer le mot de passe</string>
+  <string name="settings_password_changeSuccess">Mot de passe modifié</string>
+  <string name="settings_password_changeFailed">Échec de la modification du mot de passe</string>
   <string name="settings_section_about">À propos</string>
   <string name="settings_label_version">Version</string>
   <string name="settings_label_build">Build</string>

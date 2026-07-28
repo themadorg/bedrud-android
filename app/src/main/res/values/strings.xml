@@ -179,6 +179,8 @@
   <string name="settings_label_newPassword">New password</string>
   <string name="settings_label_confirmNewPassword">Confirm new password</string>
   <string name="settings_button_changePassword">Change Password</string>
+  <string name="settings_password_changeSuccess">Password changed successfully</string>
+  <string name="settings_password_changeFailed">Failed to change password</string>
   <string name="settings_section_about">About</string>
   <string name="settings_label_version">Version</string>
   <string name="settings_label_build">Build</string>

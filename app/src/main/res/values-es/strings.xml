@@ -171,6 +171,8 @@
   <string name="settings_label_newPassword">Nueva contraseña</string>
   <string name="settings_label_confirmNewPassword">Confirmar nueva contraseña</string>
   <string name="settings_button_changePassword">Cambiar contraseña</string>
+  <string name="settings_password_changeSuccess">Contraseña cambiada correctamente</string>
+  <string name="settings_password_changeFailed">No se pudo cambiar la contraseña</string>
   <string name="settings_section_about">Acerca de</string>
   <string name="settings_label_version">Versión</string>
   <string name="settings_label_build">Compilación</string>

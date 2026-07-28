@@ -171,6 +171,8 @@
   <string name="settings_label_newPassword">كلمة المرور الجديدة</string>
   <string name="settings_label_confirmNewPassword">تأكيد كلمة المرور الجديدة</string>
   <string name="settings_button_changePassword">تغيير كلمة المرور</string>
+  <string name="settings_password_changeSuccess">تم تغيير كلمة المرور بنجاح</string>
+  <string name="settings_password_changeFailed">فشل تغيير كلمة المرور</string>
   <string name="settings_section_about">حول</string>
   <string name="settings_label_version">الإصدار</string>
   <string name="settings_label_build">البنية</string>

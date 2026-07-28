@@ -171,6 +171,8 @@
   <string name="settings_label_newPassword">新密码</string>
   <string name="settings_label_confirmNewPassword">确认新密码</string>
   <string name="settings_button_changePassword">更改密码</string>
+  <string name="settings_password_changeSuccess">密码修改成功</string>
+  <string name="settings_password_changeFailed">密码修改失败</string>
   <string name="settings_section_about">关于</string>
   <string name="settings_label_version">版本</string>
   <string name="settings_label_build">构建</string>
