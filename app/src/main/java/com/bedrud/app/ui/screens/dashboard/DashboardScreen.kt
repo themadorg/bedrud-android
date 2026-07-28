@@ -113,6 +113,10 @@ import org.koin.compose.koinInject
 
 private const val AUTO_REFRESH_INTERVAL_MS = 60_000L
 
+// A failed fetch retries on this short delay instead of waiting out the full refresh interval,
+// so a flaky request doesn't leave the list stale for a minute.
+private const val FAILED_FETCH_RETRY_MS = 5_000L
+
 // How long a deleted room's id keeps being filtered out of fetch results. The server's list
 // endpoint can still return a just-deleted room for a while (eventual consistency), which would
 // otherwise resurrect it on the next background refresh.
@@ -198,6 +202,9 @@ fun DashboardContent(
     // it only filters what fetchRooms() accepts from the server.
     val deletedRoomTombstones = remember { mutableMapOf<String, Long>() }
 
+    // Steers the auto-refresh loop onto the short retry delay after a failure.
+    var lastFetchFailed by remember { mutableStateOf(false) }
+
     // Returns an error message on failure, or null on success.
     suspend fun fetchRooms(): String? {
         return try {
@@ -208,11 +215,14 @@ fun DashboardContent(
                 rooms = (response.body() ?: emptyList())
                     .filterNot { it.id in deletedRoomTombstones }
                 lastFetchAtMs = now
+                lastFetchFailed = false
                 null
             } else {
+                lastFetchFailed = true
                 "Failed to load rooms"
             }
         } catch (e: Exception) {
+            lastFetchFailed = true
             e.message ?: "Failed to load rooms"
         }
     }
@@ -246,15 +256,21 @@ fun DashboardContent(
         scope.launch { fetchRooms() }
     }
 
-    LaunchedEffect(Unit) { loadRooms() }
+    // Keyed on the API client: switching the active server rebuilds it, and the list must drop
+    // the old server's rooms and refetch immediately instead of showing them until the next tick.
+    LaunchedEffect(roomApi) {
+        rooms = emptyList()
+        loadRooms()
+    }
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { silentlyRefreshRooms() }
 
     // Keep the list self-healing against server-side eventual consistency (e.g. a
     // just-created room not yet reflected in listRooms()) without requiring the user
-    // to background/foreground the app or pull to refresh.
-    LaunchedEffect(Unit) {
+    // to background/foreground the app or pull to refresh. A failed fetch retries on
+    // the short delay rather than waiting out the full interval.
+    LaunchedEffect(roomApi) {
         while (true) {
-            delay(AUTO_REFRESH_INTERVAL_MS)
+            delay(if (lastFetchFailed) FAILED_FETCH_RETRY_MS else AUTO_REFRESH_INTERVAL_MS)
             silentlyRefreshRooms()
         }
     }
