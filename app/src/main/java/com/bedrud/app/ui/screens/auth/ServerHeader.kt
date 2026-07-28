@@ -18,6 +18,7 @@ import androidx.compose.ui.text.style.TextDirection
 import com.bedrud.app.R
 import com.bedrud.app.ui.theme.BedrudShapeTokens
 import com.bedrud.app.ui.theme.Dimens
+import com.bedrud.app.ui.theme.parseInstanceColor
 
 /**
  * The active server's brand mark (colored circle + initial), name, and URL, stacked and centered.
@@ -62,16 +63,5 @@ internal fun ServerHeader(
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
-    }
-}
-
-/** Parses a `#RRGGBB` instance color, falling back to a neutral blue when absent or malformed. */
-internal fun parseInstanceColor(hex: String): Color {
-    val cleaned = hex.trimStart('#')
-    if (cleaned.length != 6) return Color(0xFF3B82F6)
-    return try {
-        Color(android.graphics.Color.parseColor("#$cleaned"))
-    } catch (_: Exception) {
-        Color(0xFF3B82F6)
     }
 }
