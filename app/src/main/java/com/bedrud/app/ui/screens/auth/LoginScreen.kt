@@ -29,7 +29,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -62,6 +61,8 @@ import com.bedrud.app.models.GuestLoginRequest
 import com.bedrud.app.ui.components.BedrudButton
 import com.bedrud.app.ui.components.BedrudButtonVariant
 import com.bedrud.app.ui.components.BedrudScaffoldContentInsets
+import com.bedrud.app.ui.components.BedrudSnackbarHost
+import com.bedrud.app.ui.components.bringIntoViewOnFocus
 import com.bedrud.app.ui.theme.BedrudShapeTokens
 import com.bedrud.app.ui.theme.Dimens
 import kotlinx.coroutines.launch
@@ -199,7 +200,7 @@ fun LoginScreen(
 
     Scaffold(
         contentWindowInsets = BedrudScaffoldContentInsets,
-        snackbarHost = { SnackbarHost(snackbarHostState) }
+        snackbarHost = { BedrudSnackbarHost(snackbarHostState) }
     ) { padding ->
         Box(
             modifier = Modifier
@@ -325,7 +326,9 @@ fun LoginScreen(
                         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Go),
                         keyboardActions = KeyboardActions(onGo = { continueAsGuest() }),
                         enabled = !isBusy && guestEnabled,
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .bringIntoViewOnFocus(),
                         textStyle = MaterialTheme.typography.bodyLarge.copy(textDirection = TextDirection.Content)
                     )
                     Spacer(Modifier.height(Dimens.space12))

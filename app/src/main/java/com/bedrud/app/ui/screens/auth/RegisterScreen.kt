@@ -23,7 +23,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -58,7 +57,9 @@ import com.bedrud.app.models.RegisterRequest
 import com.bedrud.app.ui.components.BedrudButton
 import com.bedrud.app.ui.components.BedrudButtonVariant
 import com.bedrud.app.ui.components.BedrudScaffoldContentInsets
+import com.bedrud.app.ui.components.BedrudSnackbarHost
 import com.bedrud.app.ui.components.autofillType
+import com.bedrud.app.ui.components.bringIntoViewOnFocus
 import com.bedrud.app.ui.theme.BedrudShapeTokens
 import com.bedrud.app.ui.theme.Dimens
 import kotlinx.coroutines.launch
@@ -165,7 +166,7 @@ fun RegisterScreen(
 
     Scaffold(
         contentWindowInsets = BedrudScaffoldContentInsets,
-        snackbarHost = { SnackbarHost(snackbarHostState) }
+        snackbarHost = { BedrudSnackbarHost(snackbarHostState) }
     ) { padding ->
         Box(
             modifier = Modifier
@@ -223,6 +224,7 @@ fun RegisterScreen(
                         ),
                         modifier = Modifier
                             .fillMaxWidth()
+                            .bringIntoViewOnFocus()
                             .autofillType(ContentType.PersonFullName),
                         textStyle = MaterialTheme.typography.bodyLarge.copy(textDirection = TextDirection.Content)
                     )
@@ -253,6 +255,7 @@ fun RegisterScreen(
                         ),
                         modifier = Modifier
                             .fillMaxWidth()
+                            .bringIntoViewOnFocus()
                             .autofillType(ContentType.EmailAddress),
                         textStyle = MaterialTheme.typography.bodyLarge.copy(textDirection = TextDirection.Ltr)
                     )
@@ -295,6 +298,7 @@ fun RegisterScreen(
                         ),
                         modifier = Modifier
                             .fillMaxWidth()
+                            .bringIntoViewOnFocus()
                             .autofillType(ContentType.NewPassword),
                         textStyle = MaterialTheme.typography.bodyLarge.copy(textDirection = TextDirection.Ltr)
                     )
@@ -325,6 +329,7 @@ fun RegisterScreen(
                         keyboardActions = KeyboardActions(onGo = { submit() }),
                         modifier = Modifier
                             .fillMaxWidth()
+                            .bringIntoViewOnFocus()
                             .autofillType(ContentType.NewPassword),
                         textStyle = MaterialTheme.typography.bodyLarge.copy(textDirection = TextDirection.Ltr)
                     )
