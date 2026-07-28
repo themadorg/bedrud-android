@@ -38,6 +38,9 @@ object Dimens {
     val borderThin = 1.dp
     val borderStrong = 2.dp
 
+    // ── Top bar ──
+    val topBarHeight = 64.dp           // M3 small-top-app-bar content height (below the status bar)
+
     // ── Rooms list ──
     val roomCardStripe = 4.dp          // per-server accent stripe on the leading edge of a room card
     val roomListBottomSpace = 88.dp    // trailing space so the last card clears the create-room FAB
@@ -47,6 +50,7 @@ object Dimens {
     val iconSm = 18.dp
     val iconMd = 24.dp
     val iconLg = 32.dp
+    val avatarSm = 36.dp               // top-bar avatar circle (inside a 48dp touch target)
     val avatar = 40.dp
 
     // ── Brand ──

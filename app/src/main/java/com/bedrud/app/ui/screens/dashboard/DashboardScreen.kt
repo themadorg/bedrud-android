@@ -641,7 +641,7 @@ private fun RoomsHeaderTitle(serverName: String?, serverColor: Color) {
             append(" ")
             withStyle(SpanStyle(color = suffixColor)) { append(suffix) }
         },
-        style = MaterialTheme.typography.titleLarge,
+        style = MaterialTheme.typography.headlineSmall,
         maxLines = 1,
         overflow = TextOverflow.Ellipsis,
     )
@@ -652,10 +652,10 @@ private fun RoomsHeaderTitle(serverName: String?, serverColor: Color) {
 private fun ProfileAvatarButton(user: User?, onClick: () -> Unit) {
     val desc = stringResource(R.string.dashboard_contentDescription_profile)
     val avatarUrl = user?.avatarUrl
-    IconButton(onClick = onClick, modifier = Modifier.size(Dimens.avatar)) {
+    IconButton(onClick = onClick, modifier = Modifier.size(Dimens.minTouchTarget)) {
         Box(
             modifier = Modifier
-                .size(Dimens.iconLg)
+                .size(Dimens.avatarSm)
                 .clip(BedrudShapeTokens.pill)
                 .background(MaterialTheme.colorScheme.primary)
                 .semantics { contentDescription = desc },
