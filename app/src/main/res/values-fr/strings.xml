@@ -257,4 +257,10 @@
   <string name="dashboard_empty_noRecentHint">Les salles que vous rejoignez apparaissent ici, y compris sur d\'autres serveurs.</string>
   <string name="dashboard_contentDescription_removeRecent">Retirer des récents</string>
   <string name="dashboard_recent_onServer">sur <xliff:g id="serverName" example="My Server">%1$s</xliff:g></string>
+  <string name="dashboard_header_roomsSuffix">salles</string>
+  <string name="dashboard_dialog_switchServerTitle">Changer de serveur ?</string>
+  <string name="dashboard_dialog_switchServerMessage">Cette salle est sur <xliff:g id="serverName" example="My Server">%1$s</xliff:g>. Basculer vers ce serveur et rejoindre ?</string>
+  <string name="dashboard_button_switchAndJoin">Basculer et rejoindre</string>
+  <string name="dashboard_action_remove">Retirer</string>
+  <string name="dashboard_contentDescription_profile">Ouvrir le profil</string>
 </resources>

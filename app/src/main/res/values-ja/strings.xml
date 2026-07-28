@@ -257,4 +257,10 @@
   <string name="dashboard_empty_noRecentHint">参加したルームがここに表示されます（他のサーバーも含む）。</string>
   <string name="dashboard_contentDescription_removeRecent">最近から削除</string>
   <string name="dashboard_recent_onServer"><xliff:g id="serverName" example="My Server">%1$s</xliff:g> 上</string>
+  <string name="dashboard_header_roomsSuffix">ルーム</string>
+  <string name="dashboard_dialog_switchServerTitle">サーバーを切り替えますか？</string>
+  <string name="dashboard_dialog_switchServerMessage">このルームは <xliff:g id="serverName" example="My Server">%1$s</xliff:g> にあります。そのサーバーに切り替えて参加しますか？</string>
+  <string name="dashboard_button_switchAndJoin">切り替えて参加</string>
+  <string name="dashboard_action_remove">外す</string>
+  <string name="dashboard_contentDescription_profile">プロフィールを開く</string>
 </resources>

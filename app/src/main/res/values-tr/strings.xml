@@ -257,4 +257,10 @@
   <string name="dashboard_empty_noRecentHint">Katıldığınız odalar burada görünür, diğer sunucular dahil.</string>
   <string name="dashboard_contentDescription_removeRecent">Son kullanılanlardan kaldır</string>
   <string name="dashboard_recent_onServer"><xliff:g id="serverName" example="My Server">%1$s</xliff:g> üzerinde</string>
+  <string name="dashboard_header_roomsSuffix">odalar</string>
+  <string name="dashboard_dialog_switchServerTitle">Sunucu değiştirilsin mi?</string>
+  <string name="dashboard_dialog_switchServerMessage">Bu oda <xliff:g id="serverName" example="My Server">%1$s</xliff:g> sunucusunda. Bu sunucuya geçip katılınsın mı?</string>
+  <string name="dashboard_button_switchAndJoin">Geç ve katıl</string>
+  <string name="dashboard_action_remove">Kaldır</string>
+  <string name="dashboard_contentDescription_profile">Profili aç</string>
 </resources>

@@ -254,4 +254,10 @@
   <string name="dashboard_empty_noRecentHint">اتاق‌هایی که به آن‌ها می‌پیوندید اینجا ظاهر می‌شوند، از جمله در سرورهای دیگر.</string>
   <string name="dashboard_contentDescription_removeRecent">حذف از اخیر</string>
   <string name="dashboard_recent_onServer">در <xliff:g id="serverName" example="My Server">%1$s</xliff:g></string>
+  <string name="dashboard_header_roomsSuffix">اتاق‌ها</string>
+  <string name="dashboard_dialog_switchServerTitle">تغییر سرور؟</string>
+  <string name="dashboard_dialog_switchServerMessage">این اتاق روی <xliff:g id="serverName" example="My Server">%1$s</xliff:g> است. به آن سرور تغییر داده و بپیوندید؟</string>
+  <string name="dashboard_button_switchAndJoin">تغییر و پیوستن</string>
+  <string name="dashboard_action_remove">برداشتن</string>
+  <string name="dashboard_contentDescription_profile">باز کردن نمایه</string>
 </resources>
