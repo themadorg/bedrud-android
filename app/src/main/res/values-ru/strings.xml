@@ -234,6 +234,7 @@
   <string name="screen_share_notification_text">Ваш экран виден участникам встречи</string>
   <string name="meeting_error_permissionsRequired">Для входа нужны разрешения на камеру и микрофон.</string>
   <string name="meeting_error_screenShareFailed">Не удалось начать демонстрацию экрана.</string>
+  <string name="meeting_error_untrustedCertificate">Не удаётся подключиться безопасно: видеосервер использует недоверенный сертификат безопасности. Обратитесь к администратору сервера.</string>
   <string name="meeting_sheet_chat">Чат</string>
   <string name="meeting_sheet_addOthers">Добавить других</string>
   <string name="meeting_share_chooserTitle">Поделиться ссылкой на встречу</string>

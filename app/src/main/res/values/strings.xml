@@ -199,6 +199,7 @@
   <string name="screen_share_notification_text">Your screen is visible to meeting participants</string>
   <string name="meeting_error_permissionsRequired">Camera and microphone permissions are required to join.</string>
   <string name="meeting_error_screenShareFailed">Could not start screen sharing.</string>
+  <string name="meeting_error_untrustedCertificate">Can’t connect securely: this server’s video endpoint uses an untrusted security certificate. Please contact the server administrator.</string>
   <string name="meeting_sheet_chat">Chat</string>
   <string name="meeting_sheet_addOthers">Add others</string>
   <string name="meeting_share_chooserTitle">Share meeting link</string>

@@ -780,8 +780,18 @@ fun MeetingScreen(
                             color = MaterialTheme.colorScheme.error
                         )
                         Spacer(modifier = Modifier.height(8.dp))
+                        // A TLS trust failure (e.g. the media server presenting a self-signed
+                        // certificate) surfaces as a raw Java exception -- replace it with a
+                        // plain-language, actionable message instead of the stack-trace text.
+                        val connectionError = error
                         Text(
-                            text = error ?: stringResource(R.string.meeting_state_connectionFailedMessage),
+                            text = when {
+                                connectionError == null ->
+                                    stringResource(R.string.meeting_state_connectionFailedMessage)
+                                isTlsTrustError(connectionError) ->
+                                    stringResource(R.string.meeting_error_untrustedCertificate)
+                                else -> connectionError
+                            },
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             textAlign = TextAlign.Center,
@@ -796,6 +806,21 @@ fun MeetingScreen(
             }
         }
     }
+}
+
+/**
+ * True when a connection error is a TLS trust failure — the media server presented a certificate
+ * the device can't validate (self-signed, wrong host, or a missing intermediate). Matched on the
+ * exception text the LiveKit SDK surfaces, so it stays a server-config problem to report, never a
+ * reason to weaken certificate validation.
+ */
+private fun isTlsTrustError(message: String): Boolean {
+    val m = message.lowercase()
+    return "trust anchor" in m ||
+        "certpath" in m ||
+        "certification path" in m ||
+        "sslhandshake" in m ||
+        "certificateexception" in m
 }
 
 @OptIn(ExperimentalFoundationApi::class)

@@ -234,6 +234,7 @@
   <string name="screen_share_notification_text">会议参与者可以看到你的屏幕</string>
   <string name="meeting_error_permissionsRequired">加入需要摄像头和麦克风权限。</string>
   <string name="meeting_error_screenShareFailed">无法开始屏幕共享。</string>
+  <string name="meeting_error_untrustedCertificate">无法安全连接：此服务器的视频端点使用了不受信任的安全证书。请联系服务器管理员。</string>
   <string name="meeting_sheet_chat">聊天</string>
   <string name="meeting_sheet_addOthers">添加其他人</string>
   <string name="meeting_share_chooserTitle">分享会议链接</string>

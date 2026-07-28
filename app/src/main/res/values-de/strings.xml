@@ -234,6 +234,7 @@
   <string name="screen_share_notification_text">Dein Bildschirm ist für Meeting-Teilnehmer sichtbar</string>
   <string name="meeting_error_permissionsRequired">Kamera- und Mikrofonberechtigungen sind erforderlich, um beizutreten.</string>
   <string name="meeting_error_screenShareFailed">Bildschirmfreigabe konnte nicht gestartet werden.</string>
+  <string name="meeting_error_untrustedCertificate">Sichere Verbindung nicht möglich: Der Video-Endpunkt dieses Servers verwendet ein nicht vertrauenswürdiges Sicherheitszertifikat. Bitte wende dich an den Serveradministrator.</string>
   <string name="meeting_sheet_chat">Chat</string>
   <string name="meeting_sheet_addOthers">Andere hinzufügen</string>
   <string name="meeting_share_chooserTitle">Meeting-Link teilen</string>

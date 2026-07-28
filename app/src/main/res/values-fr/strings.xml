@@ -234,6 +234,7 @@
   <string name="screen_share_notification_text">Votre écran est visible par les participants</string>
   <string name="meeting_error_permissionsRequired">Les autorisations caméra et microphone sont requises pour rejoindre.</string>
   <string name="meeting_error_screenShareFailed">Impossible de démarrer le partage d\'écran.</string>
+  <string name="meeting_error_untrustedCertificate">Connexion sécurisée impossible : le point de terminaison vidéo de ce serveur utilise un certificat de sécurité non approuvé. Veuillez contacter l\'administrateur du serveur.</string>
   <string name="meeting_sheet_chat">Chat</string>
   <string name="meeting_sheet_addOthers">Ajouter d\'autres personnes</string>
   <string name="meeting_share_chooserTitle">Partager le lien de la réunion</string>
