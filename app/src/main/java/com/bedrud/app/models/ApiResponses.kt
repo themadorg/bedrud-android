@@ -156,7 +156,12 @@ data class UserRoomResponse(
     // harmless until anything called .copy() on this type -- that generates a null-check
     // on every unspecified constructor param and crashes with a Kotlin intrinsics NPE.
     val relationship: String? = null,
-    val mode: String
+    val mode: String,
+    // The server soft-deletes: DELETE room/{id} returns 202 and a background job later stamps
+    // deletedAt -- but room/list keeps returning stamped rooms indefinitely (observed 24h+).
+    // Non-null here means the room is dead and must never be shown.
+    @SerializedName("deletedAt")
+    val deletedAt: String? = null,
 )
 
 // --- Admin ---

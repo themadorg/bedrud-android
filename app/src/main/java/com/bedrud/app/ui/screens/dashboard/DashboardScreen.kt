@@ -91,6 +91,7 @@ import com.bedrud.app.core.recent.RecentRoom
 import com.bedrud.app.core.recent.RecentRoomsStore
 import com.bedrud.app.core.recent.formatRecentRoomTimeAgo
 import com.bedrud.app.core.recent.recentRoomsNotInApiList
+import com.bedrud.app.core.rooms.DeletedRoomTombstones
 import com.bedrud.app.models.CreateRoomRequest
 import com.bedrud.app.models.RoomSettings
 import com.bedrud.app.models.UpdateRoomSettingsRequest
@@ -116,11 +117,6 @@ private const val AUTO_REFRESH_INTERVAL_MS = 60_000L
 // A failed fetch retries on this short delay instead of waiting out the full refresh interval,
 // so a flaky request doesn't leave the list stale for a minute.
 private const val FAILED_FETCH_RETRY_MS = 5_000L
-
-// How long a deleted room's id keeps being filtered out of fetch results. The server's list
-// endpoint can still return a just-deleted room for a while (eventual consistency), which would
-// otherwise resurrect it on the next background refresh.
-private const val DELETED_ROOM_TOMBSTONE_MS = 10 * 60_000L
 
 // ── Filter state ─────────────────────────────────────────────────────────────
 
@@ -198,10 +194,6 @@ fun DashboardContent(
         }
     }
 
-    // Recently deleted room ids -> deletion time. Not compose state: it never drives UI directly,
-    // it only filters what fetchRooms() accepts from the server.
-    val deletedRoomTombstones = remember { mutableMapOf<String, Long>() }
-
     // Steers the auto-refresh loop onto the short retry delay after a failure.
     var lastFetchFailed by remember { mutableStateOf(false) }
 
@@ -213,11 +205,13 @@ fun DashboardContent(
         return try {
             val response = api.listRooms()
             if (response.isSuccessful) {
-                val now = System.currentTimeMillis()
-                deletedRoomTombstones.entries.removeAll { now - it.value > DELETED_ROOM_TOMBSTONE_MS }
-                rooms = (response.body() ?: emptyList())
-                    .filterNot { it.id in deletedRoomTombstones }
-                lastFetchAtMs = now
+                // Drop dead rooms the server still returns: ones already stamped deletedAt
+                // (room/list never filters them) and ones deleted from this device moments ago
+                // that the async delete hasn't stamped yet.
+                rooms = (response.body() ?: emptyList()).filterNot { room ->
+                    room.deletedAt != null || DeletedRoomTombstones.isTombstoned(room.id)
+                }
+                lastFetchAtMs = System.currentTimeMillis()
                 lastFetchFailed = false
                 null
             } else {
@@ -355,9 +349,9 @@ fun DashboardContent(
                             try {
                                 val response = roomApi.deleteRoom(deleting.id)
                                 if (response.isSuccessful) {
-                                    // Keep refreshes from resurrecting it while the server's list
-                                    // endpoint catches up...
-                                    deletedRoomTombstones[deleting.id] = System.currentTimeMillis()
+                                    // Keep refreshes from resurrecting it while the server's
+                                    // async delete catches up...
+                                    DeletedRoomTombstones.add(deleting.id)
                                     rooms = rooms.filter { it.id != deleting.id }
                                     // ...and drop its local recent entry, or the All tab would
                                     // immediately weave the deleted room back in as a recent card.
