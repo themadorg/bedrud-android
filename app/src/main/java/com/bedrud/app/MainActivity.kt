@@ -197,14 +197,20 @@ fun BedrudNavHost(
     val isLoggedIn = authManager?.isLoggedIn?.collectAsState()?.value ?: false
     val recentRoomsStore: RecentRoomsStore = koinInject()
 
+    // Route to the right top-level destination for the current auth state. This re-runs when the
+    // active instance is switched (authManager swaps) — including a switch made as part of a
+    // cross-server join. In that case we're navigating to MEETING, so MUST NOT force MAIN here:
+    // once logged in, both MAIN and MEETING are valid, and force-navigating MAIN with popUpTo(0)
+    // would pop the meeting we're opening and leave only the CallService notification running.
     LaunchedEffect(instances.isEmpty(), isLoggedIn, authManager) {
-        val target = when {
-            instances.isEmpty() -> Routes.ADD_INSTANCE
-            !isLoggedIn -> Routes.LOGIN
-            else -> Routes.MAIN
-        }
-        navController.navigate(target) {
-            popUpTo(0) { inclusive = true }
+        val current = navController.currentDestination?.route
+        when {
+            instances.isEmpty() ->
+                navController.navigate(Routes.ADD_INSTANCE) { popUpTo(0) { inclusive = true } }
+            !isLoggedIn ->
+                navController.navigate(Routes.LOGIN) { popUpTo(0) { inclusive = true } }
+            current != Routes.MAIN && current != Routes.MEETING ->
+                navController.navigate(Routes.MAIN) { popUpTo(0) { inclusive = true } }
         }
     }
 
