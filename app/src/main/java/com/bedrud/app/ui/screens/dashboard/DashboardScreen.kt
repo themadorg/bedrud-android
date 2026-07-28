@@ -669,7 +669,7 @@ private fun ProfileAvatarButton(user: User?, onClick: () -> Unit) {
     IconButton(onClick = onClick, modifier = Modifier.size(Dimens.minTouchTarget)) {
         Box(
             modifier = Modifier
-                .size(Dimens.avatarSm)
+                .size(Dimens.avatarLg)
                 .clip(BedrudShapeTokens.pill)
                 .background(MaterialTheme.colorScheme.primary)
                 .semantics { contentDescription = desc },
@@ -705,23 +705,24 @@ private fun QuickJoinBar(
     modifier: Modifier = Modifier
 ) {
     Row(modifier = modifier, verticalAlignment = Alignment.CenterVertically) {
+        // Both the field and the button sit at the compact 48dp control height with the shared
+        // corner token, so the row reads as one control without dominating the header area.
         OutlinedTextField(
             value = value,
             onValueChange = onValueChange,
             placeholder = { Text(stringResource(R.string.dashboard_placeholder_search)) },
             leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, modifier = Modifier.size(Dimens.iconSm)) },
             singleLine = true,
+            textStyle = MaterialTheme.typography.bodyMedium,
             shape = BedrudShapeTokens.field,
-            modifier = Modifier.weight(1f)
+            modifier = Modifier.weight(1f).height(Dimens.buttonHeight)
         )
         Spacer(modifier = Modifier.width(Dimens.space8))
-        // Matches the field: same 56dp height, same corner token, so the row reads as one control.
         BedrudButton(
             text = stringResource(R.string.common_button_join),
             onClick = onJoin,
             variant = BedrudButtonVariant.TONAL,
             enabled = value.isNotBlank(),
-            modifier = Modifier.height(Dimens.buttonHeightLarge),
         )
     }
 }

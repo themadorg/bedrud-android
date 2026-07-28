@@ -52,8 +52,8 @@ object Dimens {
     val iconMd = 24.dp
     val iconLg = 32.dp
     val iconXl = 56.dp                 // empty-state illustrations
-    val avatarSm = 36.dp               // top-bar avatar circle (inside a 48dp touch target)
     val avatar = 40.dp
+    val avatarLg = 44.dp               // top-bar profile avatar circle (inside a 48dp touch target)
 
     // ── Brand ──
     val brandMark = 72.dp
