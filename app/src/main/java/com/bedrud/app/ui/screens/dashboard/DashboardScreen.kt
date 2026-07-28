@@ -355,7 +355,9 @@ fun DashboardContent(
                 Text(stringResource(R.string.dashboard_dialog_deleteMessage, title))
             },
             confirmButton = {
-                TextButton(
+                BedrudButton(
+                    text = stringResource(R.string.common_button_delete),
+                    variant = BedrudButtonVariant.DESTRUCTIVE,
                     onClick = {
                         val deleting = room
                         roomToDelete = null
@@ -382,12 +384,7 @@ fun DashboardContent(
                             }
                         }
                     },
-                ) {
-                    Text(
-                        stringResource(R.string.common_button_delete),
-                        color = MaterialTheme.colorScheme.error,
-                    )
-                }
+                )
             },
             dismissButton = {
                 TextButton(onClick = { roomToDelete = null }) {
@@ -405,13 +402,15 @@ fun DashboardContent(
                 Text(stringResource(R.string.dashboard_dialog_switchServerMessage, recent.instanceName))
             },
             confirmButton = {
-                TextButton(
+                BedrudButton(
+                    text = stringResource(R.string.dashboard_button_switchAndJoin),
+                    variant = BedrudButtonVariant.TONAL,
                     onClick = {
                         val target = recent
                         pendingSwitchJoin = null
                         onJoinRecent(target)
                     },
-                ) { Text(stringResource(R.string.dashboard_button_switchAndJoin)) }
+                )
             },
             dismissButton = {
                 TextButton(onClick = { pendingSwitchJoin = null }) {
@@ -718,7 +717,7 @@ private fun ProfileAvatarButton(user: User?, onClick: () -> Unit) {
             } else {
                 Text(
                     text = (user?.name?.take(1) ?: "?").uppercase(),
-                    style = MaterialTheme.typography.labelLarge,
+                    style = MaterialTheme.typography.titleLarge,
                     color = MaterialTheme.colorScheme.onPrimary,
                 )
             }
@@ -1130,8 +1129,13 @@ private fun CreateRoomDialog(onDismiss: () -> Unit, onCreate: (String) -> Unit) 
                 )
             }
         },
-        confirmButton = { TextButton(onClick = { onCreate(roomName) }) { Text(stringResource(
-            R.string.common_button_create)) } },
+        confirmButton = {
+            BedrudButton(
+                text = stringResource(R.string.common_button_create),
+                variant = BedrudButtonVariant.TONAL,
+                onClick = { onCreate(roomName) },
+            )
+        },
         dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.common_button_cancel)) } }
     )
 }
