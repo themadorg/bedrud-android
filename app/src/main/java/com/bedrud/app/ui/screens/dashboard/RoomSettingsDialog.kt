@@ -22,6 +22,8 @@ import androidx.compose.ui.unit.dp
 import com.bedrud.app.R
 import com.bedrud.app.models.RoomSettings
 import com.bedrud.app.models.UserRoomResponse
+import com.bedrud.app.ui.components.BedrudButton
+import com.bedrud.app.ui.components.BedrudButtonVariant
 
 @Composable
 fun RoomSettingsDialog(
@@ -63,21 +65,23 @@ fun RoomSettingsDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = {
-                onSave(
-                    isPublic,
-                    room.settings.copy(
-                        allowChat = true,
-                        allowVideo = true,
-                        allowAudio = true,
-                        requireApproval = false,
-                        e2ee = false,
-                        recordingsAllowed = false,
+            BedrudButton(
+                text = stringResource(R.string.common_button_save),
+                variant = BedrudButtonVariant.TONAL,
+                onClick = {
+                    onSave(
+                        isPublic,
+                        room.settings.copy(
+                            allowChat = true,
+                            allowVideo = true,
+                            allowAudio = true,
+                            requireApproval = false,
+                            e2ee = false,
+                            recordingsAllowed = false,
+                        )
                     )
-                )
-            }) {
-                Text(stringResource(R.string.common_button_save))
-            }
+                },
+            )
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
