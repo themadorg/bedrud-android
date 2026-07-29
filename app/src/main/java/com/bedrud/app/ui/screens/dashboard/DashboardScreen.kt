@@ -433,9 +433,15 @@ fun DashboardContent(
 
     val isKeyboardVisible = WindowInsets.ime.getBottom(LocalDensity.current) > 0
 
-    val filteredRooms = remember(rooms, activeFilter, currentUser) {
+    val filteredRooms = remember(rooms, activeFilter, currentUser, activeRecentByName) {
         when (activeFilter) {
-            RoomFilter.MY_ROOMS -> rooms.filter { it.createdBy == currentUser?.id }
+            // Same recency order as the All tab: most-recently-used first, rooms never joined from
+            // this device last (stable sort keeps those in their existing server order).
+            RoomFilter.MY_ROOMS ->
+                rooms.filter { it.createdBy == currentUser?.id }
+                    .sortedByDescending {
+                        activeRecentByName[it.name]?.let { r -> r.leftAt ?: r.joinedAt } ?: Long.MIN_VALUE
+                    }
             RoomFilter.ALL -> rooms
         }
     }
