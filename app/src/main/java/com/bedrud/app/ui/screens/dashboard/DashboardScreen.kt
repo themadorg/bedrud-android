@@ -6,13 +6,11 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -921,13 +919,12 @@ private fun presenceFor(isOngoing: Boolean, lastVisitAtMs: Long?, now: Long): Pr
 
 // ── Shared card pieces ─────────────────────────────────────────────────────────
 
-/** Outlined card with a neutral accent band on its leading edge. */
+/** Plain outlined card holding one room row. */
 @Composable
 private fun RoomCardScaffold(
     onClick: () -> Unit,
     content: @Composable RowScope.() -> Unit,
 ) {
-    val bandColor = MaterialTheme.colorScheme.outline
     BedrudOutlinedCard(
         onClick = onClick,
         shape = BedrudShapeTokens.card,
@@ -936,28 +933,13 @@ private fun RoomCardScaffold(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                // Min height first so it wins: every card renders the same height whether or not
-                // it carries a trailing 48dp control (the settings button inflated owned cards).
+                // Uniform card height whether or not the card carries a trailing 48dp control
+                // (the settings button would otherwise inflate owned cards).
                 .heightIn(min = Dimens.roomCardMinHeight)
-                .height(IntrinsicSize.Min),
+                .padding(start = Dimens.space16, end = Dimens.space4, top = Dimens.space12, bottom = Dimens.space12),
             verticalAlignment = Alignment.CenterVertically,
-        ) {
-            // Fused to the card's leading edge, full height — the card's own shape clips the
-            // band's corners, so it reads as part of the card rather than a floating pill.
-            Box(
-                modifier = Modifier
-                    .width(Dimens.roomCardStripe)
-                    .fillMaxHeight()
-                    .background(bandColor),
-            )
-            Row(
-                modifier = Modifier
-                    .weight(1f)
-                    .padding(start = Dimens.space16, end = Dimens.space4, top = Dimens.space12, bottom = Dimens.space12),
-                verticalAlignment = Alignment.CenterVertically,
-                content = content,
-            )
-        }
+            content = content,
+        )
     }
 }
 
