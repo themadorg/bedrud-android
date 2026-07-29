@@ -56,6 +56,8 @@ App connects to user-chosen Bedrud server instances, not fixed backend.
 
 Switching instances: `instanceManager.switchTo(id)` → sets active → rebuilds all clients → UI reacts to StateFlow changes.
 
+The rooms dashboard (`DashboardContent`) lists the **active** server's rooms from the API and weaves in **recent** rooms from every server (`RecentRoomsStore`, which stores each recent's server id, name, and accent color). Its **All** tab merges both (recency/live first); **My Rooms** is the subset the user created. Each card is tinted with its server's color, and tapping a recent that lives on another server prompts a confirm-and-switch (`switchTo` + join) rather than switching silently.
+
 ## Networking
 
 Retrofit + OkHttp + Gson (not kotlinx-serialization for HTTP). `kotlin-serialization` plugin enabled but used elsewhere.

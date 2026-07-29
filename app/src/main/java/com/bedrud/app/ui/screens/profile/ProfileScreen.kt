@@ -54,6 +54,7 @@ import coil.compose.AsyncImage
 import com.bedrud.app.R
 import com.bedrud.app.core.instance.InstanceManager
 import com.bedrud.app.ui.screens.instance.InstanceSwitcherSheet
+import com.bedrud.app.ui.theme.parseInstanceColor
 import org.koin.compose.koinInject
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -188,7 +189,7 @@ fun ProfileContent(
                                     modifier = Modifier
                                         .size(36.dp)
                                         .clip(CircleShape)
-                                        .background(parseProfileColor(activeInstance.iconColorHex)),
+                                        .background(parseInstanceColor(activeInstance.iconColorHex)),
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Text(
@@ -278,15 +279,5 @@ fun ProfileContent(
 
             Spacer(modifier = Modifier.height(16.dp))
         }
-    }
-}
-
-private fun parseProfileColor(hex: String): Color {
-    val cleaned = hex.trimStart('#')
-    if (cleaned.length != 6) return Color(0xFF3B82F6)
-    return try {
-        Color(android.graphics.Color.parseColor("#$cleaned"))
-    } catch (_: Exception) {
-        Color(0xFF3B82F6)
     }
 }

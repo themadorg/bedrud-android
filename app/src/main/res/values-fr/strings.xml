@@ -72,6 +72,7 @@
   <string name="instance_note_insecure">Cette connexion ne sera pas chiffrée.</string>
   <string name="dashboard_title_rooms">Salons</string>
   <string name="dashboard_placeholder_search">Entrez un nom de salon ou un lien…</string>
+  <string name="dashboard_join_invalidInput">Saisissez un nom de salle ou un lien de réunion valide.</string>
   <string name="dashboard_dialog_createTitle">Créer un salon</string>
   <string name="dashboard_dialog_createDescription">Entrez un nom pour votre salon, ou laissez vide pour un nom généré automatiquement.</string>
   <string name="dashboard_label_roomName">Nom du salon (facultatif)</string>
@@ -192,7 +193,7 @@
   <string name="dashboard_stat_live">En direct</string>
   <string name="dashboard_stat_private">Privé</string>
   <string name="dashboard_status_live">● En direct</string>
-  <string name="dashboard_status_idle">○ Inactif</string>
+  <string name="dashboard_status_timeAgo">il y a %1$s</string>
   <string name="dashboard_empty_noRooms">Aucun salon pour l\'instant</string>
   <string name="dashboard_empty_noMatch">Aucun salon ne correspond à ce filtre</string>
   <string name="dashboard_feature_chat">Chat</string>
@@ -257,5 +258,7 @@
   <string name="dashboard_empty_noRecent">Aucune salle récente</string>
   <string name="dashboard_empty_noRecentHint">Les salles que vous rejoignez apparaissent ici, y compris sur d\'autres serveurs.</string>
   <string name="dashboard_contentDescription_removeRecent">Retirer des récents</string>
-  <string name="dashboard_recent_onServer">sur <xliff:g id="serverName" example="My Server">%1$s</xliff:g></string>
+  <string name="dashboard_header_roomsSuffix">salles</string>
+  <string name="dashboard_action_remove">Retirer</string>
+  <string name="dashboard_contentDescription_profile">Ouvrir le profil</string>
 </resources>

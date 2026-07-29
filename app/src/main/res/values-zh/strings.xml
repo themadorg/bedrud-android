@@ -72,6 +72,7 @@
   <string name="instance_note_insecure">此连接将不会加密。</string>
   <string name="dashboard_title_rooms">房间</string>
   <string name="dashboard_placeholder_search">输入房间名称或链接…</string>
+  <string name="dashboard_join_invalidInput">请输入房间名称或有效的会议链接。</string>
   <string name="dashboard_dialog_createTitle">创建房间</string>
   <string name="dashboard_dialog_createDescription">输入房间名称，或留空以自动生成名称。</string>
   <string name="dashboard_label_roomName">房间名称（可选）</string>
@@ -192,7 +193,7 @@
   <string name="dashboard_stat_live">直播中</string>
   <string name="dashboard_stat_private">私密</string>
   <string name="dashboard_status_live">● 直播中</string>
-  <string name="dashboard_status_idle">○ 空闲</string>
+  <string name="dashboard_status_timeAgo">%1$s前</string>
   <string name="dashboard_empty_noRooms">暂无房间</string>
   <string name="dashboard_empty_noMatch">没有符合此筛选条件的房间</string>
   <string name="dashboard_feature_chat">聊天</string>
@@ -257,5 +258,7 @@
   <string name="dashboard_empty_noRecent">没有最近的房间</string>
   <string name="dashboard_empty_noRecentHint">你加入的房间会显示在这里，包括其他服务器上的房间。</string>
   <string name="dashboard_contentDescription_removeRecent">从最近中移除</string>
-  <string name="dashboard_recent_onServer">在 <xliff:g id="serverName" example="My Server">%1$s</xliff:g></string>
+  <string name="dashboard_header_roomsSuffix">房间</string>
+  <string name="dashboard_action_remove">移除</string>
+  <string name="dashboard_contentDescription_profile">打开个人资料</string>
 </resources>

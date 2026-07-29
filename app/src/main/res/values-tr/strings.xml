@@ -72,6 +72,7 @@
   <string name="instance_note_insecure">Bu bağlantı şifrelenmeyecek.</string>
   <string name="dashboard_title_rooms">Odalar</string>
   <string name="dashboard_placeholder_search">Oda adı veya bağlantısı girin…</string>
+  <string name="dashboard_join_invalidInput">Bir oda adı veya geçerli bir toplantı bağlantısı girin.</string>
   <string name="dashboard_dialog_createTitle">Oda Oluştur</string>
   <string name="dashboard_dialog_createDescription">Odanız için bir ad girin veya otomatik oluşturulan bir ad için boş bırakın.</string>
   <string name="dashboard_label_roomName">Oda Adı (isteğe bağlı)</string>
@@ -192,7 +193,7 @@
   <string name="dashboard_stat_live">Canlı</string>
   <string name="dashboard_stat_private">Özel</string>
   <string name="dashboard_status_live">● Canlı</string>
-  <string name="dashboard_status_idle">○ Boşta</string>
+  <string name="dashboard_status_timeAgo">%1$s önce</string>
   <string name="dashboard_empty_noRooms">Henüz oda yok</string>
   <string name="dashboard_empty_noMatch">Bu filtreyle eşleşen oda yok</string>
   <string name="dashboard_feature_chat">Sohbet</string>
@@ -257,5 +258,7 @@
   <string name="dashboard_empty_noRecent">Son oda yok</string>
   <string name="dashboard_empty_noRecentHint">Katıldığınız odalar burada görünür, diğer sunucular dahil.</string>
   <string name="dashboard_contentDescription_removeRecent">Son kullanılanlardan kaldır</string>
-  <string name="dashboard_recent_onServer"><xliff:g id="serverName" example="My Server">%1$s</xliff:g> üzerinde</string>
+  <string name="dashboard_header_roomsSuffix">odalar</string>
+  <string name="dashboard_action_remove">Kaldır</string>
+  <string name="dashboard_contentDescription_profile">Profili aç</string>
 </resources>

@@ -34,6 +34,9 @@ import com.bedrud.app.ui.screens.settings.SettingsContent
 import com.bedrud.app.ui.screens.settings.SettingsStore
 import org.koin.compose.koinInject
 
+// Bottom-nav tabs are built in a fixed order: Rooms, Profile, Settings, (Admin).
+private const val PROFILE_TAB_INDEX = 1
+
 @Composable
 fun MainScreen(
     onJoinRoom: (String) -> Unit,
@@ -43,15 +46,20 @@ fun MainScreen(
     settingsStore: SettingsStore = koinInject(),
     recentRoomsStore: RecentRoomsStore = koinInject(),
 ) {
-    fun recordAndJoin(roomName: String, instanceId: String, instanceName: String) {
-        recentRoomsStore.add(roomName, instanceId, instanceName)
+    fun recordAndJoin(
+        roomName: String,
+        instanceId: String,
+        instanceName: String,
+        instanceColorHex: String?,
+    ) {
+        recentRoomsStore.add(roomName, instanceId, instanceName, instanceColorHex)
         onJoinRoom(roomName)
     }
 
     fun joinFromDashboard(roomName: String) {
         val instance = instanceManager.store.activeInstance
         if (instance != null) {
-            recordAndJoin(roomName, instance.id, instance.displayName)
+            recordAndJoin(roomName, instance.id, instance.displayName, instance.iconColorHex)
         } else {
             onJoinRoom(roomName)
         }
@@ -120,11 +128,18 @@ fun MainScreen(
             0 -> DashboardContent(
                 modifier = Modifier.padding(contentPadding),
                 onJoinRoom = ::joinFromDashboard,
+                // Rooms=0, Profile=1 — the header avatar is a shortcut to the Profile tab.
+                onOpenProfile = { selectedTab = PROFILE_TAB_INDEX },
                 onJoinRecent = { recent ->
                     if (recent.instanceId != instanceManager.store.activeInstanceId.value) {
                         instanceManager.switchTo(recent.instanceId)
                     }
-                    recordAndJoin(recent.roomName, recent.instanceId, recent.instanceName)
+                    recordAndJoin(
+                        recent.roomName,
+                        recent.instanceId,
+                        recent.instanceName,
+                        recent.instanceColorHex,
+                    )
                 },
                 instanceManager = instanceManager,
             )

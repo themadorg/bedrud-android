@@ -172,15 +172,18 @@ fun MeetingScreen(
         hoveredElevation = 0.dp
     )
 
-    // Track meeting state for PiP
-    DisposableEffect(Unit) {
-        pipStateHolder.setInMeeting(true)
+    val connectionState by roomManager.connectionState.collectAsState()
+
+    // Arm auto-PiP only while the call is actually connected. MainActivity.onUserLeaveHint reads
+    // this flag, and the camera/mic permission dialog fires onUserLeaveHint on some devices
+    // (One UI, notably) — flagging from composition start sent the join flow into PiP while the
+    // user was still in the app.
+    DisposableEffect(connectionState) {
+        pipStateHolder.setInMeeting(connectionState == ConnectionState.CONNECTED)
         onDispose {
             pipStateHolder.setInMeeting(false)
         }
     }
-
-    val connectionState by roomManager.connectionState.collectAsState()
     val isMicEnabled by roomManager.isMicEnabled.collectAsState()
     val micMediaError by roomManager.micMediaError.collectAsState()
     val isCameraEnabled by roomManager.isCameraEnabled.collectAsState()

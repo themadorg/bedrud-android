@@ -72,6 +72,7 @@
   <string name="instance_note_insecure">This connection won\'t be encrypted.</string>
   <string name="dashboard_title_rooms">Rooms</string>
   <string name="dashboard_placeholder_search">Enter room name or link…</string>
+  <string name="dashboard_join_invalidInput">Enter a room name or a valid meeting link.</string>
   <string name="dashboard_dialog_createTitle">Create Room</string>
   <string name="dashboard_dialog_createDescription">Enter a name for your room, or leave blank for an auto-generated name.</string>
   <string name="dashboard_label_roomName">Room Name (optional)</string>
@@ -224,7 +225,7 @@
   <string name="dashboard_stat_live">Live</string>
   <string name="dashboard_stat_private">Private</string>
   <string name="dashboard_status_live">● Live</string>
-  <string name="dashboard_status_idle">○ Idle</string>
+  <string name="dashboard_status_timeAgo">%1$s ago</string>
   <string name="dashboard_empty_noRooms">No rooms yet</string>
   <string name="dashboard_empty_noMatch">No rooms match this filter</string>
   <string name="dashboard_feature_chat">Chat</string>
@@ -240,7 +241,9 @@
   <string name="dashboard_empty_noRecent">No recent rooms</string>
   <string name="dashboard_empty_noRecentHint">Rooms you join appear here, including on other servers.</string>
   <string name="dashboard_contentDescription_removeRecent">Remove from recent</string>
-  <string name="dashboard_recent_onServer">on <xliff:g id="serverName" example="My Server">%1$s</xliff:g></string>
+  <string name="dashboard_header_roomsSuffix">rooms</string>
+  <string name="dashboard_action_remove">Remove</string>
+  <string name="dashboard_contentDescription_profile">Open profile</string>
   <string name="dashboard_roomSettings_isPublic">Public Room</string>
   <string name="dashboard_roomSettings_allowChat">Allow Chat</string>
   <string name="dashboard_roomSettings_allowVideo">Allow Video</string>

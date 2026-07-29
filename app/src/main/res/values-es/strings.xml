@@ -72,6 +72,7 @@
   <string name="instance_note_insecure">Esta conexión no estará cifrada.</string>
   <string name="dashboard_title_rooms">Salas</string>
   <string name="dashboard_placeholder_search">Introduce el nombre o enlace de la sala…</string>
+  <string name="dashboard_join_invalidInput">Introduce el nombre de una sala o un enlace de reunión válido.</string>
   <string name="dashboard_dialog_createTitle">Crear sala</string>
   <string name="dashboard_dialog_createDescription">Introduce un nombre para tu sala o déjalo en blanco para un nombre generado automáticamente.</string>
   <string name="dashboard_label_roomName">Nombre de la sala (opcional)</string>
@@ -192,7 +193,7 @@
   <string name="dashboard_stat_live">En vivo</string>
   <string name="dashboard_stat_private">Privado</string>
   <string name="dashboard_status_live">● En vivo</string>
-  <string name="dashboard_status_idle">○ Inactivo</string>
+  <string name="dashboard_status_timeAgo">hace %1$s</string>
   <string name="dashboard_empty_noRooms">Aún no hay salas</string>
   <string name="dashboard_empty_noMatch">Ninguna sala coincide con este filtro</string>
   <string name="dashboard_feature_chat">Chat</string>
@@ -257,5 +258,7 @@
   <string name="dashboard_empty_noRecent">No hay salas recientes</string>
   <string name="dashboard_empty_noRecentHint">Las salas a las que te unes aparecen aquí, también en otros servidores.</string>
   <string name="dashboard_contentDescription_removeRecent">Quitar de recientes</string>
-  <string name="dashboard_recent_onServer">en <xliff:g id="serverName" example="My Server">%1$s</xliff:g></string>
+  <string name="dashboard_header_roomsSuffix">salas</string>
+  <string name="dashboard_action_remove">Quitar</string>
+  <string name="dashboard_contentDescription_profile">Abrir perfil</string>
 </resources>

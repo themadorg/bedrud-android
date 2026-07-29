@@ -1,11 +1,13 @@
 package com.bedrud.app.ui.components
 
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.exclude
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
@@ -19,7 +21,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
+import com.bedrud.app.ui.theme.Dimens
 
 /**
  * Scaffold content insets without IME. [android:windowSoftInputMode=adjustResize] already
@@ -46,6 +48,31 @@ fun BedrudCompactTopBar(
     modifier: Modifier = Modifier,
     actions: @Composable RowScope.() -> Unit = {},
 ) {
+    BedrudCompactTopBar(
+        modifier = modifier,
+        actions = actions,
+        title = {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.headlineSmall,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        },
+    )
+}
+
+/**
+ * Slot-based variant: the caller supplies the title content, so pages that need a richer title
+ * (e.g. the rooms header's two-tone, server-colored name) can render their own composable while
+ * keeping the shared status-bar padding, height, and actions layout.
+ */
+@Composable
+fun BedrudCompactTopBar(
+    modifier: Modifier = Modifier,
+    actions: @Composable RowScope.() -> Unit = {},
+    title: @Composable () -> Unit,
+) {
     Surface(
         color = MaterialTheme.colorScheme.surface,
         modifier = modifier,
@@ -54,16 +81,16 @@ fun BedrudCompactTopBar(
             modifier = Modifier
                 .fillMaxWidth()
                 .statusBarsPadding()
-                .padding(start = 16.dp, end = 4.dp, top = 2.dp, bottom = 2.dp),
+                .heightIn(min = Dimens.topBarHeight)
+                .padding(
+                    start = Dimens.space16,
+                    end = Dimens.space4,
+                    top = Dimens.space2,
+                    bottom = Dimens.space2,
+                ),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(
-                text = title,
-                style = MaterialTheme.typography.titleLarge,
-                modifier = Modifier.weight(1f),
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
+            Box(modifier = Modifier.weight(1f)) { title() }
             actions()
         }
     }
@@ -78,7 +105,7 @@ fun BedrudCompactIconButton(
 ) {
     androidx.compose.material3.IconButton(
         onClick = onClick,
-        modifier = modifier.size(40.dp),
+        modifier = modifier.size(Dimens.avatar),
         content = content,
     )
 }

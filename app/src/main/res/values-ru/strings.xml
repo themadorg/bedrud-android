@@ -72,6 +72,7 @@
   <string name="instance_note_insecure">Это подключение не будет зашифровано.</string>
   <string name="dashboard_title_rooms">Комнаты</string>
   <string name="dashboard_placeholder_search">Введите название комнаты или ссылку…</string>
+  <string name="dashboard_join_invalidInput">Введите название комнаты или действительную ссылку на встречу.</string>
   <string name="dashboard_dialog_createTitle">Создать комнату</string>
   <string name="dashboard_dialog_createDescription">Введите название комнаты или оставьте пустым для автоматического названия.</string>
   <string name="dashboard_label_roomName">Название комнаты (необязательно)</string>
@@ -192,7 +193,7 @@
   <string name="dashboard_stat_live">В эфире</string>
   <string name="dashboard_stat_private">Закрытая</string>
   <string name="dashboard_status_live">● В эфире</string>
-  <string name="dashboard_status_idle">○ Ожидание</string>
+  <string name="dashboard_status_timeAgo">%1$s назад</string>
   <string name="dashboard_empty_noRooms">Пока нет комнат</string>
   <string name="dashboard_empty_noMatch">Нет комнат, соответствующих этому фильтру</string>
   <string name="dashboard_feature_chat">Чат</string>
@@ -257,5 +258,7 @@
   <string name="dashboard_empty_noRecent">Нет недавних комнат</string>
   <string name="dashboard_empty_noRecentHint">Комнаты, в которые вы входите, появляются здесь, в том числе с других серверов.</string>
   <string name="dashboard_contentDescription_removeRecent">Удалить из недавних</string>
-  <string name="dashboard_recent_onServer">на <xliff:g id="serverName" example="My Server">%1$s</xliff:g></string>
+  <string name="dashboard_header_roomsSuffix">комнаты</string>
+  <string name="dashboard_action_remove">Убрать</string>
+  <string name="dashboard_contentDescription_profile">Открыть профиль</string>
 </resources>

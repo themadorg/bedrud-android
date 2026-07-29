@@ -6,7 +6,7 @@ import org.junit.Test
 class RecentRoomsStoreTest {
 
     @Test
-    fun `recentRoomsNotInApiList excludes current-server rooms already in API list`() {
+    fun `recentRoomsNotInApiList keeps active-server rooms not already in the API list`() {
         val recent = listOf(
             RecentRoom("room-a", "inst-1", "Server A"),
             RecentRoom("room-b", "inst-1", "Server A"),
@@ -15,20 +15,22 @@ class RecentRoomsStoreTest {
 
         val result = recentRoomsNotInApiList(recent, setOf("room-a"), "inst-1")
 
+        // room-a is already listed by the API and room-c belongs to another server — both dropped.
         assertEquals(
-            listOf("room-b", "room-c"),
+            listOf("room-b"),
             result.map { it.roomName },
         )
     }
 
     @Test
-    fun `recentRoomsNotInApiList keeps other-server rooms`() {
+    fun `recentRoomsNotInApiList excludes rooms from other servers`() {
         val recent = listOf(
             RecentRoom("shared-room", "inst-2", "Server B"),
         )
 
-        val result = recentRoomsNotInApiList(recent, setOf("shared-room"), "inst-1")
+        // The active server is inst-1, so a recent on inst-2 is never surfaced — even by the same name.
+        val result = recentRoomsNotInApiList(recent, emptySet(), "inst-1")
 
-        assertEquals(listOf("shared-room"), result.map { it.roomName })
+        assertEquals(emptyList<String>(), result.map { it.roomName })
     }
 }

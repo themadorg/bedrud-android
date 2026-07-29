@@ -12,6 +12,10 @@ data class RecentRoom(
     val roomName: String,
     val instanceId: String,
     val instanceName: String,
+    // The server's accent color (`#RRGGBB`), captured at join time so a cross-server card stays
+    // correctly tinted even after that instance is removed. Nullable for entries persisted before
+    // this field existed — the UI falls back to a live instance lookup, then a neutral color.
+    val instanceColorHex: String? = null,
     val joinedAt: Long = System.currentTimeMillis(),
     val leftAt: Long? = null,
 )
@@ -27,7 +31,12 @@ class RecentRoomsStore(private val prefs: SharedPreferences) {
     private val _rooms = MutableStateFlow(loadRooms())
     val rooms: StateFlow<List<RecentRoom>> = _rooms.asStateFlow()
 
-    fun add(roomName: String, instanceId: String, instanceName: String) {
+    fun add(
+        roomName: String,
+        instanceId: String,
+        instanceName: String,
+        instanceColorHex: String? = null,
+    ) {
         val trimmed = roomName.trim()
         if (trimmed.isBlank()) return
 
@@ -35,6 +44,7 @@ class RecentRoomsStore(private val prefs: SharedPreferences) {
             roomName = trimmed,
             instanceId = instanceId,
             instanceName = instanceName.ifBlank { instanceId },
+            instanceColorHex = instanceColorHex,
             joinedAt = System.currentTimeMillis(),
         )
         val updated = listOf(entry) +
@@ -91,13 +101,16 @@ class RecentRoomsStore(private val prefs: SharedPreferences) {
     }
 }
 
+// Recent rooms on the active server that aren't already in its API room list — i.e. rooms joined
+// by link on this server that don't surface as owned/listed rooms. Recents from other servers are
+// intentionally excluded: the dashboard shows only the active server and nothing else.
 fun recentRoomsNotInApiList(
     recentRooms: List<RecentRoom>,
     apiRoomNames: Set<String>,
     activeInstanceId: String?,
 ): List<RecentRoom> =
     recentRooms.filter { recent ->
-        recent.instanceId != activeInstanceId || recent.roomName !in apiRoomNames
+        recent.instanceId == activeInstanceId && recent.roomName !in apiRoomNames
     }
 
 fun formatRecentRoomTimeAgo(joinedAt: Long, now: Long = System.currentTimeMillis()): String {
