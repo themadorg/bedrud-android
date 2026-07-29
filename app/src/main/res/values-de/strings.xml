@@ -192,7 +192,6 @@
   <string name="dashboard_stat_live">Live</string>
   <string name="dashboard_stat_private">Privat</string>
   <string name="dashboard_status_live">● Live</string>
-  <string name="dashboard_status_idle">○ Leerlauf</string>
   <string name="dashboard_empty_noRooms">Noch keine Räume</string>
   <string name="dashboard_empty_noMatch">Keine Räume entsprechen diesem Filter</string>
   <string name="dashboard_feature_chat">Chat</string>
@@ -257,11 +256,7 @@
   <string name="dashboard_empty_noRecent">Keine kürzlichen Räume</string>
   <string name="dashboard_empty_noRecentHint">Räume, denen du beitrittst, erscheinen hier – auch von anderen Servern.</string>
   <string name="dashboard_contentDescription_removeRecent">Aus zuletzt entfernen</string>
-  <string name="dashboard_recent_onServer">auf <xliff:g id="serverName" example="My Server">%1$s</xliff:g></string>
   <string name="dashboard_header_roomsSuffix">Räume</string>
-  <string name="dashboard_dialog_switchServerTitle">Server wechseln?</string>
-  <string name="dashboard_dialog_switchServerMessage">Dieser Raum ist auf <xliff:g id="serverName" example="My Server">%1$s</xliff:g>. Zu diesem Server wechseln und beitreten?</string>
-  <string name="dashboard_button_switchAndJoin">Wechseln &amp; beitreten</string>
   <string name="dashboard_action_remove">Entfernen</string>
   <string name="dashboard_contentDescription_profile">Profil öffnen</string>
 </resources>

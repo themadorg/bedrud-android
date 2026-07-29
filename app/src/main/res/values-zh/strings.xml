@@ -192,7 +192,6 @@
   <string name="dashboard_stat_live">直播中</string>
   <string name="dashboard_stat_private">私密</string>
   <string name="dashboard_status_live">● 直播中</string>
-  <string name="dashboard_status_idle">○ 空闲</string>
   <string name="dashboard_empty_noRooms">暂无房间</string>
   <string name="dashboard_empty_noMatch">没有符合此筛选条件的房间</string>
   <string name="dashboard_feature_chat">聊天</string>
@@ -257,11 +256,7 @@
   <string name="dashboard_empty_noRecent">没有最近的房间</string>
   <string name="dashboard_empty_noRecentHint">你加入的房间会显示在这里，包括其他服务器上的房间。</string>
   <string name="dashboard_contentDescription_removeRecent">从最近中移除</string>
-  <string name="dashboard_recent_onServer">在 <xliff:g id="serverName" example="My Server">%1$s</xliff:g></string>
   <string name="dashboard_header_roomsSuffix">房间</string>
-  <string name="dashboard_dialog_switchServerTitle">切换服务器？</string>
-  <string name="dashboard_dialog_switchServerMessage">此房间在 <xliff:g id="serverName" example="My Server">%1$s</xliff:g> 上。切换到该服务器并加入？</string>
-  <string name="dashboard_button_switchAndJoin">切换并加入</string>
   <string name="dashboard_action_remove">移除</string>
   <string name="dashboard_contentDescription_profile">打开个人资料</string>
 </resources>

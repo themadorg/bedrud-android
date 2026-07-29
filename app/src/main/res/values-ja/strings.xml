@@ -192,7 +192,6 @@
   <string name="dashboard_stat_live">ライブ</string>
   <string name="dashboard_stat_private">プライベート</string>
   <string name="dashboard_status_live">● ライブ</string>
-  <string name="dashboard_status_idle">○ アイドル</string>
   <string name="dashboard_empty_noRooms">ルームがまだありません</string>
   <string name="dashboard_empty_noMatch">このフィルターに一致するルームはありません</string>
   <string name="dashboard_feature_chat">チャット</string>
@@ -257,11 +256,7 @@
   <string name="dashboard_empty_noRecent">最近のルームはありません</string>
   <string name="dashboard_empty_noRecentHint">参加したルームがここに表示されます（他のサーバーも含む）。</string>
   <string name="dashboard_contentDescription_removeRecent">最近から削除</string>
-  <string name="dashboard_recent_onServer"><xliff:g id="serverName" example="My Server">%1$s</xliff:g> 上</string>
   <string name="dashboard_header_roomsSuffix">ルーム</string>
-  <string name="dashboard_dialog_switchServerTitle">サーバーを切り替えますか？</string>
-  <string name="dashboard_dialog_switchServerMessage">このルームは <xliff:g id="serverName" example="My Server">%1$s</xliff:g> にあります。そのサーバーに切り替えて参加しますか？</string>
-  <string name="dashboard_button_switchAndJoin">切り替えて参加</string>
   <string name="dashboard_action_remove">外す</string>
   <string name="dashboard_contentDescription_profile">プロフィールを開く</string>
 </resources>

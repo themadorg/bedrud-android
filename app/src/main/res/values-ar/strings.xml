@@ -192,7 +192,6 @@
   <string name="dashboard_stat_live">مباشر</string>
   <string name="dashboard_stat_private">خاص</string>
   <string name="dashboard_status_live">● مباشر</string>
-  <string name="dashboard_status_idle">○ خامل</string>
   <string name="dashboard_empty_noRooms">لا توجد غرف بعد</string>
   <string name="dashboard_empty_noMatch">لا توجد غرف تطابق هذا الفلتر</string>
   <string name="dashboard_feature_chat">الدردشة</string>
@@ -257,11 +256,7 @@
   <string name="dashboard_empty_noRecent">لا توجد غرف حديثة</string>
   <string name="dashboard_empty_noRecentHint">تظهر الغرف التي تنضم إليها هنا، بما في ذلك على خوادم أخرى.</string>
   <string name="dashboard_contentDescription_removeRecent">إزالة من الأخيرة</string>
-  <string name="dashboard_recent_onServer">على <xliff:g id="serverName" example="My Server">%1$s</xliff:g></string>
   <string name="dashboard_header_roomsSuffix">الغرف</string>
-  <string name="dashboard_dialog_switchServerTitle">تبديل الخادم؟</string>
-  <string name="dashboard_dialog_switchServerMessage">هذه الغرفة على <xliff:g id="serverName" example="My Server">%1$s</xliff:g>. التبديل إلى هذا الخادم والانضمام؟</string>
-  <string name="dashboard_button_switchAndJoin">التبديل والانضمام</string>
   <string name="dashboard_action_remove">إزالة</string>
   <string name="dashboard_contentDescription_profile">فتح الملف الشخصي</string>
 </resources>
