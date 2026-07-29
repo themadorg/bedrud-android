@@ -113,6 +113,7 @@
   <string name="meeting_contentDescription_participants">参加者</string>
   <string name="meeting_contentDescription_copyRoomLink">ルームリンクをコピー</string>
   <string name="meeting_toast_linkCopied">ルームリンクをコピーしました</string>
+  <string name="meeting_toast_errorCopied">エラーの詳細をコピーしました</string>
   <string name="meeting_contentDescription_leaveCall">通話を切断</string>
   <string name="meeting_contentDescription_participantAvatar">
     <xliff:g id="name" example="John Doe">%1$s</xliff:g> のアバター</string>
@@ -234,7 +235,6 @@
   <string name="screen_share_notification_text">参加者に画面が表示されています</string>
   <string name="meeting_error_permissionsRequired">参加するにはカメラとマイクの権限が必要です。</string>
   <string name="meeting_error_screenShareFailed">画面共有を開始できませんでした。</string>
-  <string name="meeting_error_untrustedCertificate">安全に接続できません。このサーバーのビデオ接続先が信頼できないセキュリティ証明書を使用しています。サーバー管理者にお問い合わせください。</string>
   <string name="meeting_sheet_chat">チャット</string>
   <string name="meeting_sheet_addOthers">他の人を追加</string>
   <string name="meeting_share_chooserTitle">ミーティングリンクを共有</string>

@@ -111,6 +111,7 @@
   <string name="meeting_contentDescription_participants">شرکت‌کنندگان</string>
   <string name="meeting_contentDescription_copyRoomLink">کپی لینک اتاق</string>
   <string name="meeting_toast_linkCopied">لینک اتاق کپی شد</string>
+  <string name="meeting_toast_errorCopied">جزئیات خطا کپی شد</string>
   <string name="meeting_contentDescription_leaveCall">خروج از تماس</string>
   <string name="meeting_contentDescription_participantAvatar">آواتار <xliff:g id="name" example="John Doe">%1$s</xliff:g></string>
   <string name="meeting_contentDescription_close">بستن</string>
@@ -231,7 +232,6 @@
   <string name="screen_share_notification_text">صفحه شما برای شرکت‌کنندگان جلسه قابل مشاهده است</string>
   <string name="meeting_error_permissionsRequired">برای پیوستن، مجوز دوربین و میکروفون لازم است.</string>
   <string name="meeting_error_screenShareFailed">شروع اشتراک‌گذاری صفحه ممکن نشد.</string>
-  <string name="meeting_error_untrustedCertificate">اتصال امن ممکن نیست: نقطهٔ ویدیوی این سرور از گواهی امنیتی نامعتبر استفاده می‌کند. لطفاً با مدیر سرور تماس بگیرید.</string>
   <string name="meeting_sheet_chat">گفتگو</string>
   <string name="meeting_sheet_addOthers">افزودن دیگران</string>
   <string name="meeting_share_chooserTitle">اشتراک لینک جلسه</string>

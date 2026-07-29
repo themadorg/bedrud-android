@@ -38,9 +38,12 @@ import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -56,6 +59,7 @@ import androidx.compose.material.icons.filled.Badge
 import androidx.compose.material.icons.filled.CallEnd
 import androidx.compose.material.icons.filled.Cameraswitch
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Mic
@@ -780,23 +784,52 @@ fun MeetingScreen(
                             color = MaterialTheme.colorScheme.error
                         )
                         Spacer(modifier = Modifier.height(8.dp))
-                        // A TLS trust failure (e.g. the media server presenting a self-signed
-                        // certificate) surfaces as a raw Java exception -- replace it with a
-                        // plain-language, actionable message instead of the stack-trace text.
-                        val connectionError = error
+                        // Connection failures span many causes (TLS, network, server, auth), so
+                        // rather than map each to its own message we show one general line and
+                        // surface the raw error verbatim below it -- scroll-capped and copyable,
+                        // so the actual cause can be read and reported.
                         Text(
-                            text = when {
-                                connectionError == null ->
-                                    stringResource(R.string.meeting_state_connectionFailedMessage)
-                                isTlsTrustError(connectionError) ->
-                                    stringResource(R.string.meeting_error_untrustedCertificate)
-                                else -> connectionError
-                            },
+                            text = stringResource(R.string.meeting_state_connectionFailedMessage),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             textAlign = TextAlign.Center,
                             modifier = Modifier.padding(horizontal = 32.dp)
                         )
+                        val connectionError = error
+                        if (!connectionError.isNullOrBlank()) {
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Text(
+                                text = connectionError,
+                                style = MaterialTheme.typography.bodySmall.copy(
+                                    fontFamily = FontFamily.Monospace,
+                                ),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 24.dp)
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(MaterialTheme.colorScheme.surfaceVariant)
+                                    .heightIn(max = 140.dp)
+                                    .verticalScroll(rememberScrollState())
+                                    .padding(12.dp)
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            val errorCopiedMessage = stringResource(R.string.meeting_toast_errorCopied)
+                            TextButton(
+                                onClick = {
+                                    clipboard.setText(AnnotatedString(connectionError))
+                                    scope.launch { snackbarHostState.showSnackbar(errorCopiedMessage) }
+                                }
+                            ) {
+                                Icon(
+                                    Icons.Default.ContentCopy,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(18.dp),
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(stringResource(R.string.common_action_copy))
+                            }
+                        }
                         Spacer(modifier = Modifier.height(24.dp))
                         androidx.compose.material3.FilledTonalButton(
                             // The service normally self-stops the instant the connection fails
@@ -814,21 +847,6 @@ fun MeetingScreen(
             }
         }
     }
-}
-
-/**
- * True when a connection error is a TLS trust failure — the media server presented a certificate
- * the device can't validate (self-signed, wrong host, or a missing intermediate). Matched on the
- * exception text the LiveKit SDK surfaces, so it stays a server-config problem to report, never a
- * reason to weaken certificate validation.
- */
-private fun isTlsTrustError(message: String): Boolean {
-    val m = message.lowercase()
-    return "trust anchor" in m ||
-        "certpath" in m ||
-        "certification path" in m ||
-        "sslhandshake" in m ||
-        "certificateexception" in m
 }
 
 @OptIn(ExperimentalFoundationApi::class)

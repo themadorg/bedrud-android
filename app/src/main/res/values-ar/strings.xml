@@ -113,6 +113,7 @@
   <string name="meeting_contentDescription_participants">المشاركون</string>
   <string name="meeting_contentDescription_copyRoomLink">نسخ رابط الغرفة</string>
   <string name="meeting_toast_linkCopied">تم نسخ رابط الغرفة</string>
+  <string name="meeting_toast_errorCopied">تم نسخ تفاصيل الخطأ</string>
   <string name="meeting_contentDescription_leaveCall">مغادرة المكالمة</string>
   <string name="meeting_contentDescription_participantAvatar">
     <xliff:g id="name" example="John Doe">%1$s</xliff:g> الصورة الرمزية</string>
@@ -234,7 +235,6 @@
   <string name="screen_share_notification_text">شاشتك مرئية لمشاركي الاجتماع</string>
   <string name="meeting_error_permissionsRequired">يلزم إذن الكاميرا والميكروفون للانضمام.</string>
   <string name="meeting_error_screenShareFailed">تعذّر بدء مشاركة الشاشة.</string>
-  <string name="meeting_error_untrustedCertificate">تعذّر الاتصال بأمان: نقطة الفيديو لهذا الخادم تستخدم شهادة أمان غير موثوقة. يرجى التواصل مع مسؤول الخادم.</string>
   <string name="meeting_sheet_chat">الدردشة</string>
   <string name="meeting_sheet_addOthers">إضافة آخرين</string>
   <string name="meeting_share_chooserTitle">مشاركة رابط الاجتماع</string>

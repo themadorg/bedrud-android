@@ -113,6 +113,7 @@
   <string name="meeting_contentDescription_participants">Участники</string>
   <string name="meeting_contentDescription_copyRoomLink">Скопировать ссылку на комнату</string>
   <string name="meeting_toast_linkCopied">Ссылка на комнату скопирована</string>
+  <string name="meeting_toast_errorCopied">Сведения об ошибке скопированы</string>
   <string name="meeting_contentDescription_leaveCall">Покинуть звонок</string>
   <string name="meeting_contentDescription_participantAvatar">
     <xliff:g id="name" example="John Doe">%1$s</xliff:g> аватар</string>
@@ -234,7 +235,6 @@
   <string name="screen_share_notification_text">Ваш экран виден участникам встречи</string>
   <string name="meeting_error_permissionsRequired">Для входа нужны разрешения на камеру и микрофон.</string>
   <string name="meeting_error_screenShareFailed">Не удалось начать демонстрацию экрана.</string>
-  <string name="meeting_error_untrustedCertificate">Не удаётся подключиться безопасно: видеосервер использует недоверенный сертификат безопасности. Обратитесь к администратору сервера.</string>
   <string name="meeting_sheet_chat">Чат</string>
   <string name="meeting_sheet_addOthers">Добавить других</string>
   <string name="meeting_share_chooserTitle">Поделиться ссылкой на встречу</string>
