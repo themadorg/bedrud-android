@@ -25,6 +25,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ChevronRight
@@ -70,6 +72,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -77,6 +80,9 @@ import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardCapitalization
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
@@ -172,6 +178,9 @@ fun DashboardContent(
     var pendingSwitchJoin by remember { mutableStateOf<RecentRoom?>(null) }
     var activeFilter by rememberSaveable { mutableStateOf(RoomFilter.ALL) }
     var quickJoinText by remember { mutableStateOf("") }
+    // Captured here (not in the join callback) because stringResource is composition-only.
+    val invalidJoinInputMessage = stringResource(R.string.dashboard_join_invalidInput)
+    val focusManager = LocalFocusManager.current
     val listState = rememberLazyListState()
     // Survives the dispose/recompose Navigation does when leaving for MeetingScreen and
     // coming back via Back -- listState's own scroll position is restored by that same
@@ -555,10 +564,18 @@ fun DashboardContent(
                         value = quickJoinText,
                         onValueChange = { quickJoinText = it },
                         onJoin = {
+                            // Dismiss the keyboard first: it satisfies the "action key hides the
+                            // keyboard" rule and, on failure, keeps the snackbar from rendering
+                            // hidden behind the IME.
+                            focusManager.clearFocus()
                             val roomName = BedrudURLParser.parseJoinInput(quickJoinText)
                             if (!roomName.isNullOrBlank()) {
                                 quickJoinText = ""
                                 onJoinRoom(roomName)
+                            } else {
+                                // Input didn't resolve to a room (e.g. a URL with no /m/ or /c/):
+                                // tell the user instead of the button appearing to do nothing.
+                                scope.launch { snackbarHostState.showSnackbar(invalidJoinInputMessage) }
                             }
                         },
                         modifier = Modifier
@@ -745,6 +762,15 @@ private fun QuickJoinBar(
             singleLine = true,
             textStyle = MaterialTheme.typography.bodyMedium,
             shape = BedrudShapeTokens.field,
+            // Room slugs and links are lowercase, no spaces — suppress auto-capitalize/correct and
+            // use the URL keyboard. The "Go" key joins (and, on success, the navigation dismisses it).
+            keyboardOptions = KeyboardOptions(
+                keyboardType = KeyboardType.Uri,
+                autoCorrectEnabled = false,
+                capitalization = KeyboardCapitalization.None,
+                imeAction = ImeAction.Go,
+            ),
+            keyboardActions = KeyboardActions(onGo = { onJoin() }),
             modifier = Modifier.weight(1f).height(Dimens.buttonHeight)
         )
         Spacer(modifier = Modifier.width(Dimens.space8))
