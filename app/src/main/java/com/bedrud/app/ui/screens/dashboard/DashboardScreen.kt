@@ -912,7 +912,11 @@ private fun presenceFor(isOngoing: Boolean, lastVisitAtMs: Long?, now: Long): Pr
     val isLive = isOngoing || (lastVisitAtMs != null && now - lastVisitAtMs < LIVE_WINDOW_MS)
     return when {
         isLive -> Presence(stringResource(R.string.dashboard_status_live), isLive = true)
-        lastVisitAtMs != null -> Presence(formatRecentRoomTimeAgo(lastVisitAtMs, now), isLive = false)
+        lastVisitAtMs != null -> Presence(
+            // "%1$s ago" — the connective is localized; the compact duration ("12m", "3h") is not.
+            stringResource(R.string.dashboard_status_timeAgo, formatRecentRoomTimeAgo(lastVisitAtMs, now)),
+            isLive = false,
+        )
         else -> null
     }
 }

@@ -224,6 +224,7 @@
   <string name="dashboard_stat_live">Live</string>
   <string name="dashboard_stat_private">Private</string>
   <string name="dashboard_status_live">● Live</string>
+  <string name="dashboard_status_timeAgo">%1$s ago</string>
   <string name="dashboard_empty_noRooms">No rooms yet</string>
   <string name="dashboard_empty_noMatch">No rooms match this filter</string>
   <string name="dashboard_feature_chat">Chat</string>

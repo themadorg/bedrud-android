@@ -192,6 +192,7 @@
   <string name="dashboard_stat_live">直播中</string>
   <string name="dashboard_stat_private">私密</string>
   <string name="dashboard_status_live">● 直播中</string>
+  <string name="dashboard_status_timeAgo">%1$s前</string>
   <string name="dashboard_empty_noRooms">暂无房间</string>
   <string name="dashboard_empty_noMatch">没有符合此筛选条件的房间</string>
   <string name="dashboard_feature_chat">聊天</string>

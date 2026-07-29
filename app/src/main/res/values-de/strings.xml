@@ -192,6 +192,7 @@
   <string name="dashboard_stat_live">Live</string>
   <string name="dashboard_stat_private">Privat</string>
   <string name="dashboard_status_live">● Live</string>
+  <string name="dashboard_status_timeAgo">vor %1$s</string>
   <string name="dashboard_empty_noRooms">Noch keine Räume</string>
   <string name="dashboard_empty_noMatch">Keine Räume entsprechen diesem Filter</string>
   <string name="dashboard_feature_chat">Chat</string>

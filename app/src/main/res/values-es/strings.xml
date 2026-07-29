@@ -192,6 +192,7 @@
   <string name="dashboard_stat_live">En vivo</string>
   <string name="dashboard_stat_private">Privado</string>
   <string name="dashboard_status_live">● En vivo</string>
+  <string name="dashboard_status_timeAgo">hace %1$s</string>
   <string name="dashboard_empty_noRooms">Aún no hay salas</string>
   <string name="dashboard_empty_noMatch">Ninguna sala coincide con este filtro</string>
   <string name="dashboard_feature_chat">Chat</string>

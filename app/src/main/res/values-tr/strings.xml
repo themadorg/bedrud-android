@@ -192,6 +192,7 @@
   <string name="dashboard_stat_live">Canlı</string>
   <string name="dashboard_stat_private">Özel</string>
   <string name="dashboard_status_live">● Canlı</string>
+  <string name="dashboard_status_timeAgo">%1$s önce</string>
   <string name="dashboard_empty_noRooms">Henüz oda yok</string>
   <string name="dashboard_empty_noMatch">Bu filtreyle eşleşen oda yok</string>
   <string name="dashboard_feature_chat">Sohbet</string>

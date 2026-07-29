@@ -192,6 +192,7 @@
   <string name="dashboard_stat_live">En direct</string>
   <string name="dashboard_stat_private">Privé</string>
   <string name="dashboard_status_live">● En direct</string>
+  <string name="dashboard_status_timeAgo">il y a %1$s</string>
   <string name="dashboard_empty_noRooms">Aucun salon pour l\'instant</string>
   <string name="dashboard_empty_noMatch">Aucun salon ne correspond à ce filtre</string>
   <string name="dashboard_feature_chat">Chat</string>

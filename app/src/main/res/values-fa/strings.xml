@@ -189,6 +189,7 @@
   <string name="dashboard_stat_live">زنده</string>
   <string name="dashboard_stat_private">خصوصی</string>
   <string name="dashboard_status_live">● Live</string>
+  <string name="dashboard_status_timeAgo">%1$s پیش</string>
   <string name="dashboard_empty_noRooms">هنوز اتاقی وجود ندارد</string>
   <string name="dashboard_empty_noMatch">هیچ اتاقی با این فیلتر مطابقت ندارد</string>
   <string name="dashboard_feature_chat">چت</string>
