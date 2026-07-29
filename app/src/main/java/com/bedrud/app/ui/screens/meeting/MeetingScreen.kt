@@ -798,36 +798,42 @@ fun MeetingScreen(
                         val connectionError = error
                         if (!connectionError.isNullOrBlank()) {
                             Spacer(modifier = Modifier.height(16.dp))
-                            Text(
-                                text = connectionError,
-                                style = MaterialTheme.typography.bodySmall.copy(
-                                    fontFamily = FontFamily.Monospace,
-                                ),
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            val errorCopiedMessage = stringResource(R.string.meeting_toast_errorCopied)
+                            val copyDescription = stringResource(R.string.common_action_copy)
+                            Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(horizontal = 24.dp)
                                     .clip(RoundedCornerShape(8.dp))
-                                    .background(MaterialTheme.colorScheme.surfaceVariant)
-                                    .heightIn(max = 140.dp)
-                                    .verticalScroll(rememberScrollState())
-                                    .padding(12.dp)
-                            )
-                            Spacer(modifier = Modifier.height(4.dp))
-                            val errorCopiedMessage = stringResource(R.string.meeting_toast_errorCopied)
-                            TextButton(
-                                onClick = {
-                                    clipboard.setText(AnnotatedString(connectionError))
-                                    scope.launch { snackbarHostState.showSnackbar(errorCopiedMessage) }
-                                }
+                                    .background(MaterialTheme.colorScheme.surfaceVariant),
+                                verticalAlignment = Alignment.Top,
                             ) {
-                                Icon(
-                                    Icons.Default.ContentCopy,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(18.dp),
+                                Text(
+                                    text = connectionError,
+                                    style = MaterialTheme.typography.bodySmall.copy(
+                                        fontFamily = FontFamily.Monospace,
+                                    ),
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .heightIn(max = 140.dp)
+                                        .verticalScroll(rememberScrollState())
+                                        .padding(start = 12.dp, top = 12.dp, bottom = 12.dp),
                                 )
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text(stringResource(R.string.common_action_copy))
+                                // Copy action lives on the box itself, pinned to its top-right.
+                                IconButton(
+                                    onClick = {
+                                        clipboard.setText(AnnotatedString(connectionError))
+                                        scope.launch { snackbarHostState.showSnackbar(errorCopiedMessage) }
+                                    },
+                                ) {
+                                    Icon(
+                                        Icons.Default.ContentCopy,
+                                        contentDescription = copyDescription,
+                                        modifier = Modifier.size(18.dp),
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                }
                             }
                         }
                         Spacer(modifier = Modifier.height(24.dp))
