@@ -113,6 +113,7 @@
   <string name="meeting_contentDescription_participants">参加者</string>
   <string name="meeting_contentDescription_copyRoomLink">ルームリンクをコピー</string>
   <string name="meeting_toast_linkCopied">ルームリンクをコピーしました</string>
+  <string name="meeting_toast_errorCopied">エラーの詳細をコピーしました</string>
   <string name="meeting_contentDescription_leaveCall">通話を切断</string>
   <string name="meeting_contentDescription_participantAvatar">
     <xliff:g id="name" example="John Doe">%1$s</xliff:g> のアバター</string>

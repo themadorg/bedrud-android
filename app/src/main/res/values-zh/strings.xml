@@ -113,6 +113,7 @@
   <string name="meeting_contentDescription_participants">参与者</string>
   <string name="meeting_contentDescription_copyRoomLink">复制房间链接</string>
   <string name="meeting_toast_linkCopied">房间链接已复制</string>
+  <string name="meeting_toast_errorCopied">已复制错误详情</string>
   <string name="meeting_contentDescription_leaveCall">离开通话</string>
   <string name="meeting_contentDescription_participantAvatar">
     <xliff:g id="name" example="John Doe">%1$s</xliff:g> 的头像</string>

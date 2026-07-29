@@ -111,6 +111,7 @@
   <string name="meeting_contentDescription_participants">شرکت‌کنندگان</string>
   <string name="meeting_contentDescription_copyRoomLink">کپی لینک اتاق</string>
   <string name="meeting_toast_linkCopied">لینک اتاق کپی شد</string>
+  <string name="meeting_toast_errorCopied">جزئیات خطا کپی شد</string>
   <string name="meeting_contentDescription_leaveCall">خروج از تماس</string>
   <string name="meeting_contentDescription_participantAvatar">آواتار <xliff:g id="name" example="John Doe">%1$s</xliff:g></string>
   <string name="meeting_contentDescription_close">بستن</string>

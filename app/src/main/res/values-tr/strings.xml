@@ -113,6 +113,7 @@
   <string name="meeting_contentDescription_participants">Katılımcılar</string>
   <string name="meeting_contentDescription_copyRoomLink">Oda bağlantısını kopyala</string>
   <string name="meeting_toast_linkCopied">Oda bağlantısı kopyalandı</string>
+  <string name="meeting_toast_errorCopied">Hata ayrıntıları kopyalandı</string>
   <string name="meeting_contentDescription_leaveCall">Aramadan Ayrıl</string>
   <string name="meeting_contentDescription_participantAvatar">
     <xliff:g id="name" example="John Doe">%1$s</xliff:g> avatarı</string>

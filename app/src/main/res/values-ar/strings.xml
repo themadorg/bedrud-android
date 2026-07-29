@@ -113,6 +113,7 @@
   <string name="meeting_contentDescription_participants">المشاركون</string>
   <string name="meeting_contentDescription_copyRoomLink">نسخ رابط الغرفة</string>
   <string name="meeting_toast_linkCopied">تم نسخ رابط الغرفة</string>
+  <string name="meeting_toast_errorCopied">تم نسخ تفاصيل الخطأ</string>
   <string name="meeting_contentDescription_leaveCall">مغادرة المكالمة</string>
   <string name="meeting_contentDescription_participantAvatar">
     <xliff:g id="name" example="John Doe">%1$s</xliff:g> الصورة الرمزية</string>

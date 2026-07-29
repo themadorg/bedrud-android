@@ -38,9 +38,12 @@ import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -56,6 +59,7 @@ import androidx.compose.material.icons.filled.Badge
 import androidx.compose.material.icons.filled.CallEnd
 import androidx.compose.material.icons.filled.Cameraswitch
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Mic
@@ -780,15 +784,68 @@ fun MeetingScreen(
                             color = MaterialTheme.colorScheme.error
                         )
                         Spacer(modifier = Modifier.height(8.dp))
+                        // Connection failures span many causes (TLS, network, server, auth), so
+                        // rather than map each to its own message we show one general line and
+                        // surface the raw error verbatim below it -- scroll-capped and copyable,
+                        // so the actual cause can be read and reported.
                         Text(
-                            text = error ?: stringResource(R.string.meeting_state_connectionFailedMessage),
+                            text = stringResource(R.string.meeting_state_connectionFailedMessage),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             textAlign = TextAlign.Center,
                             modifier = Modifier.padding(horizontal = 32.dp)
                         )
+                        val connectionError = error
+                        if (!connectionError.isNullOrBlank()) {
+                            Spacer(modifier = Modifier.height(16.dp))
+                            val errorCopiedMessage = stringResource(R.string.meeting_toast_errorCopied)
+                            val copyDescription = stringResource(R.string.common_action_copy)
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 24.dp)
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(MaterialTheme.colorScheme.surfaceVariant),
+                                verticalAlignment = Alignment.Top,
+                            ) {
+                                Text(
+                                    text = connectionError,
+                                    style = MaterialTheme.typography.bodySmall.copy(
+                                        fontFamily = FontFamily.Monospace,
+                                    ),
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .heightIn(max = 140.dp)
+                                        .verticalScroll(rememberScrollState())
+                                        .padding(start = 12.dp, top = 12.dp, bottom = 12.dp),
+                                )
+                                // Copy action lives on the box itself, pinned to its top-right.
+                                IconButton(
+                                    onClick = {
+                                        clipboard.setText(AnnotatedString(connectionError))
+                                        scope.launch { snackbarHostState.showSnackbar(errorCopiedMessage) }
+                                    },
+                                ) {
+                                    Icon(
+                                        Icons.Default.ContentCopy,
+                                        contentDescription = copyDescription,
+                                        modifier = Modifier.size(18.dp),
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                }
+                            }
+                        }
                         Spacer(modifier = Modifier.height(24.dp))
-                        androidx.compose.material3.FilledTonalButton(onClick = onLeave) {
+                        androidx.compose.material3.FilledTonalButton(
+                            // The service normally self-stops the instant the connection fails
+                            // (see CallService); this is a guarded safety net for any case where
+                            // it is still up, so we never navigate back leaving its notification.
+                            onClick = {
+                                if (CallService.isRunning) CallService.stop(context)
+                                onLeave()
+                            }
+                        ) {
                             Text(stringResource(R.string.meeting_button_goBack))
                         }
                     }
