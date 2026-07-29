@@ -101,13 +101,16 @@ class RecentRoomsStore(private val prefs: SharedPreferences) {
     }
 }
 
+// Recent rooms on the active server that aren't already in its API room list — i.e. rooms joined
+// by link on this server that don't surface as owned/listed rooms. Recents from other servers are
+// intentionally excluded: the dashboard shows only the active server and nothing else.
 fun recentRoomsNotInApiList(
     recentRooms: List<RecentRoom>,
     apiRoomNames: Set<String>,
     activeInstanceId: String?,
 ): List<RecentRoom> =
     recentRooms.filter { recent ->
-        recent.instanceId != activeInstanceId || recent.roomName !in apiRoomNames
+        recent.instanceId == activeInstanceId && recent.roomName !in apiRoomNames
     }
 
 fun formatRecentRoomTimeAgo(joinedAt: Long, now: Long = System.currentTimeMillis()): String {
