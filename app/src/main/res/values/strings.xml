@@ -72,6 +72,7 @@
   <string name="instance_note_insecure">This connection won\'t be encrypted.</string>
   <string name="dashboard_title_rooms">Rooms</string>
   <string name="dashboard_placeholder_search">Enter room name or link…</string>
+  <string name="dashboard_join_invalidInput">Enter a room name or a valid meeting link.</string>
   <string name="dashboard_dialog_createTitle">Create Room</string>
   <string name="dashboard_dialog_createDescription">Enter a name for your room, or leave blank for an auto-generated name.</string>
   <string name="dashboard_label_roomName">Room Name (optional)</string>

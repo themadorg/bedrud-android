@@ -72,6 +72,7 @@
   <string name="instance_note_insecure">لن يكون هذا الاتصال مشفّرًا.</string>
   <string name="dashboard_title_rooms">الغرف</string>
   <string name="dashboard_placeholder_search">أدخل اسم الغرفة أو الرابط…</string>
+  <string name="dashboard_join_invalidInput">أدخل اسم غرفة أو رابط اجتماع صالحًا.</string>
   <string name="dashboard_dialog_createTitle">إنشاء غرفة</string>
   <string name="dashboard_dialog_createDescription">أدخل اسماً لغرفتك، أو اتركه فارغاً لإنشاء اسم تلقائي.</string>
   <string name="dashboard_label_roomName">اسم الغرفة (اختياري)</string>

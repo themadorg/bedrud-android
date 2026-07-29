@@ -70,6 +70,7 @@
   <string name="instance_note_insecure">این اتصال رمزگذاری نخواهد شد.</string>
   <string name="dashboard_title_rooms">اتاق‌ها</string>
   <string name="dashboard_placeholder_search">جستجوی اتاق…</string>
+  <string name="dashboard_join_invalidInput">نام یک اتاق یا یک پیوند جلسه معتبر وارد کنید.</string>
   <string name="dashboard_dialog_createTitle">ایجاد اتاق</string>
   <string name="dashboard_dialog_createDescription">نامی برای اتاق خود وارد کنید، یا برای نام خودکار خالی بگذارید.</string>
   <string name="dashboard_label_roomName">نام اتاق (اختیاری)</string>

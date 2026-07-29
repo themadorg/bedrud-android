@@ -72,6 +72,7 @@
   <string name="instance_note_insecure">Это подключение не будет зашифровано.</string>
   <string name="dashboard_title_rooms">Комнаты</string>
   <string name="dashboard_placeholder_search">Введите название комнаты или ссылку…</string>
+  <string name="dashboard_join_invalidInput">Введите название комнаты или действительную ссылку на встречу.</string>
   <string name="dashboard_dialog_createTitle">Создать комнату</string>
   <string name="dashboard_dialog_createDescription">Введите название комнаты или оставьте пустым для автоматического названия.</string>
   <string name="dashboard_label_roomName">Название комнаты (необязательно)</string>
