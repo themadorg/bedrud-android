@@ -76,16 +76,12 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.text.withStyle
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import coil.compose.AsyncImage
@@ -112,7 +108,6 @@ import com.bedrud.app.ui.components.BedrudTabScaffoldContentInsets
 import com.bedrud.app.ui.theme.BedrudShapeTokens
 import com.bedrud.app.ui.theme.Dimens
 import com.bedrud.app.ui.theme.Motion
-import com.bedrud.app.ui.theme.parseInstanceColor
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
@@ -156,13 +151,18 @@ fun DashboardContent(
     val activeInstance = remember(instances, activeInstanceId) {
         instances.firstOrNull { it.id == activeInstanceId }
     }
-    // Resolves a stored recent's color; falls back to the live instance, then a neutral color.
-    fun colorForRecent(recent: RecentRoom): Color =
-        parseInstanceColor(
-            recent.instanceColorHex ?: instances.firstOrNull { it.id == recent.instanceId }?.iconColorHex,
-        )
-    val activeServerColor = parseInstanceColor(activeInstance?.iconColorHex)
     val activeServerName = activeInstance?.displayName
+    // Active-server recents keyed by room name, so a server-backed card can tell when the user was
+    // last in that room -- driving the Live / "Xm ago" presence label without a scan per card.
+    val activeRecentByName = remember(recentRooms, activeInstanceId) {
+        recentRooms.filter { it.instanceId == activeInstanceId }.associateBy { it.roomName }
+    }
+    fun lastVisitFor(roomName: String): Long? =
+        activeRecentByName[roomName]?.let { it.leftAt ?: it.joinedAt }
+    fun isOngoingFor(roomName: String): Boolean =
+        CallService.isRunning &&
+            CallService.activeRoomName == roomName &&
+            CallService.activeInstanceId == activeInstanceId
 
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -174,8 +174,6 @@ fun DashboardContent(
     var showCreateDialog by remember { mutableStateOf(false) }
     var roomToEdit by remember { mutableStateOf<UserRoomResponse?>(null) }
     var roomToDelete by remember { mutableStateOf<UserRoomResponse?>(null) }
-    // A cross-server recent the user tapped: hold it here to confirm the server switch before joining.
-    var pendingSwitchJoin by remember { mutableStateOf<RecentRoom?>(null) }
     var activeFilter by rememberSaveable { mutableStateOf(RoomFilter.ALL) }
     var quickJoinText by remember { mutableStateOf("") }
     // Captured here (not in the join callback) because stringResource is composition-only.
@@ -403,32 +401,6 @@ fun DashboardContent(
         )
     }
 
-    pendingSwitchJoin?.let { recent ->
-        AlertDialog(
-            onDismissRequest = { pendingSwitchJoin = null },
-            title = { Text(stringResource(R.string.dashboard_dialog_switchServerTitle)) },
-            text = {
-                Text(stringResource(R.string.dashboard_dialog_switchServerMessage, recent.instanceName))
-            },
-            confirmButton = {
-                BedrudButton(
-                    text = stringResource(R.string.dashboard_button_switchAndJoin),
-                    variant = BedrudButtonVariant.TONAL,
-                    onClick = {
-                        val target = recent
-                        pendingSwitchJoin = null
-                        onJoinRecent(target)
-                    },
-                )
-            },
-            dismissButton = {
-                TextButton(onClick = { pendingSwitchJoin = null }) {
-                    Text(stringResource(R.string.common_button_cancel))
-                }
-            },
-        )
-    }
-
     roomToEdit?.let { room ->
         RoomSettingsDialog(
             room = room,
@@ -511,22 +483,13 @@ fun DashboardContent(
         }
     }
 
-    // Tapping a room joins it. A recent on another server needs a confirmed instance switch first.
-    fun joinRecent(recent: RecentRoom) {
-        if (recent.instanceId != activeInstanceId) {
-            pendingSwitchJoin = recent
-        } else {
-            onJoinRecent(recent)
-        }
-    }
-
     Scaffold(
         modifier = modifier,
         contentWindowInsets = BedrudTabScaffoldContentInsets,
         topBar = {
             BedrudCompactTopBar(
                 actions = { ProfileAvatarButton(user = currentUser, onClick = onOpenProfile) },
-                title = { RoomsHeaderTitle(serverName = activeServerName, serverColor = activeServerColor) },
+                title = { RoomsHeaderTitle(serverName = activeServerName) },
             )
         },
         floatingActionButton = {
@@ -640,8 +603,10 @@ fun DashboardContent(
                                     when (entry) {
                                         is RoomListEntry.FromApi -> RoomCard(
                                             room = entry.room,
-                                            serverColor = activeServerColor,
                                             isOwner = entry.room.createdBy == currentUser?.id,
+                                            isOngoing = isOngoingFor(entry.room.name),
+                                            lastVisitAtMs = lastVisitFor(entry.room.name),
+                                            now = nowTickMs,
                                             onJoin = { onJoinRoom(entry.room.name) },
                                             onDelete = { roomToDelete = entry.room },
                                             onSettings = if (entry.room.createdBy == currentUser?.id) {
@@ -651,10 +616,8 @@ fun DashboardContent(
                                         )
                                         is RoomListEntry.FromRecent -> RecentRoomCard(
                                             recent = entry.recent,
-                                            serverColor = colorForRecent(entry.recent),
-                                            isCurrentServer = entry.recent.instanceId == activeInstanceId,
                                             now = nowTickMs,
-                                            onJoin = { joinRecent(entry.recent) },
+                                            onJoin = { onJoinRecent(entry.recent) },
                                             onRemove = {
                                                 recentRoomsStore.remove(
                                                     entry.recent.roomName,
@@ -669,8 +632,10 @@ fun DashboardContent(
                                 items(filteredRooms, key = { it.id }) { room ->
                                     RoomCard(
                                         room = room,
-                                        serverColor = activeServerColor,
                                         isOwner = room.createdBy == currentUser?.id,
+                                        isOngoing = isOngoingFor(room.name),
+                                        lastVisitAtMs = lastVisitFor(room.name),
+                                        now = nowTickMs,
                                         onJoin = { onJoinRoom(room.name) },
                                         onDelete = { roomToDelete = room },
                                         onSettings = if (room.createdBy == currentUser?.id) {
@@ -690,19 +655,15 @@ fun DashboardContent(
 
 // ── Header ──────────────────────────────────────────────────────────────────
 
-/** Two-tone rooms header: the active server's name (in its own accent color) + "rooms". */
+/** Rooms header: the active server's name + "rooms", in a single neutral tone. */
 @Composable
-private fun RoomsHeaderTitle(serverName: String?, serverColor: Color) {
+private fun RoomsHeaderTitle(serverName: String?) {
     val name = serverName ?: stringResource(R.string.instance_default_displayName)
     val suffix = stringResource(R.string.dashboard_header_roomsSuffix)
-    val suffixColor = MaterialTheme.colorScheme.onSurface
     Text(
-        text = buildAnnotatedString {
-            withStyle(SpanStyle(color = serverColor, fontWeight = FontWeight.SemiBold)) { append(name) }
-            append(" ")
-            withStyle(SpanStyle(color = suffixColor)) { append(suffix) }
-        },
+        text = "$name $suffix",
         style = MaterialTheme.typography.headlineSmall,
+        color = MaterialTheme.colorScheme.onSurface,
         maxLines = 1,
         overflow = TextOverflow.Ellipsis,
     )
@@ -814,8 +775,10 @@ private fun FilterRow(
 @Composable
 private fun RoomCard(
     room: UserRoomResponse,
-    serverColor: Color,
     isOwner: Boolean,
+    isOngoing: Boolean,
+    lastVisitAtMs: Long?,
+    now: Long,
     onJoin: () -> Unit,
     onDelete: () -> Unit,
     onSettings: (() -> Unit)? = null,
@@ -826,23 +789,17 @@ private fun RoomCard(
         if (parts.size >= 2) "${parts[0]}-${parts[1]}" else room.id
     }
 
-    val activeTint by animateColorAsState(
-        targetValue = if (room.isActive) MaterialTheme.colorScheme.primary
+    val presence = presenceFor(isOngoing = isOngoing, lastVisitAtMs = lastVisitAtMs, now = now)
+    val statusTint by animateColorAsState(
+        targetValue = if (presence?.isLive == true) MaterialTheme.colorScheme.primary
         else MaterialTheme.colorScheme.onSurfaceVariant,
         animationSpec = tween(Motion.durationLong),
-        label = "activeTint"
+        label = "statusTint"
     )
-
-    val statusText = if (room.isActive) {
-        stringResource(R.string.dashboard_status_live)
-    } else {
-        stringResource(R.string.dashboard_status_idle)
-    }
-    val metaText = if (room.isPublic == false) {
-        "$statusText · ${stringResource(R.string.dashboard_feature_private)}"
-    } else {
-        statusText
-    }
+    // Presence and the private tag are each optional; join whichever are present, or drop the line.
+    val privateLabel =
+        if (room.isPublic == false) stringResource(R.string.dashboard_feature_private) else null
+    val metaText = listOfNotNull(presence?.text, privateLabel).joinToString(" · ").ifEmpty { null }
 
     // Only rooms the user owns get the swipe-to-delete affordance (the server rejects other deletes).
     val swipeAction = if (isOwner) {
@@ -857,17 +814,18 @@ private fun RoomCard(
     } else null
 
     SwipeableRoomRow(action = swipeAction, modifier = modifier.fillMaxWidth()) {
-        RoomCardScaffold(serverColor = serverColor, onClick = onJoin) {
+        RoomCardScaffold(onClick = onJoin) {
             Column(modifier = Modifier.weight(1f)) {
-                // API rooms always belong to the active server, which the header already names.
-                RoomTitleLine(title = title, serverName = null, serverColor = serverColor)
-                Text(
-                    text = metaText,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = activeTint,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
+                RoomTitleLine(title = title)
+                if (metaText != null) {
+                    Text(
+                        text = metaText,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = statusTint,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
             }
 
             if (onSettings != null) {
@@ -886,13 +844,11 @@ private fun RoomCard(
     }
 }
 
-// ── Recent room card (cross-server, from local history) ────────────────────────
+// ── Recent room card (link-joined on this server, from local history) ──────────
 
 @Composable
 private fun RecentRoomCard(
     recent: RecentRoom,
-    serverColor: Color,
-    isCurrentServer: Boolean,
     now: Long,
     onJoin: () -> Unit,
     onRemove: () -> Unit,
@@ -901,8 +857,17 @@ private fun RecentRoomCard(
     val isOngoing = CallService.isRunning &&
         CallService.activeRoomName == recent.roomName &&
         CallService.activeInstanceId == recent.instanceId
-    val recentTime = if (isOngoing) now else recent.leftAt ?: recent.joinedAt
-    val metaText = formatRecentRoomTimeAgo(recentTime, now)
+    val presence = presenceFor(
+        isOngoing = isOngoing,
+        lastVisitAtMs = recent.leftAt ?: recent.joinedAt,
+        now = now,
+    )
+    val statusTint by animateColorAsState(
+        targetValue = if (presence?.isLive == true) MaterialTheme.colorScheme.primary
+        else MaterialTheme.colorScheme.onSurfaceVariant,
+        animationSpec = tween(Motion.durationLong),
+        label = "recentStatusTint"
+    )
 
     val swipeAction = SwipeAction(
         label = stringResource(R.string.dashboard_action_remove),
@@ -914,21 +879,18 @@ private fun RecentRoomCard(
     )
 
     SwipeableRoomRow(action = swipeAction, modifier = modifier.fillMaxWidth()) {
-        RoomCardScaffold(serverColor = serverColor, onClick = onJoin) {
+        RoomCardScaffold(onClick = onJoin) {
             Column(modifier = Modifier.weight(1f)) {
-                RoomTitleLine(
-                    title = recent.roomName,
-                    // On the active server the "on {server}" label is redundant with the header.
-                    serverName = if (isCurrentServer) null else recent.instanceName,
-                    serverColor = serverColor,
-                )
-                Text(
-                    text = metaText,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
+                RoomTitleLine(title = recent.roomName)
+                if (presence != null) {
+                    Text(
+                        text = presence.text,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = statusTint,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
             }
 
             TrailingChevron()
@@ -936,15 +898,36 @@ private fun RecentRoomCard(
     }
 }
 
+// ── Presence ───────────────────────────────────────────────────────────────────
+
+/** A card's presence label plus whether it's the "Live" state (so the caller can tint it). */
+private data class Presence(val text: String, val isLive: Boolean)
+
+// The user counts as "Live" while in the room or within a minute of leaving; after that we show
+// how long ago they were last in.
+private const val LIVE_WINDOW_MS = 60_000L
+
+// Two presence states only. Null means the user has never joined this room — a server-backed card
+// with no local history shows no presence line at all.
+@Composable
+private fun presenceFor(isOngoing: Boolean, lastVisitAtMs: Long?, now: Long): Presence? {
+    val isLive = isOngoing || (lastVisitAtMs != null && now - lastVisitAtMs < LIVE_WINDOW_MS)
+    return when {
+        isLive -> Presence(stringResource(R.string.dashboard_status_live), isLive = true)
+        lastVisitAtMs != null -> Presence(formatRecentRoomTimeAgo(lastVisitAtMs, now), isLive = false)
+        else -> null
+    }
+}
+
 // ── Shared card pieces ─────────────────────────────────────────────────────────
 
-/** Outlined card with the per-server accent stripe on its leading edge. */
+/** Outlined card with a neutral accent band on its leading edge. */
 @Composable
 private fun RoomCardScaffold(
-    serverColor: Color,
     onClick: () -> Unit,
     content: @Composable RowScope.() -> Unit,
 ) {
+    val bandColor = MaterialTheme.colorScheme.outline
     BedrudOutlinedCard(
         onClick = onClick,
         shape = BedrudShapeTokens.card,
@@ -965,7 +948,7 @@ private fun RoomCardScaffold(
                 modifier = Modifier
                     .width(Dimens.roomCardStripe)
                     .fillMaxHeight()
-                    .background(serverColor),
+                    .background(bandColor),
             )
             Row(
                 modifier = Modifier
@@ -978,52 +961,20 @@ private fun RoomCardScaffold(
     }
 }
 
-/** Line 1 of a room card: the monospace room name + the colored "on {server}" tag. */
+/** Line 1 of a room card: the room name in monospace. */
 @Composable
-private fun RoomTitleLine(title: String, serverName: String?, serverColor: Color) {
-    Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        Text(
-            text = title,
-            style = MaterialTheme.typography.bodyLarge.copy(
-                fontFamily = FontFamily.Monospace,
-                textDirection = TextDirection.Ltr,
-            ),
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.weight(1f, fill = false),
-        )
-        if (serverName != null) {
-            // Split the localized "on %1$s" template around its placeholder so the connective
-            // word stays muted while only the server name carries the server's accent color.
-            val template = stringResource(R.string.dashboard_recent_onServer)
-            val mutedColor = MaterialTheme.colorScheme.onSurfaceVariant
-            val placeholderIndex = template.indexOf(SERVER_NAME_PLACEHOLDER)
-            Spacer(modifier = Modifier.width(Dimens.space8))
-            Text(
-                text = buildAnnotatedString {
-                    if (placeholderIndex >= 0) {
-                        withStyle(SpanStyle(color = mutedColor)) {
-                            append(template.substring(0, placeholderIndex))
-                        }
-                        withStyle(SpanStyle(color = serverColor)) { append(serverName) }
-                        withStyle(SpanStyle(color = mutedColor)) {
-                            append(template.substring(placeholderIndex + SERVER_NAME_PLACEHOLDER.length))
-                        }
-                    } else {
-                        withStyle(SpanStyle(color = serverColor)) {
-                            append(template.format(serverName))
-                        }
-                    }
-                },
-                style = MaterialTheme.typography.labelMedium,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-        }
-    }
+private fun RoomTitleLine(title: String) {
+    Text(
+        text = title,
+        style = MaterialTheme.typography.bodyLarge.copy(
+            fontFamily = FontFamily.Monospace,
+            textDirection = TextDirection.Ltr,
+        ),
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
+        modifier = Modifier.fillMaxWidth(),
+    )
 }
-
-private const val SERVER_NAME_PLACEHOLDER = "%1\$s"
 
 @Composable
 private fun TrailingChevron() {
