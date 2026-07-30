@@ -92,6 +92,20 @@ fun BedrudCard(
     }
 }
 
+/**
+ * The small primary-tinted section label at the top of a settings/profile/admin card. Pass the
+ * card's own edge padding via [modifier] when the header sits directly in an unpadded card column.
+ */
+@Composable
+fun CardSectionHeader(title: String, modifier: Modifier = Modifier) {
+    Text(
+        text = title,
+        style = MaterialTheme.typography.labelLarge,
+        color = MaterialTheme.colorScheme.primary,
+        modifier = modifier
+    )
+}
+
 @Composable
 private fun ColumnScope.CardContent(
     title: String?,

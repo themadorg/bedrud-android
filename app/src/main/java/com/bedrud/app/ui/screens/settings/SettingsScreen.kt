@@ -25,6 +25,7 @@ import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import com.bedrud.app.ui.components.BedrudCompactTopBar
+import com.bedrud.app.ui.components.CardSectionHeader
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
@@ -97,11 +98,7 @@ fun SettingsContent(
             // Appearance
             BedrudOutlinedCard(shape = RoundedCornerShape(16.dp)) {
                 Column(modifier = Modifier.padding(16.dp)) {
-                    Text(
-                        stringResource(R.string.settings_section_appearance),
-                        style = MaterialTheme.typography.labelLarge,
-                        color = MaterialTheme.colorScheme.primary
-                    )
+                    CardSectionHeader(stringResource(R.string.settings_section_appearance))
                     Spacer(modifier = Modifier.height(12.dp))
                     Text(
                         stringResource(R.string.settings_label_theme),
@@ -163,10 +160,8 @@ fun SettingsContent(
             // Notifications
             BedrudOutlinedCard(shape = RoundedCornerShape(16.dp)) {
                 Column {
-                    Text(
+                    CardSectionHeader(
                         stringResource(R.string.settings_section_notifications),
-                        style = MaterialTheme.typography.labelLarge,
-                        color = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.padding(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 8.dp)
                     )
                     ListItem(
@@ -190,8 +185,7 @@ fun SettingsContent(
                             modifier = Modifier.padding(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 8.dp),
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            Text(stringResource(R.string.settings_section_account), style = MaterialTheme.typography.labelLarge,
-                                color = MaterialTheme.colorScheme.primary)
+                            CardSectionHeader(stringResource(R.string.settings_section_account))
                             if (currentUser?.isAdmin == true) {
                                 Icon(Icons.Default.AdminPanelSettings, contentDescription = null,
                                     tint = MaterialTheme.colorScheme.primary)
@@ -233,8 +227,7 @@ fun SettingsContent(
             val isLocalAccount = currentUser?.provider.let { it == null || it == "local" || it == "passkey" }
             BedrudOutlinedCard(shape = RoundedCornerShape(16.dp)) {
                 Column(modifier = Modifier.padding(16.dp)) {
-                    Text(stringResource(R.string.settings_section_security), style = MaterialTheme.typography.labelLarge,
-                        color = MaterialTheme.colorScheme.primary)
+                    CardSectionHeader(stringResource(R.string.settings_section_security))
                     Spacer(modifier = Modifier.height(12.dp))
 
                     if (!isLocalAccount) {
@@ -315,10 +308,8 @@ fun SettingsContent(
             // About
             BedrudOutlinedCard(shape = RoundedCornerShape(16.dp)) {
                 Column {
-                    Text(
+                    CardSectionHeader(
                         stringResource(R.string.settings_section_about),
-                        style = MaterialTheme.typography.labelLarge,
-                        color = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.padding(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 8.dp)
                     )
 

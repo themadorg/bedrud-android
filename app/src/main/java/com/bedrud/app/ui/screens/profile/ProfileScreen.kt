@@ -22,6 +22,7 @@ import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material3.ButtonDefaults
 
 import com.bedrud.app.ui.components.BedrudOutlinedCard
+import com.bedrud.app.ui.components.CardSectionHeader
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
@@ -163,10 +164,8 @@ fun ProfileContent(
             // Server section
             BedrudOutlinedCard(shape = RoundedCornerShape(16.dp)) {
                 Column {
-                    Text(
+                    CardSectionHeader(
                         stringResource(R.string.profile_section_server),
-                        style = MaterialTheme.typography.labelLarge,
-                        color = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.padding(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 8.dp)
                     )
 
@@ -219,10 +218,8 @@ fun ProfileContent(
             // Account section
             BedrudOutlinedCard(shape = RoundedCornerShape(16.dp)) {
                 Column {
-                    Text(
+                    CardSectionHeader(
                         stringResource(R.string.profile_section_account),
-                        style = MaterialTheme.typography.labelLarge,
-                        color = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.padding(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 8.dp)
                     )
 
