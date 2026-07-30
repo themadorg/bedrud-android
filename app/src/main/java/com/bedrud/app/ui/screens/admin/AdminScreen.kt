@@ -203,13 +203,10 @@ private fun AdminOverviewContent(
         }
     }
 
-    Scaffold(
+    AdminTabScaffold(
+        title = stringResource(R.string.admin_title_overview),
+        snackbarHostState = snackbarHostState,
         modifier = modifier,
-        contentWindowInsets = BedrudTabScaffoldContentInsets,
-        topBar = {
-            BedrudCompactTopBar(title = stringResource(R.string.admin_title_overview))
-        },
-        snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { padding ->
         Column(
             modifier = Modifier
@@ -220,13 +217,7 @@ private fun AdminOverviewContent(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             if (isLoading) {
-                Box(
-                    Modifier
-                        .fillMaxWidth()
-                        .height(200.dp), contentAlignment = Alignment.Center
-                ) {
-                    CircularProgressIndicator()
-                }
+                AdminLoadingIndicator()
             } else {
                 // Stats grid
                 FlowRow(
@@ -297,6 +288,39 @@ private fun StatCard(@StringRes labelResId: Int, value: Int, icon: ImageVector) 
     }
 }
 
+/**
+ * The frame every admin tab shares: compact top bar, tab content insets, and the tab's own
+ * snackbar host (passed in — the tab's load/save calls report into it).
+ */
+@Composable
+private fun AdminTabScaffold(
+    title: String,
+    snackbarHostState: SnackbarHostState,
+    modifier: Modifier = Modifier,
+    content: @Composable (PaddingValues) -> Unit,
+) {
+    Scaffold(
+        modifier = modifier,
+        contentWindowInsets = BedrudTabScaffoldContentInsets,
+        topBar = { BedrudCompactTopBar(title = title) },
+        snackbarHost = { SnackbarHost(snackbarHostState) },
+        content = content,
+    )
+}
+
+/** The centered spinner every admin tab shows while its content loads. */
+@Composable
+private fun AdminLoadingIndicator() {
+    Box(
+        Modifier
+            .fillMaxWidth()
+            .height(200.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        CircularProgressIndicator()
+    }
+}
+
 // ── Users ─────────────────────────────────────────────────────────────────────
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -325,11 +349,10 @@ private fun AdminUsersContent(
         else users.filter { it.name.contains(search, true) || it.email.contains(search, true) }
     }
 
-    Scaffold(
+    AdminTabScaffold(
+        title = stringResource(R.string.admin_users),
+        snackbarHostState = snackbarHostState,
         modifier = modifier,
-        contentWindowInsets = BedrudTabScaffoldContentInsets,
-        topBar = { BedrudCompactTopBar(title = stringResource(R.string.admin_users)) },
-        snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { padding ->
         LazyColumn(
             modifier = Modifier
@@ -346,14 +369,7 @@ private fun AdminUsersContent(
             }
             if (isLoading) {
                 item {
-                    Box(
-                        Modifier
-                            .fillMaxWidth()
-                            .height(200.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        CircularProgressIndicator()
-                    }
+                    AdminLoadingIndicator()
                 }
             } else {
                 items(filtered, key = { it.id }) { user ->
@@ -442,11 +458,10 @@ private fun AdminRoomsContent(
         isLoading = false
     }
 
-    Scaffold(
+    AdminTabScaffold(
+        title = stringResource(R.string.admin_tab_rooms),
+        snackbarHostState = snackbarHostState,
         modifier = modifier,
-        contentWindowInsets = BedrudTabScaffoldContentInsets,
-        topBar = { BedrudCompactTopBar(title = stringResource(R.string.admin_tab_rooms)) },
-        snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { padding ->
         LazyColumn(
             modifier = Modifier
@@ -456,14 +471,7 @@ private fun AdminRoomsContent(
         ) {
             if (isLoading) {
                 item {
-                    Box(
-                        Modifier
-                            .fillMaxWidth()
-                            .height(200.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        CircularProgressIndicator()
-                    }
+                    AdminLoadingIndicator()
                 }
             } else {
                 items(rooms, key = { it.id }) { room ->
@@ -549,13 +557,10 @@ private fun AdminSettingsContent(
         isLoading = false
     }
 
-    Scaffold(
+    AdminTabScaffold(
+        title = stringResource(R.string.admin_title_systemSettings),
+        snackbarHostState = snackbarHostState,
         modifier = modifier,
-        contentWindowInsets = BedrudTabScaffoldContentInsets,
-        topBar = {
-            BedrudCompactTopBar(title = stringResource(R.string.admin_title_systemSettings))
-        },
-        snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { padding ->
         Column(
             modifier = Modifier
