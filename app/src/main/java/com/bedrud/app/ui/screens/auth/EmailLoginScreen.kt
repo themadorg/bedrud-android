@@ -60,6 +60,7 @@ import com.bedrud.app.ui.components.BedrudButton
 import com.bedrud.app.ui.components.BedrudButtonVariant
 import com.bedrud.app.ui.components.BedrudScaffoldContentInsets
 import com.bedrud.app.ui.components.BedrudSnackbarHost
+import com.bedrud.app.ui.components.BedrudTextField
 import com.bedrud.app.ui.components.bringIntoViewOnFocus
 import com.bedrud.app.ui.theme.BedrudShapeTokens
 import com.bedrud.app.ui.theme.Dimens
@@ -194,15 +195,13 @@ fun EmailLoginScreen(
 
                     Spacer(Modifier.height(Dimens.space32))
 
-                    OutlinedTextField(
+                    BedrudTextField(
                         value = email,
                         onValueChange = {
                             email = it
                             errorMessage = null
                         },
-                        label = { Text(stringResource(R.string.auth_label_email)) },
-                        singleLine = true,
-                        shape = BedrudShapeTokens.field,
+                        label = stringResource(R.string.auth_label_email),
                         keyboardOptions = KeyboardOptions(
                             keyboardType = KeyboardType.Email,
                             imeAction = ImeAction.Next
@@ -210,10 +209,7 @@ fun EmailLoginScreen(
                         keyboardActions = KeyboardActions(
                             onNext = { focusManager.moveFocus(FocusDirection.Down) }
                         ),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .bringIntoViewOnFocus(),
-                        textStyle = MaterialTheme.typography.bodyLarge.copy(textDirection = TextDirection.Ltr)
+                        textDirection = TextDirection.Ltr
                     )
 
                     Spacer(Modifier.height(Dimens.space12))
@@ -399,23 +395,20 @@ private fun ForgotPasswordSheet(
             Spacer(Modifier.height(Dimens.space24))
 
             val currentError = error
-            OutlinedTextField(
+            BedrudTextField(
                 value = email,
                 onValueChange = {
                     email = it
                     error = null
                 },
-                label = { Text(stringResource(R.string.auth_label_email)) },
-                singleLine = true,
+                label = stringResource(R.string.auth_label_email),
                 isError = currentError != null,
-                shape = BedrudShapeTokens.field,
                 keyboardOptions = KeyboardOptions(
                     keyboardType = KeyboardType.Email,
                     imeAction = ImeAction.Go
                 ),
                 keyboardActions = KeyboardActions(onGo = { send() }),
-                modifier = Modifier.fillMaxWidth(),
-                textStyle = MaterialTheme.typography.bodyLarge.copy(textDirection = TextDirection.Ltr)
+                textDirection = TextDirection.Ltr
             )
 
             if (currentError != null) {

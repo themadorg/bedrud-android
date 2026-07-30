@@ -59,6 +59,7 @@ import com.bedrud.app.ui.components.BedrudButton
 import com.bedrud.app.ui.components.BedrudButtonVariant
 import com.bedrud.app.ui.components.BedrudScaffoldContentInsets
 import com.bedrud.app.ui.components.BedrudSnackbarHost
+import com.bedrud.app.ui.components.BedrudTextField
 import com.bedrud.app.ui.components.autofillType
 import com.bedrud.app.ui.components.bringIntoViewOnFocus
 import com.bedrud.app.ui.theme.BedrudShapeTokens
@@ -207,15 +208,13 @@ fun RegisterScreen(
 
                     Spacer(Modifier.height(Dimens.space32))
 
-                    OutlinedTextField(
+                    BedrudTextField(
                         value = displayName,
                         onValueChange = {
                             displayName = it
                             errorMessage = null
                         },
-                        label = { Text(stringResource(R.string.auth_label_displayName)) },
-                        singleLine = true,
-                        shape = BedrudShapeTokens.field,
+                        label = stringResource(R.string.auth_label_displayName),
                         keyboardOptions = KeyboardOptions(
                             keyboardType = KeyboardType.Text,
                             imeAction = ImeAction.Next
@@ -223,30 +222,24 @@ fun RegisterScreen(
                         keyboardActions = KeyboardActions(
                             onNext = { focusManager.moveFocus(FocusDirection.Down) }
                         ),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .bringIntoViewOnFocus()
-                            .autofillType(ContentType.PersonFullName),
-                        textStyle = MaterialTheme.typography.bodyLarge.copy(textDirection = TextDirection.Content)
+                        autofill = ContentType.PersonFullName
                     )
 
                     Spacer(Modifier.height(Dimens.space12))
 
-                    OutlinedTextField(
+                    BedrudTextField(
                         value = email,
                         onValueChange = {
                             email = it
                             errorMessage = null
                         },
-                        label = { Text(stringResource(R.string.auth_label_email)) },
-                        singleLine = true,
+                        label = stringResource(R.string.auth_label_email),
                         isError = emailInErrorState,
                         supportingText = if (emailInErrorState) {
                             { Text(stringResource(R.string.auth_error_emailInvalid)) }
                         } else {
                             null
                         },
-                        shape = BedrudShapeTokens.field,
                         keyboardOptions = KeyboardOptions(
                             keyboardType = KeyboardType.Email,
                             imeAction = ImeAction.Next
@@ -254,11 +247,8 @@ fun RegisterScreen(
                         keyboardActions = KeyboardActions(
                             onNext = { focusManager.moveFocus(FocusDirection.Down) }
                         ),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .bringIntoViewOnFocus()
-                            .autofillType(ContentType.EmailAddress),
-                        textStyle = MaterialTheme.typography.bodyLarge.copy(textDirection = TextDirection.Ltr)
+                        autofill = ContentType.EmailAddress,
+                        textDirection = TextDirection.Ltr
                     )
 
                     Spacer(Modifier.height(Dimens.space12))

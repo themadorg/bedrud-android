@@ -35,6 +35,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import com.bedrud.app.ui.components.BedrudOutlinedCard
+import com.bedrud.app.ui.components.BedrudTextField
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -44,7 +45,6 @@ import com.bedrud.app.ui.components.BedrudTabScaffoldContentInsets
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -338,13 +338,10 @@ private fun AdminUsersContent(
             contentPadding = PaddingValues(bottom = 16.dp)
         ) {
             item {
-                OutlinedTextField(
+                BedrudTextField(
                     value = search, onValueChange = { search = it },
-                    placeholder = { Text(stringResource(R.string.admin_placeholder_searchUsers)) },
-                    singleLine = true, shape = RoundedCornerShape(12.dp),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 8.dp)
+                    placeholder = stringResource(R.string.admin_placeholder_searchUsers),
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
                 )
             }
             if (isLoading) {
@@ -663,12 +660,12 @@ private fun AdminSettingsContent(
                     }
 
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        OutlinedTextField(
+                        BedrudTextField(
                             value = tokenEmail, onValueChange = { tokenEmail = it },
-                            placeholder = { Text(stringResource(R.string.admin_placeholder_email)) },
-                            singleLine = true, shape = RoundedCornerShape(12.dp),
+                            placeholder = stringResource(R.string.admin_placeholder_email),
                             modifier = Modifier.weight(1f),
-                            textStyle = MaterialTheme.typography.bodyMedium.copy(textDirection = TextDirection.Ltr)
+                            textStyle = MaterialTheme.typography.bodyMedium,
+                            textDirection = TextDirection.Ltr
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Button(onClick = {

@@ -18,6 +18,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenuItem
 import com.bedrud.app.ui.components.BedrudOutlinedCard
+import com.bedrud.app.ui.components.BedrudTextField
 import com.bedrud.app.core.auth.PasswordPolicy
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
@@ -133,13 +134,12 @@ fun SettingsContent(
                         expanded = languageExpanded,
                         onExpandedChange = { languageExpanded = it }
                     ) {
-                        OutlinedTextField(
+                        BedrudTextField(
                             value = language.label,
                             onValueChange = {},
                             readOnly = true,
                             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = languageExpanded) },
-                            modifier = Modifier.menuAnchor().fillMaxWidth(),
-                            shape = RoundedCornerShape(12.dp)
+                            modifier = Modifier.menuAnchor()
                         )
                         ExposedDropdownMenu(
                             expanded = languageExpanded,

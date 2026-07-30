@@ -41,7 +41,6 @@ import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SwipeToDismissBox
@@ -102,6 +101,7 @@ import com.bedrud.app.ui.components.BedrudButtonVariant
 import com.bedrud.app.ui.components.BedrudCompactTopBar
 import com.bedrud.app.ui.components.BedrudOutlinedCard
 import com.bedrud.app.ui.components.BedrudSnackbarHost
+import com.bedrud.app.ui.components.BedrudTextField
 import com.bedrud.app.ui.components.BedrudTabScaffoldContentInsets
 import com.bedrud.app.ui.theme.BedrudShapeTokens
 import com.bedrud.app.ui.theme.Dimens
@@ -719,14 +719,12 @@ private fun QuickJoinBar(
     Row(modifier = modifier, verticalAlignment = Alignment.CenterVertically) {
         // Both the field and the button sit at the compact 48dp control height with the shared
         // corner token, so the row reads as one control without dominating the header area.
-        OutlinedTextField(
+        BedrudTextField(
             value = value,
             onValueChange = onValueChange,
-            placeholder = { Text(stringResource(R.string.dashboard_placeholder_search)) },
+            placeholder = stringResource(R.string.dashboard_placeholder_search),
             leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, modifier = Modifier.size(Dimens.iconSm)) },
-            singleLine = true,
             textStyle = MaterialTheme.typography.bodyMedium,
-            shape = BedrudShapeTokens.field,
             // Room slugs and links are lowercase, no spaces — suppress auto-capitalize/correct and
             // use the URL keyboard. The "Go" key joins (and, on success, the navigation dismisses it).
             keyboardOptions = KeyboardOptions(
@@ -736,6 +734,7 @@ private fun QuickJoinBar(
                 imeAction = ImeAction.Go,
             ),
             keyboardActions = KeyboardActions(onGo = { onJoin() }),
+            textDirection = TextDirection.Ltr,
             modifier = Modifier.weight(1f).height(Dimens.buttonHeight)
         )
         Spacer(modifier = Modifier.width(Dimens.space8))
@@ -1087,14 +1086,12 @@ private fun CreateRoomDialog(onDismiss: () -> Unit, onCreate: (String) -> Unit) 
                 Text(stringResource(R.string.dashboard_dialog_createDescription),
                     style = MaterialTheme.typography.bodyMedium)
                 Spacer(modifier = Modifier.height(Dimens.space16))
-                OutlinedTextField(
+                BedrudTextField(
                     value = roomName,
                     onValueChange = { roomName = it },
-                    label = { Text(stringResource(R.string.dashboard_label_roomName)) },
-                    singleLine = true,
-                    shape = BedrudShapeTokens.field,
-                    modifier = Modifier.fillMaxWidth(),
-                    textStyle = MaterialTheme.typography.bodyMedium.copy(textDirection = TextDirection.Ltr)
+                    label = stringResource(R.string.dashboard_label_roomName),
+                    textStyle = MaterialTheme.typography.bodyMedium,
+                    textDirection = TextDirection.Ltr
                 )
             }
         },
