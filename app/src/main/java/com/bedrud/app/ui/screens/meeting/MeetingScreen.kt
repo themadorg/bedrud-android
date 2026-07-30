@@ -127,6 +127,7 @@ import com.bedrud.app.core.deeplink.BedrudURLParser
 import com.bedrud.app.core.instance.InstanceManager
 import com.bedrud.app.ui.components.BedrudScaffoldContentInsets
 import com.bedrud.app.ui.components.ChatImageLightbox
+import com.bedrud.app.ui.components.InitialsAvatar
 import com.bedrud.app.core.livekit.ChatMessage
 import com.bedrud.app.core.livekit.ConnectionState
 import com.bedrud.app.core.pip.PipStateHolder
@@ -976,20 +977,14 @@ private fun ParticipantTile(
                 )
             }
             else -> {
-            // Initials placeholder
-            Box(
-                modifier = Modifier
-                    .size(56.dp)
-                    .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.primary),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = name.take(1).uppercase(),
-                    style = MaterialTheme.typography.headlineMedium,
-                    color = MaterialTheme.colorScheme.onPrimary,
+                // Initials placeholder
+                InitialsAvatar(
+                    name = name,
+                    size = 56.dp,
+                    textStyle = MaterialTheme.typography.headlineMedium,
+                    contentColor = MaterialTheme.colorScheme.onPrimary,
+                    fallbackInitial = ""
                 )
-            }
             }
         }
 
@@ -1190,20 +1185,11 @@ private fun ParticipantListRow(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        // Gradient avatar
-        Box(
-            modifier = Modifier
-                .size(36.dp)
-                .clip(CircleShape)
-                .background(androidx.compose.ui.graphics.Color(avatarColor)),
-            contentAlignment = Alignment.Center
-        ) {
-            Text(
-                name.take(1).uppercase(),
-                style = MaterialTheme.typography.labelMedium,
-                color = androidx.compose.ui.graphics.Color.White
-            )
-        }
+        InitialsAvatar(
+            name = name,
+            containerColor = androidx.compose.ui.graphics.Color(avatarColor),
+            fallbackInitial = ""
+        )
 
         Column(modifier = Modifier.weight(1f)) {
             Row(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {

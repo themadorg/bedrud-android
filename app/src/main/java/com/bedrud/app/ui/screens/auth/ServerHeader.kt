@@ -1,22 +1,17 @@
 package com.bedrud.app.ui.screens.auth
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.size
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextDirection
 import com.bedrud.app.R
-import com.bedrud.app.ui.theme.BedrudShapeTokens
+import com.bedrud.app.ui.components.InitialsAvatar
 import com.bedrud.app.ui.theme.Dimens
 import com.bedrud.app.ui.theme.parseInstanceColor
 
@@ -33,22 +28,14 @@ internal fun ServerHeader(
     iconColorHex: String?
 ) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Box(
-            modifier = Modifier
-                .size(Dimens.brandMark)
-                .clip(BedrudShapeTokens.pill)
-                .background(
-                    iconColorHex?.let(::parseInstanceColor)
-                        ?: MaterialTheme.colorScheme.primaryContainer
-                ),
-            contentAlignment = Alignment.Center
-        ) {
-            Text(
-                text = (displayName ?: "B").take(1).uppercase(),
-                style = MaterialTheme.typography.headlineMedium,
-                color = Color.White
-            )
-        }
+        InitialsAvatar(
+            name = displayName,
+            size = Dimens.brandMark,
+            textStyle = MaterialTheme.typography.headlineMedium,
+            containerColor = iconColorHex?.let(::parseInstanceColor)
+                ?: MaterialTheme.colorScheme.primaryContainer,
+            fallbackInitial = "B"
+        )
         Spacer(Modifier.height(Dimens.space16))
         Text(
             text = displayName ?: stringResource(R.string.instance_default_displayName),

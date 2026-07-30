@@ -1,6 +1,5 @@
 package com.bedrud.app.ui.screens.instance
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -15,7 +14,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
@@ -32,14 +30,13 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.bedrud.app.R
 import com.bedrud.app.ui.components.BedrudScaffoldContentInsets
+import com.bedrud.app.ui.components.InitialsAvatar
 import com.bedrud.app.core.instance.InstanceManager
 import com.bedrud.app.models.Instance
 import com.bedrud.app.ui.theme.parseInstanceColor
@@ -122,19 +119,11 @@ private fun InstanceRow(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.weight(1f)
         ) {
-            Box(
-                modifier = Modifier
-                    .size(36.dp)
-                    .clip(CircleShape)
-                    .background(parseInstanceColor(instance.iconColorHex)),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = instance.displayName.take(1).uppercase(),
-                    style = MaterialTheme.typography.titleSmall,
-                    color = Color.White
-                )
-            }
+            InitialsAvatar(
+                name = instance.displayName,
+                textStyle = MaterialTheme.typography.titleSmall,
+                containerColor = parseInstanceColor(instance.iconColorHex)
+            )
 
             Spacer(modifier = Modifier.width(12.dp))
 
