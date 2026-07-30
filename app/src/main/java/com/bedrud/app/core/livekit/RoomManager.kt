@@ -9,6 +9,7 @@ import android.util.Log
 import androidx.core.app.NotificationCompat
 import com.bedrud.app.R
 import com.bedrud.app.core.call.CallConnectionService
+import com.bedrud.app.core.meeting.chat.ChatWire
 import com.bedrud.app.core.meeting.stage.StageWire
 import com.bedrud.app.ui.screens.settings.SettingsStore
 import io.livekit.android.AudioOptions
@@ -319,42 +320,18 @@ class RoomManager(
     }
 
     private fun handleDataReceived(event: RoomEvent.DataReceived) {
-        try {
-            val json = JSONObject(String(event.data, Charsets.UTF_8))
-            val isChat = event.topic == "chat" || json.optString("type") == "chat"
-            if (isChat) {
-                val senderName = json.optString("senderName", "").ifBlank {
-                    event.participant?.name
-                        ?: event.participant?.identity?.value
-                        ?: "Unknown"
-                }
-                // Parse optional attachments (forward-compatible: old clients send none)
-                val attachments = mutableListOf<ChatAttachment>()
-                val attArray = json.optJSONArray("attachments")
-                if (attArray != null) {
-                    for (i in 0 until attArray.length()) {
-                        val att = attArray.optJSONObject(i) ?: continue
-                        attachments.add(ChatAttachment(
-                            kind = att.optString("kind", "image"),
-                            url = att.optString("url", ""),
-                            mime = att.optString("mime", ""),
-                            w = att.optInt("w", 0),
-                            h = att.optInt("h", 0),
-                            size = att.optInt("size", 0),
-                        ))
-                    }
-                }
-                val msg = ChatMessage(
-                    senderName = senderName,
-                    text = json.optString("message", ""),
-                    isLocal = false,
-                    attachments = attachments,
-                )
-                _chatMessages.value += msg
-            }
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to parse data message", e)
+        val incoming = ChatWire.parseChat(event.data, event.topic) ?: return
+        val senderName = incoming.senderName.ifBlank {
+            event.participant?.name
+                ?: event.participant?.identity?.value
+                ?: "Unknown"
         }
+        _chatMessages.value += ChatMessage(
+            senderName = senderName,
+            text = incoming.text,
+            isLocal = false,
+            attachments = incoming.attachments,
+        )
     }
 
     fun disconnect() {
@@ -613,17 +590,24 @@ class RoomManager(
         )
     }
 
-    private suspend fun publishStageData(data: ByteArray) {
-        val localParticipant = _room?.localParticipant ?: return
-        try {
+    /** Publishes on the reliable data channel; false (plus a log line) when publishing throws. */
+    private suspend fun publishData(topic: String, data: ByteArray): Boolean {
+        val localParticipant = _room?.localParticipant ?: return false
+        return try {
             localParticipant.publishData(
                 data = data,
                 reliability = DataPublishReliability.RELIABLE,
-                topic = StageWire.STAGE_DATA_TOPIC,
+                topic = topic,
             )
+            true
         } catch (e: Exception) {
-            Log.e(TAG, "Failed to publish stage data", e)
+            Log.e(TAG, "Failed to publish data on topic '$topic'", e)
+            false
         }
+    }
+
+    private suspend fun publishStageData(data: ByteArray) {
+        publishData(StageWire.STAGE_DATA_TOPIC, data)
     }
 
     private fun handleStageData(event: RoomEvent.DataReceived) {
@@ -708,38 +692,23 @@ class RoomManager(
         val name = localParticipant.name ?: localParticipant.identity?.value ?: "Unknown"
         val identity = localParticipant.identity?.value ?: ""
 
-        val json = JSONObject().apply {
-            put("type", "chat")
-            put("id", java.util.UUID.randomUUID().toString())
-            put("timestamp", System.currentTimeMillis())
-            put("message", text)
-            put("senderName", name)
-            put("senderIdentity", identity)
-            if (attachments.isNotEmpty()) {
-                val attArray = org.json.JSONArray()
-                attachments.forEach { att ->
-                    attArray.put(JSONObject().apply {
-                        put("kind", att.kind)
-                        put("url", att.url)
-                        put("mime", att.mime)
-                        put("w", att.w)
-                        put("h", att.h)
-                        put("size", att.size)
-                    })
-                }
-                put("attachments", attArray)
-            }
-        }
-        try {
-            localParticipant.publishData(
-                data = json.toString().toByteArray(Charsets.UTF_8),
-                reliability = DataPublishReliability.RELIABLE,
-                topic = "chat"
+        val sent = publishData(
+            ChatWire.CHAT_DATA_TOPIC,
+            ChatWire.encodeChat(
+                senderName = name,
+                senderIdentity = identity,
+                text = text,
+                attachments = attachments,
+            ),
+        )
+        if (sent) {
+            _chatMessages.value += ChatMessage(
+                senderName = name,
+                text = text,
+                isLocal = true,
+                attachments = attachments,
             )
-            val msg = ChatMessage(senderName = name, text = text, isLocal = true, attachments = attachments)
-            _chatMessages.value += msg
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to send chat message", e)
+        } else {
             _error.value = "Failed to send message"
         }
     }
