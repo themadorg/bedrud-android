@@ -41,6 +41,10 @@
   <string name="auth_error_guestFailed">Beitritt als Gast nicht möglich. Bitte versuchen Sie es erneut.</string>
   <string name="auth_error_nameTooShort">Bitte geben Sie mindestens 2 Zeichen ein.</string>
   <string name="auth_error_generic">Etwas ist schiefgelaufen. Bitte versuchen Sie es erneut.</string>
+  <string name="auth_error_registrationFailed">Registrierung fehlgeschlagen. Bitte versuchen Sie es erneut.</string>
+  <string name="auth_error_signInFailed">Anmeldung fehlgeschlagen. Bitte versuchen Sie es erneut.</string>
+  <string name="auth_notice_verifyEmail">Bitte prüfen Sie Ihre E-Mails, um Ihr Konto zu bestätigen</string>
+  <string name="auth_notice_verifyBeforeSignIn">Bitte bestätigen Sie Ihre E-Mail-Adresse, bevor Sie sich anmelden</string>
   <string name="auth_divider_orContinueWith">oder weiter mit</string>
   <string name="auth_hint_methodDisabled">Auf diesem Server nicht aktiviert</string>
   <string name="auth_oauth_continueWithFormat">Weiter mit %1$s</string>

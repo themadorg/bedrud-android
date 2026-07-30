@@ -41,6 +41,10 @@
   <string name="auth_error_guestFailed">No se pudo entrar como invitado. Inténtalo de nuevo.</string>
   <string name="auth_error_nameTooShort">Introduce al menos 2 caracteres.</string>
   <string name="auth_error_generic">Algo salió mal. Inténtalo de nuevo.</string>
+  <string name="auth_error_registrationFailed">Error al registrarse. Inténtalo de nuevo.</string>
+  <string name="auth_error_signInFailed">Error al iniciar sesión. Inténtalo de nuevo.</string>
+  <string name="auth_notice_verifyEmail">Revisa tu correo electrónico para verificar tu cuenta</string>
+  <string name="auth_notice_verifyBeforeSignIn">Verifica tu correo electrónico antes de iniciar sesión</string>
   <string name="auth_divider_orContinueWith">o continúa con</string>
   <string name="auth_hint_methodDisabled">No habilitado en este servidor</string>
   <string name="auth_oauth_continueWithFormat">Continuar con %1$s</string>

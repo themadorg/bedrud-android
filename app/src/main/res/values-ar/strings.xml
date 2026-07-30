@@ -41,6 +41,10 @@
   <string name="auth_error_guestFailed">تعذّر الانضمام كضيف. يرجى المحاولة مرة أخرى.</string>
   <string name="auth_error_nameTooShort">الرجاء إدخال حرفين على الأقل.</string>
   <string name="auth_error_generic">حدث خطأ ما. يرجى المحاولة مرة أخرى.</string>
+  <string name="auth_error_registrationFailed">فشل إنشاء الحساب. يرجى المحاولة مرة أخرى.</string>
+  <string name="auth_error_signInFailed">فشل تسجيل الدخول. يرجى المحاولة مرة أخرى.</string>
+  <string name="auth_notice_verifyEmail">يرجى التحقق من بريدك الإلكتروني لتفعيل حسابك</string>
+  <string name="auth_notice_verifyBeforeSignIn">يرجى تفعيل بريدك الإلكتروني قبل تسجيل الدخول</string>
   <string name="auth_divider_orContinueWith">أو تابع عبر</string>
   <string name="auth_hint_methodDisabled">غير مُفعّل على هذا الخادم</string>
   <string name="auth_oauth_continueWithFormat">المتابعة عبر %1$s</string>

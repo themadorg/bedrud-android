@@ -41,6 +41,10 @@
   <string name="auth_error_guestFailed">ゲストとして参加できませんでした。もう一度お試しください。</string>
   <string name="auth_error_nameTooShort">2文字以上入力してください。</string>
   <string name="auth_error_generic">問題が発生しました。もう一度お試しください。</string>
+  <string name="auth_error_registrationFailed">登録に失敗しました。もう一度お試しください。</string>
+  <string name="auth_error_signInFailed">サインインに失敗しました。もう一度お試しください。</string>
+  <string name="auth_notice_verifyEmail">アカウントを確認するため、メールをご確認ください</string>
+  <string name="auth_notice_verifyBeforeSignIn">サインインする前にメールアドレスを確認してください</string>
   <string name="auth_divider_orContinueWith">またはこちらで続行</string>
   <string name="auth_hint_methodDisabled">このサーバーでは無効です</string>
   <string name="auth_oauth_continueWithFormat">%1$sで続行</string>

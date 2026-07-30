@@ -13,6 +13,7 @@ import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -111,6 +112,28 @@ class ApiResponseUtilsTest {
         assertEquals("acc", authManager.getAccessToken())
         assertEquals("ref", authManager.getRefreshToken())
         assertEquals("Alice", authManager.currentUser.value?.name)
+    }
+
+    @Test
+    fun `parseRegisterResponse Failed carries null when server sent no message`() {
+        val response = Response.error<JsonObject>(500, "".toResponseBody())
+
+        val outcome = parseRegisterResponse(response)
+
+        assertTrue(outcome is RegisterOutcome.Failed)
+        assertNull((outcome as RegisterOutcome.Failed).message)
+    }
+
+    @Test
+    fun `performLogin Failed carries the server error text`() = runBlocking {
+        server.enqueue(
+            MockResponse().setBody("""{"error":"bad credentials"}""").setResponseCode(401)
+        )
+
+        val outcome = performLogin(authApi, authManager, "a@b.com", "wrong-password")
+
+        assertTrue(outcome is LoginOutcome.Failed)
+        assertEquals("bad credentials", (outcome as LoginOutcome.Failed).message)
     }
 
     @Test

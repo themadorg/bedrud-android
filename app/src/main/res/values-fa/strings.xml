@@ -41,6 +41,10 @@
   <string name="auth_error_guestFailed">پیوستن به‌عنوان مهمان ممکن نشد. لطفاً دوباره تلاش کنید.</string>
   <string name="auth_error_nameTooShort">لطفاً حداقل ۲ نویسه وارد کنید.</string>
   <string name="auth_error_generic">مشکلی پیش آمد. لطفاً دوباره تلاش کنید.</string>
+  <string name="auth_error_registrationFailed">ثبت‌نام ناموفق بود. لطفاً دوباره تلاش کنید.</string>
+  <string name="auth_error_signInFailed">ورود ناموفق بود. لطفاً دوباره تلاش کنید.</string>
+  <string name="auth_notice_verifyEmail">لطفاً برای تأیید حساب خود، ایمیلتان را بررسی کنید</string>
+  <string name="auth_notice_verifyBeforeSignIn">لطفاً پیش از ورود، ایمیل خود را تأیید کنید</string>
   <string name="auth_divider_orContinueWith">یا ادامه با</string>
   <string name="auth_hint_methodDisabled">در این سرور فعال نیست</string>
   <string name="auth_oauth_continueWithFormat">ادامه با %1$s</string>
