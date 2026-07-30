@@ -9,4 +9,7 @@ package com.bedrud.app.core.auth
  */
 object PasswordPolicy {
     const val MIN_LENGTH = 12
+
+    /** The one length check every screen uses — sign-up, sign-in, and change-password. */
+    fun meetsMinLength(password: String): Boolean = password.length >= MIN_LENGTH
 }

@@ -48,6 +48,7 @@ import com.bedrud.app.core.api.RegisterOutcome
 import com.bedrud.app.core.api.parseRegisterResponse
 import com.bedrud.app.core.api.performLogin
 import com.bedrud.app.core.auth.PasswordPolicy
+import com.bedrud.app.core.auth.isValidEmail
 import com.bedrud.app.core.instance.InstanceManager
 import com.bedrud.app.models.RegisterRequest
 import com.bedrud.app.ui.components.BedrudButton
@@ -93,8 +94,8 @@ fun RegisterScreen(
 
     val genericMessage = stringResource(R.string.auth_error_generic)
 
-    val emailValid = android.util.Patterns.EMAIL_ADDRESS.matcher(email.trim()).matches()
-    val passwordLongEnough = password.length >= PasswordPolicy.MIN_LENGTH
+    val emailValid = isValidEmail(email)
+    val passwordLongEnough = PasswordPolicy.meetsMinLength(password)
     val passwordsMatch = password == confirmPassword
     val nameValid = displayName.trim().isNotEmpty()
 

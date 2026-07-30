@@ -267,7 +267,7 @@ fun SettingsContent(
                         Button(
                             onClick = {
                                 when {
-                                    newPassword.length < PasswordPolicy.MIN_LENGTH -> scope.launch {
+                                    !PasswordPolicy.meetsMinLength(newPassword) -> scope.launch {
                                         snackbarHostState.showSnackbar(passwordTooShortMessage)
                                     }
                                     newPassword != confirmPassword -> scope.launch {
