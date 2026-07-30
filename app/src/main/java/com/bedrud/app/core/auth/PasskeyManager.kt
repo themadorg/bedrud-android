@@ -3,6 +3,7 @@ package com.bedrud.app.core.auth
 import android.content.Context
 import android.util.Log
 import androidx.credentials.CreatePublicKeyCredentialRequest
+import androidx.credentials.CreatePublicKeyCredentialResponse
 import androidx.credentials.CredentialManager
 import androidx.credentials.GetCredentialRequest
 import androidx.credentials.GetPublicKeyCredentialOption
@@ -10,8 +11,10 @@ import androidx.credentials.PublicKeyCredential
 import com.bedrud.app.core.api.AuthApi
 import com.bedrud.app.models.LoginResponse
 import com.google.gson.Gson
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import retrofit2.Response
 
 class PasskeyManager(
     private val context: Context,
@@ -22,191 +25,119 @@ class PasskeyManager(
     private val gson = Gson()
 
     /**
-     * Initiates passkey-based login.
-     * 1. Calls the backend to get WebAuthn challenge options.
-     * 2. Presents the credential picker to the user.
-     * 3. Sends the signed assertion back to the backend.
-     * 4. Saves tokens and user on success.
+     * Passkey-based login: fetch the WebAuthn challenge, present the credential picker, send the
+     * signed assertion back, and save the session on success.
      */
     suspend fun loginWithPasskey(activityContext: Context): Result<LoginResponse> =
-        withContext(Dispatchers.IO) {
-            try {
-                // Step 1: Get challenge from server
-                val beginResponse = authApi.passkeyLoginBegin()
-                if (!beginResponse.isSuccessful) {
-                    return@withContext Result.failure(
-                        Exception("Failed to start passkey login: ${beginResponse.code()}")
-                    )
-                }
-
-                val options = beginResponse.body()
-                    ?: return@withContext Result.failure(Exception("Empty passkey login options"))
-
-                val optionsJson = gson.toJson(options)
-
-                // Step 2: Present credential picker
-                val getCredentialRequest = GetCredentialRequest(
-                    listOf(GetPublicKeyCredentialOption(optionsJson))
-                )
-
-                val result = withContext(Dispatchers.Main) {
-                    credentialManager.getCredential(activityContext, getCredentialRequest)
-                }
-
-                val credential = result.credential
-                if (credential !is PublicKeyCredential) {
-                    return@withContext Result.failure(Exception("Unexpected credential type"))
-                }
-
-                // Step 3: Send assertion to server
-                @Suppress("UNCHECKED_CAST")
-                val assertionData = gson.fromJson(
-                    credential.authenticationResponseJson,
-                    Map::class.java
-                ) as Map<String, Any>
-
-                val finishResponse = authApi.passkeyLoginFinish(assertionData)
-                if (!finishResponse.isSuccessful) {
-                    return@withContext Result.failure(
-                        Exception("Passkey login verification failed: ${finishResponse.code()}")
-                    )
-                }
-
-                val loginResponse = finishResponse.body()
-                    ?: return@withContext Result.failure(Exception("Empty login response"))
-
-                // Step 4: Save tokens and user
-                authManager.saveTokens(loginResponse.tokens)
-                authManager.saveUser(loginResponse.user)
-
-                Result.success(loginResponse)
-            } catch (e: Exception) {
-                Log.e(TAG, "Passkey login failed", e)
-                Result.failure(e)
-            }
+        ceremony(
+            what = "passkey login",
+            begin = { authApi.passkeyLoginBegin() },
+            credentialJson = { optionsJson -> getAssertionJson(activityContext, optionsJson) },
+            finish = { data -> authApi.passkeyLoginFinish(data) },
+        ).mapCatching { response ->
+            val body = response.body() ?: throw Exception("Empty login response")
+            authManager.saveTokens(body.tokens)
+            authManager.saveUser(body.user)
+            body
         }
 
     /**
-     * Initiates passkey-based signup.
-     * 1. Calls the backend with email/name to get WebAuthn creation options.
-     * 2. Creates a new credential on the device.
-     * 3. Sends the credential back to the backend.
-     * 4. Saves tokens and user on success.
+     * Passkey-based signup: fetch creation options for [email]/[name], create the credential on
+     * device, send the attestation back, and save the session on success.
      */
     suspend fun signupWithPasskey(
         activityContext: Context,
         email: String,
         name: String
-    ): Result<LoginResponse> = withContext(Dispatchers.IO) {
+    ): Result<LoginResponse> =
+        ceremony(
+            what = "passkey signup",
+            begin = { authApi.passkeySignupBegin(mapOf("email" to email, "name" to name)) },
+            credentialJson = { optionsJson -> createAttestationJson(activityContext, optionsJson) },
+            finish = { data -> authApi.passkeySignupFinish(data) },
+        ).mapCatching { response ->
+            val body = response.body() ?: throw Exception("Empty signup response")
+            authManager.saveTokens(body.tokens)
+            authManager.saveUser(body.user)
+            body
+        }
+
+    /** Registers an additional passkey for the already-authenticated user. */
+    suspend fun registerPasskey(activityContext: Context): Result<Unit> =
+        ceremony(
+            what = "passkey registration",
+            begin = { authApi.passkeyRegisterBegin() },
+            credentialJson = { optionsJson -> createAttestationJson(activityContext, optionsJson) },
+            finish = { data -> authApi.passkeyRegisterFinish(data) },
+        ).map { }
+
+    /**
+     * The WebAuthn round-trip every flow shares: begin call → challenge options → a credential
+     * step on the main dispatcher → parse its JSON payload → finish call. Only the endpoints and
+     * the credential step (get vs create) differ per flow. Failures come back as Result.failure
+     * with a "$what …" message; cancellation rethrows.
+     */
+    private suspend fun <R> ceremony(
+        what: String,
+        begin: suspend () -> Response<*>,
+        credentialJson: suspend (optionsJson: String) -> String,
+        finish: suspend (Map<String, Any>) -> Response<R>,
+    ): Result<Response<R>> = withContext(Dispatchers.IO) {
         try {
-            // Step 1: Get creation options from server
-            val beginResponse = authApi.passkeySignupBegin(
-                mapOf("email" to email, "name" to name)
-            )
+            val beginResponse = begin()
             if (!beginResponse.isSuccessful) {
                 return@withContext Result.failure(
-                    Exception("Failed to start passkey signup: ${beginResponse.code()}")
+                    Exception("Failed to start $what: ${beginResponse.code()}")
                 )
             }
 
             val options = beginResponse.body()
-                ?: return@withContext Result.failure(Exception("Empty passkey signup options"))
+                ?: return@withContext Result.failure(Exception("Empty $what options"))
 
-            val optionsJson = gson.toJson(options)
+            val payloadJson = credentialJson(gson.toJson(options))
 
-            // Step 2: Create credential on device
-            val createRequest = CreatePublicKeyCredentialRequest(optionsJson)
-
-            val result = withContext(Dispatchers.Main) {
-                credentialManager.createCredential(activityContext, createRequest)
-            }
-
-            val credential = result
-            if (credential !is androidx.credentials.CreatePublicKeyCredentialResponse) {
-                return@withContext Result.failure(Exception("Unexpected credential response type"))
-            }
-
-            // Step 3: Send attestation to server
             @Suppress("UNCHECKED_CAST")
-            val attestationData = gson.fromJson(
-                credential.registrationResponseJson,
-                Map::class.java
-            ) as Map<String, Any>
+            val payload = gson.fromJson(payloadJson, Map::class.java) as Map<String, Any>
 
-            val finishResponse = authApi.passkeySignupFinish(attestationData)
+            val finishResponse = finish(payload)
             if (!finishResponse.isSuccessful) {
                 return@withContext Result.failure(
-                    Exception("Passkey signup verification failed: ${finishResponse.code()}")
+                    Exception("$what verification failed: ${finishResponse.code()}")
                 )
             }
 
-            val loginResponse = finishResponse.body()
-                ?: return@withContext Result.failure(Exception("Empty signup response"))
-
-            // Step 4: Save tokens and user
-            authManager.saveTokens(loginResponse.tokens)
-            authManager.saveUser(loginResponse.user)
-
-            Result.success(loginResponse)
+            Result.success(finishResponse)
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
-            Log.e(TAG, "Passkey signup failed", e)
+            Log.e(TAG, "$what failed", e)
             Result.failure(e)
         }
     }
 
-    /**
-     * Registers a passkey for an already-authenticated user.
-     * 1. Calls the backend to get WebAuthn creation options.
-     * 2. Creates a new credential on the device.
-     * 3. Sends the credential back to the backend.
-     */
-    suspend fun registerPasskey(activityContext: Context): Result<Unit> =
-        withContext(Dispatchers.IO) {
-            try {
-                val beginResponse = authApi.passkeyRegisterBegin()
-                if (!beginResponse.isSuccessful) {
-                    return@withContext Result.failure(
-                        Exception("Failed to start passkey registration: ${beginResponse.code()}")
-                    )
-                }
-
-                val options = beginResponse.body()
-                    ?: return@withContext Result.failure(Exception("Empty registration options"))
-
-                val optionsJson = gson.toJson(options)
-
-                val createRequest = CreatePublicKeyCredentialRequest(optionsJson)
-
-                val result = withContext(Dispatchers.Main) {
-                    credentialManager.createCredential(activityContext, createRequest)
-                }
-
-                val credential = result
-                if (credential !is androidx.credentials.CreatePublicKeyCredentialResponse) {
-                    return@withContext Result.failure(
-                        Exception("Unexpected credential response type")
-                    )
-                }
-
-                @Suppress("UNCHECKED_CAST")
-                val attestationData = gson.fromJson(
-                    credential.registrationResponseJson,
-                    Map::class.java
-                ) as Map<String, Any>
-
-                val finishResponse = authApi.passkeyRegisterFinish(attestationData)
-                if (!finishResponse.isSuccessful) {
-                    return@withContext Result.failure(
-                        Exception("Passkey registration failed: ${finishResponse.code()}")
-                    )
-                }
-
-                Result.success(Unit)
-            } catch (e: Exception) {
-                Log.e(TAG, "Passkey registration failed", e)
-                Result.failure(e)
-            }
+    /** Presents the credential picker and returns the signed assertion JSON (login). */
+    private suspend fun getAssertionJson(activityContext: Context, optionsJson: String): String {
+        val request = GetCredentialRequest(listOf(GetPublicKeyCredentialOption(optionsJson)))
+        val result = withContext(Dispatchers.Main) {
+            credentialManager.getCredential(activityContext, request)
         }
+        val credential = result.credential as? PublicKeyCredential
+            ?: throw Exception("Unexpected credential type")
+        return credential.authenticationResponseJson
+    }
+
+    /** Creates a credential on device and returns the attestation JSON (signup/register). */
+    private suspend fun createAttestationJson(activityContext: Context, optionsJson: String): String {
+        val result = withContext(Dispatchers.Main) {
+            credentialManager.createCredential(
+                activityContext,
+                CreatePublicKeyCredentialRequest(optionsJson)
+            )
+        }
+        val credential = result as? CreatePublicKeyCredentialResponse
+            ?: throw Exception("Unexpected credential response type")
+        return credential.registrationResponseJson
+    }
 
     companion object {
         private const val TAG = "PasskeyManager"
