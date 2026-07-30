@@ -39,6 +39,7 @@ import androidx.compose.ui.unit.dp
 import com.bedrud.app.R
 import com.bedrud.app.core.instance.InstanceManager
 import com.bedrud.app.models.Instance
+import com.bedrud.app.ui.theme.parseInstanceColor
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -125,7 +126,7 @@ private fun SwitcherRow(
                 modifier = Modifier
                     .size(32.dp)
                     .clip(CircleShape)
-                    .background(parseSwitcherColor(instance.iconColorHex)),
+                    .background(parseInstanceColor(instance.iconColorHex)),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
@@ -162,14 +163,5 @@ private fun SwitcherRow(
                 modifier = Modifier.size(20.dp)
             )
         }
-    }
-}
-
-private fun parseSwitcherColor(hex: String): Color {
-    val h = hex.removePrefix("#")
-    return try {
-        Color(android.graphics.Color.parseColor("#$h"))
-    } catch (e: Exception) {
-        Color(0xFF3B82F6)
     }
 }

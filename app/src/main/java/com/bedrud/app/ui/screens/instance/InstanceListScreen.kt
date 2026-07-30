@@ -42,6 +42,7 @@ import com.bedrud.app.R
 import com.bedrud.app.ui.components.BedrudScaffoldContentInsets
 import com.bedrud.app.core.instance.InstanceManager
 import com.bedrud.app.models.Instance
+import com.bedrud.app.ui.theme.parseInstanceColor
 import org.koin.compose.koinInject
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -125,7 +126,7 @@ private fun InstanceRow(
                 modifier = Modifier
                     .size(36.dp)
                     .clip(CircleShape)
-                    .background(parseColor(instance.iconColorHex)),
+                    .background(parseInstanceColor(instance.iconColorHex)),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
@@ -171,14 +172,5 @@ private fun InstanceRow(
                 tint = MaterialTheme.colorScheme.error
             )
         }
-    }
-}
-
-private fun parseColor(hex: String): Color {
-    val h = hex.removePrefix("#")
-    return try {
-        Color(android.graphics.Color.parseColor("#$h"))
-    } catch (e: Exception) {
-        Color(0xFF3B82F6)
     }
 }
