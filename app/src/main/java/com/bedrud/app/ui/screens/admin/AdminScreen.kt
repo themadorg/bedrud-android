@@ -42,6 +42,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import com.bedrud.app.ui.components.BedrudCompactTopBar
 import com.bedrud.app.ui.components.BedrudTabScaffoldContentInsets
+import com.bedrud.app.ui.components.CardSectionHeader
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
@@ -82,6 +83,8 @@ import com.bedrud.app.models.AdminSettings
 import com.bedrud.app.models.AdminUser
 import com.bedrud.app.models.CreateInviteTokenRequest
 import com.bedrud.app.models.InviteToken
+import com.bedrud.app.ui.theme.BedrudRadius
+import com.bedrud.app.ui.theme.BedrudShapeTokens
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
@@ -236,12 +239,9 @@ private fun AdminOverviewContent(
                 }
 
                 // Recent users
-                BedrudOutlinedCard(shape = RoundedCornerShape(16.dp)) {
+                BedrudOutlinedCard(shape = BedrudShapeTokens.card) {
                     Column(modifier = Modifier.padding(16.dp)) {
-                        Text(
-                            stringResource(R.string.admin_section_recentSignups), style = MaterialTheme.typography.labelLarge,
-                            color = MaterialTheme.colorScheme.primary
-                        )
+                        CardSectionHeader(stringResource(R.string.admin_section_recentSignups))
                         Spacer(modifier = Modifier.height(8.dp))
                         users.takeLast(5).reversed().forEach { user ->
                             ListItem(
@@ -277,7 +277,7 @@ private fun AdminOverviewContent(
 
 @Composable
 private fun StatCard(@StringRes labelResId: Int, value: Int, icon: ImageVector) {
-    BedrudOutlinedCard(shape = RoundedCornerShape(12.dp), modifier = Modifier.width(100.dp)) {
+    BedrudOutlinedCard(modifier = Modifier.width(100.dp)) {
         Column(
             modifier = Modifier.padding(12.dp),
             horizontalAlignment = Alignment.CenterHorizontally
@@ -567,11 +567,10 @@ private fun AdminSettingsContent(
         ) {
             settings?.let { s ->
                 // Registration settings
-                BedrudOutlinedCard(shape = RoundedCornerShape(16.dp)) {
+                BedrudOutlinedCard(shape = BedrudShapeTokens.card) {
                     Column {
-                        Text(
-                            stringResource(R.string.admin_section_registration), style = MaterialTheme.typography.labelLarge,
-                            color = MaterialTheme.colorScheme.primary,
+                        CardSectionHeader(
+                            stringResource(R.string.admin_section_registration),
                             modifier = Modifier.padding(
                                 start = 16.dp,
                                 top = 16.dp,
@@ -625,19 +624,15 @@ private fun AdminSettingsContent(
             }
 
             // Invite tokens
-            BedrudOutlinedCard(shape = RoundedCornerShape(16.dp)) {
+            BedrudOutlinedCard(shape = BedrudShapeTokens.card) {
                 Column(modifier = Modifier.padding(16.dp)) {
-                    Text(
-                        text = stringResource(R.string.admin_section_inviteTokens),
-                        style = MaterialTheme.typography.labelLarge,
-                        color = MaterialTheme.colorScheme.primary
-                    )
+                    CardSectionHeader(stringResource(R.string.admin_section_inviteTokens))
                     Spacer(modifier = Modifier.height(8.dp))
 
                     // New token generated highlight
                     newToken?.let { tok ->
                         BedrudOutlinedCard(
-                            shape = RoundedCornerShape(8.dp),
+                            shape = RoundedCornerShape(BedrudRadius.sm),
                             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
                         ) {
                             Row(

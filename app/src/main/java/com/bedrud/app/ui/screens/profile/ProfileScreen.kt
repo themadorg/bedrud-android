@@ -21,6 +21,7 @@ import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material3.ButtonDefaults
 
 import com.bedrud.app.ui.components.BedrudOutlinedCard
+import com.bedrud.app.ui.components.CardSectionHeader
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
@@ -54,6 +55,8 @@ import com.bedrud.app.R
 import com.bedrud.app.core.instance.InstanceManager
 import com.bedrud.app.ui.components.InitialsAvatar
 import com.bedrud.app.ui.screens.instance.InstanceSwitcherSheet
+import com.bedrud.app.ui.theme.BedrudRadius
+import com.bedrud.app.ui.theme.BedrudShapeTokens
 import com.bedrud.app.ui.theme.parseInstanceColor
 import org.koin.compose.koinInject
 
@@ -94,7 +97,7 @@ fun ProfileContent(
             Spacer(modifier = Modifier.height(0.dp))
 
             // User section
-            BedrudOutlinedCard(shape = RoundedCornerShape(16.dp)) {
+            BedrudOutlinedCard(shape = BedrudShapeTokens.card) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -138,7 +141,7 @@ fun ProfileContent(
                                     modifier = Modifier
                                         .background(
                                             MaterialTheme.colorScheme.primary,
-                                            RoundedCornerShape(4.dp)
+                                            RoundedCornerShape(BedrudRadius.xs)
                                         )
                                         .padding(horizontal = 6.dp, vertical = 2.dp)
                                 )
@@ -154,12 +157,10 @@ fun ProfileContent(
             }
 
             // Server section
-            BedrudOutlinedCard(shape = RoundedCornerShape(16.dp)) {
+            BedrudOutlinedCard(shape = BedrudShapeTokens.card) {
                 Column {
-                    Text(
+                    CardSectionHeader(
                         stringResource(R.string.profile_section_server),
-                        style = MaterialTheme.typography.labelLarge,
-                        color = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.padding(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 8.dp)
                     )
 
@@ -201,12 +202,10 @@ fun ProfileContent(
             }
 
             // Account section
-            BedrudOutlinedCard(shape = RoundedCornerShape(16.dp)) {
+            BedrudOutlinedCard(shape = BedrudShapeTokens.card) {
                 Column {
-                    Text(
+                    CardSectionHeader(
                         stringResource(R.string.profile_section_account),
-                        style = MaterialTheme.typography.labelLarge,
-                        color = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.padding(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 8.dp)
                     )
 

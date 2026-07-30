@@ -15,11 +15,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.unit.dp
+import com.bedrud.app.ui.theme.BedrudRadius
 
 @Composable
 fun BedrudOutlinedCard(
     modifier: Modifier = Modifier,
-    shape: Shape = RoundedCornerShape(12.dp),
+    shape: Shape = RoundedCornerShape(BedrudRadius.md),
     colors: CardColors = CardDefaults.cardColors(
         containerColor = MaterialTheme.colorScheme.surface,
         contentColor = MaterialTheme.colorScheme.onSurface
@@ -60,7 +61,7 @@ fun BedrudCard(
     onClick: (() -> Unit)? = null,
     content: @Composable ColumnScope.() -> Unit
 ) {
-    val shape = RoundedCornerShape(12.dp)
+    val shape = RoundedCornerShape(BedrudRadius.md)
     val border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
 
     val cardColors = CardDefaults.cardColors(
@@ -90,6 +91,20 @@ fun BedrudCard(
             CardContent(title, subtitle, content)
         }
     }
+}
+
+/**
+ * The small primary-tinted section label at the top of a settings/profile/admin card. Pass the
+ * card's own edge padding via [modifier] when the header sits directly in an unpadded card column.
+ */
+@Composable
+fun CardSectionHeader(title: String, modifier: Modifier = Modifier) {
+    Text(
+        text = title,
+        style = MaterialTheme.typography.labelLarge,
+        color = MaterialTheme.colorScheme.primary,
+        modifier = modifier
+    )
 }
 
 @Composable
