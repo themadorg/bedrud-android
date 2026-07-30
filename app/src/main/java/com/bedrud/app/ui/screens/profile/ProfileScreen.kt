@@ -2,7 +2,6 @@ package com.bedrud.app.ui.screens.profile
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -53,6 +52,7 @@ import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.bedrud.app.R
 import com.bedrud.app.core.instance.InstanceManager
+import com.bedrud.app.ui.components.InitialsAvatar
 import com.bedrud.app.ui.screens.instance.InstanceSwitcherSheet
 import com.bedrud.app.ui.theme.parseInstanceColor
 import org.koin.compose.koinInject
@@ -111,19 +111,12 @@ fun ProfileContent(
                             contentScale = ContentScale.Crop
                         )
                     } else {
-                        Box(
-                            modifier = Modifier
-                                .size(56.dp)
-                                .clip(CircleShape)
-                                .background(MaterialTheme.colorScheme.primary),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                (user?.name?.take(1) ?: "?").uppercase(),
-                                style = MaterialTheme.typography.headlineSmall,
-                                color = MaterialTheme.colorScheme.onPrimary
-                            )
-                        }
+                        InitialsAvatar(
+                            name = user?.name,
+                            size = 56.dp,
+                            textStyle = MaterialTheme.typography.headlineSmall,
+                            contentColor = MaterialTheme.colorScheme.onPrimary
+                        )
                     }
                     Spacer(modifier = Modifier.width(16.dp))
                     Column(modifier = Modifier.weight(1f)) {
@@ -185,19 +178,10 @@ fun ProfileContent(
                                 )
                             },
                             leadingContent = {
-                                Box(
-                                    modifier = Modifier
-                                        .size(36.dp)
-                                        .clip(CircleShape)
-                                        .background(parseInstanceColor(activeInstance.iconColorHex)),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Text(
-                                        activeInstance.displayName.take(1).uppercase(),
-                                        style = MaterialTheme.typography.labelMedium,
-                                        color = Color.White
-                                    )
-                                }
+                                InitialsAvatar(
+                                    name = activeInstance.displayName,
+                                    containerColor = parseInstanceColor(activeInstance.iconColorHex)
+                                )
                             },
                             trailingContent = {
                                 FilledTonalButton(onClick = { showInstanceSwitcher = true }) {
