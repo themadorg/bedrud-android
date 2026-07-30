@@ -18,6 +18,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenuItem
 import com.bedrud.app.ui.components.BedrudOutlinedCard
+import com.bedrud.app.ui.components.BedrudPasswordField
 import com.bedrud.app.ui.components.BedrudTextField
 import com.bedrud.app.core.auth.PasswordPolicy
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -29,7 +30,6 @@ import com.bedrud.app.ui.components.BedrudCompactTopBar
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
@@ -50,7 +50,6 @@ import androidx.compose.ui.graphics.Color
 
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -242,34 +241,22 @@ fun SettingsContent(
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant)
                     } else {
-                        OutlinedTextField(
+                        BedrudPasswordField(
                             value = currentPassword,
                             onValueChange = { currentPassword = it },
-                            label = { Text(stringResource(R.string.settings_label_currentPassword)) },
-                            visualTransformation = PasswordVisualTransformation(),
-                            singleLine = true,
-                            shape = RoundedCornerShape(12.dp),
-                            modifier = Modifier.fillMaxWidth()
+                            label = stringResource(R.string.settings_label_currentPassword)
                         )
                         Spacer(modifier = Modifier.height(8.dp))
-                        OutlinedTextField(
+                        BedrudPasswordField(
                             value = newPassword,
                             onValueChange = { newPassword = it },
-                            label = { Text(stringResource(R.string.settings_label_newPassword)) },
-                            visualTransformation = PasswordVisualTransformation(),
-                            singleLine = true,
-                            shape = RoundedCornerShape(12.dp),
-                            modifier = Modifier.fillMaxWidth()
+                            label = stringResource(R.string.settings_label_newPassword)
                         )
                         Spacer(modifier = Modifier.height(8.dp))
-                        OutlinedTextField(
+                        BedrudPasswordField(
                             value = confirmPassword,
                             onValueChange = { confirmPassword = it },
-                            label = { Text(stringResource(R.string.settings_label_confirmNewPassword)) },
-                            visualTransformation = PasswordVisualTransformation(),
-                            singleLine = true,
-                            shape = RoundedCornerShape(12.dp),
-                            modifier = Modifier.fillMaxWidth()
+                            label = stringResource(R.string.settings_label_confirmNewPassword)
                         )
                         Spacer(modifier = Modifier.height(12.dp))
                         val passwordTooShortMessage =

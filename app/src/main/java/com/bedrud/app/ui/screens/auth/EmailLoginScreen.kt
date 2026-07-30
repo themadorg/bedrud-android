@@ -16,14 +16,11 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Visibility
-import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHostState
@@ -47,8 +44,6 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.input.PasswordVisualTransformation
-import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDirection
 import com.bedrud.app.R
@@ -60,8 +55,8 @@ import com.bedrud.app.ui.components.BedrudButton
 import com.bedrud.app.ui.components.BedrudButtonVariant
 import com.bedrud.app.ui.components.BedrudScaffoldContentInsets
 import com.bedrud.app.ui.components.BedrudSnackbarHost
+import com.bedrud.app.ui.components.BedrudPasswordField
 import com.bedrud.app.ui.components.BedrudTextField
-import com.bedrud.app.ui.components.bringIntoViewOnFocus
 import com.bedrud.app.ui.theme.BedrudShapeTokens
 import com.bedrud.app.ui.theme.Dimens
 import kotlinx.coroutines.launch
@@ -93,7 +88,6 @@ fun EmailLoginScreen(
 
     var email by rememberSaveable { mutableStateOf("") }
     var password by rememberSaveable { mutableStateOf("") }
-    var passwordVisible by rememberSaveable { mutableStateOf(false) }
     var isLoading by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
     var showResetSheet by remember { mutableStateOf(false) }
@@ -214,39 +208,18 @@ fun EmailLoginScreen(
 
                     Spacer(Modifier.height(Dimens.space12))
 
-                    OutlinedTextField(
+                    BedrudPasswordField(
                         value = password,
                         onValueChange = {
                             password = it
                             errorMessage = null
                         },
-                        label = { Text(stringResource(R.string.auth_label_password)) },
-                        trailingIcon = {
-                            IconButton(onClick = { passwordVisible = !passwordVisible }) {
-                                Icon(
-                                    imageVector = if (passwordVisible) Icons.Default.VisibilityOff
-                                    else Icons.Default.Visibility,
-                                    contentDescription = if (passwordVisible) {
-                                        stringResource(R.string.auth_password_toggle_hide)
-                                    } else {
-                                        stringResource(R.string.auth_password_toggle_show)
-                                    }
-                                )
-                            }
-                        },
-                        visualTransformation = if (passwordVisible) VisualTransformation.None
-                        else PasswordVisualTransformation(),
-                        singleLine = true,
-                        shape = BedrudShapeTokens.field,
+                        label = stringResource(R.string.auth_label_password),
                         keyboardOptions = KeyboardOptions(
                             keyboardType = KeyboardType.Password,
                             imeAction = ImeAction.Go
                         ),
-                        keyboardActions = KeyboardActions(onGo = { submit() }),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .bringIntoViewOnFocus(),
-                        textStyle = MaterialTheme.typography.bodyLarge.copy(textDirection = TextDirection.Ltr)
+                        keyboardActions = KeyboardActions(onGo = { submit() })
                     )
 
                     Spacer(Modifier.height(Dimens.space4))

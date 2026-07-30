@@ -15,13 +15,10 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Visibility
-import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
@@ -43,8 +40,6 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.input.PasswordVisualTransformation
-import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDirection
 import com.bedrud.app.R
@@ -59,10 +54,8 @@ import com.bedrud.app.ui.components.BedrudButton
 import com.bedrud.app.ui.components.BedrudButtonVariant
 import com.bedrud.app.ui.components.BedrudScaffoldContentInsets
 import com.bedrud.app.ui.components.BedrudSnackbarHost
+import com.bedrud.app.ui.components.BedrudPasswordField
 import com.bedrud.app.ui.components.BedrudTextField
-import com.bedrud.app.ui.components.autofillType
-import com.bedrud.app.ui.components.bringIntoViewOnFocus
-import com.bedrud.app.ui.theme.BedrudShapeTokens
 import com.bedrud.app.ui.theme.Dimens
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
@@ -253,33 +246,16 @@ fun RegisterScreen(
 
                     Spacer(Modifier.height(Dimens.space12))
 
-                    OutlinedTextField(
+                    BedrudPasswordField(
                         value = password,
                         onValueChange = {
                             password = it
                             errorMessage = null
                         },
-                        label = { Text(stringResource(R.string.auth_label_password)) },
-                        trailingIcon = {
-                            IconButton(onClick = { passwordVisible = !passwordVisible }) {
-                                Icon(
-                                    imageVector = if (passwordVisible) Icons.Default.VisibilityOff
-                                    else Icons.Default.Visibility,
-                                    contentDescription = if (passwordVisible) {
-                                        stringResource(R.string.auth_password_toggle_hide)
-                                    } else {
-                                        stringResource(R.string.auth_password_toggle_show)
-                                    }
-                                )
-                            }
-                        },
-                        visualTransformation = if (passwordVisible) VisualTransformation.None
-                        else PasswordVisualTransformation(),
-                        singleLine = true,
+                        label = stringResource(R.string.auth_label_password),
                         isError = passwordTooShort,
                         // Always-on helper doubles as the too-short error (it turns red via isError).
                         supportingText = { Text(stringResource(R.string.auth_hint_passwordMinLength, PasswordPolicy.MIN_LENGTH)) },
-                        shape = BedrudShapeTokens.field,
                         keyboardOptions = KeyboardOptions(
                             keyboardType = KeyboardType.Password,
                             imeAction = ImeAction.Next
@@ -287,42 +263,33 @@ fun RegisterScreen(
                         keyboardActions = KeyboardActions(
                             onNext = { focusManager.moveFocus(FocusDirection.Down) }
                         ),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .bringIntoViewOnFocus()
-                            .autofillType(ContentType.NewPassword),
-                        textStyle = MaterialTheme.typography.bodyLarge.copy(textDirection = TextDirection.Ltr)
+                        autofill = ContentType.NewPassword,
+                        visible = passwordVisible,
+                        onToggleVisibility = { passwordVisible = !passwordVisible }
                     )
 
                     Spacer(Modifier.height(Dimens.space12))
 
-                    OutlinedTextField(
+                    BedrudPasswordField(
                         value = confirmPassword,
                         onValueChange = {
                             confirmPassword = it
                             errorMessage = null
                         },
-                        label = { Text(stringResource(R.string.auth_label_confirmPassword)) },
-                        visualTransformation = if (passwordVisible) VisualTransformation.None
-                        else PasswordVisualTransformation(),
-                        singleLine = true,
+                        label = stringResource(R.string.auth_label_confirmPassword),
                         isError = confirmMismatch,
                         supportingText = if (confirmMismatch) {
                             { Text(stringResource(R.string.auth_error_passwordMismatch)) }
                         } else {
                             null
                         },
-                        shape = BedrudShapeTokens.field,
                         keyboardOptions = KeyboardOptions(
                             keyboardType = KeyboardType.Password,
                             imeAction = ImeAction.Go
                         ),
                         keyboardActions = KeyboardActions(onGo = { submit() }),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .bringIntoViewOnFocus()
-                            .autofillType(ContentType.NewPassword),
-                        textStyle = MaterialTheme.typography.bodyLarge.copy(textDirection = TextDirection.Ltr)
+                        autofill = ContentType.NewPassword,
+                        visible = passwordVisible
                     )
 
                     Spacer(Modifier.height(Dimens.space24))
