@@ -105,6 +105,7 @@ import com.bedrud.app.ui.components.BedrudOutlinedCard
 import com.bedrud.app.ui.components.BedrudSnackbarHost
 import com.bedrud.app.ui.components.BedrudTextField
 import com.bedrud.app.ui.components.BedrudTabScaffoldContentInsets
+import com.bedrud.app.ui.components.ConfirmDialog
 import com.bedrud.app.ui.theme.BedrudShapeTokens
 import com.bedrud.app.ui.theme.Dimens
 import com.bedrud.app.ui.theme.Motion
@@ -348,43 +349,31 @@ fun DashboardContent(
 
     roomToDelete?.let { room ->
         val title = room.name.ifEmpty { room.id }
-        AlertDialog(
-            onDismissRequest = { roomToDelete = null },
-            title = { Text(stringResource(R.string.dashboard_dialog_deleteTitle)) },
-            text = {
-                Text(stringResource(R.string.dashboard_dialog_deleteMessage, title))
-            },
-            confirmButton = {
-                BedrudButton(
-                    text = stringResource(R.string.common_button_delete),
-                    variant = BedrudButtonVariant.DESTRUCTIVE,
-                    onClick = {
-                        val deleting = room
-                        roomToDelete = null
-                        scope.launch {
-                            val deleted = apiAction("Failed to delete room", { snackbarHostState.showSnackbar(it) }) {
-                                roomApi.deleteRoom(deleting.id)
-                            }
-                            if (deleted) {
-                                // Keep refreshes from resurrecting it while the server's
-                                // async delete catches up...
-                                DeletedRoomTombstones.add(deleting.id)
-                                rooms = rooms.filter { it.id != deleting.id }
-                                // ...and drop its local recent entry, or the All tab would
-                                // immediately weave the deleted room back in as a recent card.
-                                if (deleting.name.isNotEmpty()) {
-                                    activeInstanceId?.let {
-                                        recentRoomsStore.remove(deleting.name, it)
-                                    }
-                                }
+        ConfirmDialog(
+            title = stringResource(R.string.dashboard_dialog_deleteTitle),
+            message = stringResource(R.string.dashboard_dialog_deleteMessage, title),
+            confirmLabel = stringResource(R.string.common_button_delete),
+            onDismiss = { roomToDelete = null },
+            onConfirm = {
+                val deleting = room
+                roomToDelete = null
+                scope.launch {
+                    val deleted = apiAction("Failed to delete room", { snackbarHostState.showSnackbar(it) }) {
+                        roomApi.deleteRoom(deleting.id)
+                    }
+                    if (deleted) {
+                        // Keep refreshes from resurrecting it while the server's
+                        // async delete catches up...
+                        DeletedRoomTombstones.add(deleting.id)
+                        rooms = rooms.filter { it.id != deleting.id }
+                        // ...and drop its local recent entry, or the All tab would
+                        // immediately weave the deleted room back in as a recent card.
+                        if (deleting.name.isNotEmpty()) {
+                            activeInstanceId?.let {
+                                recentRoomsStore.remove(deleting.name, it)
                             }
                         }
-                    },
-                )
-            },
-            dismissButton = {
-                TextButton(onClick = { roomToDelete = null }) {
-                    Text(stringResource(R.string.common_button_cancel))
+                    }
                 }
             },
         )
