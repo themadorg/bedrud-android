@@ -41,6 +41,10 @@
   <string name="auth_error_guestFailed">Misafir olarak katılınamadı. Lütfen tekrar deneyin.</string>
   <string name="auth_error_nameTooShort">Lütfen en az 2 karakter girin.</string>
   <string name="auth_error_generic">Bir şeyler ters gitti. Lütfen tekrar deneyin.</string>
+  <string name="auth_error_registrationFailed">Kayıt başarısız oldu. Lütfen tekrar deneyin.</string>
+  <string name="auth_error_signInFailed">Giriş başarısız oldu. Lütfen tekrar deneyin.</string>
+  <string name="auth_notice_verifyEmail">Hesabınızı doğrulamak için lütfen e-postanızı kontrol edin</string>
+  <string name="auth_notice_verifyBeforeSignIn">Giriş yapmadan önce lütfen e-postanızı doğrulayın</string>
   <string name="auth_divider_orContinueWith">veya şununla devam et</string>
   <string name="auth_hint_methodDisabled">Bu sunucuda etkin değil</string>
   <string name="auth_oauth_continueWithFormat">%1$s ile devam et</string>

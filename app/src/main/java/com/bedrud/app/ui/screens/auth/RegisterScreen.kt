@@ -93,6 +93,10 @@ fun RegisterScreen(
     var errorMessage by remember { mutableStateOf<String?>(null) }
 
     val genericMessage = stringResource(R.string.auth_error_generic)
+    val registrationFailedMessage = stringResource(R.string.auth_error_registrationFailed)
+    val signInFailedMessage = stringResource(R.string.auth_error_signInFailed)
+    val verifyEmailMessage = stringResource(R.string.auth_notice_verifyEmail)
+    val verifyBeforeSignInMessage = stringResource(R.string.auth_notice_verifyBeforeSignIn)
 
     val emailValid = isValidEmail(email)
     val passwordLongEnough = PasswordPolicy.meetsMinLength(password)
@@ -129,9 +133,10 @@ fun RegisterScreen(
                     RegisterRequest(email = trimmedEmail, password = password, name = trimmedName)
                 )
                 when (val registerOutcome = parseRegisterResponse(registerResponse)) {
-                    is RegisterOutcome.Failed -> errorMessage = registerOutcome.message
+                    is RegisterOutcome.Failed ->
+                        errorMessage = registerOutcome.message ?: registrationFailedMessage
                     is RegisterOutcome.VerificationRequired -> {
-                        errorMessage = registerOutcome.message
+                        errorMessage = registerOutcome.message ?: verifyEmailMessage
                         onNavigateToLogin()
                     }
                     is RegisterOutcome.AccountCreated -> {
@@ -145,10 +150,11 @@ fun RegisterScreen(
                         ) {
                             is LoginOutcome.Success -> onRegisterSuccess()
                             is LoginOutcome.VerificationRequired -> {
-                                errorMessage = loginOutcome.message
+                                errorMessage = loginOutcome.message ?: verifyBeforeSignInMessage
                                 onNavigateToLogin()
                             }
-                            is LoginOutcome.Failed -> errorMessage = loginOutcome.message
+                            is LoginOutcome.Failed ->
+                                errorMessage = loginOutcome.message ?: signInFailedMessage
                         }
                     }
                 }

@@ -31,6 +31,10 @@
   <string name="auth_error_guestFailed">Unable to join as a guest. Please try again.</string>
   <string name="auth_error_nameTooShort">Please enter at least 2 characters.</string>
   <string name="auth_error_generic">Something went wrong. Please try again.</string>
+  <string name="auth_error_registrationFailed">Registration failed. Please try again.</string>
+  <string name="auth_error_signInFailed">Sign-in failed. Please try again.</string>
+  <string name="auth_notice_verifyEmail">Please check your email to verify your account</string>
+  <string name="auth_notice_verifyBeforeSignIn">Please verify your email before signing in</string>
   <string name="auth_divider_orContinueWith">or continue with</string>
   <string name="auth_hint_methodDisabled">Not enabled on this server</string>
   <string name="auth_oauth_continueWithFormat">Continue with %1$s</string>
