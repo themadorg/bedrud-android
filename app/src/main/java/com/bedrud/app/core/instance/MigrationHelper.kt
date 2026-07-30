@@ -2,8 +2,9 @@ package com.bedrud.app.core.instance
 
 import android.content.Context
 import android.content.SharedPreferences
-import androidx.security.crypto.EncryptedSharedPreferences
-import androidx.security.crypto.MasterKey
+import com.bedrud.app.core.auth.AuthPrefsKeys
+import com.bedrud.app.core.auth.secureInstancePrefs
+import com.bedrud.app.core.auth.securePrefs
 import com.bedrud.app.models.Instance
 
 object MigrationHelper {
@@ -18,23 +19,13 @@ object MigrationHelper {
         mainPrefs.edit().putBoolean(MIGRATION_DONE_KEY, true).apply()
 
         // Try to read old prefs
-        val masterKey = MasterKey.Builder(context)
-            .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
-            .build()
-
         val oldPrefs: SharedPreferences = try {
-            EncryptedSharedPreferences.create(
-                context,
-                OLD_PREFS_FILE,
-                masterKey,
-                EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-                EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
-            )
+            securePrefs(context, OLD_PREFS_FILE)
         } catch (e: Exception) {
             return
         }
 
-        val accessToken = oldPrefs.getString("access_token", null)
+        val accessToken = oldPrefs.getString(AuthPrefsKeys.ACCESS_TOKEN, null)
         if (accessToken.isNullOrBlank()) return
 
         // Create default instance
@@ -46,18 +37,12 @@ object MigrationHelper {
         store.setActive(instance.id)
 
         // Copy tokens to new per-instance prefs file
-        val newPrefs: SharedPreferences = EncryptedSharedPreferences.create(
-            context,
-            "bedrud_secure_${instance.id}",
-            masterKey,
-            EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-            EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
-        )
+        val newPrefs: SharedPreferences = secureInstancePrefs(context, instance.id)
 
         newPrefs.edit()
-            .putString("access_token", accessToken)
-            .putString("refresh_token", oldPrefs.getString("refresh_token", null))
-            .putString("user", oldPrefs.getString("user", null))
+            .putString(AuthPrefsKeys.ACCESS_TOKEN, accessToken)
+            .putString(AuthPrefsKeys.REFRESH_TOKEN, oldPrefs.getString(AuthPrefsKeys.REFRESH_TOKEN, null))
+            .putString(AuthPrefsKeys.USER, oldPrefs.getString(AuthPrefsKeys.USER, null))
             .apply()
 
         // Clear old prefs
