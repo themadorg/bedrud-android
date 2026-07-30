@@ -127,6 +127,7 @@ import com.bedrud.app.core.deeplink.BedrudURLParser
 import com.bedrud.app.core.instance.InstanceManager
 import com.bedrud.app.ui.components.BedrudScaffoldContentInsets
 import com.bedrud.app.ui.components.ChatImageLightbox
+import com.bedrud.app.ui.components.ConfirmDialog
 import com.bedrud.app.ui.components.InitialsAvatar
 import com.bedrud.app.core.livekit.ChatMessage
 import com.bedrud.app.core.livekit.ConnectionState
@@ -903,35 +904,7 @@ private fun ParticipantTile(
     }
 
     var showMenu by remember { mutableStateOf(false) }
-    var showKickConfirm by remember { mutableStateOf(false) }
     val canOpenMenu = !isLocalParticipant && roomApi != null
-
-    if (showKickConfirm) {
-        AlertDialog(
-            onDismissRequest = { showKickConfirm = false },
-            title = { Text(text = stringResource(R.string.meeting_dialog_kickTitle)) },
-            text = { Text(text = stringResource(R.string.meeting_dialog_kickMessage)) },
-            confirmButton = {
-                TextButton(onClick = {
-                    showKickConfirm = false
-                    scope?.launch {
-                        try {
-                            roomApi?.kickParticipant(roomId, identity)
-                        } catch (e: Exception) {
-                            snackbarHostState?.showSnackbar(e.message ?: "Failed to kick participant")
-                        }
-                    }
-                }) {
-                    Text(stringResource(R.string.meeting_action_kick), color = MaterialTheme.colorScheme.error)
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showKickConfirm = false }) {
-                    Text(stringResource(R.string.common_button_cancel))
-                }
-            }
-        )
-    }
 
     Box(
         modifier = Modifier
@@ -1010,61 +983,119 @@ private fun ParticipantTile(
 
         // Participant actions menu
         if (canOpenMenu) {
-            DropdownMenu(
+            ParticipantActionsMenu(
                 expanded = showMenu,
-                onDismissRequest = { showMenu = false }
-            ) {
-                DropdownMenuItem(
-                    text = {
-                        Text(
-                            stringResource(
-                                if (isLocallyMuted) R.string.meeting_action_unmute
-                                else R.string.meeting_action_mute
-                            )
-                        )
-                    },
-                    onClick = {
-                        showMenu = false
-                        onToggleLocalMute(identity)
+                onDismiss = { showMenu = false },
+                isAdmin = isAdmin,
+                isLocallyMuted = isLocallyMuted,
+                onToggleLocalMute = { onToggleLocalMute(identity) },
+                isVideoLocallyDisabled = isVideoLocallyDisabled,
+                onToggleVideoDisabled = { onToggleVideoDisabled(identity) },
+                onKickConfirmed = {
+                    moderate(scope, snackbarHostState, "Failed to kick participant") {
+                        roomApi?.kickParticipant(roomId, identity)
                     }
-                )
-                DropdownMenuItem(
-                    text = {
-                        Text(
-                            stringResource(
-                                if (isVideoLocallyDisabled) R.string.meeting_action_enableVideo
-                                else R.string.meeting_action_disableVideo
-                            )
-                        )
-                    },
-                    onClick = {
-                        showMenu = false
-                        onToggleVideoDisabled(identity)
+                },
+                onBan = {
+                    moderate(scope, snackbarHostState, "Failed to ban participant") {
+                        roomApi?.banParticipant(roomId, identity)
                     }
+                },
+            )
+        }
+    }
+}
+
+/**
+ * The long-press/three-dot menu shared by the participant tile and the participants panel row:
+ * local mute and local video for everyone, kick/ban for admins. Kick asks for confirmation here
+ * so both entry points behave the same; ban stays immediate.
+ */
+@Composable
+private fun ParticipantActionsMenu(
+    expanded: Boolean,
+    onDismiss: () -> Unit,
+    isAdmin: Boolean,
+    isLocallyMuted: Boolean,
+    onToggleLocalMute: () -> Unit,
+    isVideoLocallyDisabled: Boolean,
+    onToggleVideoDisabled: () -> Unit,
+    onKickConfirmed: () -> Unit,
+    onBan: () -> Unit,
+) {
+    var showKickConfirm by remember { mutableStateOf(false) }
+    if (showKickConfirm) {
+        ConfirmDialog(
+            title = stringResource(R.string.meeting_dialog_kickTitle),
+            message = stringResource(R.string.meeting_dialog_kickMessage),
+            confirmLabel = stringResource(R.string.meeting_action_kick),
+            onConfirm = {
+                showKickConfirm = false
+                onKickConfirmed()
+            },
+            onDismiss = { showKickConfirm = false },
+        )
+    }
+    DropdownMenu(expanded = expanded, onDismissRequest = onDismiss) {
+        DropdownMenuItem(
+            text = {
+                Text(
+                    stringResource(
+                        if (isLocallyMuted) R.string.meeting_action_unmute
+                        else R.string.meeting_action_mute
+                    )
                 )
-                if (isAdmin) {
-                    DropdownMenuItem(
-                        text = { Text(stringResource(R.string.meeting_action_kick), color = MaterialTheme.colorScheme.error) },
-                        onClick = {
-                            showMenu = false
-                            showKickConfirm = true
-                        }
-                    )
-                    DropdownMenuItem(
-                        text = { Text(stringResource(R.string.meeting_action_ban), color = MaterialTheme.colorScheme.error) },
-                        onClick = {
-                            showMenu = false
-                            scope?.launch {
-                                try {
-                                    roomApi?.banParticipant(roomId, identity)
-                                } catch (e: Exception) {
-                                    snackbarHostState?.showSnackbar(e.message ?: "Failed to ban participant")
-                                }
-                            }
-                        }
-                    )
-                }
+            },
+            onClick = {
+                onDismiss()
+                onToggleLocalMute()
             }
+        )
+        DropdownMenuItem(
+            text = {
+                Text(
+                    stringResource(
+                        if (isVideoLocallyDisabled) R.string.meeting_action_enableVideo
+                        else R.string.meeting_action_disableVideo
+                    )
+                )
+            },
+            onClick = {
+                onDismiss()
+                onToggleVideoDisabled()
+            }
+        )
+        if (isAdmin) {
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.meeting_action_kick), color = MaterialTheme.colorScheme.error) },
+                onClick = {
+                    onDismiss()
+                    showKickConfirm = true
+                }
+            )
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.meeting_action_ban), color = MaterialTheme.colorScheme.error) },
+                onClick = {
+                    onDismiss()
+                    onBan()
+                }
+            )
+        }
+    }
+}
+
+/** Fire-and-forget moderation call; a thrown failure surfaces as a snackbar with [fallbackMessage]. */
+private fun moderate(
+    scope: kotlinx.coroutines.CoroutineScope?,
+    snackbarHostState: SnackbarHostState?,
+    fallbackMessage: String,
+    action: suspend () -> Unit,
+) {
+    scope?.launch {
+        try {
+            action()
+        } catch (e: Exception) {
+            snackbarHostState?.showSnackbar(e.message ?: fallbackMessage)
         }
     }
 }
@@ -1223,58 +1254,25 @@ private fun ParticipantListRow(
                         tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
-                DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
-                    DropdownMenuItem(
-                        text = {
-                            Text(
-                                stringResource(
-                                    if (isLocallyMuted) R.string.meeting_action_unmute
-                                    else R.string.meeting_action_mute
-                                )
-                            )
-                        },
-                        onClick = {
-                            showMenu = false
-                            onToggleLocalMute()
+                ParticipantActionsMenu(
+                    expanded = showMenu,
+                    onDismiss = { showMenu = false },
+                    isAdmin = isAdmin,
+                    isLocallyMuted = isLocallyMuted,
+                    onToggleLocalMute = onToggleLocalMute,
+                    isVideoLocallyDisabled = isVideoLocallyDisabled,
+                    onToggleVideoDisabled = onToggleVideoDisabled,
+                    onKickConfirmed = {
+                        moderate(scope, snackbarHostState, "Failed to kick participant") {
+                            roomApi.kickParticipant(roomId, identity)
                         }
-                    )
-                    DropdownMenuItem(
-                        text = {
-                            Text(
-                                stringResource(
-                                    if (isVideoLocallyDisabled) R.string.meeting_action_enableVideo
-                                    else R.string.meeting_action_disableVideo
-                                )
-                            )
-                        },
-                        onClick = {
-                            showMenu = false
-                            onToggleVideoDisabled()
+                    },
+                    onBan = {
+                        moderate(scope, snackbarHostState, "Failed to ban participant") {
+                            roomApi.banParticipant(roomId, identity)
                         }
-                    )
-                    if (isAdmin) {
-                        DropdownMenuItem(
-                            text = { Text(stringResource(R.string.meeting_action_kick), color = MaterialTheme.colorScheme.error) },
-                            onClick = {
-                                showMenu = false
-                                scope.launch {
-                                    try { roomApi.kickParticipant(roomId, identity) }
-                                    catch (e: Exception) { snackbarHostState.showSnackbar(e.message ?: "Failed") }
-                                }
-                            }
-                        )
-                        DropdownMenuItem(
-                            text = { Text(stringResource(R.string.meeting_action_ban), color = MaterialTheme.colorScheme.error) },
-                            onClick = {
-                                showMenu = false
-                                scope.launch {
-                                    try { roomApi.banParticipant(roomId, identity) }
-                                    catch (e: Exception) { snackbarHostState.showSnackbar(e.message ?: "Failed") }
-                                }
-                            }
-                        )
-                    }
-                }
+                    },
+                )
             }
         }
     }
