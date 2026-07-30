@@ -52,6 +52,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import com.bedrud.app.R
 import com.bedrud.app.core.DevFlags
+import com.bedrud.app.core.api.apiBody
 import com.bedrud.app.core.auth.OAuthLoginHandler
 import com.bedrud.app.core.instance.InstanceManager
 import com.bedrud.app.core.instance.PublicSettingsState
@@ -179,17 +180,14 @@ fun LoginScreen(
         scope.launch {
             loadingAction = HubAction.GUEST
             try {
-                val response = authApi.guestLogin(GuestLoginRequest(trimmed))
-                if (response.isSuccessful) {
-                    val body = response.body()!!
+                val body = apiBody(guestFailedMessage, { errorMessage = it }) {
+                    authApi.guestLogin(GuestLoginRequest(trimmed))
+                }
+                if (body != null) {
                     authManager.saveTokens(body.tokens)
                     authManager.saveUser(body.user)
                     onLoginSuccess()
-                } else {
-                    errorMessage = guestFailedMessage
                 }
-            } catch (e: Exception) {
-                errorMessage = e.message ?: guestFailedMessage
             } finally {
                 loadingAction = null
             }

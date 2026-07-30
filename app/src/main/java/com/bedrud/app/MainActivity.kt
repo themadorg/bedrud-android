@@ -24,6 +24,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.bedrud.app.core.api.apiBody
 import com.bedrud.app.core.auth.OAuthLoginHandler
 import com.bedrud.app.core.call.CallService
 import com.bedrud.app.core.createLocaleContext
@@ -222,9 +223,10 @@ fun BedrudNavHost(
         val api = authApi ?: return@LaunchedEffect
         // Save access token first so getMe() uses it in the Authorization header
         manager.saveTokens(token, "")
-        val me = api.getMe()
-        if (me.isSuccessful) {
-            val body = me.body()!!
+        // Best-effort: the token is already saved, so a failed fetch just means no cached profile
+        // yet. Must not throw — this runs directly in a LaunchedEffect.
+        val body = apiBody("", onError = {}) { api.getMe() }
+        if (body != null) {
             manager.saveUser(
                 com.bedrud.app.models.User(
                     id = body.id,

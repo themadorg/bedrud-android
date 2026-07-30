@@ -58,6 +58,7 @@ import com.bedrud.app.R
 import com.bedrud.app.core.instance.InstanceManager
 import com.bedrud.app.ui.theme.BedrudShapeTokens
 import com.bedrud.app.models.ChangePasswordRequest
+import com.bedrud.app.core.api.apiAction
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 
@@ -268,20 +269,21 @@ fun SettingsContent(
                                         snackbarHostState.showSnackbar(passwordMismatchMessage)
                                     }
                                     else -> scope.launch {
-                                        try {
-                                            val response = authApi?.changePassword(
-                                                ChangePasswordRequest(currentPassword, newPassword)
-                                            )
-                                            if (response?.isSuccessful == true) {
-                                                currentPassword = ""
-                                                newPassword = ""
-                                                confirmPassword = ""
-                                                snackbarHostState.showSnackbar(passwordChangedMessage)
-                                            } else {
-                                                snackbarHostState.showSnackbar(passwordChangeFailedMessage)
-                                            }
-                                        } catch (e: Exception) {
-                                            snackbarHostState.showSnackbar(e.message ?: passwordChangeFailedMessage)
+                                        val api = authApi ?: run {
+                                            snackbarHostState.showSnackbar(passwordChangeFailedMessage)
+                                            return@launch
+                                        }
+                                        val changed = apiAction(
+                                            passwordChangeFailedMessage,
+                                            { snackbarHostState.showSnackbar(it) }
+                                        ) {
+                                            api.changePassword(ChangePasswordRequest(currentPassword, newPassword))
+                                        }
+                                        if (changed) {
+                                            currentPassword = ""
+                                            newPassword = ""
+                                            confirmPassword = ""
+                                            snackbarHostState.showSnackbar(passwordChangedMessage)
                                         }
                                     }
                                 }

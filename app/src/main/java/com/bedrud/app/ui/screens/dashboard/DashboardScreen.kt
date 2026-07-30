@@ -91,6 +91,8 @@ import com.bedrud.app.core.recent.RecentRoomsStore
 import com.bedrud.app.core.recent.formatRecentRoomTimeAgo
 import com.bedrud.app.core.recent.recentRoomsNotInApiList
 import com.bedrud.app.core.rooms.DeletedRoomTombstones
+import com.bedrud.app.core.api.apiAction
+import com.bedrud.app.core.api.apiBody
 import com.bedrud.app.models.CreateRoomRequest
 import com.bedrud.app.models.RoomSettings
 import com.bedrud.app.models.UpdateRoomSettingsRequest
@@ -305,8 +307,8 @@ fun DashboardContent(
             onDismiss = { showCreateDialog = false },
             onCreate = { name ->
                 scope.launch {
-                    try {
-                        val response = roomApi.createRoom(
+                    val room = apiBody("Failed to create room", { snackbarHostState.showSnackbar(it) }) {
+                        roomApi.createRoom(
                             CreateRoomRequest(
                                 name = name.ifBlank { null },
                                 // Sent explicitly rather than left to server defaults: 0 is
@@ -334,18 +336,11 @@ fun DashboardContent(
                                 )
                             )
                         )
-                        if (response.isSuccessful) {
-                            val room = response.body()!!
-                            showCreateDialog = false
-                            pendingScrollToTopFor = room.name
-                            loadRooms()
-                            onJoinRoom(room.name)
-                        } else {
-                            snackbarHostState.showSnackbar("Failed to create room")
-                        }
-                    } catch (e: Exception) {
-                        snackbarHostState.showSnackbar(e.message ?: "Failed to create room")
-                    }
+                    } ?: return@launch
+                    showCreateDialog = false
+                    pendingScrollToTopFor = room.name
+                    loadRooms()
+                    onJoinRoom(room.name)
                 }
             }
         )
@@ -367,25 +362,21 @@ fun DashboardContent(
                         val deleting = room
                         roomToDelete = null
                         scope.launch {
-                            try {
-                                val response = roomApi.deleteRoom(deleting.id)
-                                if (response.isSuccessful) {
-                                    // Keep refreshes from resurrecting it while the server's
-                                    // async delete catches up...
-                                    DeletedRoomTombstones.add(deleting.id)
-                                    rooms = rooms.filter { it.id != deleting.id }
-                                    // ...and drop its local recent entry, or the All tab would
-                                    // immediately weave the deleted room back in as a recent card.
-                                    if (deleting.name.isNotEmpty()) {
-                                        activeInstanceId?.let {
-                                            recentRoomsStore.remove(deleting.name, it)
-                                        }
+                            val deleted = apiAction("Failed to delete room", { snackbarHostState.showSnackbar(it) }) {
+                                roomApi.deleteRoom(deleting.id)
+                            }
+                            if (deleted) {
+                                // Keep refreshes from resurrecting it while the server's
+                                // async delete catches up...
+                                DeletedRoomTombstones.add(deleting.id)
+                                rooms = rooms.filter { it.id != deleting.id }
+                                // ...and drop its local recent entry, or the All tab would
+                                // immediately weave the deleted room back in as a recent card.
+                                if (deleting.name.isNotEmpty()) {
+                                    activeInstanceId?.let {
+                                        recentRoomsStore.remove(deleting.name, it)
                                     }
-                                } else {
-                                    snackbarHostState.showSnackbar("Failed to delete room")
                                 }
-                            } catch (e: Exception) {
-                                snackbarHostState.showSnackbar(e.message ?: "Failed to delete room")
                             }
                         }
                     },
@@ -405,26 +396,22 @@ fun DashboardContent(
             onDismiss = { roomToEdit = null },
             onSave = { isPublic, settings ->
                 scope.launch {
-                    try {
-                        val response = roomApi.updateRoomSettings(
+                    val saved = apiAction("Failed to save settings", { snackbarHostState.showSnackbar(it) }) {
+                        roomApi.updateRoomSettings(
                             room.id,
                             UpdateRoomSettingsRequest(isPublic = isPublic, settings = settings)
                         )
-                        if (response.isSuccessful) {
-                            // Apply locally before the async loadRooms() refetch lands, so
-                            // reopening this room's settings (or reading its card) right away
-                            // reflects what was just saved instead of the pre-save snapshot.
-                            rooms = rooms.map {
-                                if (it.id == room.id) it.copy(isPublic = isPublic, settings = settings) else it
-                            }
-                            roomToEdit = null
-                            loadRooms()
-                            snackbarHostState.showSnackbar("Settings saved")
-                        } else {
-                            snackbarHostState.showSnackbar("Failed to save settings")
+                    }
+                    if (saved) {
+                        // Apply locally before the async loadRooms() refetch lands, so
+                        // reopening this room's settings (or reading its card) right away
+                        // reflects what was just saved instead of the pre-save snapshot.
+                        rooms = rooms.map {
+                            if (it.id == room.id) it.copy(isPublic = isPublic, settings = settings) else it
                         }
-                    } catch (e: Exception) {
-                        snackbarHostState.showSnackbar(e.message ?: "Failed to save settings")
+                        roomToEdit = null
+                        loadRooms()
+                        snackbarHostState.showSnackbar("Settings saved")
                     }
                 }
             }
