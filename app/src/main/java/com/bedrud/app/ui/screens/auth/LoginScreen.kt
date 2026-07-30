@@ -10,30 +10,22 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Key
 import androidx.compose.material.icons.filled.Mail
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -49,7 +41,6 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.text.style.TextAlign
 import com.bedrud.app.R
 import com.bedrud.app.core.DevFlags
 import com.bedrud.app.core.api.apiBody
@@ -59,8 +50,6 @@ import com.bedrud.app.core.instance.PublicSettingsState
 import com.bedrud.app.models.GuestLoginRequest
 import com.bedrud.app.ui.components.BedrudButton
 import com.bedrud.app.ui.components.BedrudButtonVariant
-import com.bedrud.app.ui.components.BedrudScaffoldContentInsets
-import com.bedrud.app.ui.components.BedrudSnackbarHost
 import com.bedrud.app.ui.components.BedrudTextField
 import com.bedrud.app.ui.theme.BedrudShapeTokens
 import com.bedrud.app.ui.theme.Dimens
@@ -149,12 +138,7 @@ fun LoginScreen(
     // Hidden while the settings call is still in flight, and when there's no server URL to hit.
     val showOAuthRow = serverUrl != null && (realProviders != null || oauthDevPreview || settingsFailed)
 
-    LaunchedEffect(errorMessage) {
-        errorMessage?.let {
-            snackbarHostState.showSnackbar(it)
-            errorMessage = null
-        }
-    }
+    AuthErrorSnackbar(errorMessage, snackbarHostState) { errorMessage = null }
 
     fun signInWithPasskey() {
         if (isBusy) return
@@ -194,186 +178,131 @@ fun LoginScreen(
         }
     }
 
-    Scaffold(
-        contentWindowInsets = BedrudScaffoldContentInsets,
-        snackbarHost = { BedrudSnackbarHost(snackbarHostState) }
-    ) { padding ->
-        Box(
+    AuthScreenScaffold(
+        snackbarHostState = snackbarHostState,
+        activeInstance = activeInstance,
+        subtitle = stringResource(R.string.auth_subtitle_hubChoose),
+        onBack = onBack,
+        backEnabled = !isBusy,
+    ) {
+        // ── Account sign-in ──
+        BedrudButton(
+            text = stringResource(R.string.auth_button_signInWithEmail),
+            onClick = onNavigateToEmailLogin,
+            variant = BedrudButtonVariant.PRIMARY,
+            enabled = !isBusy,
+            leadingIcon = {
+                Icon(
+                    Icons.Filled.Mail,
+                    contentDescription = null,
+                    modifier = Modifier.size(Dimens.iconSm)
+                )
+            },
             modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .imePadding()
-                    .verticalScroll(rememberScrollState()),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Column(
-                    modifier = Modifier
-                        .widthIn(max = Dimens.maxContentWidth)
-                        .fillMaxWidth()
-                        .padding(horizontal = Dimens.screenPadding),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    // Match the server chooser's brand-mark position so it doesn't jump between steps.
-                    Spacer(Modifier.height(Dimens.space56))
+                .fillMaxWidth()
+                .height(Dimens.buttonHeightLarge)
+        )
+        Spacer(Modifier.height(Dimens.space12))
+        BedrudButton(
+            text = stringResource(R.string.auth_button_signInWithPasskey),
+            onClick = { signInWithPasskey() },
+            variant = BedrudButtonVariant.OUTLINE,
+            enabled = !isBusy && passkeyEnabled,
+            loading = loadingAction == HubAction.PASSKEY,
+            leadingIcon = {
+                Icon(
+                    Icons.Filled.Key,
+                    contentDescription = null,
+                    modifier = Modifier.size(Dimens.iconSm)
+                )
+            },
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(Dimens.buttonHeightLarge)
+        )
+        if (!passkeyEnabled) MethodDisabledHint()
 
-                    ServerHeader(
-                        displayName = activeInstance?.displayName,
-                        serverUrl = activeInstance?.serverURL,
-                        iconColorHex = activeInstance?.iconColorHex
-                    )
-
-                    Spacer(Modifier.height(Dimens.space8))
-                    Text(
-                        text = stringResource(R.string.auth_subtitle_hubChoose),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        textAlign = TextAlign.Center
-                    )
-
-                    Spacer(Modifier.height(Dimens.space32))
-
-                    // ── Account sign-in ──
-                    BedrudButton(
-                        text = stringResource(R.string.auth_button_signInWithEmail),
-                        onClick = onNavigateToEmailLogin,
-                        variant = BedrudButtonVariant.PRIMARY,
-                        enabled = !isBusy,
-                        leadingIcon = {
-                            Icon(
-                                Icons.Filled.Mail,
-                                contentDescription = null,
-                                modifier = Modifier.size(Dimens.iconSm)
-                            )
-                        },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(Dimens.buttonHeightLarge)
-                    )
-                    Spacer(Modifier.height(Dimens.space12))
-                    BedrudButton(
-                        text = stringResource(R.string.auth_button_signInWithPasskey),
-                        onClick = { signInWithPasskey() },
-                        variant = BedrudButtonVariant.OUTLINE,
-                        enabled = !isBusy && passkeyEnabled,
-                        loading = loadingAction == HubAction.PASSKEY,
-                        leadingIcon = {
-                            Icon(
-                                Icons.Filled.Key,
-                                contentDescription = null,
-                                modifier = Modifier.size(Dimens.iconSm)
-                            )
-                        },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(Dimens.buttonHeightLarge)
-                    )
-                    if (!passkeyEnabled) MethodDisabledHint()
-
-                    // ── OAuth providers (compact logo row) ──
-                    if (showOAuthRow) {
-                        Spacer(Modifier.height(Dimens.space24))
-                        Text(
-                            text = stringResource(R.string.auth_divider_orContinueWith),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Spacer(Modifier.height(Dimens.space12))
-                        Row(horizontalArrangement = Arrangement.spacedBy(Dimens.space16)) {
-                            OAuthOptions.forEach { option ->
-                                // Real providers → only those enabled. Dev preview → shown disabled
-                                // (layout review only). Failure fallback → enabled so users can try.
-                                val providerEnabled = when {
-                                    realProviders != null -> option.provider.id in realProviders
-                                    oauthDevPreview -> false
-                                    else -> true
-                                }
-                                OAuthProviderButton(
-                                    option = option,
-                                    enabled = providerEnabled && !isBusy && serverUrl != null,
-                                    onClick = {
-                                        serverUrl?.let {
-                                            OAuthLoginHandler.launch(context, it, option.provider)
-                                        }
-                                    }
-                                )
+        // ── OAuth providers (compact logo row) ──
+        if (showOAuthRow) {
+            Spacer(Modifier.height(Dimens.space24))
+            Text(
+                text = stringResource(R.string.auth_divider_orContinueWith),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(Modifier.height(Dimens.space12))
+            Row(horizontalArrangement = Arrangement.spacedBy(Dimens.space16)) {
+                OAuthOptions.forEach { option ->
+                    // Real providers → only those enabled. Dev preview → shown disabled
+                    // (layout review only). Failure fallback → enabled so users can try.
+                    val providerEnabled = when {
+                        realProviders != null -> option.provider.id in realProviders
+                        oauthDevPreview -> false
+                        else -> true
+                    }
+                    OAuthProviderButton(
+                        option = option,
+                        enabled = providerEnabled && !isBusy && serverUrl != null,
+                        onClick = {
+                            serverUrl?.let {
+                                OAuthLoginHandler.launch(context, it, option.provider)
                             }
                         }
-                    }
-
-                    Spacer(Modifier.height(Dimens.space24))
-                    OrDivider()
-                    Spacer(Modifier.height(Dimens.space24))
-
-                    // ── Guest sign-in ──
-                    BedrudTextField(
-                        value = guestName,
-                        onValueChange = {
-                            guestName = it
-                            errorMessage = null
-                        },
-                        label = stringResource(R.string.auth_label_displayName),
-                        placeholder = stringResource(R.string.auth_placeholder_displayName),
-                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Go),
-                        keyboardActions = KeyboardActions(onGo = { continueAsGuest() }),
-                        enabled = !isBusy && guestEnabled
                     )
-                    Spacer(Modifier.height(Dimens.space12))
-                    BedrudButton(
-                        text = stringResource(R.string.auth_button_continueAsGuest),
-                        onClick = { continueAsGuest() },
-                        variant = BedrudButtonVariant.TONAL,
-                        enabled = !isBusy && guestEnabled && guestName.trim().length >= 2,
-                        loading = loadingAction == HubAction.GUEST,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(Dimens.buttonHeightLarge)
-                    )
-                    if (!guestEnabled) MethodDisabledHint()
-
-                    Spacer(Modifier.height(Dimens.space24))
-
-                    // ── Sign-up ──
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.Center
-                    ) {
-                        Text(
-                            text = stringResource(R.string.auth_prompt_noAccount),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        TextButton(
-                            onClick = onNavigateToRegister,
-                            enabled = !isBusy && registrationEnabled
-                        ) {
-                            Text(
-                                text = stringResource(R.string.auth_button_signUp),
-                                style = MaterialTheme.typography.labelLarge
-                            )
-                        }
-                    }
-
-                    Spacer(Modifier.height(Dimens.space32))
                 }
             }
+        }
 
-            // Lightweight back affordance — floats over the header without reserving vertical
-            // space, so the brand mark keeps the same position as the server chooser.
-            if (onBack != null) {
-                IconButton(
-                    onClick = onBack,
-                    enabled = !isBusy,
-                    modifier = Modifier.align(Alignment.TopStart)
-                ) {
-                    Icon(
-                        Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = stringResource(R.string.common_action_back)
-                    )
-                }
+        Spacer(Modifier.height(Dimens.space24))
+        OrDivider()
+        Spacer(Modifier.height(Dimens.space24))
+
+        // ── Guest sign-in ──
+        BedrudTextField(
+            value = guestName,
+            onValueChange = {
+                guestName = it
+                errorMessage = null
+            },
+            label = stringResource(R.string.auth_label_displayName),
+            placeholder = stringResource(R.string.auth_placeholder_displayName),
+            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Go),
+            keyboardActions = KeyboardActions(onGo = { continueAsGuest() }),
+            enabled = !isBusy && guestEnabled
+        )
+        Spacer(Modifier.height(Dimens.space12))
+        BedrudButton(
+            text = stringResource(R.string.auth_button_continueAsGuest),
+            onClick = { continueAsGuest() },
+            variant = BedrudButtonVariant.TONAL,
+            enabled = !isBusy && guestEnabled && guestName.trim().length >= 2,
+            loading = loadingAction == HubAction.GUEST,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(Dimens.buttonHeightLarge)
+        )
+        if (!guestEnabled) MethodDisabledHint()
+
+        Spacer(Modifier.height(Dimens.space24))
+
+        // ── Sign-up ──
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center
+        ) {
+            Text(
+                text = stringResource(R.string.auth_prompt_noAccount),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            TextButton(
+                onClick = onNavigateToRegister,
+                enabled = !isBusy && registrationEnabled
+            ) {
+                Text(
+                    text = stringResource(R.string.auth_button_signUp),
+                    style = MaterialTheme.typography.labelLarge
+                )
             }
         }
     }

@@ -1,30 +1,18 @@
 package com.bedrud.app.ui.screens.auth
 
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -32,7 +20,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.autofill.ContentType
 import androidx.compose.ui.focus.FocusDirection
@@ -40,7 +27,6 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDirection
 import com.bedrud.app.R
 import com.bedrud.app.core.api.LoginOutcome
@@ -53,8 +39,6 @@ import com.bedrud.app.core.instance.InstanceManager
 import com.bedrud.app.models.RegisterRequest
 import com.bedrud.app.ui.components.BedrudButton
 import com.bedrud.app.ui.components.BedrudButtonVariant
-import com.bedrud.app.ui.components.BedrudScaffoldContentInsets
-import com.bedrud.app.ui.components.BedrudSnackbarHost
 import com.bedrud.app.ui.components.BedrudPasswordField
 import com.bedrud.app.ui.components.BedrudTextField
 import com.bedrud.app.ui.theme.Dimens
@@ -115,11 +99,7 @@ fun RegisterScreen(
         passwordsMatch &&
         !isLoading
 
-    LaunchedEffect(errorMessage) {
-        val message = errorMessage ?: return@LaunchedEffect
-        snackbarHostState.showSnackbar(message)
-        errorMessage = null
-    }
+    AuthErrorSnackbar(errorMessage, snackbarHostState) { errorMessage = null }
 
     fun submit() {
         if (!canSubmit) return
@@ -166,180 +146,127 @@ fun RegisterScreen(
         }
     }
 
-    Scaffold(
-        contentWindowInsets = BedrudScaffoldContentInsets,
-        snackbarHost = { BedrudSnackbarHost(snackbarHostState) }
-    ) { padding ->
-        Box(
+    AuthScreenScaffold(
+        snackbarHostState = snackbarHostState,
+        activeInstance = activeInstance,
+        subtitle = stringResource(R.string.auth_register_subtitle),
+        onBack = onNavigateToLogin,
+        backEnabled = !isLoading,
+    ) {
+        BedrudTextField(
+            value = displayName,
+            onValueChange = {
+                displayName = it
+                errorMessage = null
+            },
+            label = stringResource(R.string.auth_label_displayName),
+            keyboardOptions = KeyboardOptions(
+                keyboardType = KeyboardType.Text,
+                imeAction = ImeAction.Next
+            ),
+            keyboardActions = KeyboardActions(
+                onNext = { focusManager.moveFocus(FocusDirection.Down) }
+            ),
+            autofill = ContentType.PersonFullName
+        )
+
+        Spacer(Modifier.height(Dimens.space12))
+
+        BedrudTextField(
+            value = email,
+            onValueChange = {
+                email = it
+                errorMessage = null
+            },
+            label = stringResource(R.string.auth_label_email),
+            isError = emailInErrorState,
+            supportingText = if (emailInErrorState) {
+                { Text(stringResource(R.string.auth_error_emailInvalid)) }
+            } else {
+                null
+            },
+            keyboardOptions = KeyboardOptions(
+                keyboardType = KeyboardType.Email,
+                imeAction = ImeAction.Next
+            ),
+            keyboardActions = KeyboardActions(
+                onNext = { focusManager.moveFocus(FocusDirection.Down) }
+            ),
+            autofill = ContentType.EmailAddress,
+            textDirection = TextDirection.Ltr
+        )
+
+        Spacer(Modifier.height(Dimens.space12))
+
+        BedrudPasswordField(
+            value = password,
+            onValueChange = {
+                password = it
+                errorMessage = null
+            },
+            label = stringResource(R.string.auth_label_password),
+            isError = passwordTooShort,
+            // Always-on helper doubles as the too-short error (it turns red via isError).
+            supportingText = { Text(stringResource(R.string.auth_hint_passwordMinLength, PasswordPolicy.MIN_LENGTH)) },
+            keyboardOptions = KeyboardOptions(
+                keyboardType = KeyboardType.Password,
+                imeAction = ImeAction.Next
+            ),
+            keyboardActions = KeyboardActions(
+                onNext = { focusManager.moveFocus(FocusDirection.Down) }
+            ),
+            autofill = ContentType.NewPassword,
+            visible = passwordVisible,
+            onToggleVisibility = { passwordVisible = !passwordVisible }
+        )
+
+        Spacer(Modifier.height(Dimens.space12))
+
+        BedrudPasswordField(
+            value = confirmPassword,
+            onValueChange = {
+                confirmPassword = it
+                errorMessage = null
+            },
+            label = stringResource(R.string.auth_label_confirmPassword),
+            isError = confirmMismatch,
+            supportingText = if (confirmMismatch) {
+                { Text(stringResource(R.string.auth_error_passwordMismatch)) }
+            } else {
+                null
+            },
+            keyboardOptions = KeyboardOptions(
+                keyboardType = KeyboardType.Password,
+                imeAction = ImeAction.Go
+            ),
+            keyboardActions = KeyboardActions(onGo = { submit() }),
+            autofill = ContentType.NewPassword,
+            visible = passwordVisible
+        )
+
+        Spacer(Modifier.height(Dimens.space24))
+
+        BedrudButton(
+            text = stringResource(R.string.auth_title_createAccount),
+            onClick = { submit() },
+            variant = BedrudButtonVariant.PRIMARY,
+            enabled = canSubmit,
+            loading = isLoading,
             modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
+                .fillMaxWidth()
+                .height(Dimens.buttonHeightLarge)
+        )
+
+        Spacer(Modifier.height(Dimens.space16))
+
+        TextButton(
+            onClick = onNavigateToLogin,
+            enabled = !isLoading
         ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .imePadding()
-                    .verticalScroll(rememberScrollState()),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Column(
-                    modifier = Modifier
-                        .widthIn(max = Dimens.maxContentWidth)
-                        .fillMaxWidth()
-                        .padding(horizontal = Dimens.screenPadding),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    // Match the hub/server-chooser brand-mark position so it doesn't jump between steps.
-                    Spacer(Modifier.height(Dimens.space56))
-
-                    ServerHeader(
-                        displayName = activeInstance?.displayName,
-                        serverUrl = activeInstance?.serverURL,
-                        iconColorHex = activeInstance?.iconColorHex
-                    )
-
-                    Spacer(Modifier.height(Dimens.space8))
-                    Text(
-                        text = stringResource(R.string.auth_register_subtitle),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        textAlign = TextAlign.Center
-                    )
-
-                    Spacer(Modifier.height(Dimens.space32))
-
-                    BedrudTextField(
-                        value = displayName,
-                        onValueChange = {
-                            displayName = it
-                            errorMessage = null
-                        },
-                        label = stringResource(R.string.auth_label_displayName),
-                        keyboardOptions = KeyboardOptions(
-                            keyboardType = KeyboardType.Text,
-                            imeAction = ImeAction.Next
-                        ),
-                        keyboardActions = KeyboardActions(
-                            onNext = { focusManager.moveFocus(FocusDirection.Down) }
-                        ),
-                        autofill = ContentType.PersonFullName
-                    )
-
-                    Spacer(Modifier.height(Dimens.space12))
-
-                    BedrudTextField(
-                        value = email,
-                        onValueChange = {
-                            email = it
-                            errorMessage = null
-                        },
-                        label = stringResource(R.string.auth_label_email),
-                        isError = emailInErrorState,
-                        supportingText = if (emailInErrorState) {
-                            { Text(stringResource(R.string.auth_error_emailInvalid)) }
-                        } else {
-                            null
-                        },
-                        keyboardOptions = KeyboardOptions(
-                            keyboardType = KeyboardType.Email,
-                            imeAction = ImeAction.Next
-                        ),
-                        keyboardActions = KeyboardActions(
-                            onNext = { focusManager.moveFocus(FocusDirection.Down) }
-                        ),
-                        autofill = ContentType.EmailAddress,
-                        textDirection = TextDirection.Ltr
-                    )
-
-                    Spacer(Modifier.height(Dimens.space12))
-
-                    BedrudPasswordField(
-                        value = password,
-                        onValueChange = {
-                            password = it
-                            errorMessage = null
-                        },
-                        label = stringResource(R.string.auth_label_password),
-                        isError = passwordTooShort,
-                        // Always-on helper doubles as the too-short error (it turns red via isError).
-                        supportingText = { Text(stringResource(R.string.auth_hint_passwordMinLength, PasswordPolicy.MIN_LENGTH)) },
-                        keyboardOptions = KeyboardOptions(
-                            keyboardType = KeyboardType.Password,
-                            imeAction = ImeAction.Next
-                        ),
-                        keyboardActions = KeyboardActions(
-                            onNext = { focusManager.moveFocus(FocusDirection.Down) }
-                        ),
-                        autofill = ContentType.NewPassword,
-                        visible = passwordVisible,
-                        onToggleVisibility = { passwordVisible = !passwordVisible }
-                    )
-
-                    Spacer(Modifier.height(Dimens.space12))
-
-                    BedrudPasswordField(
-                        value = confirmPassword,
-                        onValueChange = {
-                            confirmPassword = it
-                            errorMessage = null
-                        },
-                        label = stringResource(R.string.auth_label_confirmPassword),
-                        isError = confirmMismatch,
-                        supportingText = if (confirmMismatch) {
-                            { Text(stringResource(R.string.auth_error_passwordMismatch)) }
-                        } else {
-                            null
-                        },
-                        keyboardOptions = KeyboardOptions(
-                            keyboardType = KeyboardType.Password,
-                            imeAction = ImeAction.Go
-                        ),
-                        keyboardActions = KeyboardActions(onGo = { submit() }),
-                        autofill = ContentType.NewPassword,
-                        visible = passwordVisible
-                    )
-
-                    Spacer(Modifier.height(Dimens.space24))
-
-                    BedrudButton(
-                        text = stringResource(R.string.auth_title_createAccount),
-                        onClick = { submit() },
-                        variant = BedrudButtonVariant.PRIMARY,
-                        enabled = canSubmit,
-                        loading = isLoading,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(Dimens.buttonHeightLarge)
-                    )
-
-                    Spacer(Modifier.height(Dimens.space16))
-
-                    TextButton(
-                        onClick = onNavigateToLogin,
-                        enabled = !isLoading
-                    ) {
-                        Text(
-                            text = stringResource(R.string.auth_link_alreadyHaveAccount),
-                            style = MaterialTheme.typography.labelLarge
-                        )
-                    }
-
-                    Spacer(Modifier.height(Dimens.space32))
-                }
-            }
-
-            // Lightweight back affordance — floats over the header without reserving vertical space,
-            // so the brand mark keeps the same position as the hub and server chooser.
-            IconButton(
-                onClick = onNavigateToLogin,
-                enabled = !isLoading,
-                modifier = Modifier.align(Alignment.TopStart)
-            ) {
-                Icon(
-                    Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = stringResource(R.string.common_action_back)
-                )
-            }
+            Text(
+                text = stringResource(R.string.auth_link_alreadyHaveAccount),
+                style = MaterialTheme.typography.labelLarge
+            )
         }
     }
 }
