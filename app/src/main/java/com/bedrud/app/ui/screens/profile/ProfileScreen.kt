@@ -55,6 +55,8 @@ import coil.compose.AsyncImage
 import com.bedrud.app.R
 import com.bedrud.app.core.instance.InstanceManager
 import com.bedrud.app.ui.screens.instance.InstanceSwitcherSheet
+import com.bedrud.app.ui.theme.BedrudRadius
+import com.bedrud.app.ui.theme.BedrudShapeTokens
 import com.bedrud.app.ui.theme.parseInstanceColor
 import org.koin.compose.koinInject
 
@@ -95,7 +97,7 @@ fun ProfileContent(
             Spacer(modifier = Modifier.height(0.dp))
 
             // User section
-            BedrudOutlinedCard(shape = RoundedCornerShape(16.dp)) {
+            BedrudOutlinedCard(shape = BedrudShapeTokens.card) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -146,7 +148,7 @@ fun ProfileContent(
                                     modifier = Modifier
                                         .background(
                                             MaterialTheme.colorScheme.primary,
-                                            RoundedCornerShape(4.dp)
+                                            RoundedCornerShape(BedrudRadius.xs)
                                         )
                                         .padding(horizontal = 6.dp, vertical = 2.dp)
                                 )
@@ -162,7 +164,7 @@ fun ProfileContent(
             }
 
             // Server section
-            BedrudOutlinedCard(shape = RoundedCornerShape(16.dp)) {
+            BedrudOutlinedCard(shape = BedrudShapeTokens.card) {
                 Column {
                     CardSectionHeader(
                         stringResource(R.string.profile_section_server),
@@ -216,7 +218,7 @@ fun ProfileContent(
             }
 
             // Account section
-            BedrudOutlinedCard(shape = RoundedCornerShape(16.dp)) {
+            BedrudOutlinedCard(shape = BedrudShapeTokens.card) {
                 Column {
                     CardSectionHeader(
                         stringResource(R.string.profile_section_account),

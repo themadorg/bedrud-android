@@ -27,6 +27,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.res.stringResource
 import com.bedrud.app.R
+import com.bedrud.app.ui.theme.BedrudShapeTokens
 import com.bedrud.app.core.livekit.CallAudioSwitch
 import com.twilio.audioswitch.AudioDevice
 
@@ -104,7 +105,7 @@ private fun AudioDeviceRow(
 ) {
     Surface(
         onClick = onClick,
-        shape = RoundedCornerShape(16.dp),
+        shape = BedrudShapeTokens.card,
         color = if (selected) colors.selected else colors.button,
         modifier = Modifier.fillMaxWidth(),
     ) {

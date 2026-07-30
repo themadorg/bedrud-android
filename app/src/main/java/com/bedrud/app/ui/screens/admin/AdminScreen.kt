@@ -83,6 +83,8 @@ import com.bedrud.app.models.AdminSettings
 import com.bedrud.app.models.AdminUser
 import com.bedrud.app.models.CreateInviteTokenRequest
 import com.bedrud.app.models.InviteToken
+import com.bedrud.app.ui.theme.BedrudRadius
+import com.bedrud.app.ui.theme.BedrudShapeTokens
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
@@ -237,7 +239,7 @@ private fun AdminOverviewContent(
                 }
 
                 // Recent users
-                BedrudOutlinedCard(shape = RoundedCornerShape(16.dp)) {
+                BedrudOutlinedCard(shape = BedrudShapeTokens.card) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         CardSectionHeader(stringResource(R.string.admin_section_recentSignups))
                         Spacer(modifier = Modifier.height(8.dp))
@@ -275,7 +277,7 @@ private fun AdminOverviewContent(
 
 @Composable
 private fun StatCard(@StringRes labelResId: Int, value: Int, icon: ImageVector) {
-    BedrudOutlinedCard(shape = RoundedCornerShape(12.dp), modifier = Modifier.width(100.dp)) {
+    BedrudOutlinedCard(modifier = Modifier.width(100.dp)) {
         Column(
             modifier = Modifier.padding(12.dp),
             horizontalAlignment = Alignment.CenterHorizontally
@@ -568,7 +570,7 @@ private fun AdminSettingsContent(
         ) {
             settings?.let { s ->
                 // Registration settings
-                BedrudOutlinedCard(shape = RoundedCornerShape(16.dp)) {
+                BedrudOutlinedCard(shape = BedrudShapeTokens.card) {
                     Column {
                         CardSectionHeader(
                             stringResource(R.string.admin_section_registration),
@@ -625,7 +627,7 @@ private fun AdminSettingsContent(
             }
 
             // Invite tokens
-            BedrudOutlinedCard(shape = RoundedCornerShape(16.dp)) {
+            BedrudOutlinedCard(shape = BedrudShapeTokens.card) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     CardSectionHeader(stringResource(R.string.admin_section_inviteTokens))
                     Spacer(modifier = Modifier.height(8.dp))
@@ -633,7 +635,7 @@ private fun AdminSettingsContent(
                     // New token generated highlight
                     newToken?.let { tok ->
                         BedrudOutlinedCard(
-                            shape = RoundedCornerShape(8.dp),
+                            shape = RoundedCornerShape(BedrudRadius.sm),
                             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
                         ) {
                             Row(
