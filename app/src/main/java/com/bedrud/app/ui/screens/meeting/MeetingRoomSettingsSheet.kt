@@ -32,6 +32,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.bedrud.app.R
 import com.bedrud.app.core.api.RoomApi
+import com.bedrud.app.core.api.apiAction
 import com.bedrud.app.models.RoomSettings
 import com.bedrud.app.models.UpdateRoomSettingsRequest
 import kotlinx.coroutines.launch
@@ -130,18 +131,16 @@ fun MeetingRoomSettingsSheet(
                     isSaving = true
                     scope.launch {
                         try {
-                            val response = roomApi.updateRoomSettings(
-                                roomId,
-                                UpdateRoomSettingsRequest(isPublic = localIsPublic, settings = newSettings),
-                            )
-                            if (response.isSuccessful) {
+                            val saved = apiAction("Failed to save settings", { snackbarHostState.showSnackbar(it) }) {
+                                roomApi.updateRoomSettings(
+                                    roomId,
+                                    UpdateRoomSettingsRequest(isPublic = localIsPublic, settings = newSettings),
+                                )
+                            }
+                            if (saved) {
                                 onSaved(localIsPublic, newSettings)
                                 onDismiss()
-                            } else {
-                                snackbarHostState.showSnackbar("Failed to save settings")
                             }
-                        } catch (e: Exception) {
-                            snackbarHostState.showSnackbar(e.message ?: "Failed to save settings")
                         } finally {
                             isSaving = false
                         }

@@ -56,6 +56,7 @@ import com.bedrud.app.core.auth.PasswordPolicy
 import com.bedrud.app.core.instance.InstanceManager
 import com.bedrud.app.models.ForgotPasswordRequest
 import com.bedrud.app.models.LoginRequest
+import com.bedrud.app.core.api.apiBody
 import com.bedrud.app.ui.components.BedrudButton
 import com.bedrud.app.ui.components.BedrudButtonVariant
 import com.bedrud.app.ui.components.BedrudScaffoldContentInsets
@@ -135,17 +136,14 @@ fun EmailLoginScreen(
         scope.launch {
             isLoading = true
             try {
-                val response = authApi.login(LoginRequest(email = email.trim(), password = password))
-                if (response.isSuccessful) {
-                    val body = response.body()!!
+                val body = apiBody(loginFailedMessage, { errorMessage = it }) {
+                    authApi.login(LoginRequest(email = email.trim(), password = password))
+                }
+                if (body != null) {
                     authManager.saveTokens(body.tokens)
                     authManager.saveUser(body.user)
                     onLoginSuccess()
-                } else {
-                    errorMessage = loginFailedMessage
                 }
-            } catch (e: Exception) {
-                errorMessage = e.message ?: genericMessage
             } finally {
                 isLoading = false
             }
