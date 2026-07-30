@@ -4,7 +4,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
@@ -17,7 +16,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
@@ -26,7 +24,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -35,6 +32,8 @@ import com.bedrud.app.core.api.RoomApi
 import com.bedrud.app.core.api.apiAction
 import com.bedrud.app.models.RoomSettings
 import com.bedrud.app.models.UpdateRoomSettingsRequest
+import com.bedrud.app.ui.components.RoomSettingsForm
+import com.bedrud.app.ui.components.withLockedToggles
 import kotlinx.coroutines.launch
 
 // In-room mirror of RoomSettingsDialog (dashboard) — same three room-level toggles,
@@ -87,47 +86,17 @@ fun MeetingRoomSettingsSheet(
                 modifier = Modifier.padding(bottom = 4.dp),
             )
 
-            MeetingSettingsToggleRow(
-                colors = colors,
-                label = stringResource(R.string.dashboard_roomSettings_isPublic),
-                checked = localIsPublic,
-                onCheckedChange = { localIsPublic = it },
-            )
-            // Require Approval, Recording and E2EE are shown but locked off for now --
-            // not ready to be user-controlled yet, tracked for a later pass.
-            MeetingSettingsToggleRow(
-                colors = colors,
-                label = stringResource(R.string.dashboard_roomSettings_requireApproval),
-                checked = false,
-                enabled = false,
-                onCheckedChange = {},
-            )
-            MeetingSettingsToggleRow(
-                colors = colors,
-                label = stringResource(R.string.dashboard_roomSettings_recording),
-                checked = false,
-                enabled = false,
-                onCheckedChange = {},
-            )
-            MeetingSettingsToggleRow(
-                colors = colors,
-                label = stringResource(R.string.dashboard_roomSettings_e2ee),
-                checked = false,
-                enabled = false,
-                onCheckedChange = {},
+            RoomSettingsForm(
+                isPublic = localIsPublic,
+                onIsPublicChange = { localIsPublic = it },
+                contentColor = colors.onButton,
+                verticalSpacing = 10.dp,
             )
 
             Button(
                 onClick = {
                     if (isSaving) return@Button
-                    val newSettings = settings.copy(
-                        allowChat = true,
-                        allowVideo = true,
-                        allowAudio = true,
-                        requireApproval = false,
-                        e2ee = false,
-                        recordingsAllowed = false,
-                    )
+                    val newSettings = settings.withLockedToggles()
                     isSaving = true
                     scope.launch {
                         try {
@@ -155,30 +124,5 @@ fun MeetingRoomSettingsSheet(
                 Text(stringResource(R.string.common_button_save))
             }
         }
-    }
-}
-
-@Composable
-private fun MeetingSettingsToggleRow(
-    colors: MeetingChromeColors,
-    label: String,
-    checked: Boolean,
-    enabled: Boolean = true,
-    onCheckedChange: (Boolean) -> Unit,
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 4.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text(
-            text = label,
-            color = colors.onButton,
-            style = MaterialTheme.typography.bodyLarge,
-            modifier = Modifier.weight(1f),
-        )
-        Switch(checked = checked, onCheckedChange = onCheckedChange, enabled = enabled)
     }
 }
