@@ -16,14 +16,11 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Visibility
-import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHostState
@@ -47,12 +44,11 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.input.PasswordVisualTransformation
-import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDirection
 import com.bedrud.app.R
 import com.bedrud.app.core.auth.PasswordPolicy
+import com.bedrud.app.core.auth.isValidEmail
 import com.bedrud.app.core.instance.InstanceManager
 import com.bedrud.app.models.ForgotPasswordRequest
 import com.bedrud.app.models.LoginRequest
@@ -60,7 +56,8 @@ import com.bedrud.app.ui.components.BedrudButton
 import com.bedrud.app.ui.components.BedrudButtonVariant
 import com.bedrud.app.ui.components.BedrudScaffoldContentInsets
 import com.bedrud.app.ui.components.BedrudSnackbarHost
-import com.bedrud.app.ui.components.bringIntoViewOnFocus
+import com.bedrud.app.ui.components.BedrudPasswordField
+import com.bedrud.app.ui.components.BedrudTextField
 import com.bedrud.app.ui.theme.BedrudShapeTokens
 import com.bedrud.app.ui.theme.Dimens
 import kotlinx.coroutines.launch
@@ -92,7 +89,6 @@ fun EmailLoginScreen(
 
     var email by rememberSaveable { mutableStateOf("") }
     var password by rememberSaveable { mutableStateOf("") }
-    var passwordVisible by rememberSaveable { mutableStateOf(false) }
     var isLoading by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
     var showResetSheet by remember { mutableStateOf(false) }
@@ -102,7 +98,7 @@ fun EmailLoginScreen(
     val genericMessage = stringResource(R.string.auth_error_generic)
     val resetActionLabel = stringResource(R.string.auth_forgot_action)
 
-    val canSubmit = email.isNotBlank() && password.length >= PasswordPolicy.MIN_LENGTH && !isLoading
+    val canSubmit = isValidEmail(email) && PasswordPolicy.meetsMinLength(password) && !isLoading
 
     // Login errors surface as a snackbar. A wrong-password failure additionally offers a "Reset"
     // action, so recovery is right where the user hits the wall — without hiding it from the people
@@ -194,15 +190,13 @@ fun EmailLoginScreen(
 
                     Spacer(Modifier.height(Dimens.space32))
 
-                    OutlinedTextField(
+                    BedrudTextField(
                         value = email,
                         onValueChange = {
                             email = it
                             errorMessage = null
                         },
-                        label = { Text(stringResource(R.string.auth_label_email)) },
-                        singleLine = true,
-                        shape = BedrudShapeTokens.field,
+                        label = stringResource(R.string.auth_label_email),
                         keyboardOptions = KeyboardOptions(
                             keyboardType = KeyboardType.Email,
                             imeAction = ImeAction.Next
@@ -210,47 +204,23 @@ fun EmailLoginScreen(
                         keyboardActions = KeyboardActions(
                             onNext = { focusManager.moveFocus(FocusDirection.Down) }
                         ),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .bringIntoViewOnFocus(),
-                        textStyle = MaterialTheme.typography.bodyLarge.copy(textDirection = TextDirection.Ltr)
+                        textDirection = TextDirection.Ltr
                     )
 
                     Spacer(Modifier.height(Dimens.space12))
 
-                    OutlinedTextField(
+                    BedrudPasswordField(
                         value = password,
                         onValueChange = {
                             password = it
                             errorMessage = null
                         },
-                        label = { Text(stringResource(R.string.auth_label_password)) },
-                        trailingIcon = {
-                            IconButton(onClick = { passwordVisible = !passwordVisible }) {
-                                Icon(
-                                    imageVector = if (passwordVisible) Icons.Default.VisibilityOff
-                                    else Icons.Default.Visibility,
-                                    contentDescription = if (passwordVisible) {
-                                        stringResource(R.string.auth_password_toggle_hide)
-                                    } else {
-                                        stringResource(R.string.auth_password_toggle_show)
-                                    }
-                                )
-                            }
-                        },
-                        visualTransformation = if (passwordVisible) VisualTransformation.None
-                        else PasswordVisualTransformation(),
-                        singleLine = true,
-                        shape = BedrudShapeTokens.field,
+                        label = stringResource(R.string.auth_label_password),
                         keyboardOptions = KeyboardOptions(
                             keyboardType = KeyboardType.Password,
                             imeAction = ImeAction.Go
                         ),
-                        keyboardActions = KeyboardActions(onGo = { submit() }),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .bringIntoViewOnFocus(),
-                        textStyle = MaterialTheme.typography.bodyLarge.copy(textDirection = TextDirection.Ltr)
+                        keyboardActions = KeyboardActions(onGo = { submit() })
                     )
 
                     Spacer(Modifier.height(Dimens.space4))
@@ -347,7 +317,7 @@ private fun ForgotPasswordSheet(
     var error by remember { mutableStateOf<String?>(null) }
 
     val genericMessage = stringResource(R.string.auth_error_generic)
-    val emailValid = android.util.Patterns.EMAIL_ADDRESS.matcher(email.trim()).matches()
+    val emailValid = isValidEmail(email)
     val canSend = emailValid && !isSending
 
     fun send() {
@@ -399,23 +369,20 @@ private fun ForgotPasswordSheet(
             Spacer(Modifier.height(Dimens.space24))
 
             val currentError = error
-            OutlinedTextField(
+            BedrudTextField(
                 value = email,
                 onValueChange = {
                     email = it
                     error = null
                 },
-                label = { Text(stringResource(R.string.auth_label_email)) },
-                singleLine = true,
+                label = stringResource(R.string.auth_label_email),
                 isError = currentError != null,
-                shape = BedrudShapeTokens.field,
                 keyboardOptions = KeyboardOptions(
                     keyboardType = KeyboardType.Email,
                     imeAction = ImeAction.Go
                 ),
                 keyboardActions = KeyboardActions(onGo = { send() }),
-                modifier = Modifier.fillMaxWidth(),
-                textStyle = MaterialTheme.typography.bodyLarge.copy(textDirection = TextDirection.Ltr)
+                textDirection = TextDirection.Ltr
             )
 
             if (currentError != null) {

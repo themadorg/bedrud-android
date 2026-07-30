@@ -27,7 +27,6 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
@@ -51,7 +50,6 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextDirection
 import com.bedrud.app.R
 import com.bedrud.app.core.DevFlags
 import com.bedrud.app.core.auth.OAuthLoginHandler
@@ -62,7 +60,7 @@ import com.bedrud.app.ui.components.BedrudButton
 import com.bedrud.app.ui.components.BedrudButtonVariant
 import com.bedrud.app.ui.components.BedrudScaffoldContentInsets
 import com.bedrud.app.ui.components.BedrudSnackbarHost
-import com.bedrud.app.ui.components.bringIntoViewOnFocus
+import com.bedrud.app.ui.components.BedrudTextField
 import com.bedrud.app.ui.theme.BedrudShapeTokens
 import com.bedrud.app.ui.theme.Dimens
 import kotlinx.coroutines.launch
@@ -313,23 +311,17 @@ fun LoginScreen(
                     Spacer(Modifier.height(Dimens.space24))
 
                     // ── Guest sign-in ──
-                    OutlinedTextField(
+                    BedrudTextField(
                         value = guestName,
                         onValueChange = {
                             guestName = it
                             errorMessage = null
                         },
-                        label = { Text(stringResource(R.string.auth_label_displayName)) },
-                        placeholder = { Text(stringResource(R.string.auth_placeholder_displayName)) },
-                        singleLine = true,
-                        shape = BedrudShapeTokens.field,
+                        label = stringResource(R.string.auth_label_displayName),
+                        placeholder = stringResource(R.string.auth_placeholder_displayName),
                         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Go),
                         keyboardActions = KeyboardActions(onGo = { continueAsGuest() }),
-                        enabled = !isBusy && guestEnabled,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .bringIntoViewOnFocus(),
-                        textStyle = MaterialTheme.typography.bodyLarge.copy(textDirection = TextDirection.Content)
+                        enabled = !isBusy && guestEnabled
                     )
                     Spacer(Modifier.height(Dimens.space12))
                     BedrudButton(
