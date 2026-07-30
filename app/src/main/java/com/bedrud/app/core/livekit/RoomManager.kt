@@ -175,21 +175,18 @@ class RoomManager(
             }
 
             // Restore the mic to whatever the user last set it to (unmuted by default
-            // on a fresh install); camera stays off until the user turns it on.
-            try {
-                val micShouldBeEnabled = settingsStore.getMicEnabled()
-                val micPublished = room.localParticipant.setMicrophoneEnabled(micShouldBeEnabled)
-                val actuallyEnabled = if (micShouldBeEnabled) micPublished else false
-                _isMicEnabled.value = actuallyEnabled
-                CallConnectionService.updateMuteState(!actuallyEnabled)
-                _micMediaError.value = micShouldBeEnabled && !micPublished
-            } catch (e: Exception) {
-                Log.e(TAG, "Failed to enable microphone", e)
-                _isMicEnabled.value = false
-                CallConnectionService.updateMuteState(true)
-                _micMediaError.value = true
-                _error.value = "Failed to enable microphone"
-            }
+            // on a fresh install); camera stays off until the user turns it on. A silent
+            // non-publish only flags micMediaError here — no banner during connect.
+            setTrackEnabled(
+                enabled = settingsStore.getMicEnabled(),
+                label = "microphone",
+                stateFlow = _isMicEnabled,
+                errorFlow = _micMediaError,
+                sync = ::syncMicrophoneState,
+                setEnabled = { room.localParticipant.setMicrophoneEnabled(it) },
+                onApplied = { CallConnectionService.updateMuteState(!it) },
+                reportEnableFailure = false,
+            )
 
             try {
                 room.localParticipant.setCameraEnabled(false)
@@ -367,6 +364,43 @@ class RoomManager(
         CallConnectionService.updateMuteState(!enabled)
     }
 
+    /**
+     * Applies enable/disable to a local track publisher and keeps its paired flows honest:
+     * [stateFlow] reflects what actually published, [errorFlow] flags an enable that didn't take,
+     * and a thrown failure resyncs state from the SDK via [sync]. [onApplied] runs with the
+     * settled value on the success path (telecom mute state, participant version bumps).
+     * [reportEnableFailure] controls whether a silent non-publish also surfaces in [_error] —
+     * the connect-time mic restore only flags it, the user-initiated toggles announce it.
+     */
+    private suspend fun setTrackEnabled(
+        enabled: Boolean,
+        label: String,
+        stateFlow: MutableStateFlow<Boolean>,
+        errorFlow: MutableStateFlow<Boolean>,
+        sync: () -> Unit,
+        setEnabled: suspend (Boolean) -> Boolean,
+        onApplied: (actuallyEnabled: Boolean) -> Unit = {},
+        reportEnableFailure: Boolean = true,
+    ) {
+        try {
+            val published = setEnabled(enabled)
+            val actuallyEnabled = if (enabled) published else false
+            stateFlow.value = actuallyEnabled
+            onApplied(actuallyEnabled)
+            if (enabled && !published) {
+                errorFlow.value = true
+                if (reportEnableFailure) _error.value = "Failed to enable $label"
+            } else {
+                errorFlow.value = false
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to set $label enabled=$enabled", e)
+            sync()
+            if (enabled) errorFlow.value = true
+            _error.value = "Failed to toggle $label"
+        }
+    }
+
     suspend fun setMicrophoneEnabled(enabled: Boolean) {
         settingsStore.setMicEnabled(enabled)
         // Unmuting while deafened is a shortcut to undeafen too, mirroring the
@@ -382,23 +416,15 @@ class RoomManager(
             if (enabled) _micMediaError.value = false
             return
         }
-        try {
-            val published = localParticipant.setMicrophoneEnabled(enabled)
-            val actuallyEnabled = if (enabled) published else false
-            _isMicEnabled.value = actuallyEnabled
-            CallConnectionService.updateMuteState(!actuallyEnabled)
-            if (!published && enabled) {
-                _micMediaError.value = true
-                _error.value = "Failed to enable microphone"
-            } else {
-                _micMediaError.value = false
-            }
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to set microphone enabled=$enabled", e)
-            syncMicrophoneState()
-            if (enabled) _micMediaError.value = true
-            _error.value = "Failed to toggle microphone"
-        }
+        setTrackEnabled(
+            enabled = enabled,
+            label = "microphone",
+            stateFlow = _isMicEnabled,
+            errorFlow = _micMediaError,
+            sync = ::syncMicrophoneState,
+            setEnabled = { localParticipant.setMicrophoneEnabled(it) },
+            onApplied = { CallConnectionService.updateMuteState(!it) },
+        )
     }
 
     suspend fun toggleMicrophone() {
@@ -462,22 +488,15 @@ class RoomManager(
     suspend fun toggleCamera() {
         val localParticipant = _room?.localParticipant ?: return
         val enabled = !_isCameraEnabled.value
-        try {
-            val published = localParticipant.setCameraEnabled(enabled)
-            _isCameraEnabled.value = if (enabled) published else false
-            _participantVersion.value++
-            if (!published && enabled) {
-                _cameraMediaError.value = true
-                _error.value = "Failed to enable camera"
-            } else {
-                _cameraMediaError.value = false
-            }
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to toggle camera", e)
-            syncCameraState()
-            if (enabled) _cameraMediaError.value = true
-            _error.value = "Failed to toggle camera"
-        }
+        setTrackEnabled(
+            enabled = enabled,
+            label = "camera",
+            stateFlow = _isCameraEnabled,
+            errorFlow = _cameraMediaError,
+            sync = ::syncCameraState,
+            setEnabled = { localParticipant.setCameraEnabled(it) },
+            onApplied = { _participantVersion.value++ },
+        )
     }
 
     fun switchCamera() {
