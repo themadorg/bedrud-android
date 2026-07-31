@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
 
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.CAMERA" />
@@ -77,6 +78,14 @@
                     android:host="oauth" />
             </intent-filter>
         </activity>
+        <!-- ZXing's own scan activity defaults to landscape; lock it to portrait to match the
+             rest of the app (see AddInstanceScreen.kt's QR scan button). -->
+        <activity
+            android:name="com.journeyapps.barcodescanner.CaptureActivity"
+            android:screenOrientation="portrait"
+            android:theme="@style/zxing_CaptureTheme"
+            tools:replace="android:screenOrientation" />
+
         <service
             android:name=".core.call.CallService"
             android:exported="false"

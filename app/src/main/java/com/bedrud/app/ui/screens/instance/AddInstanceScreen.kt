@@ -439,7 +439,18 @@ private fun CustomServerField(
 ) {
     val textColor = if (enabled) MaterialTheme.colorScheme.onSurface
     else MaterialTheme.colorScheme.onSurfaceVariant
+    // Leading icon (matching the dashboard quick-join field's leading search icon) rather than
+    // trailing: a trailing icon ends up floating far from short input text since the field itself
+    // needs weight(1f) to stay fully tappable, which reads as misplaced/disconnected.
     Row(verticalAlignment = Alignment.CenterVertically) {
+        IconButton(onClick = onScanQrCode, enabled = enabled) {
+            Icon(
+                Icons.Rounded.QrCodeScanner,
+                contentDescription = stringResource(R.string.instance_contentDescription_scanQr),
+                tint = if (enabled) MaterialTheme.colorScheme.onSurfaceVariant
+                else MaterialTheme.colorScheme.outlineVariant
+            )
+        }
         Box(modifier = Modifier.weight(1f)) {
             if (value.isEmpty()) {
                 Text(
@@ -470,14 +481,6 @@ private fun CustomServerField(
                 modifier = Modifier
                     .fillMaxWidth()
                     .focusRequester(focusRequester)
-            )
-        }
-        IconButton(onClick = onScanQrCode, enabled = enabled) {
-            Icon(
-                Icons.Rounded.QrCodeScanner,
-                contentDescription = stringResource(R.string.instance_contentDescription_scanQr),
-                tint = if (enabled) MaterialTheme.colorScheme.onSurfaceVariant
-                else MaterialTheme.colorScheme.outlineVariant
             )
         }
     }
