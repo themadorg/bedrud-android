@@ -260,6 +260,9 @@
   <string name="dashboard_filter_recent">Zuletzt</string>
   <string name="dashboard_dialog_deleteTitle">Raum löschen?</string>
   <string name="dashboard_dialog_deleteMessage">Möchtest du <xliff:g id="roomName" example="team-standup">%1$s</xliff:g> wirklich löschen? Das kann nicht rückgängig gemacht werden.</string>
+  <string name="dashboard_dialog_switchServerTitle">Server wechseln?</string>
+  <string name="dashboard_dialog_switchServerMessage">Dieser Link gehört zu <xliff:g id="serverName" example="Bedrud">%1$s</xliff:g>. Zu diesem Server wechseln und beitreten?</string>
+  <string name="dashboard_button_switchAndJoin">Wechseln und beitreten</string>
   <string name="dashboard_empty_noRecent">Keine kürzlichen Räume</string>
   <string name="dashboard_empty_noRecentHint">Räume, denen du beitrittst, erscheinen hier – auch von anderen Servern.</string>
   <string name="dashboard_contentDescription_removeRecent">Aus zuletzt entfernen</string>

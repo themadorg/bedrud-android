@@ -260,6 +260,9 @@
   <string name="dashboard_filter_recent">最近</string>
   <string name="dashboard_dialog_deleteTitle">ルームを削除しますか？</string>
   <string name="dashboard_dialog_deleteMessage"><xliff:g id="roomName" example="team-standup">%1$s</xliff:g> を削除してもよろしいですか？この操作は元に戻せません。</string>
+  <string name="dashboard_dialog_switchServerTitle">サーバーを切り替えますか?</string>
+  <string name="dashboard_dialog_switchServerMessage">このリンクは<xliff:g id="serverName" example="Bedrud">%1$s</xliff:g>用です。切り替えて参加しますか?</string>
+  <string name="dashboard_button_switchAndJoin">切り替えて参加</string>
   <string name="dashboard_empty_noRecent">最近のルームはありません</string>
   <string name="dashboard_empty_noRecentHint">参加したルームがここに表示されます（他のサーバーも含む）。</string>
   <string name="dashboard_contentDescription_removeRecent">最近から削除</string>

@@ -260,6 +260,9 @@
   <string name="dashboard_filter_recent">Récents</string>
   <string name="dashboard_dialog_deleteTitle">Supprimer la salle ?</string>
   <string name="dashboard_dialog_deleteMessage">Voulez-vous vraiment supprimer <xliff:g id="roomName" example="team-standup">%1$s</xliff:g> ? Cette action est irréversible.</string>
+  <string name="dashboard_dialog_switchServerTitle">Changer de serveur ?</string>
+  <string name="dashboard_dialog_switchServerMessage">Ce lien correspond à <xliff:g id="serverName" example="Bedrud">%1$s</xliff:g>. Changer de serveur et rejoindre ?</string>
+  <string name="dashboard_button_switchAndJoin">Changer et rejoindre</string>
   <string name="dashboard_empty_noRecent">Aucune salle récente</string>
   <string name="dashboard_empty_noRecentHint">Les salles que vous rejoignez apparaissent ici, y compris sur d\'autres serveurs.</string>
   <string name="dashboard_contentDescription_removeRecent">Retirer des récents</string>

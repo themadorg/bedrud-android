@@ -260,6 +260,9 @@
   <string name="dashboard_filter_recent">Недавние</string>
   <string name="dashboard_dialog_deleteTitle">Удалить комнату?</string>
   <string name="dashboard_dialog_deleteMessage">Вы уверены, что хотите удалить <xliff:g id="roomName" example="team-standup">%1$s</xliff:g>? Это действие нельзя отменить.</string>
+  <string name="dashboard_dialog_switchServerTitle">Сменить сервер?</string>
+  <string name="dashboard_dialog_switchServerMessage">Эта ссылка предназначена для <xliff:g id="serverName" example="Bedrud">%1$s</xliff:g>. Переключиться на этот сервер и присоединиться?</string>
+  <string name="dashboard_button_switchAndJoin">Переключиться и присоединиться</string>
   <string name="dashboard_empty_noRecent">Нет недавних комнат</string>
   <string name="dashboard_empty_noRecentHint">Комнаты, в которые вы входите, появляются здесь, в том числе с других серверов.</string>
   <string name="dashboard_contentDescription_removeRecent">Удалить из недавних</string>

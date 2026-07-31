@@ -260,6 +260,9 @@
   <string name="dashboard_filter_recent">الأخيرة</string>
   <string name="dashboard_dialog_deleteTitle">حذف الغرفة؟</string>
   <string name="dashboard_dialog_deleteMessage">هل أنت متأكد من حذف <xliff:g id="roomName" example="team-standup">%1$s</xliff:g>؟ لا يمكن التراجع عن ذلك.</string>
+  <string name="dashboard_dialog_switchServerTitle">هل تريد تبديل الخادم؟</string>
+  <string name="dashboard_dialog_switchServerMessage">هذا الرابط مخصص لـ <xliff:g id="serverName" example="Bedrud">%1$s</xliff:g>. هل تريد التبديل إليه والانضمام؟</string>
+  <string name="dashboard_button_switchAndJoin">تبديل والانضمام</string>
   <string name="dashboard_empty_noRecent">لا توجد غرف حديثة</string>
   <string name="dashboard_empty_noRecentHint">تظهر الغرف التي تنضم إليها هنا، بما في ذلك على خوادم أخرى.</string>
   <string name="dashboard_contentDescription_removeRecent">إزالة من الأخيرة</string>

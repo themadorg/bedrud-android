@@ -243,6 +243,9 @@
   <string name="dashboard_filter_recent">Recent</string>
   <string name="dashboard_dialog_deleteTitle">Delete room?</string>
   <string name="dashboard_dialog_deleteMessage">Are you sure you want to delete <xliff:g id="roomName" example="team-standup">%1$s</xliff:g>? This cannot be undone.</string>
+  <string name="dashboard_dialog_switchServerTitle">Switch server?</string>
+  <string name="dashboard_dialog_switchServerMessage">This link is for <xliff:g id="serverName" example="Bedrud">%1$s</xliff:g>. Switch to it and join?</string>
+  <string name="dashboard_button_switchAndJoin">Switch and join</string>
   <string name="dashboard_empty_noRecent">No recent rooms</string>
   <string name="dashboard_empty_noRecentHint">Rooms you join appear here, including on other servers.</string>
   <string name="dashboard_contentDescription_removeRecent">Remove from recent</string>

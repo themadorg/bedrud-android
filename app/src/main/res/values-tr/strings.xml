@@ -260,6 +260,9 @@
   <string name="dashboard_filter_recent">Son</string>
   <string name="dashboard_dialog_deleteTitle">Oda silinsin mi?</string>
   <string name="dashboard_dialog_deleteMessage"><xliff:g id="roomName" example="team-standup">%1$s</xliff:g> odasını silmek istediğinize emin misiniz? Bu geri alınamaz.</string>
+  <string name="dashboard_dialog_switchServerTitle">Sunucu değiştirilsin mi?</string>
+  <string name="dashboard_dialog_switchServerMessage">Bu bağlantı <xliff:g id="serverName" example="Bedrud">%1$s</xliff:g> sunucusuna ait. Bu sunucuya geçip katılmak ister misiniz?</string>
+  <string name="dashboard_button_switchAndJoin">Geç ve katıl</string>
   <string name="dashboard_empty_noRecent">Son oda yok</string>
   <string name="dashboard_empty_noRecentHint">Katıldığınız odalar burada görünür, diğer sunucular dahil.</string>
   <string name="dashboard_contentDescription_removeRecent">Son kullanılanlardan kaldır</string>

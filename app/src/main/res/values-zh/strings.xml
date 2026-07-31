@@ -260,6 +260,9 @@
   <string name="dashboard_filter_recent">最近</string>
   <string name="dashboard_dialog_deleteTitle">删除房间？</string>
   <string name="dashboard_dialog_deleteMessage">确定要删除 <xliff:g id="roomName" example="team-standup">%1$s</xliff:g> 吗？此操作无法撤销。</string>
+  <string name="dashboard_dialog_switchServerTitle">切换服务器？</string>
+  <string name="dashboard_dialog_switchServerMessage">此链接属于 <xliff:g id="serverName" example="Bedrud">%1$s</xliff:g>。是否切换到该服务器并加入？</string>
+  <string name="dashboard_button_switchAndJoin">切换并加入</string>
   <string name="dashboard_empty_noRecent">没有最近的房间</string>
   <string name="dashboard_empty_noRecentHint">你加入的房间会显示在这里，包括其他服务器上的房间。</string>
   <string name="dashboard_contentDescription_removeRecent">从最近中移除</string>

@@ -260,6 +260,9 @@
   <string name="dashboard_filter_recent">Recientes</string>
   <string name="dashboard_dialog_deleteTitle">¿Eliminar sala?</string>
   <string name="dashboard_dialog_deleteMessage">¿Seguro que quieres eliminar <xliff:g id="roomName" example="team-standup">%1$s</xliff:g>? Esta acción no se puede deshacer.</string>
+  <string name="dashboard_dialog_switchServerTitle">¿Cambiar de servidor?</string>
+  <string name="dashboard_dialog_switchServerMessage">Este enlace es para <xliff:g id="serverName" example="Bedrud">%1$s</xliff:g>. ¿Cambiar a ese servidor y unirte?</string>
+  <string name="dashboard_button_switchAndJoin">Cambiar y unirse</string>
   <string name="dashboard_empty_noRecent">No hay salas recientes</string>
   <string name="dashboard_empty_noRecentHint">Las salas a las que te unes aparecen aquí, también en otros servidores.</string>
   <string name="dashboard_contentDescription_removeRecent">Quitar de recientes</string>
