@@ -77,6 +77,7 @@
   <string name="dashboard_title_rooms">Salons</string>
   <string name="dashboard_placeholder_search">Entrez un nom de salon ou un lien…</string>
   <string name="dashboard_join_invalidInput">Saisissez un nom de salle ou un lien de réunion valide.</string>
+  <string name="dashboard_join_unknownServer">Ajoutez d\'abord le serveur de ce lien.</string>
   <string name="dashboard_dialog_createTitle">Créer un salon</string>
   <string name="dashboard_dialog_createDescription">Entrez un nom pour votre salon, ou laissez vide pour un nom généré automatiquement.</string>
   <string name="dashboard_label_roomName">Nom du salon (facultatif)</string>

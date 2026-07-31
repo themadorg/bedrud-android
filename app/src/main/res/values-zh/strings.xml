@@ -77,6 +77,7 @@
   <string name="dashboard_title_rooms">房间</string>
   <string name="dashboard_placeholder_search">输入房间名称或链接…</string>
   <string name="dashboard_join_invalidInput">请输入房间名称或有效的会议链接。</string>
+  <string name="dashboard_join_unknownServer">请先添加此链接对应的服务器。</string>
   <string name="dashboard_dialog_createTitle">创建房间</string>
   <string name="dashboard_dialog_createDescription">输入房间名称，或留空以自动生成名称。</string>
   <string name="dashboard_label_roomName">房间名称（可选）</string>

@@ -77,6 +77,7 @@
   <string name="dashboard_title_rooms">ルーム</string>
   <string name="dashboard_placeholder_search">ルーム名またはリンクを入力…</string>
   <string name="dashboard_join_invalidInput">ルーム名または有効なミーティングリンクを入力してください。</string>
+  <string name="dashboard_join_unknownServer">先にこのリンクのサーバーを追加してください。</string>
   <string name="dashboard_dialog_createTitle">ルームを作成</string>
   <string name="dashboard_dialog_createDescription">ルーム名を入力するか、空白のままにすると自動生成されます。</string>
   <string name="dashboard_label_roomName">ルーム名（オプション）</string>
