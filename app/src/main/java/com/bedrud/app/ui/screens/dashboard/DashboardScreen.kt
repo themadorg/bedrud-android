@@ -3,6 +3,7 @@ package com.bedrud.app.ui.screens.dashboard
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -28,6 +29,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Groups
@@ -106,6 +108,7 @@ import com.bedrud.app.ui.components.BedrudSnackbarHost
 import com.bedrud.app.ui.components.BedrudTextField
 import com.bedrud.app.ui.components.BedrudTabScaffoldContentInsets
 import com.bedrud.app.ui.components.ConfirmDialog
+import com.bedrud.app.ui.screens.instance.InstanceSwitcherSheet
 import com.bedrud.app.ui.theme.BedrudShapeTokens
 import com.bedrud.app.ui.theme.Dimens
 import com.bedrud.app.ui.theme.Motion
@@ -140,6 +143,7 @@ fun DashboardContent(
     onJoinRoom: (String) -> Unit,
     onJoinRecent: (RecentRoom) -> Unit,
     onOpenProfile: () -> Unit,
+    onNavigateToAddInstance: () -> Unit,
     instanceManager: InstanceManager = koinInject(),
     recentRoomsStore: RecentRoomsStore = koinInject(),
 ) {
@@ -153,6 +157,18 @@ fun DashboardContent(
         instances.firstOrNull { it.id == activeInstanceId }
     }
     val activeServerName = activeInstance?.displayName
+    var showInstanceSwitcher by remember { mutableStateOf(false) }
+
+    if (showInstanceSwitcher) {
+        InstanceSwitcherSheet(
+            instanceManager = instanceManager,
+            onDismiss = { showInstanceSwitcher = false },
+            onAddInstance = {
+                showInstanceSwitcher = false
+                onNavigateToAddInstance()
+            }
+        )
+    }
     // Active-server recents keyed by room name, so a server-backed card can tell when the user was
     // last in that room -- driving the Live / "Xm ago" presence label without a scan per card.
     val activeRecentByName = remember(recentRooms, activeInstanceId) {
@@ -469,7 +485,12 @@ fun DashboardContent(
         topBar = {
             BedrudCompactTopBar(
                 actions = { ProfileAvatarButton(user = currentUser, onClick = onOpenProfile) },
-                title = { RoomsHeaderTitle(serverName = activeServerName) },
+                title = {
+                    RoomsHeaderTitle(
+                        serverName = activeServerName,
+                        onClick = { showInstanceSwitcher = true },
+                    )
+                },
             )
         },
         floatingActionButton = {
@@ -635,18 +656,40 @@ fun DashboardContent(
 
 // ── Header ──────────────────────────────────────────────────────────────────
 
-/** Rooms header: the active server's name + "rooms", in a single neutral tone. */
+/**
+ * Rooms header: the active server's name + "rooms", in a single neutral tone. Doubles as the
+ * server switcher's entry point -- a trailing chevron (the standard dropdown/selector affordance,
+ * distinct from [TrailingChevron]'s drill-in arrow used on room rows) marks it as tappable.
+ */
 @Composable
-private fun RoomsHeaderTitle(serverName: String?) {
+private fun RoomsHeaderTitle(serverName: String?, onClick: () -> Unit) {
     val name = serverName ?: stringResource(R.string.instance_default_displayName)
     val suffix = stringResource(R.string.dashboard_header_roomsSuffix)
-    Text(
-        text = "$name $suffix",
-        style = MaterialTheme.typography.headlineSmall,
-        color = MaterialTheme.colorScheme.onSurface,
-        maxLines = 1,
-        overflow = TextOverflow.Ellipsis,
-    )
+    val switchServerLabel = stringResource(R.string.dashboard_contentDescription_switchServer)
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(Dimens.space4),
+        modifier = Modifier
+            .heightIn(min = Dimens.minTouchTarget)
+            .clip(BedrudShapeTokens.chip)
+            .clickable(onClickLabel = switchServerLabel, onClick = onClick)
+            .padding(horizontal = Dimens.space4),
+    ) {
+        Text(
+            text = "$name $suffix",
+            style = MaterialTheme.typography.headlineSmall,
+            color = MaterialTheme.colorScheme.onSurface,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f, fill = false),
+        )
+        Icon(
+            Icons.Default.ExpandMore,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.size(Dimens.iconSm),
+        )
+    }
 }
 
 /** Circular profile shortcut in the top bar — the user's photo, or their colored initial. */

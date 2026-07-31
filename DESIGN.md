@@ -80,8 +80,9 @@ drive `animate*AsState` with `tween(Motion.durationMedium, easing = Motion.stand
   shape (`BedrudShapeTokens.button`), and padding. Built-in `loading` state.
 - **`BedrudCard` / `BedrudOutlinedCard`** — outline-first cards, tonal surface, minimal elevation.
 - **`BedrudCompactTopBar`** — compact status-bar-aware header. Takes either a `title: String` or a
-  slot `title` composable (the rooms header uses the slot for its two-tone, server-colored name),
-  plus an `actions` row.
+  slot `title` composable (the rooms header uses the slot for its "{server} rooms" name, in a single
+  neutral tone, with a trailing chevron marking it as the server switcher's entry point), plus an
+  `actions` row.
 - **`BedrudSnackbarHost`** — Material 3 snackbar with the rounded shape token; used across the auth
   screens and the rooms dashboard.
 - **Selectable cards** (e.g. the server chooser) — a `selectableGroup()` of `Surface`s marked
