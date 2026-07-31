@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
@@ -443,7 +444,16 @@ private fun CustomServerField(
     // trailing: a trailing icon ends up floating far from short input text since the field itself
     // needs weight(1f) to stay fully tappable, which reads as misplaced/disconnected.
     Row(verticalAlignment = Alignment.CenterVertically) {
-        IconButton(onClick = onScanQrCode, enabled = enabled) {
+        // IconButton's 48dp touch target centers the 24dp glyph, insetting it (48-24)/2 = 12dp --
+        // shift the touch target left by that same inset so the visible glyph lines up flush with
+        // "Your own server" above it instead of sitting 12dp right of it. The touch target still
+        // extends its full 48dp (now partly into the card's 16dp padding, which comfortably fits
+        // a 12dp shift), so this doesn't shrink the tappable area.
+        IconButton(
+            onClick = onScanQrCode,
+            enabled = enabled,
+            modifier = Modifier.offset(x = -(Dimens.minTouchTarget - Dimens.iconMd) / 2),
+        ) {
             Icon(
                 Icons.Rounded.QrCodeScanner,
                 contentDescription = stringResource(R.string.instance_contentDescription_scanQr),
