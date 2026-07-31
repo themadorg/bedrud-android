@@ -64,6 +64,7 @@ import androidx.compose.ui.text.style.TextDirection
 import com.bedrud.app.BuildConfig
 import com.bedrud.app.R
 import com.bedrud.app.core.instance.InstanceManager
+import com.bedrud.app.core.instance.ServerUrlCanonicalizer
 import com.bedrud.app.ui.components.BedrudButton
 import com.bedrud.app.ui.components.BedrudScaffoldContentInsets
 import com.bedrud.app.ui.components.DevOnly
@@ -75,9 +76,6 @@ import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 
 private enum class ServerChoice { DEFAULT, CUSTOM }
-
-/** Host[:port] validation for a typed server address — rejects whitespace and stray characters. */
-private val HOST_PORT_REGEX = Regex("^[A-Za-z0-9.-]+(:\\d+)?$")
 
 /**
  * First-run / add-server screen. The user either takes the recommended default server or points
@@ -103,8 +101,8 @@ fun AddInstanceScreen(
     var errorMessage by remember { mutableStateOf<String?>(null) }
     val customFocusRequester = remember { FocusRequester() }
 
-    val defaultUrl = remember { canonicalizeServerUrl(BuildConfig.DEFAULT_SERVER_HOST) }
-    val resolvedCustom = canonicalizeServerUrl(customInput)
+    val defaultUrl = remember { ServerUrlCanonicalizer.canonicalize(BuildConfig.DEFAULT_SERVER_HOST) }
+    val resolvedCustom = ServerUrlCanonicalizer.canonicalize(customInput)
     val resolvedUrl = if (choice == ServerChoice.DEFAULT) defaultUrl else resolvedCustom
     val isInsecure = choice == ServerChoice.CUSTOM && resolvedCustom?.startsWith("http://") == true
     val canContinue = !isChecking && resolvedUrl != null
@@ -458,26 +456,6 @@ private fun InsecureNote() {
             color = MaterialTheme.bedrudColors.warning
         )
     }
-}
-
-/**
- * Normalizes user/host input to a canonical `scheme://host/` URL. Strips whitespace, defaults to
- * https (honors an explicit http:// for local/dev servers), and validates the host[:port]. Returns
- * null for blank or malformed input, which keeps `Continue` disabled.
- */
-private fun canonicalizeServerUrl(input: String): String? {
-    val cleaned = input.filterNot { it.isWhitespace() }
-    if (cleaned.isEmpty()) return null
-    val scheme = if (cleaned.startsWith("http://", ignoreCase = true)) "http" else "https"
-    var rest = cleaned
-    listOf("https://", "http://").forEach { prefix ->
-        if (rest.startsWith(prefix, ignoreCase = true)) rest = rest.substring(prefix.length)
-    }
-    rest = rest.trimEnd('/')
-    if (rest.isEmpty()) return null
-    val hostPort = rest.substringBefore('/')
-    if (!hostPort.matches(HOST_PORT_REGEX)) return null
-    return "$scheme://$rest/"
 }
 
 /** Human-friendly name derived from a canonical URL — the host (path/scheme stripped). */
