@@ -672,8 +672,7 @@ private fun RoomsHeaderTitle(serverName: String?, onClick: () -> Unit) {
         modifier = Modifier
             .heightIn(min = Dimens.minTouchTarget)
             .clip(BedrudShapeTokens.chip)
-            .clickable(onClickLabel = switchServerLabel, onClick = onClick)
-            .padding(horizontal = Dimens.space4),
+            .clickable(onClickLabel = switchServerLabel, onClick = onClick),
     ) {
         Text(
             text = "$name $suffix",
@@ -697,7 +696,17 @@ private fun RoomsHeaderTitle(serverName: String?, onClick: () -> Unit) {
 private fun ProfileAvatarButton(user: User?, onClick: () -> Unit) {
     val desc = stringResource(R.string.dashboard_contentDescription_profile)
     val avatarUrl = user?.avatarUrl
-    IconButton(onClick = onClick, modifier = Modifier.size(Dimens.minTouchTarget)) {
+    // Extra end padding: the shared top bar's 4dp trailing margin is tuned for a standard-sized
+    // icon, where the icon glyph's own inset within its touch target makes up the rest of a 16dp
+    // visual gap from the edge. This avatar fills nearly all of its touch target (44dp of 48dp,
+    // only 2dp of self-inset), so without this it'd land noticeably closer to the edge than the
+    // header title's 16dp start inset.
+    IconButton(
+        onClick = onClick,
+        modifier = Modifier
+            .padding(end = Dimens.space8)
+            .size(Dimens.minTouchTarget),
+    ) {
         Box(
             modifier = Modifier
                 .size(Dimens.avatarLg)
