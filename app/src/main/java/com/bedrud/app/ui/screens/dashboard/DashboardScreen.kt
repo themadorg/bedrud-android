@@ -96,6 +96,7 @@ import com.bedrud.app.core.rooms.DeletedRoomTombstones
 import com.bedrud.app.core.api.apiAction
 import com.bedrud.app.core.api.apiBody
 import com.bedrud.app.models.CreateRoomRequest
+import com.bedrud.app.models.Instance
 import com.bedrud.app.models.RoomSettings
 import com.bedrud.app.models.UpdateRoomSettingsRequest
 import com.bedrud.app.models.User
@@ -133,6 +134,9 @@ private sealed interface RoomListEntry {
     data class FromApi(val room: UserRoomResponse) : RoomListEntry
     data class FromRecent(val recent: RecentRoom) : RoomListEntry
 }
+
+/** A quick-join link resolved to a different server than the active one, awaiting confirmation. */
+private data class PendingServerSwitch(val instance: Instance, val roomName: String)
 
 // ── Screen entry point ────────────────────────────────────────────────────────
 
@@ -191,6 +195,7 @@ fun DashboardContent(
     var showCreateDialog by remember { mutableStateOf(false) }
     var roomToEdit by remember { mutableStateOf<UserRoomResponse?>(null) }
     var roomToDelete by remember { mutableStateOf<UserRoomResponse?>(null) }
+    var pendingServerSwitch by remember { mutableStateOf<PendingServerSwitch?>(null) }
     var activeFilter by rememberSaveable { mutableStateOf(RoomFilter.ALL) }
     var quickJoinText by remember { mutableStateOf("") }
     // Captured here (not in the join callback) because stringResource is composition-only.
@@ -424,6 +429,31 @@ fun DashboardContent(
         )
     }
 
+    pendingServerSwitch?.let { pending ->
+        AlertDialog(
+            onDismissRequest = { pendingServerSwitch = null },
+            title = { Text(stringResource(R.string.dashboard_dialog_switchServerTitle)) },
+            text = { Text(stringResource(R.string.dashboard_dialog_switchServerMessage, pending.instance.displayName)) },
+            confirmButton = {
+                BedrudButton(
+                    text = stringResource(R.string.dashboard_button_switchAndJoin),
+                    variant = BedrudButtonVariant.TONAL,
+                    onClick = {
+                        instanceManager.switchTo(pending.instance.id)
+                        pendingServerSwitch = null
+                        quickJoinText = ""
+                        onJoinRoom(pending.roomName)
+                    },
+                )
+            },
+            dismissButton = {
+                TextButton(onClick = { pendingServerSwitch = null }) {
+                    Text(stringResource(R.string.common_button_cancel))
+                }
+            }
+        )
+    }
+
     val isKeyboardVisible = WindowInsets.ime.getBottom(LocalDensity.current) > 0
 
     val filteredRooms = remember(rooms, activeFilter, currentUser, activeRecentByName) {
@@ -551,10 +581,12 @@ fun DashboardContent(
                                 parsedUrl != null && targetInstance == null -> {
                                     scope.launch { snackbarHostState.showSnackbar(unknownServerJoinMessage) }
                                 }
+                                targetInstance != null && targetInstance.id != activeInstanceId -> {
+                                    // Switching servers is a bigger context change than a same-server
+                                    // join, so confirm first rather than doing it silently.
+                                    pendingServerSwitch = PendingServerSwitch(targetInstance, roomName)
+                                }
                                 else -> {
-                                    if (targetInstance != null && targetInstance.id != activeInstanceId) {
-                                        instanceManager.switchTo(targetInstance.id)
-                                    }
                                     quickJoinText = ""
                                     onJoinRoom(roomName)
                                 }
