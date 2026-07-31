@@ -70,7 +70,6 @@
   <string name="instance_choice_default_title">官方服务器</string>
   <string name="instance_choice_default_tag">默认</string>
   <string name="instance_choice_custom_title">自己的服务器</string>
-  <string name="instance_placeholder_customServer">你自己的服务器网址</string>
   <string name="instance_button_continue">继续</string>
   <string name="instance_error_unreachable">无法连接到此服务器。请检查地址后重试。</string>
   <string name="instance_note_insecure">此连接将不会加密。</string>

@@ -408,7 +408,7 @@ private fun CustomServerField(
     Box {
         if (value.isEmpty()) {
             Text(
-                text = stringResource(R.string.instance_placeholder_customServer),
+                text = stringResource(R.string.instance_placeholder_serverAddress),
                 style = MaterialTheme.typography.bodyLarge.copy(
                     fontFamily = FontFamily.Monospace,
                     textDirection = TextDirection.Ltr

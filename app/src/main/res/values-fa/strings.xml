@@ -68,7 +68,6 @@
   <string name="instance_choice_default_title">سرور رسمی</string>
   <string name="instance_choice_default_tag">پیش‌فرض</string>
   <string name="instance_choice_custom_title">سرور خودتان</string>
-  <string name="instance_placeholder_customServer">نشانی سرور خودتان</string>
   <string name="instance_button_continue">ادامه</string>
   <string name="instance_error_unreachable">دسترسی به این سرور ممکن نشد. نشانی را بررسی کنید و دوباره تلاش کنید.</string>
   <string name="instance_note_insecure">این اتصال رمزگذاری نخواهد شد.</string>

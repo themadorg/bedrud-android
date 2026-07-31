@@ -70,7 +70,6 @@
   <string name="instance_choice_default_title">الخادم الرسمي</string>
   <string name="instance_choice_default_tag">افتراضي</string>
   <string name="instance_choice_custom_title">خادمك الخاص</string>
-  <string name="instance_placeholder_customServer">عنوان خادمك الخاص</string>
   <string name="instance_button_continue">متابعة</string>
   <string name="instance_error_unreachable">تعذّر الوصول إلى هذا الخادم. تحقّق من العنوان وحاول مرة أخرى.</string>
   <string name="instance_note_insecure">لن يكون هذا الاتصال مشفّرًا.</string>

@@ -70,7 +70,6 @@
   <string name="instance_choice_default_title">Offizieller Server</string>
   <string name="instance_choice_default_tag">Standard</string>
   <string name="instance_choice_custom_title">Eigener Server</string>
-  <string name="instance_placeholder_customServer">URL deines eigenen Servers</string>
   <string name="instance_button_continue">Weiter</string>
   <string name="instance_error_unreachable">Dieser Server ist nicht erreichbar. Überprüfe die Adresse und versuche es erneut.</string>
   <string name="instance_note_insecure">Diese Verbindung wird nicht verschlüsselt.</string>

@@ -70,7 +70,6 @@
   <string name="instance_choice_default_title">Serveur officiel</string>
   <string name="instance_choice_default_tag">Par défaut</string>
   <string name="instance_choice_custom_title">Votre propre serveur</string>
-  <string name="instance_placeholder_customServer">URL de votre propre serveur</string>
   <string name="instance_button_continue">Continuer</string>
   <string name="instance_error_unreachable">Impossible de joindre ce serveur. Vérifiez l\'adresse et réessayez.</string>
   <string name="instance_note_insecure">Cette connexion ne sera pas chiffrée.</string>
