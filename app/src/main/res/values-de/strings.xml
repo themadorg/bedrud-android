@@ -265,4 +265,5 @@
   <string name="dashboard_header_roomsSuffix">Räume</string>
   <string name="dashboard_action_remove">Entfernen</string>
   <string name="dashboard_contentDescription_profile">Profil öffnen</string>
+  <string name="dashboard_contentDescription_switchServer">Server wechseln</string>
 </resources>

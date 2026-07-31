@@ -248,6 +248,7 @@
   <string name="dashboard_header_roomsSuffix">rooms</string>
   <string name="dashboard_action_remove">Remove</string>
   <string name="dashboard_contentDescription_profile">Open profile</string>
+  <string name="dashboard_contentDescription_switchServer">Switch server</string>
   <string name="dashboard_roomSettings_isPublic">Public Room</string>
   <string name="dashboard_roomSettings_allowChat">Allow Chat</string>
   <string name="dashboard_roomSettings_allowVideo">Allow Video</string>

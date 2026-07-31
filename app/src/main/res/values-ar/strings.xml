@@ -265,4 +265,5 @@
   <string name="dashboard_header_roomsSuffix">الغرف</string>
   <string name="dashboard_action_remove">إزالة</string>
   <string name="dashboard_contentDescription_profile">فتح الملف الشخصي</string>
+  <string name="dashboard_contentDescription_switchServer">تبديل الخادم</string>
 </resources>

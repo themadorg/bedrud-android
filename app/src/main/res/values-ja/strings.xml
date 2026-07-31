@@ -265,4 +265,5 @@
   <string name="dashboard_header_roomsSuffix">ルーム</string>
   <string name="dashboard_action_remove">外す</string>
   <string name="dashboard_contentDescription_profile">プロフィールを開く</string>
+  <string name="dashboard_contentDescription_switchServer">サーバーを切り替え</string>
 </resources>

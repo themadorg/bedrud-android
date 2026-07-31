@@ -265,4 +265,5 @@
   <string name="dashboard_header_roomsSuffix">房间</string>
   <string name="dashboard_action_remove">移除</string>
   <string name="dashboard_contentDescription_profile">打开个人资料</string>
+  <string name="dashboard_contentDescription_switchServer">切换服务器</string>
 </resources>
