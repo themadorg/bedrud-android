@@ -53,6 +53,7 @@ App connects to user-chosen Bedrud server instances, not fixed backend.
 - `AuthManager` — per-instance `EncryptedSharedPreferences` ("bedrud_secure_$instanceId") storing JWT tokens + user JSON.
 - API base URL: `{serverURL}/api` (computed property on `Instance`).
 - Health check (`GET /api/health`) runs before adding new instance.
+- `AddInstanceScreen`'s custom-server field can also be filled by scanning a QR code (Google Play Services' code scanner — no CAMERA permission needed for this flow) instead of typing; the scanned text goes through the same `ServerUrlCanonicalizer` as manual/pasted input. **Standard follow-up work, not done here:** this only decodes a QR code — nothing in this Android-only repo generates one. For "point your camera at the admin's screen" onboarding to actually work, a self-hosted Bedrud server's admin panel needs its own page that renders a QR code encoding its own address. That's backend/admin-UI work; this repo only has the Android client (backend was stripped out, see git history).
 
 Switching instances: `instanceManager.switchTo(id)` → sets active → rebuilds all clients → UI reacts to StateFlow changes.
 

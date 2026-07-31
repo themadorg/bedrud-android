@@ -247,6 +247,9 @@ dependencies {
     // Browser (CustomTabs for OAuth)
     implementation("androidx.browser:browser:1.10.0")
 
+    // QR code scanning (add-server flow) -- Google Play Services' own scanner UI/permission handling
+    implementation("com.google.android.gms:play-services-code-scanner:16.1.0")
+
     // Testing
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.11.0")

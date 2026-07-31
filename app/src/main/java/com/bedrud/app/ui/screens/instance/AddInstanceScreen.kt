@@ -1,5 +1,6 @@
 package com.bedrud.app.ui.screens.instance
 
+import android.content.Context
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
@@ -29,7 +30,9 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.ErrorOutline
 import androidx.compose.material.icons.rounded.LockOpen
+import androidx.compose.material.icons.rounded.QrCodeScanner
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
@@ -53,6 +56,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -72,7 +76,13 @@ import com.bedrud.app.ui.theme.BedrudShapeTokens
 import com.bedrud.app.ui.theme.Dimens
 import com.bedrud.app.ui.theme.Motion
 import com.bedrud.app.ui.theme.bedrudColors
+import com.google.mlkit.vision.barcode.common.Barcode
+import com.google.mlkit.vision.codescanner.GmsBarcodeScannerOptions
+import com.google.mlkit.vision.codescanner.GmsBarcodeScanning
+import kotlin.coroutines.resume
+import kotlin.coroutines.resumeWithException
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.suspendCancellableCoroutine
 import org.koin.compose.koinInject
 
 private enum class ServerChoice { DEFAULT, CUSTOM }
@@ -109,10 +119,27 @@ fun AddInstanceScreen(
 
     val defaultName = stringResource(R.string.instance_default_displayName)
     val unreachableMessage = stringResource(R.string.instance_error_unreachable)
+    val qrScanFailedMessage = stringResource(R.string.instance_error_qrScanFailed)
+    val context = LocalContext.current
 
     // Selecting "your own server" focuses the field and raises the keyboard immediately.
     LaunchedEffect(choice) {
         if (choice == ServerChoice.CUSTOM) customFocusRequester.requestFocus()
+    }
+
+    fun scanQrCode() {
+        keyboardController?.hide()
+        scope.launch {
+            try {
+                val scanned = scanServerQrCode(context)
+                if (scanned != null) {
+                    customInput = scanned.filterNot(Char::isWhitespace)
+                    errorMessage = null
+                }
+            } catch (e: Exception) {
+                snackbarHostState.showSnackbar(qrScanFailedMessage)
+            }
+        }
     }
 
     fun submit() {
@@ -216,7 +243,8 @@ fun AddInstanceScreen(
                             onSubmit = {
                                 keyboardController?.hide()
                                 if (canContinue) submit()
-                            }
+                            },
+                            onScanQrCode = ::scanQrCode
                         )
                         AnimatedVisibility(visible = selected && isInsecure) {
                             InsecureNote()
@@ -399,41 +427,80 @@ private fun CustomServerField(
     onValueChange: (String) -> Unit,
     enabled: Boolean,
     focusRequester: FocusRequester,
-    onSubmit: () -> Unit
+    onSubmit: () -> Unit,
+    onScanQrCode: () -> Unit
 ) {
     val textColor = if (enabled) MaterialTheme.colorScheme.onSurface
     else MaterialTheme.colorScheme.onSurfaceVariant
-    Box {
-        if (value.isEmpty()) {
-            Text(
-                text = stringResource(R.string.instance_placeholder_serverAddress),
-                style = MaterialTheme.typography.bodyLarge.copy(
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Box(modifier = Modifier.weight(1f)) {
+            if (value.isEmpty()) {
+                Text(
+                    text = stringResource(R.string.instance_placeholder_serverAddress),
+                    style = MaterialTheme.typography.bodyLarge.copy(
+                        fontFamily = FontFamily.Monospace,
+                        textDirection = TextDirection.Ltr
+                    ),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            BasicTextField(
+                value = value,
+                onValueChange = onValueChange,
+                enabled = enabled,
+                singleLine = true,
+                textStyle = MaterialTheme.typography.bodyLarge.copy(
                     fontFamily = FontFamily.Monospace,
-                    textDirection = TextDirection.Ltr
+                    textDirection = TextDirection.Ltr,
+                    color = textColor
                 ),
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Uri,
+                    imeAction = ImeAction.Go
+                ),
+                keyboardActions = KeyboardActions(onGo = { onSubmit() }),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .focusRequester(focusRequester)
             )
         }
-        BasicTextField(
-            value = value,
-            onValueChange = onValueChange,
-            enabled = enabled,
-            singleLine = true,
-            textStyle = MaterialTheme.typography.bodyLarge.copy(
-                fontFamily = FontFamily.Monospace,
-                textDirection = TextDirection.Ltr,
-                color = textColor
-            ),
-            cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
-            keyboardOptions = KeyboardOptions(
-                keyboardType = KeyboardType.Uri,
-                imeAction = ImeAction.Go
-            ),
-            keyboardActions = KeyboardActions(onGo = { onSubmit() }),
-            modifier = Modifier
-                .fillMaxWidth()
-                .focusRequester(focusRequester)
-        )
+        IconButton(onClick = onScanQrCode, enabled = enabled) {
+            Icon(
+                Icons.Rounded.QrCodeScanner,
+                contentDescription = stringResource(R.string.instance_contentDescription_scanQr),
+                tint = if (enabled) MaterialTheme.colorScheme.onSurfaceVariant
+                else MaterialTheme.colorScheme.outlineVariant
+            )
+        }
+    }
+}
+
+/**
+ * Launches Google Play Services' own QR scanner UI -- it manages its own camera permission and
+ * scan-frame UI internally, so this app doesn't need the CAMERA permission for this flow (unlike
+ * the in-call camera, which does). Returns the scanned text, or null if the user backed out.
+ *
+ * STANDARD/REQUIRED FOLLOW-UP WORK (not in this Android-only repo): the QR code itself has to come
+ * from somewhere. This decodes whatever a QR code contains (expected to be the server's bare
+ * address or a full URL, either of which ServerUrlCanonicalizer already resolves) -- but no
+ * self-hosted Bedrud server currently generates or displays such a code anywhere. For this to be a
+ * true "point your camera at the admin's screen" flow, the server's admin panel needs a page that
+ * renders a QR code encoding its own address. That's backend/admin-UI work, tracked outside this
+ * repo -- see AGENTS.md.
+ */
+private suspend fun scanServerQrCode(context: Context): String? {
+    val scanner = GmsBarcodeScanning.getClient(
+        context,
+        GmsBarcodeScannerOptions.Builder()
+            .setBarcodeFormats(Barcode.FORMAT_QR_CODE)
+            .build()
+    )
+    return suspendCancellableCoroutine { continuation ->
+        scanner.startScan()
+            .addOnSuccessListener { barcode -> continuation.resume(barcode.rawValue) }
+            .addOnCanceledListener { continuation.resume(null) }
+            .addOnFailureListener { e -> continuation.resumeWithException(e) }
     }
 }
 
