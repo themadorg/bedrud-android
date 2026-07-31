@@ -72,6 +72,8 @@
   <string name="instance_choice_custom_title">Tu propio servidor</string>
   <string name="instance_button_continue">Continuar</string>
   <string name="instance_error_unreachable">No se pudo conectar con este servidor. Comprueba la dirección e inténtalo de nuevo.</string>
+  <string name="instance_contentDescription_scanQr">Escanear código QR</string>
+  <string name="instance_error_qrScanFailed">No se pudo escanear el código QR. Inténtalo de nuevo o introduce la dirección manualmente.</string>
   <string name="instance_note_insecure">Esta conexión no estará cifrada.</string>
   <string name="dashboard_title_rooms">Salas</string>
   <string name="dashboard_placeholder_search">Introduce el nombre o enlace de la sala…</string>

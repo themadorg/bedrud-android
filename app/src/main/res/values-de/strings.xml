@@ -72,6 +72,8 @@
   <string name="instance_choice_custom_title">Eigener Server</string>
   <string name="instance_button_continue">Weiter</string>
   <string name="instance_error_unreachable">Dieser Server ist nicht erreichbar. Überprüfe die Adresse und versuche es erneut.</string>
+  <string name="instance_contentDescription_scanQr">QR-Code scannen</string>
+  <string name="instance_error_qrScanFailed">QR-Code konnte nicht gescannt werden. Versuche es erneut oder gib die Adresse manuell ein.</string>
   <string name="instance_note_insecure">Diese Verbindung wird nicht verschlüsselt.</string>
   <string name="dashboard_title_rooms">Räume</string>
   <string name="dashboard_placeholder_search">Raumname oder Link eingeben…</string>
