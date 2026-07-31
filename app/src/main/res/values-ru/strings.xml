@@ -73,7 +73,6 @@
   <string name="instance_button_continue">Продолжить</string>
   <string name="instance_error_unreachable">Не удалось подключиться к этому серверу. Проверьте адрес и повторите попытку.</string>
   <string name="instance_contentDescription_scanQr">Сканировать QR-код</string>
-  <string name="instance_error_qrScanFailed">Не удалось отсканировать QR-код. Повторите попытку или введите адрес вручную.</string>
   <string name="instance_note_insecure">Это подключение не будет зашифровано.</string>
   <string name="dashboard_title_rooms">Комнаты</string>
   <string name="dashboard_placeholder_search">Введите название комнаты или ссылку…</string>

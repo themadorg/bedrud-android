@@ -73,7 +73,6 @@
   <string name="instance_button_continue">متابعة</string>
   <string name="instance_error_unreachable">تعذّر الوصول إلى هذا الخادم. تحقّق من العنوان وحاول مرة أخرى.</string>
   <string name="instance_contentDescription_scanQr">مسح رمز QR</string>
-  <string name="instance_error_qrScanFailed">تعذّر مسح رمز QR. حاول مرة أخرى أو أدخل العنوان يدويًا.</string>
   <string name="instance_note_insecure">لن يكون هذا الاتصال مشفّرًا.</string>
   <string name="dashboard_title_rooms">الغرف</string>
   <string name="dashboard_placeholder_search">أدخل اسم الغرفة أو الرابط…</string>

@@ -73,7 +73,6 @@
   <string name="instance_button_continue">继续</string>
   <string name="instance_error_unreachable">无法连接到此服务器。请检查地址后重试。</string>
   <string name="instance_contentDescription_scanQr">扫描二维码</string>
-  <string name="instance_error_qrScanFailed">无法扫描二维码。请重试或手动输入地址。</string>
   <string name="instance_note_insecure">此连接将不会加密。</string>
   <string name="dashboard_title_rooms">房间</string>
   <string name="dashboard_placeholder_search">输入房间名称或链接…</string>

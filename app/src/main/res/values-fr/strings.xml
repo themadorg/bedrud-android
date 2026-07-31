@@ -73,7 +73,6 @@
   <string name="instance_button_continue">Continuer</string>
   <string name="instance_error_unreachable">Impossible de joindre ce serveur. Vérifiez l\'adresse et réessayez.</string>
   <string name="instance_contentDescription_scanQr">Scanner le code QR</string>
-  <string name="instance_error_qrScanFailed">Impossible de scanner le code QR. Réessayez ou saisissez l\'adresse manuellement.</string>
   <string name="instance_note_insecure">Cette connexion ne sera pas chiffrée.</string>
   <string name="dashboard_title_rooms">Salons</string>
   <string name="dashboard_placeholder_search">Entrez un nom de salon ou un lien…</string>

@@ -73,7 +73,6 @@
   <string name="instance_button_continue">Continue</string>
   <string name="instance_error_unreachable">Couldn\'t reach this server. Check the address and try again.</string>
   <string name="instance_contentDescription_scanQr">Scan QR code</string>
-  <string name="instance_error_qrScanFailed">Couldn\'t scan QR code. Try again or enter the address manually.</string>
   <string name="instance_note_insecure">This connection won\'t be encrypted.</string>
   <string name="dashboard_title_rooms">Rooms</string>
   <string name="dashboard_placeholder_search">Enter room name or link…</string>

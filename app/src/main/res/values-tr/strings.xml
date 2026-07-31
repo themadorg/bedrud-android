@@ -73,7 +73,6 @@
   <string name="instance_button_continue">Devam</string>
   <string name="instance_error_unreachable">Bu sunucuya ulaşılamadı. Adresi kontrol edip tekrar deneyin.</string>
   <string name="instance_contentDescription_scanQr">QR kodu tara</string>
-  <string name="instance_error_qrScanFailed">QR kodu taranamadı. Tekrar deneyin veya adresi manuel olarak girin.</string>
   <string name="instance_note_insecure">Bu bağlantı şifrelenmeyecek.</string>
   <string name="dashboard_title_rooms">Odalar</string>
   <string name="dashboard_placeholder_search">Oda adı veya bağlantısı girin…</string>
