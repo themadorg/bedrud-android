@@ -195,6 +195,7 @@ fun DashboardContent(
     var quickJoinText by remember { mutableStateOf("") }
     // Captured here (not in the join callback) because stringResource is composition-only.
     val invalidJoinInputMessage = stringResource(R.string.dashboard_join_invalidInput)
+    val unknownServerJoinMessage = stringResource(R.string.dashboard_join_unknownServer)
     val focusManager = LocalFocusManager.current
     val listState = rememberLazyListState()
     // Survives the dispose/recompose Navigation does when leaving for MeetingScreen and
@@ -532,14 +533,31 @@ fun DashboardContent(
                             // keyboard" rule and, on failure, keeps the snackbar from rendering
                             // hidden behind the IME.
                             focusManager.clearFocus()
-                            val roomName = BedrudURLParser.parseJoinInput(quickJoinText)
-                            if (!roomName.isNullOrBlank()) {
-                                quickJoinText = ""
-                                onJoinRoom(roomName)
-                            } else {
-                                // Input didn't resolve to a room (e.g. a URL with no /m/ or /c/):
-                                // tell the user instead of the button appearing to do nothing.
-                                scope.launch { snackbarHostState.showSnackbar(invalidJoinInputMessage) }
+                            val trimmedInput = quickJoinText.trim()
+                            val parsedUrl = BedrudURLParser.parse(trimmedInput)
+                            val roomName = parsedUrl?.roomName ?: BedrudURLParser.parseJoinInput(trimmedInput)
+                            // A pasted link names its own server, which may not be the active one --
+                            // resolve it to a known instance rather than silently joining the room
+                            // name against whatever server currently happens to be active.
+                            val targetInstance = parsedUrl?.let { url ->
+                                instances.firstOrNull { BedrudURLParser.matchesServer(it.serverURL, url.serverBaseURL) }
+                            }
+                            when {
+                                roomName.isNullOrBlank() -> {
+                                    // Input didn't resolve to a room (e.g. a URL with no /m/ or /c/):
+                                    // tell the user instead of the button appearing to do nothing.
+                                    scope.launch { snackbarHostState.showSnackbar(invalidJoinInputMessage) }
+                                }
+                                parsedUrl != null && targetInstance == null -> {
+                                    scope.launch { snackbarHostState.showSnackbar(unknownServerJoinMessage) }
+                                }
+                                else -> {
+                                    if (targetInstance != null && targetInstance.id != activeInstanceId) {
+                                        instanceManager.switchTo(targetInstance.id)
+                                    }
+                                    quickJoinText = ""
+                                    onJoinRoom(roomName)
+                                }
                             }
                         },
                         modifier = Modifier
