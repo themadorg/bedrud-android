@@ -240,6 +240,8 @@
   <string name="screen_share_notification_text">Ekranınız toplantı katılımcılarına görünür</string>
   <string name="meeting_error_permissionsRequired">Katılmak için kamera ve mikrofon izinleri gerekli.</string>
   <string name="meeting_error_screenShareFailed">Ekran paylaşımı başlatılamadı.</string>
+  <string name="meeting_error_roomNoLongerExists">Bu oda artık mevcut değil</string>
+  <string name="meeting_error_joinFailed">Odaya katılma başarısız oldu</string>
   <string name="meeting_sheet_chat">Sohbet</string>
   <string name="meeting_sheet_addOthers">Başkalarını ekle</string>
   <string name="meeting_share_chooserTitle">Toplantı bağlantısını paylaş</string>

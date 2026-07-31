@@ -240,6 +240,8 @@
   <string name="screen_share_notification_text">شاشتك مرئية لمشاركي الاجتماع</string>
   <string name="meeting_error_permissionsRequired">يلزم إذن الكاميرا والميكروفون للانضمام.</string>
   <string name="meeting_error_screenShareFailed">تعذّر بدء مشاركة الشاشة.</string>
+  <string name="meeting_error_roomNoLongerExists">هذه الغرفة لم تعد موجودة</string>
+  <string name="meeting_error_joinFailed">فشل الانضمام إلى الغرفة</string>
   <string name="meeting_sheet_chat">الدردشة</string>
   <string name="meeting_sheet_addOthers">إضافة آخرين</string>
   <string name="meeting_share_chooserTitle">مشاركة رابط الاجتماع</string>

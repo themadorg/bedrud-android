@@ -240,6 +240,8 @@
   <string name="screen_share_notification_text">会议参与者可以看到你的屏幕</string>
   <string name="meeting_error_permissionsRequired">加入需要摄像头和麦克风权限。</string>
   <string name="meeting_error_screenShareFailed">无法开始屏幕共享。</string>
+  <string name="meeting_error_roomNoLongerExists">此房间已不存在</string>
+  <string name="meeting_error_joinFailed">加入房间失败</string>
   <string name="meeting_sheet_chat">聊天</string>
   <string name="meeting_sheet_addOthers">添加其他人</string>
   <string name="meeting_share_chooserTitle">分享会议链接</string>
