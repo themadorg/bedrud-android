@@ -75,12 +75,15 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.withStyle
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import coil.compose.AsyncImage
@@ -716,6 +719,23 @@ private fun RoomsHeaderTitle(serverName: String?, onClick: () -> Unit) {
     val name = serverName ?: stringResource(R.string.instance_default_displayName)
     val suffix = stringResource(R.string.dashboard_header_roomsSuffix)
     val switchServerLabel = stringResource(R.string.dashboard_contentDescription_switchServer)
+    // Two-tier hierarchy so the server name reads as the headline and "rooms" as a lighter,
+    // secondary label -- clearer than one flat run of text, without color-coding by server
+    // (that was tried and dropped for this header; see DESIGN.md).
+    val nameStyle = MaterialTheme.typography.headlineSmall.toSpanStyle().copy(
+        fontWeight = FontWeight.Bold,
+        color = MaterialTheme.colorScheme.onSurface,
+    )
+    val suffixStyle = MaterialTheme.typography.titleMedium.toSpanStyle().copy(
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
+    val titleText = remember(name, suffix, nameStyle, suffixStyle) {
+        buildAnnotatedString {
+            withStyle(nameStyle) { append(name) }
+            append(" ")
+            withStyle(suffixStyle) { append(suffix) }
+        }
+    }
     Row(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(Dimens.space4),
@@ -725,9 +745,7 @@ private fun RoomsHeaderTitle(serverName: String?, onClick: () -> Unit) {
             .clickable(onClickLabel = switchServerLabel, onClick = onClick),
     ) {
         Text(
-            text = "$name $suffix",
-            style = MaterialTheme.typography.headlineSmall,
-            color = MaterialTheme.colorScheme.onSurface,
+            text = titleText,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.weight(1f, fill = false),
