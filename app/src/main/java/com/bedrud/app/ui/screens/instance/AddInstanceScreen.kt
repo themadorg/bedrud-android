@@ -1,5 +1,6 @@
 package com.bedrud.app.ui.screens.instance
 
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
@@ -29,7 +30,9 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.ErrorOutline
 import androidx.compose.material.icons.rounded.LockOpen
+import androidx.compose.material.icons.rounded.QrCodeScanner
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
@@ -53,6 +56,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -64,6 +68,7 @@ import androidx.compose.ui.text.style.TextDirection
 import com.bedrud.app.BuildConfig
 import com.bedrud.app.R
 import com.bedrud.app.core.instance.InstanceManager
+import com.bedrud.app.core.instance.ServerUrlCanonicalizer
 import com.bedrud.app.ui.components.BedrudButton
 import com.bedrud.app.ui.components.BedrudScaffoldContentInsets
 import com.bedrud.app.ui.components.DevOnly
@@ -71,13 +76,12 @@ import com.bedrud.app.ui.theme.BedrudShapeTokens
 import com.bedrud.app.ui.theme.Dimens
 import com.bedrud.app.ui.theme.Motion
 import com.bedrud.app.ui.theme.bedrudColors
+import com.journeyapps.barcodescanner.ScanContract
+import com.journeyapps.barcodescanner.ScanOptions
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 
 private enum class ServerChoice { DEFAULT, CUSTOM }
-
-/** Host[:port] validation for a typed server address — rejects whitespace and stray characters. */
-private val HOST_PORT_REGEX = Regex("^[A-Za-z0-9.-]+(:\\d+)?$")
 
 /**
  * First-run / add-server screen. The user either takes the recommended default server or points
@@ -97,14 +101,22 @@ fun AddInstanceScreen(
 
     val instances by instanceManager.store.instances.collectAsState()
 
-    var choice by rememberSaveable { mutableStateOf(ServerChoice.DEFAULT) }
+    val defaultUrl = remember { ServerUrlCanonicalizer.canonicalize(BuildConfig.DEFAULT_SERVER_HOST) }
+    // The official server can only be added once -- if it's already among the user's instances,
+    // selecting it again here would just re-trigger submit()'s switchTo(existing.id) path. Disable
+    // it instead so "Add Server" reliably means "add a *new* one" rather than sometimes silently
+    // switching back to a server the user already has.
+    val isDefaultAdded = defaultUrl != null && instances.any { it.serverURL.equals(defaultUrl, ignoreCase = true) }
+
+    var choice by rememberSaveable {
+        mutableStateOf(if (isDefaultAdded) ServerChoice.CUSTOM else ServerChoice.DEFAULT)
+    }
     var customInput by rememberSaveable { mutableStateOf("") }
     var isChecking by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
     val customFocusRequester = remember { FocusRequester() }
 
-    val defaultUrl = remember { canonicalizeServerUrl(BuildConfig.DEFAULT_SERVER_HOST) }
-    val resolvedCustom = canonicalizeServerUrl(customInput)
+    val resolvedCustom = ServerUrlCanonicalizer.canonicalize(customInput)
     val resolvedUrl = if (choice == ServerChoice.DEFAULT) defaultUrl else resolvedCustom
     val isInsecure = choice == ServerChoice.CUSTOM && resolvedCustom?.startsWith("http://") == true
     val canContinue = !isChecking && resolvedUrl != null
@@ -115,6 +127,35 @@ fun AddInstanceScreen(
     // Selecting "your own server" focuses the field and raises the keyboard immediately.
     LaunchedEffect(choice) {
         if (choice == ServerChoice.CUSTOM) customFocusRequester.requestFocus()
+    }
+
+    // Pure on-device decode (ZXing) -- no Play Services dependency, so it can't fail the way
+    // Play Services' own code scanner did (its module needs to be fetched over network on first
+    // use, which proved unreliable on restricted networks). Requires CAMERA permission, which
+    // this app already holds for calls; ZXing's own capture activity requests it if missing.
+    //
+    // STANDARD/REQUIRED FOLLOW-UP WORK (not in this Android-only repo): the QR code itself has to
+    // come from somewhere. This decodes whatever a QR code contains (expected to be the server's
+    // bare address or a full URL, either of which ServerUrlCanonicalizer already resolves) -- but
+    // no self-hosted Bedrud server currently generates or displays such a code anywhere. For this
+    // to be a true "point your camera at the admin's screen" flow, the server's admin panel needs
+    // a page that renders a QR code encoding its own address. That's backend/admin-UI work,
+    // tracked outside this repo -- see AGENTS.md.
+    val scanLauncher = rememberLauncherForActivityResult(ScanContract()) { result ->
+        result.contents?.let { scanned ->
+            customInput = scanned.filterNot(Char::isWhitespace)
+            errorMessage = null
+        }
+    }
+
+    fun scanQrCode() {
+        keyboardController?.hide()
+        scanLauncher.launch(
+            ScanOptions()
+                .setDesiredBarcodeFormats(ScanOptions.QR_CODE)
+                .setBeepEnabled(false)
+                .setOrientationLocked(true)
+        )
     }
 
     fun submit() {
@@ -184,7 +225,11 @@ fun AddInstanceScreen(
                             errorMessage = null
                         },
                         title = stringResource(R.string.instance_choice_default_title),
-                        badge = stringResource(R.string.instance_choice_default_tag),
+                        badge = stringResource(
+                            if (isDefaultAdded) R.string.instance_choice_default_addedTag
+                            else R.string.instance_choice_default_tag
+                        ),
+                        enabled = !isDefaultAdded,
                     ) { selected ->
                         Text(
                             text = displayUrl(defaultUrl ?: BuildConfig.DEFAULT_SERVER_HOST),
@@ -218,7 +263,8 @@ fun AddInstanceScreen(
                             onSubmit = {
                                 keyboardController?.hide()
                                 if (canContinue) submit()
-                            }
+                            },
+                            onScanQrCode = ::scanQrCode
                         )
                         AnimatedVisibility(visible = selected && isInsecure) {
                             InsecureNote()
@@ -321,6 +367,7 @@ private fun ServerChoiceCard(
     title: String,
     badge: String?,
     modifier: Modifier = Modifier,
+    enabled: Boolean = true,
     content: @Composable (selected: Boolean) -> Unit
 ) {
     val borderColor by animateColorAsState(
@@ -336,6 +383,7 @@ private fun ServerChoiceCard(
             .fillMaxWidth()
             .selectable(
                 selected = selected,
+                enabled = enabled,
                 role = Role.RadioButton,
                 onClick = onSelect
             ),
@@ -353,6 +401,7 @@ private fun ServerChoiceCard(
             RadioButton(
                 selected = selected,
                 onClick = null,
+                enabled = enabled,
                 modifier = Modifier.align(Alignment.TopEnd)
             )
             Column(
@@ -401,41 +450,73 @@ private fun CustomServerField(
     onValueChange: (String) -> Unit,
     enabled: Boolean,
     focusRequester: FocusRequester,
-    onSubmit: () -> Unit
+    onSubmit: () -> Unit,
+    onScanQrCode: () -> Unit
 ) {
     val textColor = if (enabled) MaterialTheme.colorScheme.onSurface
     else MaterialTheme.colorScheme.onSurfaceVariant
-    Box {
-        if (value.isEmpty()) {
-            Text(
-                text = stringResource(R.string.instance_placeholder_customServer),
-                style = MaterialTheme.typography.bodyLarge.copy(
-                    fontFamily = FontFamily.Monospace,
-                    textDirection = TextDirection.Ltr
-                ),
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+    // Leading icon (matching the dashboard quick-join field's leading search icon) rather than
+    // trailing: a trailing icon ends up floating far from short input text since the field itself
+    // needs weight(1f) to stay fully tappable, which reads as misplaced/disconnected.
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        // IconButton's 48dp touch target centers the 24dp glyph, insetting it (48-24)/2 = 12dp on
+        // each side. Left-shifting the whole thing by that inset lines the glyph up flush with
+        // "Your own server" above it, but leaves the *reported* width at a full 48dp -- so the text
+        // field after it would still start 24dp from the glyph, reading as an oversized gap. This
+        // custom layout keeps the full 48dp touch target (for accessibility) but reports only
+        // iconMd + space8 of width upstream, so the field starts a normal icon-to-text gap away
+        // from the glyph instead of from the touch target's far edge.
+        IconButton(
+            onClick = onScanQrCode,
+            enabled = enabled,
+            modifier = Modifier.layout { measurable, constraints ->
+                val placeable = measurable.measure(constraints)
+                val inset = ((Dimens.minTouchTarget - Dimens.iconMd) / 2).roundToPx()
+                val reportedWidth = (Dimens.iconMd + Dimens.space8).roundToPx()
+                layout(reportedWidth, placeable.height) {
+                    placeable.placeRelative(-inset, 0)
+                }
+            },
+        ) {
+            Icon(
+                Icons.Rounded.QrCodeScanner,
+                contentDescription = stringResource(R.string.instance_contentDescription_scanQr),
+                tint = if (enabled) MaterialTheme.colorScheme.onSurfaceVariant
+                else MaterialTheme.colorScheme.outlineVariant
             )
         }
-        BasicTextField(
-            value = value,
-            onValueChange = onValueChange,
-            enabled = enabled,
-            singleLine = true,
-            textStyle = MaterialTheme.typography.bodyLarge.copy(
-                fontFamily = FontFamily.Monospace,
-                textDirection = TextDirection.Ltr,
-                color = textColor
-            ),
-            cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
-            keyboardOptions = KeyboardOptions(
-                keyboardType = KeyboardType.Uri,
-                imeAction = ImeAction.Go
-            ),
-            keyboardActions = KeyboardActions(onGo = { onSubmit() }),
-            modifier = Modifier
-                .fillMaxWidth()
-                .focusRequester(focusRequester)
-        )
+        Box(modifier = Modifier.weight(1f)) {
+            if (value.isEmpty()) {
+                Text(
+                    text = stringResource(R.string.instance_placeholder_serverAddress),
+                    style = MaterialTheme.typography.bodyLarge.copy(
+                        fontFamily = FontFamily.Monospace,
+                        textDirection = TextDirection.Ltr
+                    ),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            BasicTextField(
+                value = value,
+                onValueChange = onValueChange,
+                enabled = enabled,
+                singleLine = true,
+                textStyle = MaterialTheme.typography.bodyLarge.copy(
+                    fontFamily = FontFamily.Monospace,
+                    textDirection = TextDirection.Ltr,
+                    color = textColor
+                ),
+                cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Uri,
+                    imeAction = ImeAction.Go
+                ),
+                keyboardActions = KeyboardActions(onGo = { onSubmit() }),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .focusRequester(focusRequester)
+            )
+        }
     }
 }
 
@@ -458,26 +539,6 @@ private fun InsecureNote() {
             color = MaterialTheme.bedrudColors.warning
         )
     }
-}
-
-/**
- * Normalizes user/host input to a canonical `scheme://host/` URL. Strips whitespace, defaults to
- * https (honors an explicit http:// for local/dev servers), and validates the host[:port]. Returns
- * null for blank or malformed input, which keeps `Continue` disabled.
- */
-private fun canonicalizeServerUrl(input: String): String? {
-    val cleaned = input.filterNot { it.isWhitespace() }
-    if (cleaned.isEmpty()) return null
-    val scheme = if (cleaned.startsWith("http://", ignoreCase = true)) "http" else "https"
-    var rest = cleaned
-    listOf("https://", "http://").forEach { prefix ->
-        if (rest.startsWith(prefix, ignoreCase = true)) rest = rest.substring(prefix.length)
-    }
-    rest = rest.trimEnd('/')
-    if (rest.isEmpty()) return null
-    val hostPort = rest.substringBefore('/')
-    if (!hostPort.matches(HOST_PORT_REGEX)) return null
-    return "$scheme://$rest/"
 }
 
 /** Human-friendly name derived from a canonical URL — the host (path/scheme stripped). */

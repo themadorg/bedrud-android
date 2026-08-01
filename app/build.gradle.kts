@@ -247,6 +247,11 @@ dependencies {
     // Browser (CustomTabs for OAuth)
     implementation("androidx.browser:browser:1.10.0")
 
+    // QR code scanning (add-server flow) -- pure on-device decode, no Play Services dependency
+    // (Play Services' own code scanner needs its module fetched over network on first use, which
+    // is unreliable on restricted networks -- see AddInstanceScreen.kt for what was tried first)
+    implementation("com.journeyapps:zxing-android-embedded:4.3.0")
+
     // Testing
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.11.0")
