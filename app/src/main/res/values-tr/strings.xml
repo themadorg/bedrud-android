@@ -69,6 +69,7 @@
   <!-- First-run server chooser -->
   <string name="instance_choice_default_title">Resmi sunucu</string>
   <string name="instance_choice_default_tag">Varsayılan</string>
+  <string name="instance_choice_default_addedTag">Eklendi</string>
   <string name="instance_choice_custom_title">Kendi sunucun</string>
   <string name="instance_button_continue">Devam</string>
   <string name="instance_error_unreachable">Bu sunucuya ulaşılamadı. Adresi kontrol edip tekrar deneyin.</string>

@@ -69,6 +69,7 @@
   <!-- First-run server chooser -->
   <string name="instance_choice_default_title">Servidor oficial</string>
   <string name="instance_choice_default_tag">Predeterminado</string>
+  <string name="instance_choice_default_addedTag">Añadido</string>
   <string name="instance_choice_custom_title">Tu propio servidor</string>
   <string name="instance_button_continue">Continuar</string>
   <string name="instance_error_unreachable">No se pudo conectar con este servidor. Comprueba la dirección e inténtalo de nuevo.</string>

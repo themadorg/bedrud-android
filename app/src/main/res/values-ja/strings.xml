@@ -69,6 +69,7 @@
   <!-- First-run server chooser -->
   <string name="instance_choice_default_title">公式サーバー</string>
   <string name="instance_choice_default_tag">デフォルト</string>
+  <string name="instance_choice_default_addedTag">追加済み</string>
   <string name="instance_choice_custom_title">自分のサーバー</string>
   <string name="instance_button_continue">続行</string>
   <string name="instance_error_unreachable">このサーバーに接続できませんでした。アドレスを確認して、もう一度お試しください。</string>

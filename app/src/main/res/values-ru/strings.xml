@@ -69,6 +69,7 @@
   <!-- First-run server chooser -->
   <string name="instance_choice_default_title">Официальный сервер</string>
   <string name="instance_choice_default_tag">По умолчанию</string>
+  <string name="instance_choice_default_addedTag">Добавлен</string>
   <string name="instance_choice_custom_title">Свой сервер</string>
   <string name="instance_button_continue">Продолжить</string>
   <string name="instance_error_unreachable">Не удалось подключиться к этому серверу. Проверьте адрес и повторите попытку.</string>
