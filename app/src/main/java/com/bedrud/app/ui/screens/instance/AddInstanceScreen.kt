@@ -101,13 +101,21 @@ fun AddInstanceScreen(
 
     val instances by instanceManager.store.instances.collectAsState()
 
-    var choice by rememberSaveable { mutableStateOf(ServerChoice.DEFAULT) }
+    val defaultUrl = remember { ServerUrlCanonicalizer.canonicalize(BuildConfig.DEFAULT_SERVER_HOST) }
+    // The official server can only be added once -- if it's already among the user's instances,
+    // selecting it again here would just re-trigger submit()'s switchTo(existing.id) path. Disable
+    // it instead so "Add Server" reliably means "add a *new* one" rather than sometimes silently
+    // switching back to a server the user already has.
+    val isDefaultAdded = defaultUrl != null && instances.any { it.serverURL.equals(defaultUrl, ignoreCase = true) }
+
+    var choice by rememberSaveable {
+        mutableStateOf(if (isDefaultAdded) ServerChoice.CUSTOM else ServerChoice.DEFAULT)
+    }
     var customInput by rememberSaveable { mutableStateOf("") }
     var isChecking by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
     val customFocusRequester = remember { FocusRequester() }
 
-    val defaultUrl = remember { ServerUrlCanonicalizer.canonicalize(BuildConfig.DEFAULT_SERVER_HOST) }
     val resolvedCustom = ServerUrlCanonicalizer.canonicalize(customInput)
     val resolvedUrl = if (choice == ServerChoice.DEFAULT) defaultUrl else resolvedCustom
     val isInsecure = choice == ServerChoice.CUSTOM && resolvedCustom?.startsWith("http://") == true
@@ -217,7 +225,11 @@ fun AddInstanceScreen(
                             errorMessage = null
                         },
                         title = stringResource(R.string.instance_choice_default_title),
-                        badge = stringResource(R.string.instance_choice_default_tag),
+                        badge = stringResource(
+                            if (isDefaultAdded) R.string.instance_choice_default_addedTag
+                            else R.string.instance_choice_default_tag
+                        ),
+                        enabled = !isDefaultAdded,
                     ) { selected ->
                         Text(
                             text = displayUrl(defaultUrl ?: BuildConfig.DEFAULT_SERVER_HOST),
@@ -355,6 +367,7 @@ private fun ServerChoiceCard(
     title: String,
     badge: String?,
     modifier: Modifier = Modifier,
+    enabled: Boolean = true,
     content: @Composable (selected: Boolean) -> Unit
 ) {
     val borderColor by animateColorAsState(
@@ -370,6 +383,7 @@ private fun ServerChoiceCard(
             .fillMaxWidth()
             .selectable(
                 selected = selected,
+                enabled = enabled,
                 role = Role.RadioButton,
                 onClick = onSelect
             ),
@@ -387,6 +401,7 @@ private fun ServerChoiceCard(
             RadioButton(
                 selected = selected,
                 onClick = null,
+                enabled = enabled,
                 modifier = Modifier.align(Alignment.TopEnd)
             )
             Column(
