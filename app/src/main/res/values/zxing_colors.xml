@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Overrides ZXing's default scan-screen colors (red laser, cool-black mask) with Bedrud's
+     rose/teal palette. These resource names are ZXing's own (see ViewfinderView), so the app
+     module's copy wins over the library's during resource merging automatically. Unlike the
+     manifest override in AndroidManifest.xml, plain value resources don't need tools:replace. -->
+<resources>
+    <color name="zxing_viewfinder_laser">#FFE11D48</color>
+    <color name="zxing_possible_result_points">#CC2DD4BF</color>
+    <color name="zxing_viewfinder_mask">#600C0A09</color>
+    <color name="zxing_result_view">#B00C0A09</color>
+</resources>
