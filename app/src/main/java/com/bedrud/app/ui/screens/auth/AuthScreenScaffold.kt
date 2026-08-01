@@ -1,5 +1,6 @@
 package com.bedrud.app.ui.screens.auth
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
@@ -47,6 +48,14 @@ internal fun AuthScreenScaffold(
     backEnabled: Boolean,
     content: @Composable ColumnScope.() -> Unit,
 ) {
+    // LoginScreen reaches this as the back stack's root (the add-instance entry is popped
+    // inclusive on arrival), so there's nothing for the system back gesture/button to pop to --
+    // without this, it falls through to the Activity's default behavior and closes the app
+    // instead of returning to "Add Instance" like the on-screen arrow below does.
+    if (onBack != null) {
+        BackHandler(enabled = backEnabled, onBack = onBack)
+    }
+
     Scaffold(
         contentWindowInsets = BedrudScaffoldContentInsets,
         snackbarHost = { BedrudSnackbarHost(snackbarHostState) }
