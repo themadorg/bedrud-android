@@ -121,6 +121,7 @@ import coil.compose.AsyncImage
 import com.bedrud.app.R
 import com.bedrud.app.core.BidiUtils
 import com.bedrud.app.core.api.RoomApi
+import com.bedrud.app.core.api.parseApiErrorMessage
 import com.bedrud.app.core.call.CallService
 import com.bedrud.app.core.chat.ChatImageUtils
 import com.bedrud.app.core.deeplink.BedrudURLParser
@@ -139,6 +140,7 @@ import io.livekit.android.compose.ui.VideoTrackView
 import io.livekit.android.room.Room
 import io.livekit.android.room.participant.Participant
 import io.livekit.android.room.track.Track
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
@@ -165,6 +167,8 @@ fun MeetingScreen(
     val clipboard = LocalClipboardManager.current
     val screenShareFailedMessage = stringResource(R.string.meeting_error_screenShareFailed)
     val permissionsRequiredMessage = stringResource(R.string.meeting_error_permissionsRequired)
+    val roomNoLongerExistsMessage = stringResource(R.string.meeting_error_roomNoLongerExists)
+    val joinFailedMessage = stringResource(R.string.meeting_error_joinFailed)
     val linkCopiedMessage = stringResource(R.string.meeting_toast_linkCopied)
     val isInPipMode by pipStateHolder.isInPipMode.collectAsState()
     val flatFabElevation = FloatingActionButtonDefaults.elevation(
@@ -328,17 +332,25 @@ fun MeetingScreen(
                         permissionLauncher.launch(requiredPermissions)
                     }
                 } else {
-                    snackbarHostState.showSnackbar("This room no longer exists")
+                    snackbarHostState.showSnackbar(roomNoLongerExistsMessage)
                     isJoining = false
                     onLeave()
                 }
             } else {
-                snackbarHostState.showSnackbar("Failed to join room")
+                // The server names the specific problem (e.g. "Room not found") when it has
+                // one; show that instead of a generic failure. Either way, leave -- staying on
+                // this screen after a failed join left the user stuck on an infinite spinner
+                // with no way back except the system back button.
+                snackbarHostState.showSnackbar(parseApiErrorMessage(response) ?: joinFailedMessage)
                 isJoining = false
+                onLeave()
             }
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
-            snackbarHostState.showSnackbar(e.message ?: "Failed to join room")
+            snackbarHostState.showSnackbar(e.message ?: joinFailedMessage)
             isJoining = false
+            onLeave()
         }
     }
 

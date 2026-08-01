@@ -237,6 +237,8 @@
   <string name="screen_share_notification_text">صفحه شما برای شرکت‌کنندگان جلسه قابل مشاهده است</string>
   <string name="meeting_error_permissionsRequired">برای پیوستن، مجوز دوربین و میکروفون لازم است.</string>
   <string name="meeting_error_screenShareFailed">شروع اشتراک‌گذاری صفحه ممکن نشد.</string>
+  <string name="meeting_error_roomNoLongerExists">این اتاق دیگر وجود ندارد</string>
+  <string name="meeting_error_joinFailed">پیوستن به اتاق ناموفق بود</string>
   <string name="meeting_sheet_chat">گفتگو</string>
   <string name="meeting_sheet_addOthers">افزودن دیگران</string>
   <string name="meeting_share_chooserTitle">اشتراک لینک جلسه</string>

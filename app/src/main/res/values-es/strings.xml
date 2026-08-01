@@ -240,6 +240,8 @@
   <string name="screen_share_notification_text">Tu pantalla es visible para los participantes</string>
   <string name="meeting_error_permissionsRequired">Se requieren permisos de cámara y micrófono para unirse.</string>
   <string name="meeting_error_screenShareFailed">No se pudo iniciar el compartir pantalla.</string>
+  <string name="meeting_error_roomNoLongerExists">Esta sala ya no existe</string>
+  <string name="meeting_error_joinFailed">No se pudo unir a la sala</string>
   <string name="meeting_sheet_chat">Chat</string>
   <string name="meeting_sheet_addOthers">Añadir a otros</string>
   <string name="meeting_share_chooserTitle">Compartir enlace de la reunión</string>

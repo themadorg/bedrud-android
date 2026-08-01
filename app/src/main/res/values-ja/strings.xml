@@ -240,6 +240,8 @@
   <string name="screen_share_notification_text">参加者に画面が表示されています</string>
   <string name="meeting_error_permissionsRequired">参加するにはカメラとマイクの権限が必要です。</string>
   <string name="meeting_error_screenShareFailed">画面共有を開始できませんでした。</string>
+  <string name="meeting_error_roomNoLongerExists">このルームは存在しません</string>
+  <string name="meeting_error_joinFailed">ルームへの参加に失敗しました</string>
   <string name="meeting_sheet_chat">チャット</string>
   <string name="meeting_sheet_addOthers">他の人を追加</string>
   <string name="meeting_share_chooserTitle">ミーティングリンクを共有</string>
