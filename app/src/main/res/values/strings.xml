@@ -77,6 +77,7 @@
   <string name="dashboard_title_rooms">Rooms</string>
   <string name="dashboard_placeholder_search">Enter room name or link…</string>
   <string name="dashboard_join_invalidInput">Enter a room name or a valid meeting link.</string>
+  <string name="dashboard_join_unknownServer">Add this link\'s server first.</string>
   <string name="dashboard_dialog_createTitle">Create Room</string>
   <string name="dashboard_dialog_createDescription">Enter a name for your room, or leave blank for an auto-generated name.</string>
   <string name="dashboard_label_roomName">Room Name (optional)</string>
@@ -244,12 +245,16 @@
   <string name="dashboard_filter_recent">Recent</string>
   <string name="dashboard_dialog_deleteTitle">Delete room?</string>
   <string name="dashboard_dialog_deleteMessage">Are you sure you want to delete <xliff:g id="roomName" example="team-standup">%1$s</xliff:g>? This cannot be undone.</string>
+  <string name="dashboard_dialog_switchServerTitle">Switch server?</string>
+  <string name="dashboard_dialog_switchServerMessage">This link is for <xliff:g id="serverName" example="Bedrud">%1$s</xliff:g>. Switch to it and join?</string>
+  <string name="dashboard_button_switchAndJoin">Switch and join</string>
   <string name="dashboard_empty_noRecent">No recent rooms</string>
   <string name="dashboard_empty_noRecentHint">Rooms you join appear here, including on other servers.</string>
   <string name="dashboard_contentDescription_removeRecent">Remove from recent</string>
   <string name="dashboard_header_roomsSuffix">rooms</string>
   <string name="dashboard_action_remove">Remove</string>
   <string name="dashboard_contentDescription_profile">Open profile</string>
+  <string name="dashboard_contentDescription_switchServer">Switch server</string>
   <string name="dashboard_roomSettings_isPublic">Public Room</string>
   <string name="dashboard_roomSettings_allowChat">Allow Chat</string>
   <string name="dashboard_roomSettings_allowVideo">Allow Video</string>

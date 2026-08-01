@@ -3,6 +3,7 @@ package com.bedrud.app.ui.screens.dashboard
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -28,6 +29,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Groups
@@ -73,12 +75,15 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.withStyle
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import coil.compose.AsyncImage
@@ -94,6 +99,7 @@ import com.bedrud.app.core.rooms.DeletedRoomTombstones
 import com.bedrud.app.core.api.apiAction
 import com.bedrud.app.core.api.apiBody
 import com.bedrud.app.models.CreateRoomRequest
+import com.bedrud.app.models.Instance
 import com.bedrud.app.models.RoomSettings
 import com.bedrud.app.models.UpdateRoomSettingsRequest
 import com.bedrud.app.models.User
@@ -106,6 +112,7 @@ import com.bedrud.app.ui.components.BedrudSnackbarHost
 import com.bedrud.app.ui.components.BedrudTextField
 import com.bedrud.app.ui.components.BedrudTabScaffoldContentInsets
 import com.bedrud.app.ui.components.ConfirmDialog
+import com.bedrud.app.ui.screens.instance.InstanceSwitcherSheet
 import com.bedrud.app.ui.theme.BedrudShapeTokens
 import com.bedrud.app.ui.theme.Dimens
 import com.bedrud.app.ui.theme.Motion
@@ -131,6 +138,9 @@ private sealed interface RoomListEntry {
     data class FromRecent(val recent: RecentRoom) : RoomListEntry
 }
 
+/** A quick-join link resolved to a different server than the active one, awaiting confirmation. */
+private data class PendingServerSwitch(val instance: Instance, val roomName: String)
+
 // ── Screen entry point ────────────────────────────────────────────────────────
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -140,6 +150,7 @@ fun DashboardContent(
     onJoinRoom: (String) -> Unit,
     onJoinRecent: (RecentRoom) -> Unit,
     onOpenProfile: () -> Unit,
+    onNavigateToAddInstance: () -> Unit,
     instanceManager: InstanceManager = koinInject(),
     recentRoomsStore: RecentRoomsStore = koinInject(),
 ) {
@@ -153,6 +164,18 @@ fun DashboardContent(
         instances.firstOrNull { it.id == activeInstanceId }
     }
     val activeServerName = activeInstance?.displayName
+    var showInstanceSwitcher by remember { mutableStateOf(false) }
+
+    if (showInstanceSwitcher) {
+        InstanceSwitcherSheet(
+            instanceManager = instanceManager,
+            onDismiss = { showInstanceSwitcher = false },
+            onAddInstance = {
+                showInstanceSwitcher = false
+                onNavigateToAddInstance()
+            }
+        )
+    }
     // Active-server recents keyed by room name, so a server-backed card can tell when the user was
     // last in that room -- driving the Live / "Xm ago" presence label without a scan per card.
     val activeRecentByName = remember(recentRooms, activeInstanceId) {
@@ -175,10 +198,12 @@ fun DashboardContent(
     var showCreateDialog by remember { mutableStateOf(false) }
     var roomToEdit by remember { mutableStateOf<UserRoomResponse?>(null) }
     var roomToDelete by remember { mutableStateOf<UserRoomResponse?>(null) }
+    var pendingServerSwitch by remember { mutableStateOf<PendingServerSwitch?>(null) }
     var activeFilter by rememberSaveable { mutableStateOf(RoomFilter.ALL) }
     var quickJoinText by remember { mutableStateOf("") }
     // Captured here (not in the join callback) because stringResource is composition-only.
     val invalidJoinInputMessage = stringResource(R.string.dashboard_join_invalidInput)
+    val unknownServerJoinMessage = stringResource(R.string.dashboard_join_unknownServer)
     val focusManager = LocalFocusManager.current
     val listState = rememberLazyListState()
     // Survives the dispose/recompose Navigation does when leaving for MeetingScreen and
@@ -407,6 +432,31 @@ fun DashboardContent(
         )
     }
 
+    pendingServerSwitch?.let { pending ->
+        AlertDialog(
+            onDismissRequest = { pendingServerSwitch = null },
+            title = { Text(stringResource(R.string.dashboard_dialog_switchServerTitle)) },
+            text = { Text(stringResource(R.string.dashboard_dialog_switchServerMessage, pending.instance.displayName)) },
+            confirmButton = {
+                BedrudButton(
+                    text = stringResource(R.string.dashboard_button_switchAndJoin),
+                    variant = BedrudButtonVariant.TONAL,
+                    onClick = {
+                        instanceManager.switchTo(pending.instance.id)
+                        pendingServerSwitch = null
+                        quickJoinText = ""
+                        onJoinRoom(pending.roomName)
+                    },
+                )
+            },
+            dismissButton = {
+                TextButton(onClick = { pendingServerSwitch = null }) {
+                    Text(stringResource(R.string.common_button_cancel))
+                }
+            }
+        )
+    }
+
     val isKeyboardVisible = WindowInsets.ime.getBottom(LocalDensity.current) > 0
 
     val filteredRooms = remember(rooms, activeFilter, currentUser, activeRecentByName) {
@@ -469,7 +519,12 @@ fun DashboardContent(
         topBar = {
             BedrudCompactTopBar(
                 actions = { ProfileAvatarButton(user = currentUser, onClick = onOpenProfile) },
-                title = { RoomsHeaderTitle(serverName = activeServerName) },
+                title = {
+                    RoomsHeaderTitle(
+                        serverName = activeServerName,
+                        onClick = { showInstanceSwitcher = true },
+                    )
+                },
             )
         },
         floatingActionButton = {
@@ -511,14 +566,33 @@ fun DashboardContent(
                             // keyboard" rule and, on failure, keeps the snackbar from rendering
                             // hidden behind the IME.
                             focusManager.clearFocus()
-                            val roomName = BedrudURLParser.parseJoinInput(quickJoinText)
-                            if (!roomName.isNullOrBlank()) {
-                                quickJoinText = ""
-                                onJoinRoom(roomName)
-                            } else {
-                                // Input didn't resolve to a room (e.g. a URL with no /m/ or /c/):
-                                // tell the user instead of the button appearing to do nothing.
-                                scope.launch { snackbarHostState.showSnackbar(invalidJoinInputMessage) }
+                            val trimmedInput = quickJoinText.trim()
+                            val parsedUrl = BedrudURLParser.parse(trimmedInput)
+                            val roomName = parsedUrl?.roomName ?: BedrudURLParser.parseJoinInput(trimmedInput)
+                            // A pasted link names its own server, which may not be the active one --
+                            // resolve it to a known instance rather than silently joining the room
+                            // name against whatever server currently happens to be active.
+                            val targetInstance = parsedUrl?.let { url ->
+                                instances.firstOrNull { BedrudURLParser.matchesServer(it.serverURL, url.serverBaseURL) }
+                            }
+                            when {
+                                roomName.isNullOrBlank() -> {
+                                    // Input didn't resolve to a room (e.g. a URL with no /m/ or /c/):
+                                    // tell the user instead of the button appearing to do nothing.
+                                    scope.launch { snackbarHostState.showSnackbar(invalidJoinInputMessage) }
+                                }
+                                parsedUrl != null && targetInstance == null -> {
+                                    scope.launch { snackbarHostState.showSnackbar(unknownServerJoinMessage) }
+                                }
+                                targetInstance != null && targetInstance.id != activeInstanceId -> {
+                                    // Switching servers is a bigger context change than a same-server
+                                    // join, so confirm first rather than doing it silently.
+                                    pendingServerSwitch = PendingServerSwitch(targetInstance, roomName)
+                                }
+                                else -> {
+                                    quickJoinText = ""
+                                    onJoinRoom(roomName)
+                                }
                             }
                         },
                         modifier = Modifier
@@ -635,18 +709,54 @@ fun DashboardContent(
 
 // ── Header ──────────────────────────────────────────────────────────────────
 
-/** Rooms header: the active server's name + "rooms", in a single neutral tone. */
+/**
+ * Rooms header: the active server's name + "rooms", in a single neutral tone. Doubles as the
+ * server switcher's entry point -- a trailing chevron (the standard dropdown/selector affordance,
+ * distinct from [TrailingChevron]'s drill-in arrow used on room rows) marks it as tappable.
+ */
 @Composable
-private fun RoomsHeaderTitle(serverName: String?) {
+private fun RoomsHeaderTitle(serverName: String?, onClick: () -> Unit) {
     val name = serverName ?: stringResource(R.string.instance_default_displayName)
     val suffix = stringResource(R.string.dashboard_header_roomsSuffix)
-    Text(
-        text = "$name $suffix",
-        style = MaterialTheme.typography.headlineSmall,
+    val switchServerLabel = stringResource(R.string.dashboard_contentDescription_switchServer)
+    // Two-tier hierarchy so the server name reads as the headline and "rooms" as a lighter,
+    // secondary label -- clearer than one flat run of text, without color-coding by server
+    // (that was tried and dropped for this header; see DESIGN.md).
+    val nameStyle = MaterialTheme.typography.headlineSmall.toSpanStyle().copy(
+        fontWeight = FontWeight.Bold,
         color = MaterialTheme.colorScheme.onSurface,
-        maxLines = 1,
-        overflow = TextOverflow.Ellipsis,
     )
+    val suffixStyle = MaterialTheme.typography.titleMedium.toSpanStyle().copy(
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
+    val titleText = remember(name, suffix, nameStyle, suffixStyle) {
+        buildAnnotatedString {
+            withStyle(nameStyle) { append(name) }
+            append(" ")
+            withStyle(suffixStyle) { append(suffix) }
+        }
+    }
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(Dimens.space4),
+        modifier = Modifier
+            .heightIn(min = Dimens.minTouchTarget)
+            .clip(BedrudShapeTokens.chip)
+            .clickable(onClickLabel = switchServerLabel, onClick = onClick),
+    ) {
+        Text(
+            text = titleText,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f, fill = false),
+        )
+        Icon(
+            Icons.Default.ExpandMore,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.size(Dimens.iconSm),
+        )
+    }
 }
 
 /** Circular profile shortcut in the top bar — the user's photo, or their colored initial. */
@@ -654,7 +764,17 @@ private fun RoomsHeaderTitle(serverName: String?) {
 private fun ProfileAvatarButton(user: User?, onClick: () -> Unit) {
     val desc = stringResource(R.string.dashboard_contentDescription_profile)
     val avatarUrl = user?.avatarUrl
-    IconButton(onClick = onClick, modifier = Modifier.size(Dimens.minTouchTarget)) {
+    // Extra end padding: the shared top bar's 4dp trailing margin is tuned for a standard-sized
+    // icon, where the icon glyph's own inset within its touch target makes up the rest of a 16dp
+    // visual gap from the edge. This avatar fills nearly all of its touch target (44dp of 48dp,
+    // only 2dp of self-inset), so without this it'd land noticeably closer to the edge than the
+    // header title's 16dp start inset.
+    IconButton(
+        onClick = onClick,
+        modifier = Modifier
+            .padding(end = Dimens.space8)
+            .size(Dimens.minTouchTarget),
+    ) {
         Box(
             modifier = Modifier
                 .size(Dimens.avatarLg)

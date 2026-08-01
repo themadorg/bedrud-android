@@ -77,6 +77,7 @@
   <string name="dashboard_title_rooms">房间</string>
   <string name="dashboard_placeholder_search">输入房间名称或链接…</string>
   <string name="dashboard_join_invalidInput">请输入房间名称或有效的会议链接。</string>
+  <string name="dashboard_join_unknownServer">请先添加此链接对应的服务器。</string>
   <string name="dashboard_dialog_createTitle">创建房间</string>
   <string name="dashboard_dialog_createDescription">输入房间名称，或留空以自动生成名称。</string>
   <string name="dashboard_label_roomName">房间名称（可选）</string>
@@ -261,10 +262,14 @@
   <string name="dashboard_filter_recent">最近</string>
   <string name="dashboard_dialog_deleteTitle">删除房间？</string>
   <string name="dashboard_dialog_deleteMessage">确定要删除 <xliff:g id="roomName" example="team-standup">%1$s</xliff:g> 吗？此操作无法撤销。</string>
+  <string name="dashboard_dialog_switchServerTitle">切换服务器？</string>
+  <string name="dashboard_dialog_switchServerMessage">此链接属于 <xliff:g id="serverName" example="Bedrud">%1$s</xliff:g>。是否切换到该服务器并加入？</string>
+  <string name="dashboard_button_switchAndJoin">切换并加入</string>
   <string name="dashboard_empty_noRecent">没有最近的房间</string>
   <string name="dashboard_empty_noRecentHint">你加入的房间会显示在这里，包括其他服务器上的房间。</string>
   <string name="dashboard_contentDescription_removeRecent">从最近中移除</string>
   <string name="dashboard_header_roomsSuffix">房间</string>
   <string name="dashboard_action_remove">移除</string>
   <string name="dashboard_contentDescription_profile">打开个人资料</string>
+  <string name="dashboard_contentDescription_switchServer">切换服务器</string>
 </resources>

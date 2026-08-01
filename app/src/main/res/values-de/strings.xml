@@ -77,6 +77,7 @@
   <string name="dashboard_title_rooms">Räume</string>
   <string name="dashboard_placeholder_search">Raumname oder Link eingeben…</string>
   <string name="dashboard_join_invalidInput">Gib einen Raumnamen oder einen gültigen Meeting-Link ein.</string>
+  <string name="dashboard_join_unknownServer">Füge zuerst den Server dieses Links hinzu.</string>
   <string name="dashboard_dialog_createTitle">Raum erstellen</string>
   <string name="dashboard_dialog_createDescription">Geben Sie einen Namen für Ihren Raum ein oder lassen Sie das Feld leer für einen automatisch generierten Namen.</string>
   <string name="dashboard_label_roomName">Raumname (optional)</string>
@@ -261,10 +262,14 @@
   <string name="dashboard_filter_recent">Zuletzt</string>
   <string name="dashboard_dialog_deleteTitle">Raum löschen?</string>
   <string name="dashboard_dialog_deleteMessage">Möchtest du <xliff:g id="roomName" example="team-standup">%1$s</xliff:g> wirklich löschen? Das kann nicht rückgängig gemacht werden.</string>
+  <string name="dashboard_dialog_switchServerTitle">Server wechseln?</string>
+  <string name="dashboard_dialog_switchServerMessage">Dieser Link gehört zu <xliff:g id="serverName" example="Bedrud">%1$s</xliff:g>. Zu diesem Server wechseln und beitreten?</string>
+  <string name="dashboard_button_switchAndJoin">Wechseln und beitreten</string>
   <string name="dashboard_empty_noRecent">Keine kürzlichen Räume</string>
   <string name="dashboard_empty_noRecentHint">Räume, denen du beitrittst, erscheinen hier – auch von anderen Servern.</string>
   <string name="dashboard_contentDescription_removeRecent">Aus zuletzt entfernen</string>
   <string name="dashboard_header_roomsSuffix">Räume</string>
   <string name="dashboard_action_remove">Entfernen</string>
   <string name="dashboard_contentDescription_profile">Profil öffnen</string>
+  <string name="dashboard_contentDescription_switchServer">Server wechseln</string>
 </resources>

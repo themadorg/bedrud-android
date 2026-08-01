@@ -87,4 +87,12 @@ object BedrudURLParser {
         val slug = roomName.trim().trim('/')
         return "$base/m/$slug"
     }
+
+    /**
+     * True if [instanceServerUrl] (an [Instance][com.bedrud.app.models.Instance]'s canonical,
+     * trailing-slash `serverURL`) and [parsedBaseUrl] (a [BedrudMeetingURL.serverBaseURL], never
+     * trailing-slashed) name the same server.
+     */
+    fun matchesServer(instanceServerUrl: String, parsedBaseUrl: String): Boolean =
+        instanceServerUrl.trimEnd('/').equals(parsedBaseUrl, ignoreCase = true)
 }

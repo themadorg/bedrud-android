@@ -77,6 +77,7 @@
   <string name="dashboard_title_rooms">Odalar</string>
   <string name="dashboard_placeholder_search">Oda adı veya bağlantısı girin…</string>
   <string name="dashboard_join_invalidInput">Bir oda adı veya geçerli bir toplantı bağlantısı girin.</string>
+  <string name="dashboard_join_unknownServer">Önce bu bağlantının sunucusunu ekleyin.</string>
   <string name="dashboard_dialog_createTitle">Oda Oluştur</string>
   <string name="dashboard_dialog_createDescription">Odanız için bir ad girin veya otomatik oluşturulan bir ad için boş bırakın.</string>
   <string name="dashboard_label_roomName">Oda Adı (isteğe bağlı)</string>
@@ -261,10 +262,14 @@
   <string name="dashboard_filter_recent">Son</string>
   <string name="dashboard_dialog_deleteTitle">Oda silinsin mi?</string>
   <string name="dashboard_dialog_deleteMessage"><xliff:g id="roomName" example="team-standup">%1$s</xliff:g> odasını silmek istediğinize emin misiniz? Bu geri alınamaz.</string>
+  <string name="dashboard_dialog_switchServerTitle">Sunucu değiştirilsin mi?</string>
+  <string name="dashboard_dialog_switchServerMessage">Bu bağlantı <xliff:g id="serverName" example="Bedrud">%1$s</xliff:g> sunucusuna ait. Bu sunucuya geçip katılmak ister misiniz?</string>
+  <string name="dashboard_button_switchAndJoin">Geç ve katıl</string>
   <string name="dashboard_empty_noRecent">Son oda yok</string>
   <string name="dashboard_empty_noRecentHint">Katıldığınız odalar burada görünür, diğer sunucular dahil.</string>
   <string name="dashboard_contentDescription_removeRecent">Son kullanılanlardan kaldır</string>
   <string name="dashboard_header_roomsSuffix">odalar</string>
   <string name="dashboard_action_remove">Kaldır</string>
   <string name="dashboard_contentDescription_profile">Profili aç</string>
+  <string name="dashboard_contentDescription_switchServer">Sunucu değiştir</string>
 </resources>

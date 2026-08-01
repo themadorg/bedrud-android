@@ -75,6 +75,7 @@
   <string name="dashboard_title_rooms">اتاق‌ها</string>
   <string name="dashboard_placeholder_search">جستجوی اتاق…</string>
   <string name="dashboard_join_invalidInput">نام یک اتاق یا یک پیوند جلسه معتبر وارد کنید.</string>
+  <string name="dashboard_join_unknownServer">ابتدا سرور این پیوند را اضافه کنید.</string>
   <string name="dashboard_dialog_createTitle">ایجاد اتاق</string>
   <string name="dashboard_dialog_createDescription">نامی برای اتاق خود وارد کنید، یا برای نام خودکار خالی بگذارید.</string>
   <string name="dashboard_label_roomName">نام اتاق (اختیاری)</string>
@@ -258,10 +259,14 @@
   <string name="dashboard_filter_recent">اخیر</string>
   <string name="dashboard_dialog_deleteTitle">اتاق حذف شود؟</string>
   <string name="dashboard_dialog_deleteMessage">آیا مطمئن هستید که می‌خواهید <xliff:g id="roomName" example="team-standup">%1$s</xliff:g> را حذف کنید؟ این کار قابل بازگشت نیست.</string>
+  <string name="dashboard_dialog_switchServerTitle">سرور تغییر کند؟</string>
+  <string name="dashboard_dialog_switchServerMessage">این پیوند مربوط به <xliff:g id="serverName" example="Bedrud">%1$s</xliff:g> است. به آن سرور تغییر کرده و وارد شوید؟</string>
+  <string name="dashboard_button_switchAndJoin">تغییر و پیوستن</string>
   <string name="dashboard_empty_noRecent">اتاق اخیری نیست</string>
   <string name="dashboard_empty_noRecentHint">اتاق‌هایی که به آن‌ها می‌پیوندید اینجا ظاهر می‌شوند، از جمله در سرورهای دیگر.</string>
   <string name="dashboard_contentDescription_removeRecent">حذف از اخیر</string>
   <string name="dashboard_header_roomsSuffix">اتاق‌ها</string>
   <string name="dashboard_action_remove">برداشتن</string>
   <string name="dashboard_contentDescription_profile">باز کردن نمایه</string>
+  <string name="dashboard_contentDescription_switchServer">تغییر سرور</string>
 </resources>

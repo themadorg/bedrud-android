@@ -77,6 +77,7 @@
   <string name="dashboard_title_rooms">Salas</string>
   <string name="dashboard_placeholder_search">Introduce el nombre o enlace de la sala…</string>
   <string name="dashboard_join_invalidInput">Introduce el nombre de una sala o un enlace de reunión válido.</string>
+  <string name="dashboard_join_unknownServer">Agrega primero el servidor de este enlace.</string>
   <string name="dashboard_dialog_createTitle">Crear sala</string>
   <string name="dashboard_dialog_createDescription">Introduce un nombre para tu sala o déjalo en blanco para un nombre generado automáticamente.</string>
   <string name="dashboard_label_roomName">Nombre de la sala (opcional)</string>
@@ -261,10 +262,14 @@
   <string name="dashboard_filter_recent">Recientes</string>
   <string name="dashboard_dialog_deleteTitle">¿Eliminar sala?</string>
   <string name="dashboard_dialog_deleteMessage">¿Seguro que quieres eliminar <xliff:g id="roomName" example="team-standup">%1$s</xliff:g>? Esta acción no se puede deshacer.</string>
+  <string name="dashboard_dialog_switchServerTitle">¿Cambiar de servidor?</string>
+  <string name="dashboard_dialog_switchServerMessage">Este enlace es para <xliff:g id="serverName" example="Bedrud">%1$s</xliff:g>. ¿Cambiar a ese servidor y unirte?</string>
+  <string name="dashboard_button_switchAndJoin">Cambiar y unirse</string>
   <string name="dashboard_empty_noRecent">No hay salas recientes</string>
   <string name="dashboard_empty_noRecentHint">Las salas a las que te unes aparecen aquí, también en otros servidores.</string>
   <string name="dashboard_contentDescription_removeRecent">Quitar de recientes</string>
   <string name="dashboard_header_roomsSuffix">salas</string>
   <string name="dashboard_action_remove">Quitar</string>
   <string name="dashboard_contentDescription_profile">Abrir perfil</string>
+  <string name="dashboard_contentDescription_switchServer">Cambiar de servidor</string>
 </resources>
