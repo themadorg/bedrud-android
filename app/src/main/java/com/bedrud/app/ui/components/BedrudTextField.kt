@@ -61,11 +61,15 @@ fun BedrudTextField(
         .fillMaxWidth()
         .bringIntoViewOnFocus()
         .let { if (autofill != null) it.autofillType(autofill) else it }
+    // Placeholder must match the input's own text style: M3 otherwise renders the placeholder at
+    // its default bodyLarge regardless of [textStyle], so a compact field (e.g. bodyMedium) shows a
+    // hint larger than the text the user types. Reuse the exact merged style for both.
+    val mergedTextStyle = textStyle.copy(textDirection = textDirection)
     OutlinedTextField(
         value = value,
         onValueChange = onValueChange,
         label = label?.let { { Text(it) } },
-        placeholder = placeholder?.let { { Text(it) } },
+        placeholder = placeholder?.let { { Text(it, style = mergedTextStyle) } },
         leadingIcon = leadingIcon,
         trailingIcon = trailingIcon,
         supportingText = supportingText,
@@ -77,7 +81,7 @@ fun BedrudTextField(
         keyboardOptions = keyboardOptions,
         keyboardActions = keyboardActions,
         shape = BedrudShapeTokens.field,
-        textStyle = textStyle.copy(textDirection = textDirection),
+        textStyle = mergedTextStyle,
         modifier = fieldModifier,
     )
 }
