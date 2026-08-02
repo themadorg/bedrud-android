@@ -2,6 +2,7 @@ package com.bedrud.app.ui.screens.dashboard
 
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -28,11 +29,12 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Groups
+import androidx.compose.material.icons.filled.MeetingRoom
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.AlertDialog
@@ -66,10 +68,20 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.StrokeJoin
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.LayoutCoordinates
+import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
@@ -119,6 +131,10 @@ import com.bedrud.app.ui.theme.Motion
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
+import kotlin.math.atan2
+import kotlin.math.cos
+import kotlin.math.sin
+import kotlin.math.sqrt
 import org.koin.compose.koinInject
 
 private const val AUTO_REFRESH_INTERVAL_MS = 60_000L
@@ -496,6 +512,18 @@ fun DashboardContent(
             neverJoined
     }
 
+    val isCurrentTabEmpty = when (activeFilter) {
+        RoomFilter.ALL -> allTabEntries.isEmpty() && !isLoading
+        RoomFilter.MY_ROOMS -> filteredRooms.isEmpty() && !isLoading
+    }
+
+    // Anchors (in root/window coordinates) for the sketch arrow pointing from the empty-state
+    // phrase to the create-room FAB -- captured from two different Scaffold slots, so they're
+    // reconciled into one local coordinate space via overlayOrigin when actually drawing.
+    var fabAnchor by remember { mutableStateOf<Offset?>(null) }
+    var emptyPhraseAnchor by remember { mutableStateOf<Offset?>(null) }
+    var overlayOrigin by remember { mutableStateOf(Offset.Zero) }
+
     LaunchedEffect(pendingScrollToTopFor, activeFilter, recentRooms, filteredRooms, allTabEntries) {
         val targetRoomName = pendingScrollToTopFor ?: return@LaunchedEffect
         val targetRoomVisibleInCurrentTab = when (activeFilter) {
@@ -513,195 +541,211 @@ fun DashboardContent(
         }
     }
 
-    Scaffold(
-        modifier = modifier,
-        contentWindowInsets = BedrudTabScaffoldContentInsets,
-        topBar = {
-            BedrudCompactTopBar(
-                actions = { ProfileAvatarButton(user = currentUser, onClick = onOpenProfile) },
-                title = {
-                    RoomsHeaderTitle(
-                        serverName = activeServerName,
-                        onClick = { showInstanceSwitcher = true },
-                    )
-                },
-            )
-        },
-        floatingActionButton = {
-            FloatingActionButton(
-                onClick = { showCreateDialog = true },
-                containerColor = MaterialTheme.colorScheme.primaryContainer,
-                contentColor = MaterialTheme.colorScheme.onPrimaryContainer
-            ) { Icon(Icons.Default.Add, contentDescription = stringResource(R.string.dashboard_contentDescription_createRoom)) }
-        },
-        snackbarHost = { BedrudSnackbarHost(snackbarHostState) }
-    ) { innerPadding ->
-        PullToRefreshBox(
-            isRefreshing = isRefreshing,
-            onRefresh = { refreshRooms() },
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding),
-        ) {
-            if (isLoading && rooms.isEmpty() && recentRooms.isEmpty()) {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) { CircularProgressIndicator() }
-            } else {
-                // Header height, captured so the empty state below can be centered against the
-                // full screen rather than just the space left over beneath it.
-                var quickJoinHeightPx by remember { mutableIntStateOf(0) }
-                var filterRowHeightPx by remember { mutableIntStateOf(0) }
-
-                Column(
-                    modifier = Modifier.fillMaxSize()
-                ) {
-                    // ── Quick join bar ────────────────────────────────
-                    QuickJoinBar(
-                        value = quickJoinText,
-                        onValueChange = { quickJoinText = it },
-                        onJoin = {
-                            // Dismiss the keyboard first: it satisfies the "action key hides the
-                            // keyboard" rule and, on failure, keeps the snackbar from rendering
-                            // hidden behind the IME.
-                            focusManager.clearFocus()
-                            val trimmedInput = quickJoinText.trim()
-                            val parsedUrl = BedrudURLParser.parse(trimmedInput)
-                            val roomName = parsedUrl?.roomName ?: BedrudURLParser.parseJoinInput(trimmedInput)
-                            // A pasted link names its own server, which may not be the active one --
-                            // resolve it to a known instance rather than silently joining the room
-                            // name against whatever server currently happens to be active.
-                            val targetInstance = parsedUrl?.let { url ->
-                                instances.firstOrNull { BedrudURLParser.matchesServer(it.serverURL, url.serverBaseURL) }
-                            }
-                            when {
-                                roomName.isNullOrBlank() -> {
-                                    // Input didn't resolve to a room (e.g. a URL with no /m/ or /c/):
-                                    // tell the user instead of the button appearing to do nothing.
-                                    scope.launch { snackbarHostState.showSnackbar(invalidJoinInputMessage) }
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .onGloballyPositioned { overlayOrigin = it.positionInRoot() }
+    ) {
+        Scaffold(
+            contentWindowInsets = BedrudTabScaffoldContentInsets,
+            topBar = {
+                BedrudCompactTopBar(
+                    actions = { ProfileAvatarButton(user = currentUser, onClick = onOpenProfile) },
+                    title = {
+                        RoomsHeaderTitle(
+                            serverName = activeServerName,
+                            onClick = { showInstanceSwitcher = true },
+                        )
+                    },
+                )
+            },
+            floatingActionButton = {
+                FloatingActionButton(
+                    onClick = { showCreateDialog = true },
+                    // Full/circular per our `pill` token (which the design system already earmarks
+                    // for FABs) so it rhymes with the nav bar's fully-rounded active-indicator pill,
+                    // instead of M3's default 16dp squircle.
+                    shape = BedrudShapeTokens.pill,
+                    containerColor = MaterialTheme.colorScheme.primaryContainer,
+                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                    modifier = Modifier.onGloballyPositioned { fabAnchor = it.boundsInRoot().center }
+                ) { Icon(Icons.Default.Add, contentDescription = stringResource(R.string.dashboard_contentDescription_createRoom)) }
+            },
+            snackbarHost = { BedrudSnackbarHost(snackbarHostState) }
+        ) { innerPadding ->
+            PullToRefreshBox(
+                isRefreshing = isRefreshing,
+                onRefresh = { refreshRooms() },
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding),
+            ) {
+                if (isLoading && rooms.isEmpty() && recentRooms.isEmpty()) {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) { CircularProgressIndicator() }
+                } else {
+                    // Header height, captured so the empty state below can be centered against the
+                    // full screen rather than just the space left over beneath it.
+                    var quickJoinHeightPx by remember { mutableIntStateOf(0) }
+                    var filterRowHeightPx by remember { mutableIntStateOf(0) }
+    
+                    Column(
+                        modifier = Modifier.fillMaxSize()
+                    ) {
+                        // ── Quick join bar ────────────────────────────────
+                        QuickJoinBar(
+                            value = quickJoinText,
+                            onValueChange = { quickJoinText = it },
+                            onJoin = {
+                                // Dismiss the keyboard first: it satisfies the "action key hides the
+                                // keyboard" rule and, on failure, keeps the snackbar from rendering
+                                // hidden behind the IME.
+                                focusManager.clearFocus()
+                                val trimmedInput = quickJoinText.trim()
+                                val parsedUrl = BedrudURLParser.parse(trimmedInput)
+                                val roomName = parsedUrl?.roomName ?: BedrudURLParser.parseJoinInput(trimmedInput)
+                                // A pasted link names its own server, which may not be the active one --
+                                // resolve it to a known instance rather than silently joining the room
+                                // name against whatever server currently happens to be active.
+                                val targetInstance = parsedUrl?.let { url ->
+                                    instances.firstOrNull { BedrudURLParser.matchesServer(it.serverURL, url.serverBaseURL) }
                                 }
-                                parsedUrl != null && targetInstance == null -> {
-                                    scope.launch { snackbarHostState.showSnackbar(unknownServerJoinMessage) }
-                                }
-                                targetInstance != null && targetInstance.id != activeInstanceId -> {
-                                    // Switching servers is a bigger context change than a same-server
-                                    // join, so confirm first rather than doing it silently.
-                                    pendingServerSwitch = PendingServerSwitch(targetInstance, roomName)
-                                }
-                                else -> {
-                                    quickJoinText = ""
-                                    onJoinRoom(roomName)
-                                }
-                            }
-                        },
-                        modifier = Modifier
-                            .padding(horizontal = Dimens.space16, vertical = Dimens.space4)
-                            .onGloballyPositioned { quickJoinHeightPx = it.size.height }
-                    )
-
-                    // ── Filter chips ──────────────────────────────────
-                    FilterRow(
-                        activeFilter = activeFilter,
-                        onFilterChange = { activeFilter = it },
-                        modifier = Modifier
-                            .padding(horizontal = Dimens.space16, vertical = Dimens.space4)
-                            .onGloballyPositioned { filterRowHeightPx = it.size.height }
-                    )
-
-                    // ── Room list ─────────────────────────────────────
-                    val isCurrentTabEmpty = when (activeFilter) {
-                        RoomFilter.ALL -> allTabEntries.isEmpty() && !isLoading
-                        RoomFilter.MY_ROOMS -> filteredRooms.isEmpty() && !isLoading
-                    }
-
-                    if (isCurrentTabEmpty) {
-                        // Centering only within this leftover space (below the header) would pull
-                        // the icon+text+button group noticeably above the true center of the
-                        // screen, since nothing balances the header's height at the bottom. Nudge
-                        // the group up by half the header height so its own midpoint lands on the
-                        // screen's midpoint instead.
-                        val pullUp = with(LocalDensity.current) {
-                            ((quickJoinHeightPx + filterRowHeightPx) / 2).toDp()
-                        }
-                        Box(
-                            modifier = Modifier.weight(1f).fillMaxSize(),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            Box(modifier = Modifier.offset(y = -pullUp)) {
-                                EmptyState(
-                                    hasFilter = activeFilter == RoomFilter.MY_ROOMS,
-                                    onCreateRoom = { showCreateDialog = true },
-                                )
-                            }
-                        }
-                    } else {
-                        LazyColumn(
-                            state = listState,
-                            modifier = Modifier.weight(1f).fillMaxSize(),
-                            contentPadding = PaddingValues(
-                                bottom = if (isKeyboardVisible) Dimens.space16 else Dimens.roomListBottomSpace,
-                            )
-                        ) {
-                            if (activeFilter == RoomFilter.ALL) {
-                                items(
-                                    allTabEntries,
-                                    key = { entry ->
-                                        when (entry) {
-                                            is RoomListEntry.FromApi -> "api:${entry.room.id}"
-                                            is RoomListEntry.FromRecent ->
-                                                "recent:${entry.recent.instanceId}:${entry.recent.roomName}"
-                                        }
-                                    },
-                                ) { entry ->
-                                    when (entry) {
-                                        is RoomListEntry.FromApi -> RoomCard(
-                                            room = entry.room,
-                                            isOwner = entry.room.createdBy == currentUser?.id,
-                                            isOngoing = isOngoingFor(entry.room.name),
-                                            lastVisitAtMs = lastVisitFor(entry.room.name),
-                                            now = nowTickMs,
-                                            onJoin = { onJoinRoom(entry.room.name) },
-                                            onDelete = { roomToDelete = entry.room },
-                                            onSettings = if (entry.room.createdBy == currentUser?.id) {
-                                                { roomToEdit = entry.room }
-                                            } else null,
-                                            modifier = Modifier.padding(horizontal = Dimens.space16, vertical = Dimens.space4),
-                                        )
-                                        is RoomListEntry.FromRecent -> RecentRoomCard(
-                                            recent = entry.recent,
-                                            now = nowTickMs,
-                                            onJoin = { onJoinRecent(entry.recent) },
-                                            onRemove = {
-                                                recentRoomsStore.remove(
-                                                    entry.recent.roomName,
-                                                    entry.recent.instanceId,
-                                                )
-                                            },
-                                            modifier = Modifier.padding(horizontal = Dimens.space16, vertical = Dimens.space4),
-                                        )
+                                when {
+                                    roomName.isNullOrBlank() -> {
+                                        // Input didn't resolve to a room (e.g. a URL with no /m/ or /c/):
+                                        // tell the user instead of the button appearing to do nothing.
+                                        scope.launch { snackbarHostState.showSnackbar(invalidJoinInputMessage) }
+                                    }
+                                    parsedUrl != null && targetInstance == null -> {
+                                        scope.launch { snackbarHostState.showSnackbar(unknownServerJoinMessage) }
+                                    }
+                                    targetInstance != null && targetInstance.id != activeInstanceId -> {
+                                        // Switching servers is a bigger context change than a same-server
+                                        // join, so confirm first rather than doing it silently.
+                                        pendingServerSwitch = PendingServerSwitch(targetInstance, roomName)
+                                    }
+                                    else -> {
+                                        quickJoinText = ""
+                                        onJoinRoom(roomName)
                                     }
                                 }
-                            } else {
-                                items(filteredRooms, key = { it.id }) { room ->
-                                    RoomCard(
-                                        room = room,
-                                        isOwner = room.createdBy == currentUser?.id,
-                                        isOngoing = isOngoingFor(room.name),
-                                        lastVisitAtMs = lastVisitFor(room.name),
-                                        now = nowTickMs,
-                                        onJoin = { onJoinRoom(room.name) },
-                                        onDelete = { roomToDelete = room },
-                                        onSettings = if (room.createdBy == currentUser?.id) {
-                                            { roomToEdit = room }
-                                        } else null,
-                                        modifier = Modifier.padding(horizontal = Dimens.space16, vertical = Dimens.space4)
+                            },
+                            modifier = Modifier
+                                .padding(horizontal = Dimens.space16, vertical = Dimens.space4)
+                                .onGloballyPositioned { quickJoinHeightPx = it.size.height }
+                        )
+    
+                        // ── Filter chips ──────────────────────────────────
+                        FilterRow(
+                            activeFilter = activeFilter,
+                            onFilterChange = { activeFilter = it },
+                            modifier = Modifier
+                                .padding(horizontal = Dimens.space16, vertical = Dimens.space4)
+                                .onGloballyPositioned { filterRowHeightPx = it.size.height }
+                        )
+    
+                        // ── Room list ─────────────────────────────────────
+                        if (isCurrentTabEmpty) {
+                            // Centering only within this leftover space (below the header) would pull
+                            // the icon+phrase group noticeably above the true center of the screen,
+                            // since nothing balances the header's height at the bottom. Nudge the
+                            // group up by half the header height so its own midpoint lands on the
+                            // screen's midpoint instead.
+                            val pullUp = with(LocalDensity.current) {
+                                ((quickJoinHeightPx + filterRowHeightPx) / 2).toDp()
+                            }
+                            Box(
+                                modifier = Modifier.weight(1f).fillMaxSize(),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Box(modifier = Modifier.offset(y = -pullUp)) {
+                                    EmptyState(
+                                        onPhrasePositioned = { emptyPhraseAnchor = it.boundsInRoot().bottomCenter },
                                     )
+                                }
+                            }
+                        } else {
+                            LazyColumn(
+                                state = listState,
+                                modifier = Modifier.weight(1f).fillMaxSize(),
+                                contentPadding = PaddingValues(
+                                    bottom = if (isKeyboardVisible) Dimens.space16 else Dimens.roomListBottomSpace,
+                                )
+                            ) {
+                                if (activeFilter == RoomFilter.ALL) {
+                                    items(
+                                        allTabEntries,
+                                        key = { entry ->
+                                            when (entry) {
+                                                is RoomListEntry.FromApi -> "api:${entry.room.id}"
+                                                is RoomListEntry.FromRecent ->
+                                                    "recent:${entry.recent.instanceId}:${entry.recent.roomName}"
+                                            }
+                                        },
+                                    ) { entry ->
+                                        when (entry) {
+                                            is RoomListEntry.FromApi -> RoomCard(
+                                                room = entry.room,
+                                                isOwner = entry.room.createdBy == currentUser?.id,
+                                                isOngoing = isOngoingFor(entry.room.name),
+                                                lastVisitAtMs = lastVisitFor(entry.room.name),
+                                                now = nowTickMs,
+                                                onJoin = { onJoinRoom(entry.room.name) },
+                                                onDelete = { roomToDelete = entry.room },
+                                                onSettings = if (entry.room.createdBy == currentUser?.id) {
+                                                    { roomToEdit = entry.room }
+                                                } else null,
+                                                modifier = Modifier.padding(horizontal = Dimens.space16, vertical = Dimens.space4),
+                                            )
+                                            is RoomListEntry.FromRecent -> RecentRoomCard(
+                                                recent = entry.recent,
+                                                now = nowTickMs,
+                                                onJoin = { onJoinRecent(entry.recent) },
+                                                onRemove = {
+                                                    recentRoomsStore.remove(
+                                                        entry.recent.roomName,
+                                                        entry.recent.instanceId,
+                                                    )
+                                                },
+                                                modifier = Modifier.padding(horizontal = Dimens.space16, vertical = Dimens.space4),
+                                            )
+                                        }
+                                    }
+                                } else {
+                                    items(filteredRooms, key = { it.id }) { room ->
+                                        RoomCard(
+                                            room = room,
+                                            isOwner = room.createdBy == currentUser?.id,
+                                            isOngoing = isOngoingFor(room.name),
+                                            lastVisitAtMs = lastVisitFor(room.name),
+                                            now = nowTickMs,
+                                            onJoin = { onJoinRoom(room.name) },
+                                            onDelete = { roomToDelete = room },
+                                            onSettings = if (room.createdBy == currentUser?.id) {
+                                                { roomToEdit = room }
+                                            } else null,
+                                            modifier = Modifier.padding(horizontal = Dimens.space16, vertical = Dimens.space4)
+                                        )
+                                    }
                                 }
                             }
                         }
                     }
                 }
+            }
+        }
+
+        if (isCurrentTabEmpty) {
+            val start = emptyPhraseAnchor
+            val end = fabAnchor
+            if (start != null && end != null) {
+                SketchArrow(
+                    start = start - overlayOrigin,
+                    end = end - overlayOrigin,
+                    modifier = Modifier.fillMaxSize()
+                )
             }
         }
     }
@@ -853,8 +897,9 @@ private fun FilterRow(
 ) {
     Row(modifier = modifier, horizontalArrangement = Arrangement.spacedBy(Dimens.space8)) {
         RoomFilter.entries.forEach { filter ->
+            val isSelected = activeFilter == filter
             FilterChip(
-                selected = activeFilter == filter,
+                selected = isSelected,
                 onClick = { onFilterChange(filter) },
                 label = {
                     Text(
@@ -863,7 +908,19 @@ private fun FilterRow(
                             RoomFilter.MY_ROOMS -> stringResource(R.string.dashboard_filter_myRooms)
                         }
                     )
-                }
+                },
+                // Canonical M3 filter-chip affordance: a leading check on the active chip only, so
+                // the selected state reads as "this filter is on" rather than relying on the fill
+                // colour alone. Uniform across both chips -- not a per-category icon.
+                leadingIcon = if (isSelected) {
+                    {
+                        Icon(
+                            Icons.Default.Check,
+                            contentDescription = null,
+                            modifier = Modifier.size(Dimens.iconSm)
+                        )
+                    }
+                } else null
             )
         }
     }
@@ -1141,30 +1198,175 @@ private fun SwipeActionBackground(action: SwipeAction, state: SwipeToDismissBoxS
 // ── Empty state ───────────────────────────────────────────────────────────────
 
 @Composable
-private fun EmptyState(hasFilter: Boolean, onCreateRoom: () -> Unit) {
-    // One consistent gap between icon, phrase, and call to action.
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(Dimens.space16),
-    ) {
+private fun EmptyState(onPhrasePositioned: (LayoutCoordinates) -> Unit) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        // Bare icon (no tinted badge behind it), muted to the same tone as the phrase below so the
+        // empty state reads as one quiet group.
         Icon(
-            Icons.Default.Groups,
+            Icons.Default.MeetingRoom,
             contentDescription = null,
             tint = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.size(Dimens.iconXl)
         )
+        Spacer(Modifier.height(Dimens.space4))
         Text(
-            text = if (hasFilter) stringResource(R.string.dashboard_empty_noMatch) else stringResource(R.string.dashboard_empty_noRooms),
+            text = stringResource(R.string.dashboard_empty_noRooms),
             style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.onGloballyPositioned(onPhrasePositioned)
         )
-        if (!hasFilter) {
-            BedrudButton(
-                text = stringResource(R.string.dashboard_button_createFirstRoom),
-                onClick = onCreateRoom,
-                variant = BedrudButtonVariant.OUTLINE
+    }
+}
+
+/**
+ * A hand-drawn-looking dashed "doodle" arrow from [start] to [end] (both in the same local
+ * coordinate space): two loop-the-loops (a bigger one, then a smaller one) with a small dip
+ * between them, then a rising line into a solid arrowhead -- points the empty-state phrase at the
+ * create-room FAB instead of duplicating it as a second button. Modeled on a hand-drawn tutorial
+ * arrow reference doodle.
+ */
+@Composable
+private fun SketchArrow(start: Offset, end: Offset, modifier: Modifier = Modifier) {
+    val color = MaterialTheme.colorScheme.onSurfaceVariant
+    val density = LocalDensity.current
+    val strokeWidthPx = with(density) { Dimens.borderStrong.toPx() }
+    val dashPx = with(density) { Dimens.space8.toPx() }
+    val gapPx = with(density) { Dimens.space4.toPx() }
+    // Pull both ends off the anchors themselves -- a line starting/ending exactly on the phrase
+    // and the FAB's centers reads as glued to them rather than pointing at them. The FAB gets a
+    // bigger margin so the arrowhead lands at roughly its visual edge instead of the icon itself.
+    val startInsetPx = with(density) { Dimens.space12.toPx() }
+    // Big enough to clear the FAB itself (half of a ~56dp FAB plus a gap) so the arrowhead
+    // finishes just short of the button rather than landing on top of it.
+    val endInsetPx = with(density) { Dimens.space48.toPx() }
+
+    Canvas(modifier = modifier) {
+        val rawDx = end.x - start.x
+        val rawDy = end.y - start.y
+        val rawLen = sqrt(rawDx * rawDx + rawDy * rawDy).coerceAtLeast(1f)
+        val ux = rawDx / rawLen
+        val uy = rawDy / rawLen
+        val adjStart = Offset(start.x + ux * startInsetPx, start.y + uy * startInsetPx)
+        val tip = Offset(end.x - ux * endInsetPx, end.y - uy * endInsetPx)
+
+        val dx = tip.x - adjStart.x
+        val dy = tip.y - adjStart.y
+        val len = sqrt(dx * dx + dy * dy).coerceAtLeast(1f)
+        val dirX = dx / len
+        val dirY = dy / len
+        // "Up" side of the direction of travel -- both loops bulge this way, the dip between
+        // them bulges the opposite way, matching the reference doodle's silhouette.
+        val perpX = -dirY
+        val perpY = dirX
+
+        fun along(t: Float, side: Float = 0f) = Offset(
+            adjStart.x + dx * t + perpX * side,
+            adjStart.y + dy * t + perpY * side
+        )
+        fun circlePoint(center: Offset, radius: Float, angleDeg: Float): Offset {
+            val a = Math.toRadians(angleDeg.toDouble())
+            return Offset(center.x + radius * cos(a).toFloat(), center.y + radius * sin(a).toFloat())
+        }
+        fun angleOf(center: Offset, point: Offset): Float =
+            Math.toDegrees(atan2((point.y - center.y).toDouble(), (point.x - center.x).toDouble())).toFloat()
+
+        val loopRadius = len * 0.075f
+
+        // Unit tangent (direction of travel) of an arc at [angleDeg], for a positive/CW sweep in
+        // Compose's y-down space. Used to leave/enter the loop along its OWN tangent instead of
+        // snapping back to the straight travel direction -- that mismatch would leave a small kink,
+        // and a malformed dash, right where the loop rejoins the line.
+        fun arcTangent(angleDeg: Float): Offset {
+            val a = Math.toRadians(angleDeg.toDouble())
+            return Offset(-sin(a).toFloat(), cos(a).toFloat())
+        }
+
+        // A single loop-the-loop partway down; the run before it is just a gently curved line.
+        val loopEntry = along(0.62f)
+        val loopCenter = Offset(loopEntry.x + perpX * loopRadius, loopEntry.y + perpY * loopRadius)
+        val loopStartAngle = angleOf(loopCenter, loopEntry)
+        val loopSweep = 326f
+        val loopExitAngle = loopStartAngle + loopSweep
+        val loopExit = circlePoint(loopCenter, loopRadius, loopExitAngle)
+        val loopEntryTan = arcTangent(loopStartAngle)
+        val loopExitTan = arcTangent(loopExitAngle)
+
+        val ctrl = len * 0.08f  // control-point reach for the connecting curves
+
+        val path = Path().apply {
+            moveTo(adjStart.x, adjStart.y)
+
+            // Gentle hand-drawn curve from the start down into the loop -- bows softly to one side
+            // (where the old first loop used to be), then straightens to meet the loop's entry
+            // tangent so the join stays smooth.
+            cubicTo(
+                adjStart.x + dirX * (len * 0.26f) + perpX * (len * 0.06f),
+                adjStart.y + dirY * (len * 0.26f) + perpY * (len * 0.06f),
+                loopEntry.x - loopEntryTan.x * (len * 0.20f), loopEntry.y - loopEntryTan.y * (len * 0.20f),
+                loopEntry.x, loopEntry.y
+            )
+
+            arcTo(
+                rect = Rect(
+                    loopCenter.x - loopRadius, loopCenter.y - loopRadius,
+                    loopCenter.x + loopRadius, loopCenter.y + loopRadius
+                ),
+                startAngleDegrees = loopStartAngle,
+                sweepAngleDegrees = loopSweep,
+                forceMoveTo = false
+            )
+
+            // Rising line from the loop all the way to the tip -- the shaft ends where the
+            // arrowhead's wings begin.
+            cubicTo(
+                loopExit.x + loopExitTan.x * ctrl, loopExit.y + loopExitTan.y * ctrl,
+                tip.x - dirX * ctrl, tip.y - dirY * ctrl,
+                tip.x, tip.y
             )
         }
+
+        // Shaft: phase = dashPx starts the pattern at the dash/gap boundary, so the line begins
+        // with a gap instead of a dash -- i.e. the very first dash under the phrase is dropped.
+        val shaftStroke = Stroke(
+            width = strokeWidthPx,
+            cap = StrokeCap.Round,
+            join = StrokeJoin.Round,
+            pathEffect = PathEffect.dashPathEffect(floatArrayOf(dashPx, gapPx), phase = dashPx)
+        )
+        drawPath(path = path, color = color, style = shaftStroke)
+
+        // Wings: no phase offset, so each starts with a solid dash right at the tip.
+        val wingStroke = Stroke(
+            width = strokeWidthPx,
+            cap = StrokeCap.Round,
+            join = StrokeJoin.Round,
+            pathEffect = PathEffect.dashPathEffect(floatArrayOf(dashPx, gapPx))
+        )
+
+        // Open, dashed arrowhead -- two "wing" strokes flicked back from the tip, drawn in the
+        // exact same dashed style + width as the shaft, so it reads as part of the same hand-drawn
+        // line rather than a solid pasted-on triangle.
+        val wingLen = len * 0.08f
+        val wingAngle = Math.toRadians(26.0)
+        val cosW = cos(wingAngle).toFloat()
+        val sinW = sin(wingAngle).toFloat()
+        val backX = -dirX
+        val backY = -dirY
+        val wing1 = Offset(
+            tip.x + (backX * cosW - backY * sinW) * wingLen,
+            tip.y + (backX * sinW + backY * cosW) * wingLen
+        )
+        val wing2 = Offset(
+            tip.x + (backX * cosW + backY * sinW) * wingLen,
+            tip.y + (-backX * sinW + backY * cosW) * wingLen
+        )
+        val headPath = Path().apply {
+            moveTo(tip.x, tip.y)
+            lineTo(wing1.x, wing1.y)
+            moveTo(tip.x, tip.y)
+            lineTo(wing2.x, wing2.y)
+        }
+        drawPath(path = headPath, color = color, style = wingStroke)
     }
 }
 

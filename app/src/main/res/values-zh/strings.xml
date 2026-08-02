@@ -82,7 +82,6 @@
   <string name="dashboard_dialog_createTitle">创建房间</string>
   <string name="dashboard_dialog_createDescription">输入房间名称，或留空以自动生成名称。</string>
   <string name="dashboard_label_roomName">房间名称（可选）</string>
-  <string name="dashboard_button_createFirstRoom">创建您的第一个房间</string>
   <string name="dashboard_contentDescription_createRoom">创建房间</string>
   <string name="dashboard_contentDescription_settings">设置</string>
   <string name="dashboard_roomSettings_title">房间设置</string>
@@ -201,7 +200,6 @@
   <string name="dashboard_status_live">● 直播中</string>
   <string name="dashboard_status_timeAgo">%1$s前</string>
   <string name="dashboard_empty_noRooms">暂无房间</string>
-  <string name="dashboard_empty_noMatch">没有符合此筛选条件的房间</string>
   <string name="dashboard_feature_chat">聊天</string>
   <string name="dashboard_feature_video">视频</string>
   <string name="dashboard_feature_audio">音频</string>

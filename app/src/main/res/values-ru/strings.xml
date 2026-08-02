@@ -82,7 +82,6 @@
   <string name="dashboard_dialog_createTitle">Создать комнату</string>
   <string name="dashboard_dialog_createDescription">Введите название комнаты или оставьте пустым для автоматического названия.</string>
   <string name="dashboard_label_roomName">Название комнаты (необязательно)</string>
-  <string name="dashboard_button_createFirstRoom">Создайте свою первую комнату</string>
   <string name="dashboard_contentDescription_createRoom">Создать комнату</string>
   <string name="dashboard_contentDescription_settings">Настройки</string>
   <string name="dashboard_roomSettings_title">Настройки комнаты</string>
@@ -201,7 +200,6 @@
   <string name="dashboard_status_live">● В эфире</string>
   <string name="dashboard_status_timeAgo">%1$s назад</string>
   <string name="dashboard_empty_noRooms">Пока нет комнат</string>
-  <string name="dashboard_empty_noMatch">Нет комнат, соответствующих этому фильтру</string>
   <string name="dashboard_feature_chat">Чат</string>
   <string name="dashboard_feature_video">Видео</string>
   <string name="dashboard_feature_audio">Аудио</string>
