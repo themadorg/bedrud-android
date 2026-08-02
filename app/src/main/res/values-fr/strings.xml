@@ -201,7 +201,7 @@
   <string name="dashboard_status_live">● En direct</string>
   <string name="dashboard_status_timeAgo">il y a %1$s</string>
   <string name="dashboard_empty_noRooms">Aucun salon pour l\'instant</string>
-  <string name="dashboard_empty_noMatch">Aucun salon ne correspond à ce filtre</string>
+  <string name="dashboard_empty_noOwnedRooms">Vous n\'avez pas encore créé de salon</string>
   <string name="dashboard_feature_chat">Chat</string>
   <string name="dashboard_feature_video">Vidéo</string>
   <string name="dashboard_feature_audio">Audio</string>

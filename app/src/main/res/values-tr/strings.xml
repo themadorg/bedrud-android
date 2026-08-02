@@ -201,7 +201,7 @@
   <string name="dashboard_status_live">● Canlı</string>
   <string name="dashboard_status_timeAgo">%1$s önce</string>
   <string name="dashboard_empty_noRooms">Henüz oda yok</string>
-  <string name="dashboard_empty_noMatch">Bu filtreyle eşleşen oda yok</string>
+  <string name="dashboard_empty_noOwnedRooms">Henüz hiç oda oluşturmadınız</string>
   <string name="dashboard_feature_chat">Sohbet</string>
   <string name="dashboard_feature_video">Video</string>
   <string name="dashboard_feature_audio">Ses</string>

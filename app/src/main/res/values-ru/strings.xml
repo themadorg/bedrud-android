@@ -201,7 +201,7 @@
   <string name="dashboard_status_live">● В эфире</string>
   <string name="dashboard_status_timeAgo">%1$s назад</string>
   <string name="dashboard_empty_noRooms">Пока нет комнат</string>
-  <string name="dashboard_empty_noMatch">Нет комнат, соответствующих этому фильтру</string>
+  <string name="dashboard_empty_noOwnedRooms">Вы ещё не создали ни одной комнаты</string>
   <string name="dashboard_feature_chat">Чат</string>
   <string name="dashboard_feature_video">Видео</string>
   <string name="dashboard_feature_audio">Аудио</string>

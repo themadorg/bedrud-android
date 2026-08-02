@@ -201,7 +201,7 @@
   <string name="dashboard_status_live">● مباشر</string>
   <string name="dashboard_status_timeAgo">منذ %1$s</string>
   <string name="dashboard_empty_noRooms">لا توجد غرف بعد</string>
-  <string name="dashboard_empty_noMatch">لا توجد غرف تطابق هذا الفلتر</string>
+  <string name="dashboard_empty_noOwnedRooms">لم تُنشئ أي غرفة بعد</string>
   <string name="dashboard_feature_chat">الدردشة</string>
   <string name="dashboard_feature_video">الفيديو</string>
   <string name="dashboard_feature_audio">الصوت</string>
