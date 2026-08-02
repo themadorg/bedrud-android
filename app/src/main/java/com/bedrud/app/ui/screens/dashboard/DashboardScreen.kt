@@ -29,6 +29,7 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Close
@@ -892,8 +893,9 @@ private fun FilterRow(
 ) {
     Row(modifier = modifier, horizontalArrangement = Arrangement.spacedBy(Dimens.space8)) {
         RoomFilter.entries.forEach { filter ->
+            val isSelected = activeFilter == filter
             FilterChip(
-                selected = activeFilter == filter,
+                selected = isSelected,
                 onClick = { onFilterChange(filter) },
                 label = {
                     Text(
@@ -902,7 +904,19 @@ private fun FilterRow(
                             RoomFilter.MY_ROOMS -> stringResource(R.string.dashboard_filter_myRooms)
                         }
                     )
-                }
+                },
+                // Canonical M3 filter-chip affordance: a leading check on the active chip only, so
+                // the selected state reads as "this filter is on" rather than relying on the fill
+                // colour alone. Uniform across both chips -- not a per-category icon.
+                leadingIcon = if (isSelected) {
+                    {
+                        Icon(
+                            Icons.Default.Check,
+                            contentDescription = null,
+                            modifier = Modifier.size(Dimens.iconSm)
+                        )
+                    }
+                } else null
             )
         }
     }
