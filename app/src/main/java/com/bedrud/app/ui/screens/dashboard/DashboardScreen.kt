@@ -562,6 +562,10 @@ fun DashboardContent(
             floatingActionButton = {
                 FloatingActionButton(
                     onClick = { showCreateDialog = true },
+                    // Full/circular per our `pill` token (which the design system already earmarks
+                    // for FABs) so it rhymes with the nav bar's fully-rounded active-indicator pill,
+                    // instead of M3's default 16dp squircle.
+                    shape = BedrudShapeTokens.pill,
                     containerColor = MaterialTheme.colorScheme.primaryContainer,
                     contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
                     modifier = Modifier.onGloballyPositioned { fabAnchor = it.boundsInRoot().center }
@@ -1204,7 +1208,7 @@ private fun EmptyState(onPhrasePositioned: (LayoutCoordinates) -> Unit) {
             tint = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.size(Dimens.iconXl)
         )
-        Spacer(Modifier.height(Dimens.space8))
+        Spacer(Modifier.height(Dimens.space4))
         Text(
             text = stringResource(R.string.dashboard_empty_noRooms),
             style = MaterialTheme.typography.titleMedium,
