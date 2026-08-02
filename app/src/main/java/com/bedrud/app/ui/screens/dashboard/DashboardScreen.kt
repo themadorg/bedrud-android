@@ -24,6 +24,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -630,7 +631,10 @@ fun DashboardContent(
                         ) {
                             Box(modifier = Modifier.offset(y = -pullUp)) {
                                 EmptyState(
-                                    hasFilter = activeFilter == RoomFilter.MY_ROOMS,
+                                    title = stringResource(
+                                        if (activeFilter == RoomFilter.MY_ROOMS) R.string.dashboard_empty_noOwnedRooms
+                                        else R.string.dashboard_empty_noRooms
+                                    ),
                                     onCreateRoom = { showCreateDialog = true },
                                 )
                             }
@@ -1141,30 +1145,40 @@ private fun SwipeActionBackground(action: SwipeAction, state: SwipeToDismissBoxS
 // ── Empty state ───────────────────────────────────────────────────────────────
 
 @Composable
-private fun EmptyState(hasFilter: Boolean, onCreateRoom: () -> Unit) {
-    // One consistent gap between icon, phrase, and call to action.
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(Dimens.space16),
-    ) {
-        Icon(
-            Icons.Default.Groups,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.size(Dimens.iconXl)
-        )
+private fun EmptyState(title: String, onCreateRoom: () -> Unit) {
+    // Tighter gap between the badge and the phrase than between the phrase and the button --
+    // reads as one grouped "headline", with the button as a clearly separate next step.
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        // Soft tertiary (teal) badge behind the icon -- same circular-badge treatment as the
+        // brand mark on Add Server, so the empty state reads as designed rather than a bare
+        // gray glyph. Tertiary (not primary) so it doesn't visually compete with the rose
+        // Create-room button below.
+        Box(
+            modifier = Modifier
+                .size(Dimens.brandMark)
+                .clip(CircleShape)
+                .background(MaterialTheme.colorScheme.tertiaryContainer),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                Icons.Default.Groups,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onTertiaryContainer,
+                modifier = Modifier.size(Dimens.iconXl)
+            )
+        }
+        Spacer(Modifier.height(Dimens.space8))
         Text(
-            text = if (hasFilter) stringResource(R.string.dashboard_empty_noMatch) else stringResource(R.string.dashboard_empty_noRooms),
+            text = title,
             style = MaterialTheme.typography.titleMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
-        if (!hasFilter) {
-            BedrudButton(
-                text = stringResource(R.string.dashboard_button_createFirstRoom),
-                onClick = onCreateRoom,
-                variant = BedrudButtonVariant.OUTLINE
-            )
-        }
+        Spacer(Modifier.height(Dimens.space16))
+        BedrudButton(
+            text = stringResource(R.string.dashboard_button_createFirstRoom),
+            onClick = onCreateRoom,
+            variant = BedrudButtonVariant.OUTLINE
+        )
     }
 }
 
