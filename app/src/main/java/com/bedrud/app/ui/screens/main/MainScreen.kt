@@ -7,11 +7,11 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AdminPanelSettings
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.VideoCall
+import androidx.compose.material.icons.filled.Videocam
 import androidx.compose.material.icons.outlined.AdminPanelSettings
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.Settings
-import androidx.compose.material.icons.outlined.VideoCall
+import androidx.compose.material.icons.outlined.Videocam
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -74,8 +74,8 @@ fun MainScreen(
         add(
             BottomNavTab(
                 label = stringResource(R.string.main_tab_rooms),
-                icon = Icons.Outlined.VideoCall,
-                selectedIcon = Icons.Filled.VideoCall
+                icon = Icons.Outlined.Videocam,
+                selectedIcon = Icons.Filled.Videocam
             )
         )
         add(
