@@ -201,7 +201,6 @@
   <string name="dashboard_status_live">● ライブ</string>
   <string name="dashboard_status_timeAgo">%1$s前</string>
   <string name="dashboard_empty_noRooms">ルームがまだありません</string>
-  <string name="dashboard_empty_noOwnedRooms">まだルームを作成していません</string>
   <string name="dashboard_feature_chat">チャット</string>
   <string name="dashboard_feature_video">ビデオ</string>
   <string name="dashboard_feature_audio">オーディオ</string>

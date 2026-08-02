@@ -53,6 +53,8 @@ object Dimens {
     val iconXl = 56.dp                 // empty-state illustrations
     val avatar = 40.dp
     val avatarLg = 44.dp               // top-bar profile avatar circle (inside a 48dp touch target)
+    val emptyStateBadge = 88.dp        // circular badge behind an empty-state icon (roomier than
+                                        // brandMark around a 56dp glyph, so it doesn't look cramped)
 
     // ── Brand ──
     val brandMark = 72.dp

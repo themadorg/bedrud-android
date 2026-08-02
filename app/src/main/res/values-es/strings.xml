@@ -201,7 +201,6 @@
   <string name="dashboard_status_live">● En vivo</string>
   <string name="dashboard_status_timeAgo">hace %1$s</string>
   <string name="dashboard_empty_noRooms">Aún no hay salas</string>
-  <string name="dashboard_empty_noOwnedRooms">Aún no has creado ninguna sala</string>
   <string name="dashboard_feature_chat">Chat</string>
   <string name="dashboard_feature_video">Video</string>
   <string name="dashboard_feature_audio">Audio</string>

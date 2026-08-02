@@ -201,7 +201,6 @@
   <string name="dashboard_status_live">● Live</string>
   <string name="dashboard_status_timeAgo">vor %1$s</string>
   <string name="dashboard_empty_noRooms">Noch keine Räume</string>
-  <string name="dashboard_empty_noOwnedRooms">Du hast noch keine Räume erstellt</string>
   <string name="dashboard_feature_chat">Chat</string>
   <string name="dashboard_feature_video">Video</string>
   <string name="dashboard_feature_audio">Audio</string>

@@ -631,10 +631,6 @@ fun DashboardContent(
                         ) {
                             Box(modifier = Modifier.offset(y = -pullUp)) {
                                 EmptyState(
-                                    title = stringResource(
-                                        if (activeFilter == RoomFilter.MY_ROOMS) R.string.dashboard_empty_noOwnedRooms
-                                        else R.string.dashboard_empty_noRooms
-                                    ),
                                     onCreateRoom = { showCreateDialog = true },
                                 )
                             }
@@ -1145,31 +1141,30 @@ private fun SwipeActionBackground(action: SwipeAction, state: SwipeToDismissBoxS
 // ── Empty state ───────────────────────────────────────────────────────────────
 
 @Composable
-private fun EmptyState(title: String, onCreateRoom: () -> Unit) {
+private fun EmptyState(onCreateRoom: () -> Unit) {
     // Tighter gap between the badge and the phrase than between the phrase and the button --
     // reads as one grouped "headline", with the button as a clearly separate next step.
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        // Soft tertiary (teal) badge behind the icon -- same circular-badge treatment as the
-        // brand mark on Add Server, so the empty state reads as designed rather than a bare
-        // gray glyph. Tertiary (not primary) so it doesn't visually compete with the rose
-        // Create-room button below.
+        // Same circular-badge treatment as the brand mark on Add Server (rose primaryContainer),
+        // so the empty state reads as designed rather than a bare gray glyph -- sized roomier than
+        // brandMark so the icon isn't crowding the edge of its circle.
         Box(
             modifier = Modifier
-                .size(Dimens.brandMark)
+                .size(Dimens.emptyStateBadge)
                 .clip(CircleShape)
-                .background(MaterialTheme.colorScheme.tertiaryContainer),
+                .background(MaterialTheme.colorScheme.primaryContainer),
             contentAlignment = Alignment.Center
         ) {
             Icon(
                 Icons.Default.Groups,
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.onTertiaryContainer,
+                tint = MaterialTheme.colorScheme.onPrimaryContainer,
                 modifier = Modifier.size(Dimens.iconXl)
             )
         }
         Spacer(Modifier.height(Dimens.space8))
         Text(
-            text = title,
+            text = stringResource(R.string.dashboard_empty_noRooms),
             style = MaterialTheme.typography.titleMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )

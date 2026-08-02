@@ -201,7 +201,6 @@
   <string name="dashboard_status_live">● 直播中</string>
   <string name="dashboard_status_timeAgo">%1$s前</string>
   <string name="dashboard_empty_noRooms">暂无房间</string>
-  <string name="dashboard_empty_noOwnedRooms">您还没有创建任何房间</string>
   <string name="dashboard_feature_chat">聊天</string>
   <string name="dashboard_feature_video">视频</string>
   <string name="dashboard_feature_audio">音频</string>
