@@ -113,13 +113,19 @@ fun recentRoomsNotInApiList(
         recent.instanceId == activeInstanceId && recent.roomName !in apiRoomNames
     }
 
+private const val MILLIS_PER_SECOND = 1000L
+private const val SECONDS_PER_MINUTE = 60L
+private const val SECONDS_PER_HOUR = 3600L
+private const val SECONDS_PER_DAY = 86_400L
+private const val SECONDS_PER_WEEK = 604_800L
+
 fun formatRecentRoomTimeAgo(joinedAt: Long, now: Long = System.currentTimeMillis()): String {
-    val seconds = ((now - joinedAt) / 1000).coerceAtLeast(0)
+    val seconds = ((now - joinedAt) / MILLIS_PER_SECOND).coerceAtLeast(0)
     return when {
-        seconds < 60 -> "now"
-        seconds < 3600 -> "${seconds / 60}m"
-        seconds < 86_400 -> "${seconds / 3600}h"
-        seconds < 604_800 -> "${seconds / 86_400}d"
-        else -> "${seconds / 604_800}w"
+        seconds < SECONDS_PER_MINUTE -> "now"
+        seconds < SECONDS_PER_HOUR -> "${seconds / SECONDS_PER_MINUTE}m"
+        seconds < SECONDS_PER_DAY -> "${seconds / SECONDS_PER_HOUR}h"
+        seconds < SECONDS_PER_WEEK -> "${seconds / SECONDS_PER_DAY}d"
+        else -> "${seconds / SECONDS_PER_WEEK}w"
     }
 }
