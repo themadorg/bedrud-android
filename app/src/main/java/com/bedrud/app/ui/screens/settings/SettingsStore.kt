@@ -45,7 +45,7 @@ enum class AppLanguage(val localeTag: String, val label: String, val isRtl: Bool
 class SettingsStore(context: Context) {
 
     private val prefs: SharedPreferences =
-        context.getSharedPreferences("bedrud_settings", Context.MODE_PRIVATE)
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
     private val _appearance = MutableStateFlow(loadAppearance())
     val appearance: StateFlow<AppAppearance> = _appearance.asStateFlow()
@@ -119,6 +119,7 @@ class SettingsStore(context: Context) {
     }
 
     companion object {
+        private const val PREFS_NAME = "bedrud_settings"
         private const val KEY_APPEARANCE = "bedrud_appearance"
         private const val KEY_NOTIFICATIONS = "bedrud_notifications_enabled"
         private const val KEY_LANGUAGE = "bedrud_language"
