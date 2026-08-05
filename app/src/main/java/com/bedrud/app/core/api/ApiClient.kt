@@ -15,6 +15,12 @@ import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import java.util.concurrent.TimeUnit
 
+/** Connect/read/write timeout applied to every Bedrud API OkHttp client. */
+private const val DEFAULT_TIMEOUT_SECONDS = 30L
+
+/** Cap on 401-driven token-refresh retries before forcing logout, to avoid infinite loops. */
+private const val MAX_REFRESH_ATTEMPTS = 2
+
 /**
  * Interceptor that attaches the JWT access token to every outgoing request.
  */
@@ -31,7 +37,7 @@ class AuthInterceptor(
         }
 
         val authenticatedRequest = original.newBuilder()
-            .header("Authorization", "Bearer $accessToken")
+            .header(ApiHeaders.AUTHORIZATION, ApiHeaders.bearer(accessToken))
             .build()
 
         return chain.proceed(authenticatedRequest)
@@ -50,7 +56,7 @@ class TokenAuthenticator(
 
     override fun authenticate(route: Route?, response: Response): Request? {
         // Avoid infinite retry loops
-        if (responseCount(response) >= 2) {
+        if (responseCount(response) >= MAX_REFRESH_ATTEMPTS) {
             authManager.logout()
             return null
         }
@@ -68,8 +74,8 @@ class TokenAuthenticator(
                 .addConverterFactory(GsonConverterFactory.create())
                 .client(
                     OkHttpClient.Builder()
-                        .connectTimeout(30, TimeUnit.SECONDS)
-                        .readTimeout(30, TimeUnit.SECONDS)
+                        .connectTimeout(DEFAULT_TIMEOUT_SECONDS, TimeUnit.SECONDS)
+                        .readTimeout(DEFAULT_TIMEOUT_SECONDS, TimeUnit.SECONDS)
                         .build()
                 )
                 .build()
@@ -93,7 +99,7 @@ class TokenAuthenticator(
             authManager.saveTokens(refreshCall.accessToken, refreshCall.refreshToken)
 
             return response.request.newBuilder()
-                .header("Authorization", "Bearer ${refreshCall.accessToken}")
+                .header(ApiHeaders.AUTHORIZATION, ApiHeaders.bearer(refreshCall.accessToken))
                 .build()
         }
 
@@ -134,9 +140,9 @@ class ApiClientFactory(private val baseURL: String) {
             .addInterceptor(authInterceptor)
             .addInterceptor(loggingInterceptor)
             .authenticator(tokenAuthenticator)
-            .connectTimeout(30, TimeUnit.SECONDS)
-            .readTimeout(30, TimeUnit.SECONDS)
-            .writeTimeout(30, TimeUnit.SECONDS)
+            .connectTimeout(DEFAULT_TIMEOUT_SECONDS, TimeUnit.SECONDS)
+            .readTimeout(DEFAULT_TIMEOUT_SECONDS, TimeUnit.SECONDS)
+            .writeTimeout(DEFAULT_TIMEOUT_SECONDS, TimeUnit.SECONDS)
             .build()
     }
 

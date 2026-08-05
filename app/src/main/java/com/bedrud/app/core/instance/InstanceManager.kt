@@ -11,6 +11,7 @@ import com.bedrud.app.core.auth.AuthManager
 import com.bedrud.app.core.auth.PasskeyManager
 import com.bedrud.app.core.livekit.RoomManager
 import com.bedrud.app.models.HealthResponse
+import com.bedrud.app.models.Instance
 import com.bedrud.app.models.PublicSettings
 import com.bedrud.app.ui.screens.settings.SettingsStore
 import com.google.gson.GsonBuilder
@@ -32,6 +33,9 @@ import java.util.concurrent.TimeUnit
 
 /** How long to wait for the public-settings fetch before giving up and falling back to defaults. */
 private const val SETTINGS_TIMEOUT_MS = 8_000L
+
+/** Connect/read timeout for the lightweight server health probe (shorter than the main API client). */
+private const val HEALTH_CHECK_TIMEOUT_SECONDS = 10L
 
 /** Load state of the active server's public settings (see [InstanceManager.publicSettings]). */
 sealed interface PublicSettingsState {
@@ -166,10 +170,14 @@ class InstanceManager(
     }
 
     suspend fun checkHealth(serverURL: String): HealthResponse {
-        val baseURL = if (serverURL.endsWith("/")) "${serverURL}api" else "$serverURL/api"
+        val baseURL = if (serverURL.endsWith("/")) {
+            "$serverURL${Instance.API_PATH_SEGMENT}"
+        } else {
+            "$serverURL/${Instance.API_PATH_SEGMENT}"
+        }
         val plainClient = OkHttpClient.Builder()
-            .connectTimeout(10, TimeUnit.SECONDS)
-            .readTimeout(10, TimeUnit.SECONDS)
+            .connectTimeout(HEALTH_CHECK_TIMEOUT_SECONDS, TimeUnit.SECONDS)
+            .readTimeout(HEALTH_CHECK_TIMEOUT_SECONDS, TimeUnit.SECONDS)
             .build()
         val gson = GsonBuilder().setLenient().create()
         val retrofit = Retrofit.Builder()
