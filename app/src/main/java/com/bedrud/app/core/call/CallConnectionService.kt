@@ -11,6 +11,7 @@ import android.telecom.PhoneAccountHandle
 import android.telecom.TelecomManager
 import android.util.Log
 import com.bedrud.app.R
+import com.bedrud.app.core.deeplink.BedrudScheme
 
 class CallConnectionService : ConnectionService() {
 
@@ -96,7 +97,8 @@ class CallConnectionService : ConnectionService() {
 
     companion object {
         private const val TAG = "CallConnectionService"
-        const val SCHEME = "bedrud"
+        const val SCHEME = BedrudScheme.SCHEME
+        private const val ROOM_URI_AUTHORITY = "room"
         private var activeConnection: Connection? = null
         private var pendingAudioRoute: Int? = null
         var muteListener: ((Boolean) -> Unit)? = null
@@ -171,7 +173,7 @@ class CallConnectionService : ConnectionService() {
         }
 
         fun roomUri(roomName: String): Uri =
-            Uri.parse("$SCHEME://room/${Uri.encode(roomName)}")
+            Uri.parse("$SCHEME://$ROOM_URI_AUTHORITY/${Uri.encode(roomName)}")
 
         private fun parseRoomName(address: Uri?): String? {
             address ?: return null
