@@ -214,7 +214,7 @@ class CallService : Service() {
     private fun acquireWakeLock() {
         releaseWakeLock()
         val pm = getSystemService(PowerManager::class.java) ?: return
-        wakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "bedrud:active_call").apply {
+        wakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, WAKE_LOCK_TAG).apply {
             setReferenceCounted(false)
             acquire(MAX_CALL_DURATION_MS)
         }
@@ -302,6 +302,7 @@ class CallService : Service() {
 
     companion object {
         private const val TAG = "CallService"
+        private const val WAKE_LOCK_TAG = "bedrud:active_call"
         private const val CHANNEL_ID = "bedrud_call_ongoing"
         private const val NOTIFICATION_ID = 1001
         const val EXTRA_ROOM_NAME = "room_name"
