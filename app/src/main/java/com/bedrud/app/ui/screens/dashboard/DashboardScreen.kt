@@ -82,6 +82,7 @@ import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
@@ -110,6 +111,7 @@ import com.bedrud.app.core.recent.recentRoomsNotInApiList
 import com.bedrud.app.core.rooms.DeletedRoomTombstones
 import com.bedrud.app.core.api.apiAction
 import com.bedrud.app.core.api.apiBody
+import com.bedrud.app.core.toUserMessage
 import com.bedrud.app.models.CreateRoomRequest
 import com.bedrud.app.models.Instance
 import com.bedrud.app.models.RoomSettings
@@ -171,6 +173,11 @@ fun DashboardContent(
     recentRoomsStore: RecentRoomsStore = koinInject(),
 ) {
     val roomApi = instanceManager.roomApi.collectAsState().value ?: return
+    val context = LocalContext.current
+    val createRoomFailedMsg = stringResource(R.string.dashboard_error_createRoomFailed)
+    val deleteRoomFailedMsg = stringResource(R.string.dashboard_error_deleteRoomFailed)
+    val saveSettingsFailedMsg = stringResource(R.string.dashboard_error_saveSettingsFailed)
+    val settingsSavedMsg = stringResource(R.string.dashboard_toast_settingsSaved)
     val authManager = instanceManager.authManager.collectAsState().value
     val currentUser by (authManager?.currentUser ?: MutableStateFlow(null)).collectAsState()
     val recentRooms by recentRoomsStore.rooms.collectAsState()
@@ -349,7 +356,11 @@ fun DashboardContent(
             onDismiss = { showCreateDialog = false },
             onCreate = { name ->
                 scope.launch {
-                    val room = apiBody("Failed to create room", { snackbarHostState.showSnackbar(it) }) {
+                    val room = apiBody(
+                        createRoomFailedMsg,
+                        { snackbarHostState.showSnackbar(it) },
+                        classifyError = { it.toUserMessage(context) },
+                    ) {
                         roomApi.createRoom(
                             CreateRoomRequest(
                                 name = name.ifBlank { null },
@@ -399,7 +410,11 @@ fun DashboardContent(
                 val deleting = room
                 roomToDelete = null
                 scope.launch {
-                    val deleted = apiAction("Failed to delete room", { snackbarHostState.showSnackbar(it) }) {
+                    val deleted = apiAction(
+                        deleteRoomFailedMsg,
+                        { snackbarHostState.showSnackbar(it) },
+                        classifyError = { it.toUserMessage(context) },
+                    ) {
                         roomApi.deleteRoom(deleting.id)
                     }
                     if (deleted) {
@@ -426,7 +441,11 @@ fun DashboardContent(
             onDismiss = { roomToEdit = null },
             onSave = { isPublic, settings ->
                 scope.launch {
-                    val saved = apiAction("Failed to save settings", { snackbarHostState.showSnackbar(it) }) {
+                    val saved = apiAction(
+                        saveSettingsFailedMsg,
+                        { snackbarHostState.showSnackbar(it) },
+                        classifyError = { it.toUserMessage(context) },
+                    ) {
                         roomApi.updateRoomSettings(
                             room.id,
                             UpdateRoomSettingsRequest(isPublic = isPublic, settings = settings)
@@ -441,7 +460,7 @@ fun DashboardContent(
                         }
                         roomToEdit = null
                         loadRooms()
-                        snackbarHostState.showSnackbar("Settings saved")
+                        snackbarHostState.showSnackbar(settingsSavedMsg)
                     }
                 }
             }
