@@ -1,36 +1,20 @@
 package com.bedrud.app.core.api
 
 import com.bedrud.app.models.ChangePasswordRequest
-import com.google.gson.Gson
 import kotlinx.coroutines.runBlocking
 import okhttp3.mockwebserver.MockResponse
-import okhttp3.mockwebserver.MockWebServer
-import org.junit.After
 import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
-import retrofit2.Retrofit
-import retrofit2.converter.gson.GsonConverterFactory
 
-class PasswordChangeTest {
+class PasswordChangeTest : MockApiTest() {
 
-    private lateinit var server: MockWebServer
     private lateinit var authApi: AuthApi
-    private val gson = Gson()
 
     @Before
     fun setUp() {
-        server = MockWebServer()
-        server.start()
-        val retrofit = Retrofit.Builder()
-            .baseUrl(server.url("/"))
-            .addConverterFactory(GsonConverterFactory.create())
-            .build()
-        authApi = retrofit.create(AuthApi::class.java)
+        authApi = api()
     }
-
-    @After
-    fun tearDown() { server.shutdown() }
 
     @Test
     fun `changePassword sends PUT to auth-password with correct body`() = runBlocking {
@@ -41,15 +25,9 @@ class PasswordChangeTest {
             newPassword = "new-secret"
         )
         val response = authApi.changePassword(request)
-        val recorded = server.takeRequest()
 
-        assertEquals("PUT", recorded.method)
-        assertEquals("/auth/password", recorded.path)
+        assertRequest("PUT", "/auth/password", listOf("old-secret", "new-secret"))
         assertTrue(response.isSuccessful)
-
-        val body = recorded.body.readUtf8()
-        assertTrue(body.contains("old-secret"))
-        assertTrue(body.contains("new-secret"))
     }
 
     @Test
@@ -57,8 +35,7 @@ class PasswordChangeTest {
         server.enqueue(MockResponse().setResponseCode(200))
 
         authApi.changePassword(ChangePasswordRequest(currentPassword = "cur", newPassword = "nw"))
-        val recorded = server.takeRequest()
-        val body = recorded.body.readUtf8()
+        val body = server.takeRequest().body.readUtf8()
 
         // Verify Gson serializes with camelCase (matching server expectations)
         assertTrue(body.contains("currentPassword") || body.contains("current_password"))
