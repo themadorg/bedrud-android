@@ -1,7 +1,6 @@
 package com.bedrud.app.core.livekit
 
 import android.app.Application
-import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Intent
 import android.os.Build
@@ -11,6 +10,7 @@ import com.bedrud.app.R
 import com.bedrud.app.core.call.CallConnectionService
 import com.bedrud.app.core.meeting.chat.ChatWire
 import com.bedrud.app.core.meeting.stage.StageWire
+import com.bedrud.app.core.registerNotificationChannel
 import com.bedrud.app.ui.screens.settings.SettingsStore
 import io.livekit.android.AudioOptions
 import io.livekit.android.LiveKit
@@ -682,16 +682,12 @@ class RoomManager(
 
     private fun ensureScreenShareNotificationChannel() {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
-        val channel = NotificationChannel(
-            SCREEN_SHARE_CHANNEL_ID,
-            application.getString(R.string.screen_share_channel_name),
-            NotificationManager.IMPORTANCE_LOW,
-        ).apply {
-            description = application.getString(R.string.screen_share_channel_description)
-            setShowBadge(false)
-        }
-        val manager = application.getSystemService(NotificationManager::class.java)
-        manager.createNotificationChannel(channel)
+        application.registerNotificationChannel(
+            id = SCREEN_SHARE_CHANNEL_ID,
+            name = application.getString(R.string.screen_share_channel_name),
+            importance = NotificationManager.IMPORTANCE_LOW,
+            description = application.getString(R.string.screen_share_channel_description),
+        )
     }
 
     private fun buildScreenShareNotification() =
