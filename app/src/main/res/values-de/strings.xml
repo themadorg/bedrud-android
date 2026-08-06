@@ -271,4 +271,23 @@
   <string name="dashboard_action_remove">Entfernen</string>
   <string name="dashboard_contentDescription_profile">Profil öffnen</string>
   <string name="dashboard_contentDescription_switchServer">Server wechseln</string>
+
+  <!-- Error messages (#70) -->
+  <string name="error_network_unavailable">Keine Internetverbindung</string>
+  <string name="error_timeout">Der Server hat zu lange zum Antworten gebraucht</string>
+  <string name="error_server_unreachable">Server nicht erreichbar</string>
+  <string name="error_generic">Etwas ist schiefgelaufen. Bitte versuche es erneut.</string>
+  <string name="meeting_error_microphoneFailed">Es gab ein Problem mit deinem Mikrofon</string>
+  <string name="meeting_error_cameraFailed">Es gab ein Problem mit deiner Kamera</string>
+  <string name="meeting_error_cameraSwitchFailed">Kamera konnte nicht gewechselt werden</string>
+  <string name="meeting_error_screenShareUnavailable">Bildschirmfreigabe ist nicht verfügbar</string>
+  <string name="meeting_error_screenShareStopFailed">Bildschirmfreigabe konnte nicht beendet werden</string>
+  <string name="meeting_error_alreadyPresenting"><xliff:g id="name" example="Alex">%1$s</xliff:g> präsentiert bereits</string>
+  <string name="meeting_error_messageSendFailed">Deine Nachricht konnte nicht gesendet werden</string>
+  <string name="meeting_error_kickFailed">Teilnehmer konnte nicht entfernt werden</string>
+  <string name="meeting_error_banFailed">Teilnehmer konnte nicht gesperrt werden</string>
+  <string name="dashboard_error_createRoomFailed">Raum konnte nicht erstellt werden</string>
+  <string name="dashboard_error_deleteRoomFailed">Raum konnte nicht gelöscht werden</string>
+  <string name="dashboard_error_saveSettingsFailed">Einstellungen konnten nicht gespeichert werden</string>
+  <string name="dashboard_toast_settingsSaved">Einstellungen gespeichert</string>
 </resources>

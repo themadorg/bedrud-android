@@ -271,4 +271,27 @@
   <string name="profile_label_userId">User ID</string>
   <string name="profile_label_provider">Provider</string>
   <string name="profile_button_signOut">Sign Out</string>
+
+  <!-- Generic error messages (network/exception classification) -->
+  <string name="error_network_unavailable">No internet connection</string>
+  <string name="error_timeout">The server took too long to respond</string>
+  <string name="error_server_unreachable">Couldn\'t reach the server</string>
+  <string name="error_generic">Something went wrong. Please try again.</string>
+
+  <!-- Meeting device / media errors -->
+  <string name="meeting_error_microphoneFailed">There was a problem with your microphone</string>
+  <string name="meeting_error_cameraFailed">There was a problem with your camera</string>
+  <string name="meeting_error_cameraSwitchFailed">Couldn\'t switch camera</string>
+  <string name="meeting_error_screenShareUnavailable">Screen sharing isn\'t available</string>
+  <string name="meeting_error_screenShareStopFailed">Couldn\'t stop screen sharing</string>
+  <string name="meeting_error_alreadyPresenting"><xliff:g id="name" example="Alex">%1$s</xliff:g> is already presenting</string>
+  <string name="meeting_error_messageSendFailed">Couldn\'t send your message</string>
+  <string name="meeting_error_kickFailed">Failed to remove participant</string>
+  <string name="meeting_error_banFailed">Failed to ban participant</string>
+
+  <!-- Dashboard room actions -->
+  <string name="dashboard_error_createRoomFailed">Failed to create room</string>
+  <string name="dashboard_error_deleteRoomFailed">Failed to delete room</string>
+  <string name="dashboard_error_saveSettingsFailed">Failed to save settings</string>
+  <string name="dashboard_toast_settingsSaved">Settings saved</string>
 </resources>

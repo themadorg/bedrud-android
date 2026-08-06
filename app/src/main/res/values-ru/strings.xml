@@ -271,4 +271,23 @@
   <string name="dashboard_action_remove">Убрать</string>
   <string name="dashboard_contentDescription_profile">Открыть профиль</string>
   <string name="dashboard_contentDescription_switchServer">Сменить сервер</string>
+
+  <!-- Error messages (#70) -->
+  <string name="error_network_unavailable">Нет подключения к интернету</string>
+  <string name="error_timeout">Сервер слишком долго не отвечал</string>
+  <string name="error_server_unreachable">Не удалось связаться с сервером</string>
+  <string name="error_generic">Что-то пошло не так. Попробуйте ещё раз.</string>
+  <string name="meeting_error_microphoneFailed">Возникла проблема с микрофоном</string>
+  <string name="meeting_error_cameraFailed">Возникла проблема с камерой</string>
+  <string name="meeting_error_cameraSwitchFailed">Не удалось переключить камеру</string>
+  <string name="meeting_error_screenShareUnavailable">Демонстрация экрана недоступна</string>
+  <string name="meeting_error_screenShareStopFailed">Не удалось остановить демонстрацию экрана</string>
+  <string name="meeting_error_alreadyPresenting"><xliff:g id="name" example="Alex">%1$s</xliff:g> уже ведёт показ</string>
+  <string name="meeting_error_messageSendFailed">Не удалось отправить сообщение</string>
+  <string name="meeting_error_kickFailed">Не удалось удалить участника</string>
+  <string name="meeting_error_banFailed">Не удалось заблокировать участника</string>
+  <string name="dashboard_error_createRoomFailed">Не удалось создать комнату</string>
+  <string name="dashboard_error_deleteRoomFailed">Не удалось удалить комнату</string>
+  <string name="dashboard_error_saveSettingsFailed">Не удалось сохранить настройки</string>
+  <string name="dashboard_toast_settingsSaved">Настройки сохранены</string>
 </resources>

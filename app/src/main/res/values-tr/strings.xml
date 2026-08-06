@@ -271,4 +271,23 @@
   <string name="dashboard_action_remove">Kaldır</string>
   <string name="dashboard_contentDescription_profile">Profili aç</string>
   <string name="dashboard_contentDescription_switchServer">Sunucu değiştir</string>
+
+  <!-- Error messages (#70) -->
+  <string name="error_network_unavailable">İnternet bağlantısı yok</string>
+  <string name="error_timeout">Sunucu yanıt vermek için çok uzun sürdü</string>
+  <string name="error_server_unreachable">Sunucuya ulaşılamadı</string>
+  <string name="error_generic">Bir şeyler ters gitti. Lütfen tekrar deneyin.</string>
+  <string name="meeting_error_microphoneFailed">Mikrofonunuzla ilgili bir sorun oluştu</string>
+  <string name="meeting_error_cameraFailed">Kameranızla ilgili bir sorun oluştu</string>
+  <string name="meeting_error_cameraSwitchFailed">Kamera değiştirilemedi</string>
+  <string name="meeting_error_screenShareUnavailable">Ekran paylaşımı kullanılamıyor</string>
+  <string name="meeting_error_screenShareStopFailed">Ekran paylaşımı durdurulamadı</string>
+  <string name="meeting_error_alreadyPresenting"><xliff:g id="name" example="Alex">%1$s</xliff:g> zaten sunum yapıyor</string>
+  <string name="meeting_error_messageSendFailed">Mesajınız gönderilemedi</string>
+  <string name="meeting_error_kickFailed">Katılımcı çıkarılamadı</string>
+  <string name="meeting_error_banFailed">Katılımcı engellenemedi</string>
+  <string name="dashboard_error_createRoomFailed">Oda oluşturulamadı</string>
+  <string name="dashboard_error_deleteRoomFailed">Oda silinemedi</string>
+  <string name="dashboard_error_saveSettingsFailed">Ayarlar kaydedilemedi</string>
+  <string name="dashboard_toast_settingsSaved">Ayarlar kaydedildi</string>
 </resources>
