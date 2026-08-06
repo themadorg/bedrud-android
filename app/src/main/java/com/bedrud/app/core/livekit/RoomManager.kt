@@ -6,6 +6,7 @@ import android.app.NotificationManager
 import android.content.Intent
 import android.os.Build
 import android.util.Log
+import androidx.annotation.StringRes
 import androidx.core.app.NotificationCompat
 import com.bedrud.app.R
 import com.bedrud.app.core.call.CallConnectionService
@@ -180,6 +181,7 @@ class RoomManager(
             setTrackEnabled(
                 enabled = settingsStore.getMicEnabled(),
                 label = "microphone",
+                deviceErrorRes = R.string.meeting_error_microphoneFailed,
                 stateFlow = _isMicEnabled,
                 errorFlow = _micMediaError,
                 sync = ::syncMicrophoneState,
@@ -375,6 +377,7 @@ class RoomManager(
     private suspend fun setTrackEnabled(
         enabled: Boolean,
         label: String,
+        @StringRes deviceErrorRes: Int,
         stateFlow: MutableStateFlow<Boolean>,
         errorFlow: MutableStateFlow<Boolean>,
         sync: () -> Unit,
@@ -389,7 +392,7 @@ class RoomManager(
             onApplied(actuallyEnabled)
             if (enabled && !published) {
                 errorFlow.value = true
-                if (reportEnableFailure) _error.value = "Failed to enable $label"
+                if (reportEnableFailure) _error.value = application.getString(deviceErrorRes)
             } else {
                 errorFlow.value = false
             }
@@ -397,7 +400,7 @@ class RoomManager(
             Log.e(TAG, "Failed to set $label enabled=$enabled", e)
             sync()
             if (enabled) errorFlow.value = true
-            _error.value = "Failed to toggle $label"
+            _error.value = application.getString(deviceErrorRes)
         }
     }
 
@@ -419,6 +422,7 @@ class RoomManager(
         setTrackEnabled(
             enabled = enabled,
             label = "microphone",
+            deviceErrorRes = R.string.meeting_error_microphoneFailed,
             stateFlow = _isMicEnabled,
             errorFlow = _micMediaError,
             sync = ::syncMicrophoneState,
@@ -491,6 +495,7 @@ class RoomManager(
         setTrackEnabled(
             enabled = enabled,
             label = "camera",
+            deviceErrorRes = R.string.meeting_error_cameraFailed,
             stateFlow = _isCameraEnabled,
             errorFlow = _cameraMediaError,
             sync = ::syncCameraState,
@@ -516,7 +521,7 @@ class RoomManager(
             videoTrack.switchCamera(position = nextPosition)
         } catch (e: Exception) {
             Log.e(TAG, "Failed to switch camera", e)
-            _error.value = "Failed to switch camera"
+            _error.value = application.getString(R.string.meeting_error_cameraSwitchFailed)
         }
     }
 
@@ -545,7 +550,7 @@ class RoomManager(
             if (!published) {
                 clearOwnedScreenShareStage()
                 _isScreenShareEnabled.value = false
-                _error.value = "Failed to publish screen share"
+                _error.value = application.getString(R.string.meeting_error_screenShareFailed)
                 return false
             }
             _isScreenShareEnabled.value = localParticipant.isScreenShareEnabled
@@ -555,7 +560,7 @@ class RoomManager(
             Log.e(TAG, "Failed to start screen share", e)
             clearOwnedScreenShareStage()
             _isScreenShareEnabled.value = false
-            _error.value = "Screen share is not available: ${e.message}"
+            _error.value = application.getString(R.string.meeting_error_screenShareUnavailable)
             return false
         }
     }
@@ -568,7 +573,7 @@ class RoomManager(
             clearOwnedScreenShareStage()
         } catch (e: Exception) {
             Log.e(TAG, "Failed to stop screen share", e)
-            _error.value = "Failed to stop screen share: ${e.message}"
+            _error.value = application.getString(R.string.meeting_error_screenShareStopFailed)
         }
     }
 
@@ -580,7 +585,7 @@ class RoomManager(
 
         val current = activeStageLocal
         if (current != null && current.ownerIdentity != ownerIdentity) {
-            _error.value = "${current.ownerName} is already on stage"
+            _error.value = application.getString(R.string.meeting_error_alreadyPresenting, current.ownerName)
             return false
         }
 
@@ -728,7 +733,7 @@ class RoomManager(
                 attachments = attachments,
             )
         } else {
-            _error.value = "Failed to send message"
+            _error.value = application.getString(R.string.meeting_error_messageSendFailed)
         }
     }
 
