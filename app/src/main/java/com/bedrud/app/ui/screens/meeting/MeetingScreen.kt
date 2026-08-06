@@ -892,6 +892,8 @@ private fun ParticipantTile(
     val identity = participant.identity?.value ?: "Unknown"
     val isVideoLocallyDisabled = identity in disabledVideoIdentities
     val isLocallyMuted = identity in mutedIdentities
+    val kickFailedMessage = stringResource(R.string.meeting_error_kickFailed)
+    val banFailedMessage = stringResource(R.string.meeting_error_banFailed)
 
     val screenShareRef = if (identity != stageScreenShareIdentity) {
         resolveParticipantScreenShare(participant)
@@ -1004,12 +1006,12 @@ private fun ParticipantTile(
                 isVideoLocallyDisabled = isVideoLocallyDisabled,
                 onToggleVideoDisabled = { onToggleVideoDisabled(identity) },
                 onKickConfirmed = {
-                    moderate(scope, snackbarHostState, "Failed to kick participant") {
+                    moderate(scope, snackbarHostState, kickFailedMessage) {
                         roomApi?.kickParticipant(roomId, identity)
                     }
                 },
                 onBan = {
-                    moderate(scope, snackbarHostState, "Failed to ban participant") {
+                    moderate(scope, snackbarHostState, banFailedMessage) {
                         roomApi?.banParticipant(roomId, identity)
                     }
                 },
@@ -1107,7 +1109,8 @@ private fun moderate(
         try {
             action()
         } catch (e: Exception) {
-            snackbarHostState?.showSnackbar(e.message ?: fallbackMessage)
+            // Show the caller's localized fallback rather than the raw (untranslated) exception text.
+            snackbarHostState?.showSnackbar(fallbackMessage)
         }
     }
 }
@@ -1214,6 +1217,8 @@ private fun ParticipantListRow(
     onToggleLocalMute: () -> Unit = {}
 ) {
     var showMenu by remember { mutableStateOf(false) }
+    val kickFailedMessage = stringResource(R.string.meeting_error_kickFailed)
+    val banFailedMessage = stringResource(R.string.meeting_error_banFailed)
     val avatarColor = remember(name) {
         val colors = listOf(0xFF6366F1, 0xFF8B5CF6, 0xFF06B6D4, 0xFF10B981, 0xFFF59E0B, 0xFFEF4444)
         colors[Math.abs(name.hashCode()) % colors.size]
@@ -1275,12 +1280,12 @@ private fun ParticipantListRow(
                     isVideoLocallyDisabled = isVideoLocallyDisabled,
                     onToggleVideoDisabled = onToggleVideoDisabled,
                     onKickConfirmed = {
-                        moderate(scope, snackbarHostState, "Failed to kick participant") {
+                        moderate(scope, snackbarHostState, kickFailedMessage) {
                             roomApi.kickParticipant(roomId, identity)
                         }
                     },
                     onBan = {
-                        moderate(scope, snackbarHostState, "Failed to ban participant") {
+                        moderate(scope, snackbarHostState, banFailedMessage) {
                             roomApi.banParticipant(roomId, identity)
                         }
                     },
