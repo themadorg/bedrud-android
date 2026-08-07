@@ -964,7 +964,7 @@ private fun RoomCard(
             icon = Icons.Default.Delete,
             containerColor = MaterialTheme.colorScheme.errorContainer,
             contentColor = MaterialTheme.colorScheme.onErrorContainer,
-            // Route through the confirm dialog (destructive), so snap back rather than dismiss.
+            // Route through the confirm dialog (destructive), so put the row back rather than dismiss.
             onTriggered = { onDelete(); false },
         )
     } else null
@@ -1139,7 +1139,9 @@ private data class SwipeAction(
     val icon: ImageVector,
     val containerColor: Color,
     val contentColor: Color,
-    // Returns true to let the row dismiss (instant action), false to snap back (deferred/confirmed).
+    // Returns true to leave the row dismissed (instant action), false to put it back
+    // (deferred/confirmed — the action opens a dialog, so the row should still be there
+    // behind it).
     val onTriggered: () -> Boolean,
 )
 
@@ -1155,16 +1157,21 @@ private fun SwipeableRoomRow(
         Box(modifier = modifier) { content() }
         return
     }
-    val state = rememberSwipeToDismissBoxState(
-        confirmValueChange = { value ->
-            if (value == SwipeToDismissBoxValue.EndToStart) action.onTriggered() else false
-        },
-    )
+    val state = rememberSwipeToDismissBoxState()
+    val scope = rememberCoroutineScope()
     SwipeToDismissBox(
         state = state,
         modifier = modifier,
         enableDismissFromStartToEnd = false,
         enableDismissFromEndToStart = true,
+        // Was confirmValueChange, which is deprecated: vetoing a settle from a callback is
+        // gone, so a swipe past the threshold always completes and the row is put back
+        // afterwards instead. onDismiss fires once, after the row has settled dismissed.
+        onDismiss = { value ->
+            if (value == SwipeToDismissBoxValue.EndToStart && !action.onTriggered()) {
+                scope.launch { state.reset() }
+            }
+        },
         backgroundContent = { SwipeActionBackground(action, state) },
     ) {
         content()
