@@ -36,6 +36,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import com.bedrud.app.ui.components.BedrudOutlinedCard
 import com.bedrud.app.ui.components.BedrudTextField
+import com.bedrud.app.ui.util.setPlainText
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -69,9 +70,8 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import com.bedrud.app.ui.components.BottomNavTab
 import com.bedrud.app.ui.components.BedrudBottomNavigationBar
 
-import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.text.style.TextOverflow
@@ -97,6 +97,9 @@ private enum class AdminTab(@StringRes val labelResId: Int, val icon: ImageVecto
     ROOMS(R.string.admin_tab_rooms, Icons.Default.MeetingRoom),
     SETTINGS(R.string.admin_tab_settings, Icons.Default.Settings)
 }
+
+// How often the overview tab re-polls the live online-user count.
+private const val ONLINE_COUNT_REFRESH_INTERVAL_MS = 30_000L
 
 @Composable
 fun AdminScreen(
@@ -195,7 +198,7 @@ private fun AdminOverviewContent(
         load()
         // Auto-refresh online count every 30s
         while (true) {
-            delay(30_000L)
+            delay(ONLINE_COUNT_REFRESH_INTERVAL_MS)
             try {
                 onlineCount = adminApi.getOnlineCount().body()?.get("count") ?: onlineCount
             } catch (_: Exception) {
@@ -540,7 +543,8 @@ private fun AdminSettingsContent(
 ) {
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
-    val clipboard = LocalClipboardManager.current
+    val clipboard = LocalClipboard.current
+    val clipLabel = stringResource(R.string.app_name)
     var settings by remember { mutableStateOf<AdminSettings?>(null) }
     var tokens by remember { mutableStateOf<List<InviteToken>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
@@ -651,7 +655,7 @@ private fun AdminSettingsContent(
                                     style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
                                     maxLines = 1, overflow = TextOverflow.Ellipsis
                                 )
-                                IconButton(onClick = { clipboard.setText(AnnotatedString(tok.token)) }) {
+                                IconButton(onClick = { scope.launch { clipboard.setPlainText(clipLabel, tok.token) } }) {
                                     Icon(Icons.Default.ContentCopy, contentDescription = stringResource(R.string.common_action_copy))
                                 }
                             }
@@ -714,7 +718,7 @@ private fun AdminSettingsContent(
                             },
                             trailingContent = {
                                 Row {
-                                    IconButton(onClick = { clipboard.setText(AnnotatedString(tok.token)) }) {
+                                    IconButton(onClick = { scope.launch { clipboard.setPlainText(clipLabel, tok.token) } }) {
                                         Icon(
                                             Icons.Default.ContentCopy, contentDescription = stringResource(R.string.common_action_copy),
                                             modifier = Modifier.size(18.dp)

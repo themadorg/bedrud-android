@@ -5,44 +5,26 @@ import com.bedrud.app.models.AuthTokens
 import com.bedrud.app.models.LoginResponse
 import com.bedrud.app.models.User
 import com.bedrud.app.testutil.InMemorySharedPreferences
-import com.google.gson.Gson
 import com.google.gson.JsonObject
 import kotlinx.coroutines.runBlocking
 import okhttp3.ResponseBody.Companion.toResponseBody
 import okhttp3.mockwebserver.MockResponse
-import okhttp3.mockwebserver.MockWebServer
-import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import retrofit2.Response
-import retrofit2.Retrofit
-import retrofit2.converter.gson.GsonConverterFactory
 
-class ApiResponseUtilsTest {
+class ApiResponseUtilsTest : MockApiTest() {
 
-    private val gson = Gson()
-    private lateinit var server: MockWebServer
     private lateinit var authApi: AuthApi
     private lateinit var authManager: AuthManager
 
     @Before
     fun setUp() {
-        server = MockWebServer()
-        server.start()
-        authApi = Retrofit.Builder()
-            .baseUrl(server.url("/"))
-            .addConverterFactory(GsonConverterFactory.create())
-            .build()
-            .create(AuthApi::class.java)
+        authApi = api()
         authManager = AuthManager(InMemorySharedPreferences())
-    }
-
-    @After
-    fun tearDown() {
-        server.shutdown()
     }
 
     @Test

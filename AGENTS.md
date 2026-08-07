@@ -1,6 +1,6 @@
 # Bedrud Android
 
-Kotlin + Jetpack Compose + Material 3. Single `:app` module. minSdk 28, compileSdk/targetSdk 36, JDK 17.
+Kotlin + Jetpack Compose + Material 3. Single `:app` module. minSdk 28, compileSdk/targetSdk 37, JDK 17.
 
 ## Build & Test
 
@@ -10,12 +10,24 @@ Kotlin + Jetpack Compose + Material 3. Single `:app` module. minSdk 28, compileS
 ./gradlew test                   # Unit tests only (src/test/)
 ```
 
-No instrumented test directory. No `make` target for Android tests — run `./gradlew test` directly.
+No instrumented test directory.
+
+This repo also has its own root `Makefile` wrapping the above plus device, CI-parity and
+release steps — `make help` lists them. The two that matter most day to day:
+
+```bash
+make check                       # lint + testDebugUnitTest — exactly what CI gates a PR on
+make doctor                      # why won't it build here: JDK / SDK / adb / gh / signing
+```
 
 **Test stack:** JUnit 4, MockK, OkHttp MockWebServer, kotlinx-coroutines-test.
 **Test util:** `InMemorySharedPreferences` in `testutil/` — inject into any class taking `SharedPreferences` (InstanceStore, AuthManager). Avoid Android framework dependency.
 
-**Make aliases from repo root:** `make build-android-debug`, `make build-android`, `make install-android`, `make release-android`.
+**Versioning:** there is no version number in the repo. `versionCode` comes from the CI run
+number and `versionName` from the dispatched tag, both as `-P` flags (see `app/build.gradle.kts`).
+The git tag is the source of truth — `make tag-patch`/`tag-minor`/`tag-major` create tags,
+they never edit files, and `make release-beta`/`release-stable` only dispatch `release.yml`.
+Never add a version literal to a build file or bump one by hand.
 
 ## Architecture
 

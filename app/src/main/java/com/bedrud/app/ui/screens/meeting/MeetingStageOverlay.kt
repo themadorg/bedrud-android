@@ -31,6 +31,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.bedrud.app.R
+import com.bedrud.app.core.meeting.VideoAspect
 import com.bedrud.app.core.meeting.stage.StageWire
 import io.livekit.android.compose.ui.ScaleType
 import io.livekit.android.compose.ui.VideoTrackView
@@ -76,7 +77,7 @@ fun MeetingScreenShareStage(
                 participantVersion = participantVersion,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .aspectRatio(16f / 9f),
+                    .aspectRatio(VideoAspect.RATIO),
             )
         }
     }

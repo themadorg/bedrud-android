@@ -5,6 +5,17 @@ import org.json.JSONObject
 object StageWire {
     const val STAGE_DATA_TOPIC = "stage"
 
+    // Stage kinds — the "who's on stage" content type, shared with RoomManager and the meeting UI.
+    const val KIND_SCREENSHARE = "screenshare"
+    const val KIND_WHITEBOARD = "whiteboard"
+    const val KIND_YOUTUBE = "youtube"
+
+    // Wire message types carried in the payload's "type" field.
+    private const val TYPE_STAGE_SET = "stage_set"
+    private const val TYPE_STAGE_CLEAR = "stage_clear"
+    private const val TYPE_STAGE_REQUEST = "stage_request"
+    private const val TYPE_STAGE_STATE = "stage_state"
+
     data class MeetingStage(
         val kind: String,
         val ownerIdentity: String,
@@ -21,14 +32,14 @@ object StageWire {
 
     fun encodeStageSet(stage: MeetingStage): ByteArray =
         JSONObject()
-            .put("type", "stage_set")
+            .put("type", TYPE_STAGE_SET)
             .put("stage", stage.toJson())
             .toString()
             .toByteArray(Charsets.UTF_8)
 
     fun encodeStageClear(ownerIdentity: String, ts: Long): ByteArray =
         JSONObject()
-            .put("type", "stage_clear")
+            .put("type", TYPE_STAGE_CLEAR)
             .put("ownerIdentity", ownerIdentity)
             .put("ts", ts)
             .toString()
@@ -36,14 +47,14 @@ object StageWire {
 
     fun encodeStageRequest(ts: Long): ByteArray =
         JSONObject()
-            .put("type", "stage_request")
+            .put("type", TYPE_STAGE_REQUEST)
             .put("ts", ts)
             .toString()
             .toByteArray(Charsets.UTF_8)
 
     fun encodeStageState(stage: MeetingStage?, ts: Long): ByteArray =
         JSONObject()
-            .put("type", "stage_state")
+            .put("type", TYPE_STAGE_STATE)
             .put("stage", stage?.toJson())
             .put("ts", ts)
             .toString()
@@ -59,25 +70,26 @@ object StageWire {
 
     private fun parseJson(json: JSONObject): StageMessage? {
         return when (json.optString("type")) {
-            "stage_set" -> parseMeetingStage(json.optJSONObject("stage"))?.let { StageMessage.Set(it) }
-            "stage_clear" -> {
+            TYPE_STAGE_SET -> parseMeetingStage(json.optJSONObject("stage"))?.let { StageMessage.Set(it) }
+            TYPE_STAGE_CLEAR -> {
                 val ownerIdentity = json.optString("ownerIdentity", "")
                 val ts = json.optLong("ts", 0L)
                 if (ownerIdentity.isBlank() || ts == 0L) null else StageMessage.Clear(ownerIdentity, ts)
             }
-            "stage_request" -> {
+            TYPE_STAGE_REQUEST -> {
                 val ts = json.optLong("ts", 0L)
                 if (ts == 0L) null else StageMessage.Request(ts)
             }
-            "stage_state" -> {
+            TYPE_STAGE_STATE -> {
                 val ts = json.optLong("ts", 0L)
                 if (ts == 0L) return null
                 val stageJson = json.opt("stage")
-                val stage = when (stageJson) {
-                    null, JSONObject.NULL -> null
-                    is JSONObject -> parseMeetingStage(stageJson)
-                    else -> null
-                }
+                // Neither a missing "stage" (null) nor an explicit JSON null
+                // (JSONObject.NULL) is a JSONObject, so one is-check covers both. Spelling
+                // it as a `when` with those two as their own branch reads more explicitly,
+                // but Kotlin then reports the whole `when` as non-exhaustive despite its
+                // else branch, because the subject is a platform type.
+                val stage = if (stageJson is JSONObject) parseMeetingStage(stageJson) else null
                 StageMessage.State(stage, ts)
             }
             else -> null
@@ -94,7 +106,8 @@ object StageWire {
             return null
         }
         return when (kind) {
-            "screenshare", "whiteboard", "youtube" -> MeetingStage(kind, ownerIdentity, ownerName, updatedAt)
+            KIND_SCREENSHARE, KIND_WHITEBOARD, KIND_YOUTUBE ->
+                MeetingStage(kind, ownerIdentity, ownerName, updatedAt)
             else -> null
         }
     }

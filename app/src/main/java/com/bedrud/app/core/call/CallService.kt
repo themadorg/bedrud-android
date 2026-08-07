@@ -1,7 +1,6 @@
 package com.bedrud.app.core.call
 
 import android.app.Notification
-import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.Service
@@ -21,6 +20,7 @@ import com.bedrud.app.core.instance.InstanceManager
 import com.bedrud.app.core.livekit.ConnectionState
 import com.bedrud.app.core.livekit.RoomManager
 import com.bedrud.app.core.recent.RecentRoomsStore
+import com.bedrud.app.core.registerNotificationChannel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -214,7 +214,7 @@ class CallService : Service() {
     private fun acquireWakeLock() {
         releaseWakeLock()
         val pm = getSystemService(PowerManager::class.java) ?: return
-        wakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "bedrud:active_call").apply {
+        wakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, WAKE_LOCK_TAG).apply {
             setReferenceCounted(false)
             acquire(MAX_CALL_DURATION_MS)
         }
@@ -228,19 +228,16 @@ class CallService : Service() {
     }
 
     private fun createNotificationChannel() {
-        val channel = NotificationChannel(
-            CHANNEL_ID,
-            getString(R.string.call_channel_name),
-            NotificationManager.IMPORTANCE_DEFAULT,
-        ).apply {
-            description = getString(R.string.call_channel_description)
-            setShowBadge(false)
+        registerNotificationChannel(
+            id = CHANNEL_ID,
+            name = getString(R.string.call_channel_name),
+            importance = NotificationManager.IMPORTANCE_DEFAULT,
+            description = getString(R.string.call_channel_description),
+        ) {
             lockscreenVisibility = Notification.VISIBILITY_PRIVATE
             enableVibration(false)
             setSound(null, null)
         }
-        val nm = getSystemService(NotificationManager::class.java)
-        nm.createNotificationChannel(channel)
     }
 
     private fun buildNotification(roomName: String, isMuted: Boolean): Notification {
@@ -302,6 +299,7 @@ class CallService : Service() {
 
     companion object {
         private const val TAG = "CallService"
+        private const val WAKE_LOCK_TAG = "bedrud:active_call"
         private const val CHANNEL_ID = "bedrud_call_ongoing"
         private const val NOTIFICATION_ID = 1001
         const val EXTRA_ROOM_NAME = "room_name"

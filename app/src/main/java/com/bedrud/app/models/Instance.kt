@@ -10,8 +10,13 @@ data class Instance(
     val apiBaseURL: String
         get() {
             val base = if (serverURL.endsWith("/")) serverURL else "$serverURL/"
-            return "${base}api"
+            return "$base$API_PATH_SEGMENT"
         }
+
+    companion object {
+        /** Path segment appended to a server URL to reach its REST API (`{server}/api`). */
+        const val API_PATH_SEGMENT = "api"
+    }
 }
 
 data class Account(
