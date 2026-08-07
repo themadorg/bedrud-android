@@ -3,7 +3,6 @@ package com.bedrud.app.core.call
 import android.content.ComponentName
 import android.content.Context
 import android.graphics.drawable.Icon
-import android.os.Build
 import android.telecom.PhoneAccount
 import android.telecom.PhoneAccountHandle
 import android.telecom.TelecomManager
@@ -19,14 +18,19 @@ object CallTelecom {
         return PhoneAccountHandle(componentName, PHONE_ACCOUNT_ID)
     }
 
+    // CAPABILITY_SELF_MANAGED is deprecated in favour of the androidx.core.telecom
+    // CallsManager API, which is a rewrite of how this app registers and runs calls rather
+    // than a swap at this call site - see the note on setAudioRoute in
+    // CallConnectionService. Until that happens, self-managed registration is what makes
+    // meetings behave as real calls, so it stays.
+    @Suppress("DEPRECATION")
     fun registerPhoneAccount(context: Context) {
         val telecom = context.getSystemService(Context.TELECOM_SERVICE) as? TelecomManager ?: return
         val handle = phoneAccountHandle(context)
         val builder = PhoneAccount.builder(handle, context.getString(R.string.call_phone_account_label))
             .setIcon(Icon.createWithResource(context, R.drawable.ic_call_notification))
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            builder.setCapabilities(PhoneAccount.CAPABILITY_SELF_MANAGED)
-        }
+        // No SDK_INT guard: this capability arrived in API 26 and minSdk is 28.
+        builder.setCapabilities(PhoneAccount.CAPABILITY_SELF_MANAGED)
         try {
             telecom.registerPhoneAccount(builder.build())
         } catch (e: Exception) {

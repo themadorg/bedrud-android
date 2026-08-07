@@ -17,7 +17,21 @@ object AuthPrefsKeys {
     const val USER = "user"
 }
 
-/** Opens an [EncryptedSharedPreferences] file with the app's standard key/value schemes. */
+/**
+ * Opens an [EncryptedSharedPreferences] file with the app's standard key/value schemes.
+ *
+ * androidx.security-crypto is deprecated, and Google shipped no successor — the guidance is to
+ * encrypt with the Android Keystore yourself. That is not a swap at this call site, it is
+ * hand-writing the crypto that currently protects every instance's access token, refresh token
+ * and user record, plus a migration that reads the old files and rewrites them in the new
+ * format. Get either half wrong and users are silently signed out at best.
+ *
+ * The library still works and still uses the Keystore-backed AES-GCM it always did, so the
+ * deprecation is a maintenance signal, not a vulnerability. Keeping the whole decision behind
+ * this one function is the point: when the replacement is written, this is the only body that
+ * changes, and [AuthPrefsKeys] already pins the key names a migration would have to preserve.
+ */
+@Suppress("DEPRECATION")
 fun securePrefs(context: Context, fileName: String): SharedPreferences =
     EncryptedSharedPreferences.create(
         context,
