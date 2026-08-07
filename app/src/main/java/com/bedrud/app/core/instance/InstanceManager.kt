@@ -14,6 +14,7 @@ import com.bedrud.app.models.HealthResponse
 import com.bedrud.app.models.PublicSettings
 import com.bedrud.app.ui.screens.settings.SettingsStore
 import com.google.gson.GsonBuilder
+import com.google.gson.Strictness
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -171,7 +172,7 @@ class InstanceManager(
             .connectTimeout(10, TimeUnit.SECONDS)
             .readTimeout(10, TimeUnit.SECONDS)
             .build()
-        val gson = GsonBuilder().setLenient().create()
+        val gson = GsonBuilder().setStrictness(Strictness.LENIENT).create()
         val retrofit = Retrofit.Builder()
             .baseUrl(baseURL.trimEnd('/') + "/")
             .client(plainClient)

@@ -240,13 +240,12 @@ fun LoginScreen(
                         oauthDevPreview -> false
                         else -> true
                     }
+                    // serverUrl is non-null in here: showOAuthRow already requires it.
                     OAuthProviderButton(
                         option = option,
-                        enabled = providerEnabled && !isBusy && serverUrl != null,
+                        enabled = providerEnabled && !isBusy,
                         onClick = {
-                            serverUrl?.let {
-                                OAuthLoginHandler.launch(context, it, option.provider)
-                            }
+                            OAuthLoginHandler.launch(context, serverUrl, option.provider)
                         }
                     )
                 }

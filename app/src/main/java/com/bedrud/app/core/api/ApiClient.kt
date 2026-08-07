@@ -4,6 +4,7 @@ import com.bedrud.app.BuildConfig
 import com.bedrud.app.core.auth.AuthManager
 import com.bedrud.app.models.RefreshTokenRequest
 import com.google.gson.GsonBuilder
+import com.google.gson.Strictness
 import okhttp3.Authenticator
 import okhttp3.Interceptor
 import okhttp3.OkHttpClient
@@ -142,7 +143,7 @@ class ApiClientFactory(private val baseURL: String) {
 
     fun createRetrofit(okHttpClient: OkHttpClient): Retrofit {
         val gson = GsonBuilder()
-            .setLenient()
+            .setStrictness(Strictness.LENIENT)
             .create()
 
         return Retrofit.Builder()

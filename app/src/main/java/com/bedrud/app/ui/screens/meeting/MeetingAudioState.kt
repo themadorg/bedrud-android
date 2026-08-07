@@ -1,12 +1,12 @@
 package com.bedrud.app.ui.screens.meeting
 
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.Bluetooth
 import androidx.compose.material.icons.filled.Headphones
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.MicOff
 import androidx.compose.material.icons.filled.Phone
-import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
@@ -81,7 +81,6 @@ fun audioDeviceLabel(device: AudioDevice): String {
         is AudioDevice.BluetoothHeadset -> fallback.ifBlank {
             stringResource(R.string.meeting_audio_device_bluetooth)
         }
-        else -> fallback
     }
 }
 
@@ -89,9 +88,8 @@ fun audioDeviceIcon(device: AudioDevice): ImageVector =
     when (device) {
         is AudioDevice.BluetoothHeadset -> Icons.Default.Bluetooth
         is AudioDevice.WiredHeadset -> Icons.Default.Headphones
-        is AudioDevice.Speakerphone -> Icons.Default.VolumeUp
+        is AudioDevice.Speakerphone -> Icons.AutoMirrored.Filled.VolumeUp
         is AudioDevice.Earpiece -> Icons.Default.Phone
-        else -> Icons.Default.VolumeUp
     }
 
 fun meetingAudioButtonIcon(isMicEnabled: Boolean, selectedDevice: AudioDevice?): ImageVector {
