@@ -85,7 +85,14 @@ Run the same two checks CI gates on:
 ```bash
 ./gradlew lint
 ./gradlew testDebugUnitTest
+
+# or, the same pair in one command
+make check
 ```
+
+`make help` lists the rest of the shortcuts, and `make doctor` diagnoses a machine that
+won't build. On Windows run them from Git Bash or WSL — `make` isn't bundled with Git for
+Windows (`winget install ezwinports.make` or `scoop install make`).
 
 Tests are JUnit 4 with MockK, OkHttp MockWebServer, and kotlinx-coroutines-test. There is
 no instrumented test directory. `InMemorySharedPreferences` in `testutil/` lets you inject

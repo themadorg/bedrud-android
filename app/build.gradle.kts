@@ -37,8 +37,14 @@ android {
         //   stable  -> "<version>"      (release.yml dispatched with releaseChannel=stable)
         // release.yml passes releaseVersionName=<the dispatched tag>, so the on-device
         // version string always matches the tag it was built from instead of a separately
-        // hand-maintained value. A local/default build falls back to the placeholder below.
-        versionName = ((project.findProperty("releaseVersionName") as String?) ?: "1.2.0") +
+        // hand-maintained value.
+        //
+        // Only a local build reaches the fallback, and it deliberately is not a real
+        // version number. It used to be one ("1.2.0"), which drifted the moment 1.3.0 was
+        // tagged: nothing reads it, so nothing catches it going stale, and meanwhile every
+        // locally built APK claimed to be a release it wasn't. "0.0.0-local" cannot drift
+        // and says what the build actually is - Settings > About shows this string.
+        versionName = ((project.findProperty("releaseVersionName") as String?) ?: "0.0.0-local") +
             if (project.findProperty("releaseChannel") == "beta") "-beta" else ""
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
