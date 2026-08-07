@@ -1,6 +1,6 @@
 # Bedrud Android
 
-Kotlin + Jetpack Compose + Material 3. Single `:app` module. minSdk 28, compileSdk/targetSdk 36, JDK 17.
+Kotlin + Jetpack Compose + Material 3. Single `:app` module. minSdk 28, compileSdk/targetSdk 37, JDK 17.
 
 ## Build & Test
 

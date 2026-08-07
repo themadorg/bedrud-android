@@ -1,121 +1,55 @@
-# Data (repo-root only — do not match nested paths like emoji-picker/data/)
-/data
-*.db
-*.db-shm
-*.db-wal
-
-# Local reference clones (see context/README.md) — nested git, do not commit
-/context/webxdc-website/
-/context/deltachat-desktop/
-
-# Build artifacts
-dist
-server/dist/
-server/frontend/
-apps/web/build/
-apps/web/node_modules/
-apps/site/node_modules/
-apps/site/dist/
-apps/site/.astro/
-apps/site/public/search-index-*.json
-apps/site/public/search-index-*.json
-node_modules/
-
-# Environment
-.env
-.DS_Store
-
-# Python
-__pycache__
-pyinfra-debug.log
-.venv
-
-# Logs
-access.log
-
-# IDE
-.idea/
-.vscode/
-.claude/
-*.swp
-*.swo
-.mypy_cache
-**/xcuserdata/
-.spm-cache/
-
-deploy
-server/livekit.yaml
-server/internal/livekit/bin/
-server/internal/livekit/LICENSEserver/tmp/
-server/tmp/
-
-# Playwright MCP snapshots
-.playwright-mcp/
-
-# certificates
-crt.pem
-key.pem
-
-target/
-
-# Local agent tooling
-.grok/
-
-context/
-
-*.iml
-.gradle
-/local.properties
-/.idea
-.DS_Store
-/build
-/captures
-.externalNativeBuild
-.cxx
-local.properties
-/app/build
-/app/release
-keystore.jks
+# --- Secrets & local configuration -------------------------------------------
+# Signing material must never be committed. app/build.gradle.kts reads
+# keystore.properties from the repo root; release.yml writes both of these at build
+# time from environment secrets and deletes them again afterwards.
 keystore.properties
-.kotlin
-gradle-wrapper2.jar
-
-## --- Android/Java/Kotlin ---
-*.apk
-*.aab
+keystore.jks
+dev-release.jks
 *.jks
 *.keystore
-bin/
-gen/
-out/
-.kotlin/
+secrets.properties
 
-## --- Gradle ---
+# Written by Android Studio - contains this machine's SDK path.
+local.properties
+
+.env
+
+# --- Gradle & build output ----------------------------------------------------
 .gradle/
 build/
 /app/build/
 /app/release/
 /captures/
 gradle-daemon-jvm.properties
+.kotlin/
 
-## --- C++ / Native Build ---
+*.apk
+*.aab
+
+# --- Java / Kotlin / native ---------------------------------------------------
+bin/
+gen/
+out/
+/obj/
 .externalNativeBuild/
 .cxx/
-/obj/
 
-## --- IDE (IntelliJ / Android Studio) ---
+# --- IDE ----------------------------------------------------------------------
 .idea/
+*.iml
 *.iws
 *.ipr
-/out/
+.vscode/
+*.swp
+*.swo
 
-## --- Local Configuration & Secrets ---
-secrets.properties
-google-services.json (if you want to keep Firebase keys local)
+# --- Local agent tooling ------------------------------------------------------
+.claude/
+.grok/
 
-## --- OS Specific ---
+# --- OS -----------------------------------------------------------------------
+.DS_Store
 Thumbs.db
 
-## --- Other ---
-MANIFEST.MF
+# --- Logs ---------------------------------------------------------------------
 *.log
