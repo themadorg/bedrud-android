@@ -98,6 +98,9 @@ private enum class AdminTab(@StringRes val labelResId: Int, val icon: ImageVecto
     SETTINGS(R.string.admin_tab_settings, Icons.Default.Settings)
 }
 
+// How often the overview tab re-polls the live online-user count.
+private const val ONLINE_COUNT_REFRESH_INTERVAL_MS = 30_000L
+
 @Composable
 fun AdminScreen(
     modifier: Modifier = Modifier,
@@ -195,7 +198,7 @@ private fun AdminOverviewContent(
         load()
         // Auto-refresh online count every 30s
         while (true) {
-            delay(30_000L)
+            delay(ONLINE_COUNT_REFRESH_INTERVAL_MS)
             try {
                 onlineCount = adminApi.getOnlineCount().body()?.get("count") ?: onlineCount
             } catch (_: Exception) {

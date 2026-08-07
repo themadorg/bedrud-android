@@ -143,6 +143,13 @@ private const val AUTO_REFRESH_INTERVAL_MS = 60_000L
 // so a flaky request doesn't leave the list stale for a minute.
 private const val FAILED_FETCH_RETRY_MS = 5_000L
 
+// Cadence of the ticking clock that keeps the "Xm ago" recent-room labels advancing.
+private const val NOW_TICK_INTERVAL_MS = 60_000L
+
+// Ignore a silent refresh request that arrives within this window of the last fetch, so rapid tab
+// switching or flaky connectivity doesn't hammer the server.
+private const val MANUAL_REFRESH_DEBOUNCE_MS = 3_000L
+
 // ── Filter state ─────────────────────────────────────────────────────────────
 
 // ALL merges the active server's rooms with recent rooms from every server (recency/live first);
@@ -238,7 +245,7 @@ fun DashboardContent(
     var nowTickMs by remember { mutableLongStateOf(System.currentTimeMillis()) }
     LaunchedEffect(Unit) {
         while (true) {
-            delay(60_000L)
+            delay(NOW_TICK_INTERVAL_MS)
             nowTickMs = System.currentTimeMillis()
         }
     }
@@ -316,7 +323,7 @@ fun DashboardContent(
     fun silentlyRefreshRooms() {
         if (isLoading || isRefreshing) return
         if (showCreateDialog || roomToEdit != null || roomToDelete != null) return
-        if (System.currentTimeMillis() - lastFetchAtMs < 3_000L) return
+        if (System.currentTimeMillis() - lastFetchAtMs < MANUAL_REFRESH_DEBOUNCE_MS) return
         scope.launch { fetchRooms() }
     }
 

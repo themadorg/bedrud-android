@@ -123,6 +123,7 @@ import com.bedrud.app.core.api.RoomApi
 import com.bedrud.app.core.api.parseApiErrorMessage
 import com.bedrud.app.core.call.CallService
 import com.bedrud.app.core.chat.ChatImageUtils
+import com.bedrud.app.core.chat.ChatUpload
 import com.bedrud.app.core.deeplink.BedrudURLParser
 import com.bedrud.app.core.instance.InstanceManager
 import com.bedrud.app.ui.components.BedrudScaffoldContentInsets
@@ -132,6 +133,10 @@ import com.bedrud.app.ui.components.InitialsAvatar
 import com.bedrud.app.ui.util.setPlainText
 import com.bedrud.app.core.livekit.ChatMessage
 import com.bedrud.app.core.livekit.ConnectionState
+import com.bedrud.app.core.livekit.RoomManager
+import com.bedrud.app.core.meeting.VideoAspect
+import com.bedrud.app.core.meeting.chat.ChatWire
+import com.bedrud.app.core.meeting.stage.StageWire
 import com.bedrud.app.core.pip.PipStateHolder
 import com.bedrud.app.models.JoinRoomRequest
 import com.bedrud.app.models.JoinRoomResponse
@@ -233,7 +238,7 @@ fun MeetingScreen(
     var isScreenShareFullscreen by rememberSaveable { mutableStateOf(false) }
 
     LaunchedEffect(activeStage?.kind) {
-        if (activeStage?.kind != "screenshare") {
+        if (activeStage?.kind != StageWire.KIND_SCREENSHARE) {
             isScreenShareFullscreen = false
         }
     }
@@ -428,14 +433,14 @@ fun MeetingScreen(
                     val audioState = rememberMeetingAudioState(roomManager.audioHandler)
 
                     val localIdentity = room.localParticipant.identity?.value
-                    val stageScreenShareIdentity = if (activeStage?.kind == "screenshare") {
+                    val stageScreenShareIdentity = if (activeStage?.kind == StageWire.KIND_SCREENSHARE) {
                         activeStage?.ownerIdentity
                     } else {
                         null
                     }
 
                     if (isInPipMode) {
-                        val pipStage = activeStage?.takeIf { it.kind == "screenshare" }
+                        val pipStage = activeStage?.takeIf { it.kind == StageWire.KIND_SCREENSHARE }
                         val pipParticipant = if (pipStage != null) {
                             participants.find { it.identity?.value == pipStage.ownerIdentity }
                         } else {
@@ -508,7 +513,7 @@ fun MeetingScreen(
                                     connectionState = connectionState
                                 )
 
-                                val screenShareStage = activeStage?.takeIf { it.kind == "screenshare" }
+                                val screenShareStage = activeStage?.takeIf { it.kind == StageWire.KIND_SCREENSHARE }
                                 if (screenShareStage != null && !isScreenShareFullscreen) {
                                     MeetingScreenShareStage(
                                         stage = screenShareStage,
@@ -768,7 +773,7 @@ fun MeetingScreen(
                                 )
                             }
 
-                            val fullscreenStage = activeStage?.takeIf { it.kind == "screenshare" }
+                            val fullscreenStage = activeStage?.takeIf { it.kind == StageWire.KIND_SCREENSHARE }
                             if (isScreenShareFullscreen && fullscreenStage != null) {
                                 MeetingScreenShareFullscreen(
                                     stage = fullscreenStage,
@@ -894,7 +899,7 @@ private fun ParticipantTile(
     mutedIdentities: Set<String> = emptySet(),
     onToggleLocalMute: (String) -> Unit = {},
 ) {
-    val identity = participant.identity?.value ?: "Unknown"
+    val identity = participant.identity?.value ?: RoomManager.UNKNOWN_PARTICIPANT_NAME
     val isVideoLocallyDisabled = identity in disabledVideoIdentities
     val isLocallyMuted = identity in mutedIdentities
 
@@ -926,7 +931,7 @@ private fun ParticipantTile(
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .aspectRatio(16f / 9f)
+            .aspectRatio(VideoAspect.RATIO)
             .clip(RoundedCornerShape(12.dp))
             .background(MaterialTheme.colorScheme.surfaceVariant)
             .then(
@@ -1456,20 +1461,19 @@ private fun ChatPanel(
                     ?: throw Exception("Cannot open image")
                 val bytes = stream.readBytes()
                 stream.close()
-                val mimeType = context.contentResolver.getType(uri) ?: "image/jpeg"
-                val ext = when (mimeType) {
-                    "image/png" -> "png"
-                    "image/gif" -> "gif"
-                    "image/webp" -> "webp"
-                    else -> "jpg"
-                }
+                val mimeType = context.contentResolver.getType(uri) ?: ChatUpload.DEFAULT_MIME
+                val ext = ChatUpload.extensionForMime(mimeType)
                 val requestBody = bytes.toRequestBody(mimeType.toMediaTypeOrNull())
-                val part = MultipartBody.Part.createFormData("file", "upload.$ext", requestBody)
+                val part = MultipartBody.Part.createFormData(
+                    ChatUpload.MULTIPART_FILE_FIELD,
+                    ChatUpload.fileName(ext),
+                    requestBody,
+                )
                 val response = roomApi.uploadChatImage(roomId, part)
                 if (response.isSuccessful) {
                     val result = response.body()!!
                     val attachment = com.bedrud.app.core.livekit.ChatAttachment(
-                        kind = "image",
+                        kind = ChatWire.ATTACHMENT_KIND_IMAGE,
                         url = result.url,
                         mime = result.mime,
                         w = result.width,
@@ -1663,7 +1667,7 @@ private fun ChatBubble(
             horizontalAlignment = if (message.isLocal) Alignment.End else Alignment.Start
         ) {
             // Image attachments
-            message.attachments.filter { it.kind == "image" }.forEach { att ->
+            message.attachments.filter { it.kind == ChatWire.ATTACHMENT_KIND_IMAGE }.forEach { att ->
                 val isDataUri = att.url.startsWith("data:")
                 if (isDataUri) {
                     // Decode base64 data URI to bitmap in-memory

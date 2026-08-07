@@ -4,6 +4,8 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import androidx.browser.customtabs.CustomTabsIntent
+import com.bedrud.app.core.deeplink.BedrudScheme
+import com.bedrud.app.models.Instance
 
 /**
  * Handles OAuth login flows via Chrome Custom Tabs.
@@ -23,6 +25,12 @@ import androidx.browser.customtabs.CustomTabsIntent
  *   the web frontend URL.
  */
 object OAuthLoginHandler {
+
+    /** Host of the OAuth callback deep link (`bedrud://oauth/...`). */
+    private const val OAUTH_CALLBACK_HOST = "oauth"
+
+    /** Path marker present on every OAuth callback URL, whatever the scheme/host. */
+    private const val OAUTH_CALLBACK_PATH = "/auth/callback"
 
     enum class Provider(val id: String, val label: String) {
         GOOGLE("google", "Continue with Google"),
@@ -57,12 +65,12 @@ object OAuthLoginHandler {
 
     /** Returns true if [uri] matches the OAuth callback pattern. */
     fun isOAuthCallback(uri: Uri): Boolean {
-        return (uri.scheme == "bedrud" && uri.host == "oauth") ||
-            uri.toString().contains("/auth/callback") && uri.getQueryParameter("token") != null
+        return (uri.scheme == BedrudScheme.SCHEME && uri.host == OAUTH_CALLBACK_HOST) ||
+            uri.toString().contains(OAUTH_CALLBACK_PATH) && uri.getQueryParameter("token") != null
     }
 
     private fun buildAuthUrl(serverUrl: String, provider: Provider): String {
         val base = serverUrl.trimEnd('/')
-        return "$base/api/auth/${provider.id}/login"
+        return "$base/${Instance.API_PATH_SEGMENT}/auth/${provider.id}/login"
     }
 }
