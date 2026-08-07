@@ -126,10 +126,13 @@ import com.bedrud.app.core.chat.ChatImageUtils
 import com.bedrud.app.core.chat.ChatUpload
 import com.bedrud.app.core.deeplink.BedrudURLParser
 import com.bedrud.app.core.instance.InstanceManager
+import com.bedrud.app.ui.components.BedrudButton
+import com.bedrud.app.ui.components.BedrudButtonVariant
 import com.bedrud.app.ui.components.BedrudScaffoldContentInsets
 import com.bedrud.app.ui.components.ChatImageLightbox
 import com.bedrud.app.ui.components.ConfirmDialog
 import com.bedrud.app.ui.components.InitialsAvatar
+ import com.bedrud.app.ui.theme.Dimens
 import com.bedrud.app.ui.util.setPlainText
 import com.bedrud.app.core.livekit.ChatMessage
 import com.bedrud.app.core.livekit.ConnectionState
@@ -677,34 +680,42 @@ fun MeetingScreen(
                                 AlertDialog(
                                     onDismissRequest = { showLeaveDialog = false },
                                     title = { Text(stringResource(R.string.meeting_dialog_leaveTitle)) },
-                                    text = { Text(stringResource(R.string.meeting_dialog_leaveMessage)) },
-                                    confirmButton = {
-                                        TextButton(onClick = {
-                                            showLeaveDialog = false
-                                            scope.launch {
-                                                try {
-                                                    roomApi.deleteRoom(roomId)
-                                                } catch (_: Exception) {}
-                                                CallService.stop(context)
-                                                onLeave()
-                                            }
-                                        }) {
-                                            Text(
-                                                stringResource(R.string.meeting_button_endForEveryone),
-                                                color = MaterialTheme.colorScheme.error,
+                                    text = {
+                                        Column {
+                                            Text(stringResource(R.string.meeting_dialog_leaveMessage))
+                                            Spacer(modifier = Modifier.height(Dimens.space16))
+                                            // Destructive alternative, kept secondary to "Just leave".
+                                            BedrudButton(
+                                                text = stringResource(R.string.meeting_button_endForEveryone),
+                                                variant = BedrudButtonVariant.DESTRUCTIVE_OUTLINE,
+                                                onClick = {
+                                                    showLeaveDialog = false
+                                                    scope.launch {
+                                                        try {
+                                                            roomApi.deleteRoom(roomId)
+                                                        } catch (_: Exception) {}
+                                                        CallService.stop(context)
+                                                        onLeave()
+                                                    }
+                                                },
+                                                modifier = Modifier.fillMaxWidth(),
                                             )
                                         }
                                     },
-                                    dismissButton = {
-                                        Row {
-                                            TextButton(onClick = {
+                                    confirmButton = {
+                                        BedrudButton(
+                                            text = stringResource(R.string.meeting_button_justLeave),
+                                            variant = BedrudButtonVariant.TONAL,
+                                            onClick = {
                                                 showLeaveDialog = false
                                                 CallService.stop(context)
                                                 onLeave()
-                                            }) { Text(stringResource(R.string.meeting_button_justLeave)) }
-                                            TextButton(onClick = { showLeaveDialog = false }) {
-                                                Text(stringResource(R.string.common_button_cancel))
-                                            }
+                                            },
+                                        )
+                                    },
+                                    dismissButton = {
+                                        TextButton(onClick = { showLeaveDialog = false }) {
+                                            Text(stringResource(R.string.common_button_cancel))
                                         }
                                     },
                                 )
