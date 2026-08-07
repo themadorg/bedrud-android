@@ -22,3 +22,9 @@
 *.sh text eol=lf
 gradlew text eol=lf
 gradle-wrapper.properties text eol=lf
+
+# The Makefile must be LF too. Its recipes are POSIX shell, and on Windows they run under
+# Git Bash - where a trailing CR from a CRLF checkout becomes part of the command and
+# breaks every recipe. core.autocrlf=true (the Git for Windows default) would do exactly
+# that without this line.
+Makefile text eol=lf
