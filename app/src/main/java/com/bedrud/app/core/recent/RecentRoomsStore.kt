@@ -2,8 +2,8 @@ package com.bedrud.app.core.recent
 
 import android.content.Context
 import android.content.SharedPreferences
-import com.google.gson.Gson
-import com.google.gson.reflect.TypeToken
+import com.bedrud.app.core.prefs.getJsonList
+import com.bedrud.app.core.prefs.putJsonList
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -25,8 +25,6 @@ class RecentRoomsStore(private val prefs: SharedPreferences) {
     constructor(context: Context) : this(
         context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE),
     )
-
-    private val gson = Gson()
 
     private val _rooms = MutableStateFlow(loadRooms())
     val rooms: StateFlow<List<RecentRoom>> = _rooms.asStateFlow()
@@ -81,18 +79,10 @@ class RecentRoomsStore(private val prefs: SharedPreferences) {
     }
 
     private fun saveRooms(rooms: List<RecentRoom>) {
-        prefs.edit().putString(KEY_ROOMS, gson.toJson(rooms)).apply()
+        prefs.putJsonList(KEY_ROOMS, rooms)
     }
 
-    private fun loadRooms(): List<RecentRoom> {
-        val json = prefs.getString(KEY_ROOMS, null) ?: return emptyList()
-        return try {
-            val type = object : TypeToken<List<RecentRoom>>() {}.type
-            gson.fromJson<List<RecentRoom>>(json, type).orEmpty()
-        } catch (_: Exception) {
-            emptyList()
-        }
-    }
+    private fun loadRooms(): List<RecentRoom> = prefs.getJsonList(KEY_ROOMS)
 
     companion object {
         private const val PREFS_NAME = "bedrud_recent_rooms"

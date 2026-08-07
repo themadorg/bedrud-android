@@ -1,39 +1,19 @@
 package com.bedrud.app.core.api
 
 import com.bedrud.app.models.*
-import com.google.gson.Gson
 import kotlinx.coroutines.runBlocking
 import okhttp3.mockwebserver.MockResponse
-import okhttp3.mockwebserver.MockWebServer
-import org.junit.After
 import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
-import retrofit2.Retrofit
-import retrofit2.converter.gson.GsonConverterFactory
 
-class RoomApiTest {
+class RoomApiTest : MockApiTest() {
 
-    private lateinit var server: MockWebServer
     private lateinit var roomApi: RoomApi
-    private val gson = Gson()
 
     @Before
     fun setUp() {
-        server = MockWebServer()
-        server.start()
-
-        val retrofit = Retrofit.Builder()
-            .baseUrl(server.url("/"))
-            .addConverterFactory(GsonConverterFactory.create())
-            .build()
-
-        roomApi = retrofit.create(RoomApi::class.java)
-    }
-
-    @After
-    fun tearDown() {
-        server.shutdown()
+        roomApi = api()
     }
 
     @Test
@@ -43,9 +23,7 @@ class RoomApiTest {
 
         val response = roomApi.createRoom(CreateRoomRequest(name = "Room 1"))
 
-        val request = server.takeRequest()
-        assertEquals("POST", request.method)
-        assertEquals("/room/create", request.path)
+        assertRequest("POST", "/room/create")
         assertTrue(response.isSuccessful)
         assertEquals("r1", response.body()!!.id)
     }
@@ -63,9 +41,7 @@ class RoomApiTest {
 
         val response = roomApi.listRooms()
 
-        val request = server.takeRequest()
-        assertEquals("GET", request.method)
-        assertEquals("/room/list", request.path)
+        assertRequest("GET", "/room/list")
         assertTrue(response.isSuccessful)
         assertEquals(1, response.body()!!.size)
         assertEquals("r1", response.body()!![0].id)
@@ -84,9 +60,7 @@ class RoomApiTest {
 
         val response = roomApi.joinRoom(JoinRoomRequest(roomName = "my-room"))
 
-        val request = server.takeRequest()
-        assertEquals("POST", request.method)
-        assertEquals("/room/join", request.path)
+        assertRequest("POST", "/room/join")
         assertTrue(response.isSuccessful)
         assertEquals("tok123", response.body()!!.token)
         assertEquals("wss://lk.example.com", response.body()!!.livekitHost)
@@ -98,9 +72,7 @@ class RoomApiTest {
 
         val response = roomApi.kickParticipant("room123", "user456")
 
-        val request = server.takeRequest()
-        assertEquals("POST", request.method)
-        assertEquals("/room/room123/kick/user456", request.path)
+        assertRequest("POST", "/room/room123/kick/user456")
         assertTrue(response.isSuccessful)
     }
 
@@ -114,13 +86,11 @@ class RoomApiTest {
         )
         val response = roomApi.updateRoomSettings("room123", updateRequest)
 
-        val request = server.takeRequest()
-        assertEquals("PUT", request.method)
-        assertEquals("/room/room123/settings", request.path)
-        val body = request.body.readUtf8()
-        assertTrue(body.contains("\"isPublic\":true"))
-        assertTrue(body.contains("\"allowChat\":false"))
-        assertTrue(body.contains("\"e2ee\":true"))
+        assertRequest(
+            "PUT",
+            "/room/room123/settings",
+            listOf("\"isPublic\":true", "\"allowChat\":false", "\"e2ee\":true"),
+        )
         assertTrue(response.isSuccessful)
     }
 
@@ -130,9 +100,7 @@ class RoomApiTest {
 
         val response = roomApi.banParticipant("room123", "user456")
 
-        val request = server.takeRequest()
-        assertEquals("POST", request.method)
-        assertEquals("/room/room123/ban/user456", request.path)
+        assertRequest("POST", "/room/room123/ban/user456")
         assertTrue(response.isSuccessful)
     }
 
@@ -142,9 +110,7 @@ class RoomApiTest {
 
         val response = roomApi.deleteRoom("room999")
 
-        val request = server.takeRequest()
-        assertEquals("DELETE", request.method)
-        assertEquals("/room/room999", request.path)
+        assertRequest("DELETE", "/room/room999")
         assertTrue(response.isSuccessful)
     }
 

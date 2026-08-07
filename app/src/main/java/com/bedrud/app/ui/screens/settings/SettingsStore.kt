@@ -6,6 +6,8 @@ import android.text.TextUtils
 import android.view.View
 import androidx.annotation.StringRes
 import com.bedrud.app.R
+import com.bedrud.app.core.prefs.getEnum
+import com.bedrud.app.core.prefs.putEnum
 import java.util.Locale
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -59,7 +61,7 @@ class SettingsStore(context: Context) {
     val language: StateFlow<AppLanguage> = _language.asStateFlow()
 
     fun setAppearance(value: AppAppearance) {
-        prefs.edit().putString(KEY_APPEARANCE, value.name).apply()
+        prefs.putEnum(KEY_APPEARANCE, value)
         _appearance.value = value
     }
 
@@ -69,18 +71,12 @@ class SettingsStore(context: Context) {
     }
 
     fun setLanguage(value: AppLanguage) {
-        prefs.edit().putString(KEY_LANGUAGE, value.name).apply()
+        prefs.putEnum(KEY_LANGUAGE, value)
         _language.value = value
     }
 
-    fun getLanguageTag(): String {
-        val raw = prefs.getString(KEY_LANGUAGE, AppLanguage.SYSTEM.name)
-        return try {
-            AppLanguage.valueOf(raw ?: AppLanguage.SYSTEM.name).localeTag
-        } catch (_: Exception) {
-            AppLanguage.SYSTEM.localeTag
-        }
-    }
+    fun getLanguageTag(): String =
+        prefs.getEnum(KEY_LANGUAGE, AppLanguage.SYSTEM).localeTag
 
     fun getLastTab(): Int = prefs.getInt(KEY_LAST_TAB, 0)
 
@@ -100,23 +96,11 @@ class SettingsStore(context: Context) {
         prefs.edit().putBoolean(KEY_DEAFENED, value).apply()
     }
 
-    private fun loadAppearance(): AppAppearance {
-        val raw = prefs.getString(KEY_APPEARANCE, AppAppearance.SYSTEM.name)
-        return try {
-            AppAppearance.valueOf(raw ?: AppAppearance.SYSTEM.name)
-        } catch (_: Exception) {
-            AppAppearance.SYSTEM
-        }
-    }
+    private fun loadAppearance(): AppAppearance =
+        prefs.getEnum(KEY_APPEARANCE, AppAppearance.SYSTEM)
 
-    private fun loadLanguage(): AppLanguage {
-        val raw = prefs.getString(KEY_LANGUAGE, AppLanguage.SYSTEM.name)
-        return try {
-            AppLanguage.valueOf(raw ?: AppLanguage.SYSTEM.name)
-        } catch (_: Exception) {
-            AppLanguage.SYSTEM
-        }
-    }
+    private fun loadLanguage(): AppLanguage =
+        prefs.getEnum(KEY_LANGUAGE, AppLanguage.SYSTEM)
 
     companion object {
         private const val PREFS_NAME = "bedrud_settings"

@@ -1,39 +1,19 @@
 package com.bedrud.app.core.api
 
 import com.bedrud.app.models.*
-import com.google.gson.Gson
 import kotlinx.coroutines.runBlocking
 import okhttp3.mockwebserver.MockResponse
-import okhttp3.mockwebserver.MockWebServer
-import org.junit.After
 import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
-import retrofit2.Retrofit
-import retrofit2.converter.gson.GsonConverterFactory
 
-class AuthApiTest {
+class AuthApiTest : MockApiTest() {
 
-    private lateinit var server: MockWebServer
     private lateinit var authApi: AuthApi
-    private val gson = Gson()
 
     @Before
     fun setUp() {
-        server = MockWebServer()
-        server.start()
-
-        val retrofit = Retrofit.Builder()
-            .baseUrl(server.url("/"))
-            .addConverterFactory(GsonConverterFactory.create())
-            .build()
-
-        authApi = retrofit.create(AuthApi::class.java)
-    }
-
-    @After
-    fun tearDown() {
-        server.shutdown()
+        authApi = api()
     }
 
     @Test
@@ -48,13 +28,7 @@ class AuthApiTest {
 
         val response = authApi.login(LoginRequest(email = "a@b.com", password = "pass"))
 
-        val request = server.takeRequest()
-        assertEquals("POST", request.method)
-        assertEquals("/auth/login", request.path)
-        val body = request.body.readUtf8()
-        assertTrue(body.contains("a@b.com"))
-        assertTrue(body.contains("pass"))
-
+        assertRequest("POST", "/auth/login", listOf("a@b.com", "pass"))
         assertTrue(response.isSuccessful)
         assertEquals("acc", response.body()!!.tokens.accessToken)
         assertEquals("u1", response.body()!!.user.id)
@@ -74,9 +48,7 @@ class AuthApiTest {
             RegisterRequest(email = "a@b.com", password = "pass", name = "Alice")
         )
 
-        val request = server.takeRequest()
-        assertEquals("POST", request.method)
-        assertEquals("/auth/register", request.path)
+        assertRequest("POST", "/auth/register")
         assertTrue(response.isSuccessful)
         assertTrue(response.body()!!.has("tokens"))
         assertEquals("acc", response.body()!!.getAsJsonObject("tokens").get("accessToken").asString)
@@ -94,9 +66,7 @@ class AuthApiTest {
 
         val response = authApi.guestLogin(GuestLoginRequest(name = "Guest"))
 
-        val request = server.takeRequest()
-        assertEquals("POST", request.method)
-        assertEquals("/auth/guest-login", request.path)
+        assertRequest("POST", "/auth/guest-login")
         assertTrue(response.isSuccessful)
     }
 
@@ -109,12 +79,7 @@ class AuthApiTest {
 
         val response = authApi.refreshToken(RefreshTokenRequest(refreshToken = "old_ref"))
 
-        val request = server.takeRequest()
-        assertEquals("POST", request.method)
-        assertEquals("/auth/refresh", request.path)
-        val body = request.body.readUtf8()
-        assertTrue(body.contains("refresh_token"))
-        assertTrue(body.contains("old_ref"))
+        assertRequest("POST", "/auth/refresh", listOf("refresh_token", "old_ref"))
         assertTrue(response.isSuccessful)
         assertEquals("new_acc", response.body()!!.accessToken)
     }
@@ -128,9 +93,7 @@ class AuthApiTest {
 
         val response = authApi.getMe()
 
-        val request = server.takeRequest()
-        assertEquals("GET", request.method)
-        assertEquals("/auth/me", request.path)
+        assertRequest("GET", "/auth/me")
         assertTrue(response.isSuccessful)
         assertEquals("u1", response.body()!!.id)
         assertEquals("Alice", response.body()!!.name)
@@ -143,10 +106,7 @@ class AuthApiTest {
 
         val response = authApi.forgotPassword(ForgotPasswordRequest(email = "a@b.com"))
 
-        val request = server.takeRequest()
-        assertEquals("POST", request.method)
-        assertEquals("/auth/forgot-password", request.path)
-        assertTrue(request.body.readUtf8().contains("a@b.com"))
+        assertRequest("POST", "/auth/forgot-password", listOf("a@b.com"))
         assertTrue(response.isSuccessful)
     }
 }
