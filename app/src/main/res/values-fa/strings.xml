@@ -268,4 +268,23 @@
   <string name="dashboard_action_remove">برداشتن</string>
   <string name="dashboard_contentDescription_profile">باز کردن نمایه</string>
   <string name="dashboard_contentDescription_switchServer">تغییر سرور</string>
+
+  <!-- Error messages (#70) -->
+  <string name="error_network_unavailable">اتصال اینترنت برقرار نیست</string>
+  <string name="error_timeout">پاسخ سرور بیش از حد طول کشید</string>
+  <string name="error_server_unreachable">دسترسی به سرور ممکن نشد</string>
+  <string name="error_generic">مشکلی پیش آمد. لطفاً دوباره تلاش کنید.</string>
+  <string name="meeting_error_microphoneFailed">مشکلی در میکروفون شما رخ داد</string>
+  <string name="meeting_error_cameraFailed">مشکلی در دوربین شما رخ داد</string>
+  <string name="meeting_error_cameraSwitchFailed">تعویض دوربین ممکن نشد</string>
+  <string name="meeting_error_screenShareUnavailable">هم‌رسانی صفحه در دسترس نیست</string>
+  <string name="meeting_error_screenShareStopFailed">توقف هم‌رسانی صفحه ممکن نشد</string>
+  <string name="meeting_error_alreadyPresenting"><xliff:g id="name" example="Alex">%1$s</xliff:g> در حال ارائه است</string>
+  <string name="meeting_error_messageSendFailed">ارسال پیام شما ممکن نشد</string>
+  <string name="meeting_error_kickFailed">حذف شرکت‌کننده ممکن نشد</string>
+  <string name="meeting_error_banFailed">مسدود کردن شرکت‌کننده ممکن نشد</string>
+  <string name="dashboard_error_createRoomFailed">ساخت اتاق ممکن نشد</string>
+  <string name="dashboard_error_deleteRoomFailed">حذف اتاق ممکن نشد</string>
+  <string name="dashboard_error_saveSettingsFailed">ذخیره تنظیمات ممکن نشد</string>
+  <string name="dashboard_toast_settingsSaved">تنظیمات ذخیره شد</string>
 </resources>

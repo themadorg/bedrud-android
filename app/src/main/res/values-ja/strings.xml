@@ -271,4 +271,23 @@
   <string name="dashboard_action_remove">外す</string>
   <string name="dashboard_contentDescription_profile">プロフィールを開く</string>
   <string name="dashboard_contentDescription_switchServer">サーバーを切り替え</string>
+
+  <!-- Error messages (#70) -->
+  <string name="error_network_unavailable">インターネット接続がありません</string>
+  <string name="error_timeout">サーバーの応答に時間がかかりすぎました</string>
+  <string name="error_server_unreachable">サーバーに接続できませんでした</string>
+  <string name="error_generic">問題が発生しました。もう一度お試しください。</string>
+  <string name="meeting_error_microphoneFailed">マイクに問題が発生しました</string>
+  <string name="meeting_error_cameraFailed">カメラに問題が発生しました</string>
+  <string name="meeting_error_cameraSwitchFailed">カメラを切り替えられませんでした</string>
+  <string name="meeting_error_screenShareUnavailable">画面共有は利用できません</string>
+  <string name="meeting_error_screenShareStopFailed">画面共有を停止できませんでした</string>
+  <string name="meeting_error_alreadyPresenting"><xliff:g id="name" example="Alex">%1$s</xliff:g>さんがすでに発表しています</string>
+  <string name="meeting_error_messageSendFailed">メッセージを送信できませんでした</string>
+  <string name="meeting_error_kickFailed">参加者を削除できませんでした</string>
+  <string name="meeting_error_banFailed">参加者をブロックできませんでした</string>
+  <string name="dashboard_error_createRoomFailed">ルームを作成できませんでした</string>
+  <string name="dashboard_error_deleteRoomFailed">ルームを削除できませんでした</string>
+  <string name="dashboard_error_saveSettingsFailed">設定を保存できませんでした</string>
+  <string name="dashboard_toast_settingsSaved">設定を保存しました</string>
 </resources>

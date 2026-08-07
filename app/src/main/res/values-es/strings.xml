@@ -271,4 +271,23 @@
   <string name="dashboard_action_remove">Quitar</string>
   <string name="dashboard_contentDescription_profile">Abrir perfil</string>
   <string name="dashboard_contentDescription_switchServer">Cambiar de servidor</string>
+
+  <!-- Error messages (#70) -->
+  <string name="error_network_unavailable">Sin conexión a Internet</string>
+  <string name="error_timeout">El servidor tardó demasiado en responder</string>
+  <string name="error_server_unreachable">No se pudo conectar con el servidor</string>
+  <string name="error_generic">Algo salió mal. Inténtalo de nuevo.</string>
+  <string name="meeting_error_microphoneFailed">Hubo un problema con tu micrófono</string>
+  <string name="meeting_error_cameraFailed">Hubo un problema con tu cámara</string>
+  <string name="meeting_error_cameraSwitchFailed">No se pudo cambiar de cámara</string>
+  <string name="meeting_error_screenShareUnavailable">La pantalla compartida no está disponible</string>
+  <string name="meeting_error_screenShareStopFailed">No se pudo detener la pantalla compartida</string>
+  <string name="meeting_error_alreadyPresenting"><xliff:g id="name" example="Alex">%1$s</xliff:g> ya está presentando</string>
+  <string name="meeting_error_messageSendFailed">No se pudo enviar tu mensaje</string>
+  <string name="meeting_error_kickFailed">No se pudo expulsar al participante</string>
+  <string name="meeting_error_banFailed">No se pudo bloquear al participante</string>
+  <string name="dashboard_error_createRoomFailed">No se pudo crear la sala</string>
+  <string name="dashboard_error_deleteRoomFailed">No se pudo eliminar la sala</string>
+  <string name="dashboard_error_saveSettingsFailed">No se pudo guardar la configuración</string>
+  <string name="dashboard_toast_settingsSaved">Configuración guardada</string>
 </resources>

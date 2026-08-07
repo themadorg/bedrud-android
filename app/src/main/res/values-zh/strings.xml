@@ -271,4 +271,23 @@
   <string name="dashboard_action_remove">移除</string>
   <string name="dashboard_contentDescription_profile">打开个人资料</string>
   <string name="dashboard_contentDescription_switchServer">切换服务器</string>
+
+  <!-- Error messages (#70) -->
+  <string name="error_network_unavailable">无网络连接</string>
+  <string name="error_timeout">服务器响应超时</string>
+  <string name="error_server_unreachable">无法连接到服务器</string>
+  <string name="error_generic">出了点问题，请重试。</string>
+  <string name="meeting_error_microphoneFailed">您的麦克风出现问题</string>
+  <string name="meeting_error_cameraFailed">您的摄像头出现问题</string>
+  <string name="meeting_error_cameraSwitchFailed">无法切换摄像头</string>
+  <string name="meeting_error_screenShareUnavailable">屏幕共享不可用</string>
+  <string name="meeting_error_screenShareStopFailed">无法停止屏幕共享</string>
+  <string name="meeting_error_alreadyPresenting"><xliff:g id="name" example="Alex">%1$s</xliff:g> 正在演示</string>
+  <string name="meeting_error_messageSendFailed">无法发送您的消息</string>
+  <string name="meeting_error_kickFailed">无法移除参与者</string>
+  <string name="meeting_error_banFailed">无法封禁参与者</string>
+  <string name="dashboard_error_createRoomFailed">无法创建房间</string>
+  <string name="dashboard_error_deleteRoomFailed">无法删除房间</string>
+  <string name="dashboard_error_saveSettingsFailed">无法保存设置</string>
+  <string name="dashboard_toast_settingsSaved">设置已保存</string>
 </resources>

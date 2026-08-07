@@ -271,4 +271,23 @@
   <string name="dashboard_action_remove">إزالة</string>
   <string name="dashboard_contentDescription_profile">فتح الملف الشخصي</string>
   <string name="dashboard_contentDescription_switchServer">تبديل الخادم</string>
+
+  <!-- Error messages (#70) -->
+  <string name="error_network_unavailable">لا يوجد اتصال بالإنترنت</string>
+  <string name="error_timeout">استغرق الخادم وقتًا طويلاً للاستجابة</string>
+  <string name="error_server_unreachable">تعذّر الوصول إلى الخادم</string>
+  <string name="error_generic">حدث خطأ ما. يرجى المحاولة مرة أخرى.</string>
+  <string name="meeting_error_microphoneFailed">حدثت مشكلة في الميكروفون</string>
+  <string name="meeting_error_cameraFailed">حدثت مشكلة في الكاميرا</string>
+  <string name="meeting_error_cameraSwitchFailed">تعذّر تبديل الكاميرا</string>
+  <string name="meeting_error_screenShareUnavailable">مشاركة الشاشة غير متاحة</string>
+  <string name="meeting_error_screenShareStopFailed">تعذّر إيقاف مشاركة الشاشة</string>
+  <string name="meeting_error_alreadyPresenting"><xliff:g id="name" example="Alex">%1$s</xliff:g> يعرض بالفعل</string>
+  <string name="meeting_error_messageSendFailed">تعذّر إرسال رسالتك</string>
+  <string name="meeting_error_kickFailed">تعذّرت إزالة المشارك</string>
+  <string name="meeting_error_banFailed">تعذّر حظر المشارك</string>
+  <string name="dashboard_error_createRoomFailed">تعذّر إنشاء الغرفة</string>
+  <string name="dashboard_error_deleteRoomFailed">تعذّر حذف الغرفة</string>
+  <string name="dashboard_error_saveSettingsFailed">تعذّر حفظ الإعدادات</string>
+  <string name="dashboard_toast_settingsSaved">تم حفظ الإعدادات</string>
 </resources>

@@ -271,4 +271,23 @@
   <string name="dashboard_action_remove">Retirer</string>
   <string name="dashboard_contentDescription_profile">Ouvrir le profil</string>
   <string name="dashboard_contentDescription_switchServer">Changer de serveur</string>
+
+  <!-- Error messages (#70) -->
+  <string name="error_network_unavailable">Pas de connexion Internet</string>
+  <string name="error_timeout">Le serveur a mis trop de temps à répondre</string>
+  <string name="error_server_unreachable">Impossible de joindre le serveur</string>
+  <string name="error_generic">Une erreur s\'est produite. Veuillez réessayer.</string>
+  <string name="meeting_error_microphoneFailed">Un problème est survenu avec votre microphone</string>
+  <string name="meeting_error_cameraFailed">Un problème est survenu avec votre caméra</string>
+  <string name="meeting_error_cameraSwitchFailed">Impossible de changer de caméra</string>
+  <string name="meeting_error_screenShareUnavailable">Le partage d\'écran n\'est pas disponible</string>
+  <string name="meeting_error_screenShareStopFailed">Impossible d\'arrêter le partage d\'écran</string>
+  <string name="meeting_error_alreadyPresenting"><xliff:g id="name" example="Alex">%1$s</xliff:g> présente déjà</string>
+  <string name="meeting_error_messageSendFailed">Impossible d\'envoyer votre message</string>
+  <string name="meeting_error_kickFailed">Impossible de retirer le participant</string>
+  <string name="meeting_error_banFailed">Impossible de bannir le participant</string>
+  <string name="dashboard_error_createRoomFailed">Impossible de créer le salon</string>
+  <string name="dashboard_error_deleteRoomFailed">Impossible de supprimer le salon</string>
+  <string name="dashboard_error_saveSettingsFailed">Impossible d\'enregistrer les paramètres</string>
+  <string name="dashboard_toast_settingsSaved">Paramètres enregistrés</string>
 </resources>
