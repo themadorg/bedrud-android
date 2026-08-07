@@ -292,7 +292,7 @@ class RoomManager(
                         }
                         is RoomEvent.Disconnected -> {
                             // "PARTICIPANT_REMOVED" is the LiveKit disconnect reason for kick
-                            val kicked = event.reason?.name == "PARTICIPANT_REMOVED"
+                            val kicked = event.reason.name == "PARTICIPANT_REMOVED"
                             if (kicked) _wasKicked.value = true
                             _connectionState.value = ConnectionState.DISCONNECTED
                             onDisconnected?.invoke()

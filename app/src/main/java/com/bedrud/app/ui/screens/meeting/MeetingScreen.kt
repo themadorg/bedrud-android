@@ -106,11 +106,10 @@ import androidx.compose.ui.zIndex
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDirection
@@ -130,6 +129,7 @@ import com.bedrud.app.ui.components.BedrudScaffoldContentInsets
 import com.bedrud.app.ui.components.ChatImageLightbox
 import com.bedrud.app.ui.components.ConfirmDialog
 import com.bedrud.app.ui.components.InitialsAvatar
+import com.bedrud.app.ui.util.setPlainText
 import com.bedrud.app.core.livekit.ChatMessage
 import com.bedrud.app.core.livekit.ConnectionState
 import com.bedrud.app.core.pip.PipStateHolder
@@ -164,12 +164,13 @@ fun MeetingScreen(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
-    val clipboard = LocalClipboardManager.current
+    val clipboard = LocalClipboard.current
     val screenShareFailedMessage = stringResource(R.string.meeting_error_screenShareFailed)
     val permissionsRequiredMessage = stringResource(R.string.meeting_error_permissionsRequired)
     val roomNoLongerExistsMessage = stringResource(R.string.meeting_error_roomNoLongerExists)
     val joinFailedMessage = stringResource(R.string.meeting_error_joinFailed)
     val linkCopiedMessage = stringResource(R.string.meeting_toast_linkCopied)
+    val clipLabel = stringResource(R.string.app_name)
     val isInPipMode by pipStateHolder.isInPipMode.collectAsState()
     val flatFabElevation = FloatingActionButtonDefaults.elevation(
         defaultElevation = 0.dp,
@@ -623,8 +624,10 @@ fun MeetingScreen(
                                 },
                                 onCopyRoomLink = {
                                     val link = BedrudURLParser.buildMeetingLink(serverURL, roomName)
-                                    clipboard.setText(AnnotatedString(link))
-                                    scope.launch { snackbarHostState.showSnackbar(linkCopiedMessage) }
+                                    scope.launch {
+                                        clipboard.setPlainText(clipLabel, link)
+                                        snackbarHostState.showSnackbar(linkCopiedMessage)
+                                    }
                                 },
                                 onToggleDeafen = { scope.launch { roomManager.toggleDeafen() } },
                                 onOpenAudioSettings = { showAudioSheet = true },
@@ -840,8 +843,10 @@ fun MeetingScreen(
                                 // Copy action lives on the box itself, pinned to its top-right.
                                 IconButton(
                                     onClick = {
-                                        clipboard.setText(AnnotatedString(connectionError))
-                                        scope.launch { snackbarHostState.showSnackbar(errorCopiedMessage) }
+                                        scope.launch {
+                                            clipboard.setPlainText(clipLabel, connectionError)
+                                            snackbarHostState.showSnackbar(errorCopiedMessage)
+                                        }
                                     },
                                 ) {
                                     Icon(
@@ -1003,14 +1008,15 @@ private fun ParticipantTile(
                 onToggleLocalMute = { onToggleLocalMute(identity) },
                 isVideoLocallyDisabled = isVideoLocallyDisabled,
                 onToggleVideoDisabled = { onToggleVideoDisabled(identity) },
+                // roomApi is non-null in here: canOpenMenu already requires it.
                 onKickConfirmed = {
                     moderate(scope, snackbarHostState, "Failed to kick participant") {
-                        roomApi?.kickParticipant(roomId, identity)
+                        roomApi.kickParticipant(roomId, identity)
                     }
                 },
                 onBan = {
                     moderate(scope, snackbarHostState, "Failed to ban participant") {
-                        roomApi?.banParticipant(roomId, identity)
+                        roomApi.banParticipant(roomId, identity)
                     }
                 },
             )

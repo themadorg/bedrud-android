@@ -73,11 +73,12 @@ object StageWire {
                 val ts = json.optLong("ts", 0L)
                 if (ts == 0L) return null
                 val stageJson = json.opt("stage")
-                val stage = when (stageJson) {
-                    null, JSONObject.NULL -> null
-                    is JSONObject -> parseMeetingStage(stageJson)
-                    else -> null
-                }
+                // Neither a missing "stage" (null) nor an explicit JSON null
+                // (JSONObject.NULL) is a JSONObject, so one is-check covers both. Spelling
+                // it as a `when` with those two as their own branch reads more explicitly,
+                // but Kotlin then reports the whole `when` as non-exhaustive despite its
+                // else branch, because the subject is a platform type.
+                val stage = if (stageJson is JSONObject) parseMeetingStage(stageJson) else null
                 StageMessage.State(stage, ts)
             }
             else -> null
