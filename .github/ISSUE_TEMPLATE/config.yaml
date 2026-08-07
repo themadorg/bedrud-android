@@ -1,10 +1,10 @@
 blank_issues_enabled: false
 
 contact_links:
-  - name: Questions / Discussions
-    url: https://github.com/YOUR_ORG/YOUR_REPO/discussions
-    about: Ask questions or discuss ideas here
+  - name: Server, web app, or other clients
+    url: https://github.com/themadorg/bedrud/issues
+    about: This repository is the Android client only. Everything else lives in the main Bedrud project.
 
-  - name: Security Reports
-    url: https://github.com/YOUR_ORG/YOUR_REPO/security/advisories/new
-    about: Report security vulnerabilities privately
+  - name: Security reports
+    url: https://github.com/themadorg/bedrud-android/security/advisories/new
+    about: Report a vulnerability privately instead of opening a public issue.

@@ -3,36 +3,24 @@ package com.bedrud.app.core.api
 import com.bedrud.app.core.auth.AuthManager
 import com.bedrud.app.models.RefreshTokenResponse
 import com.bedrud.app.testutil.InMemorySharedPreferences
-import com.google.gson.Gson
 import io.mockk.mockk
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.mockwebserver.MockResponse
-import okhttp3.mockwebserver.MockWebServer
-import org.junit.After
 import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
 import java.util.concurrent.TimeUnit
 
-class TokenAuthenticatorTest {
+class TokenAuthenticatorTest : MockApiTest() {
 
-    private lateinit var server: MockWebServer
     private lateinit var prefs: InMemorySharedPreferences
     private lateinit var authManager: AuthManager
-    private val gson = Gson()
 
     @Before
     fun setUp() {
-        server = MockWebServer()
-        server.start()
         prefs = InMemorySharedPreferences()
         authManager = AuthManager(prefs)
-    }
-
-    @After
-    fun tearDown() {
-        server.shutdown()
     }
 
     private fun buildAuthenticator(): TokenAuthenticator {

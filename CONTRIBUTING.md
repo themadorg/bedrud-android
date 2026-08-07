@@ -1,10 +1,10 @@
 # Contributing
 
-Contributions to Bedrud are welcome. This guide covers the process for submitting changes.
+Contributions to the Bedrud Android client are welcome. This guide covers the process for
+submitting changes to **this** repository — the Android app. For the server, web app, or
+other platforms, see the [main Bedrud project](https://github.com/themadorg/bedrud).
 
-For documentation-specific contributions, see [docs/contributing.md](docs/contributing.md).
-
-## Getting Started
+## Getting started
 
 1. Fork the repository
 2. Clone your fork
@@ -14,107 +14,113 @@ For documentation-specific contributions, see [docs/contributing.md](docs/contri
 
 ## Prerequisites
 
-- Go 1.22+
-- Bun 1.0+ (for web frontend)
-- Rust (for desktop app)
-- GNU Make
-- Git
+- **JDK 17** — the project pins `jvmToolchain(17)`
+- **Android SDK** (compileSdk 37)
+- **Git**
 
-## Development Setup
+[Android Studio](https://developer.android.com/studio) (latest stable) is the easiest
+path: it brings its own JDK and SDK manager, and writes the `local.properties` the build
+needs. Everything below also works from the command line.
+
+## Development setup
 
 ```bash
 # After forking on GitHub, clone your fork
-git clone https://github.com/<your-username>/bedrud.git
-cd bedrud
-make init
-make dev
+git clone https://github.com/<your-username>/bedrud-android.git
+cd bedrud-android
+
+./gradlew assembleDebug
 ```
 
-See the [Development Workflow](docs/guides/development.md) for detailed setup instructions.
+Debug APKs land in `app/build/outputs/apk/debug/`, split per ABI plus a universal APK.
+See [README.md](README.md#building-from-source) for build flags such as
+`-PdefaultServerHost`, and for release signing.
 
-## Project Structure
+## Project structure
 
-| Directory       | Language         | Description                      |
-|-----------------|------------------|----------------------------------|
-| `server/`       | Go               | Backend API and embedded LiveKit |
-| `apps/web/`     | TypeScript/React | Web frontend                     |
-| `apps/desktop/` | Rust + Slint     | Desktop app                      |
-| `apps/android/` | Kotlin           | Android app                      |
-| `apps/ios/`     | Swift            | iOS app                          |
-| `agents/`       | Python           | Bot agents                       |
-| `packages/`     | TypeScript       | Shared type definitions          |
-| `tools/cli/`    | Python           | Deployment CLI                   |
-| `docs/`         | Markdown         | Documentation                    |
+Single `:app` module. The source layout is in [README.md](README.md#architecture), and
+the conventions that matter when changing it — design tokens, the multi-instance model,
+navigation, networking — are in [AGENTS.md](AGENTS.md). The design system itself is
+documented in [DESIGN.md](DESIGN.md).
 
-## Code Style
+## Code style
 
-| Language         | Standard                |
-|------------------|-------------------------|
-| Go               | `gofmt`                 |
-| TypeScript/React | Biome                   |
-| Kotlin           | Android Studio defaults |
-| Swift            | Xcode defaults          |
-| Python           | ruff                    |
+Kotlin, Android Studio defaults. Three project-specific rules are worth calling out
+because CI or review will catch them:
 
-## Pull Request Process
+- **Design tokens.** Sizes, spacing, shapes, colors, and motion come from `ui/theme/`.
+  No raw `n.dp` or hex literals under `ui/screens/**` or `ui/components/**`.
+- **Strings must be translated.** User-facing strings go in `res/values/strings.xml`
+  *and* in every locale (ar, de, es, fa, fr, ja, ru, tr, zh). Lint fails on
+  `MissingTranslation`, so an English-only string breaks the build. The app supports RTL.
+- **No version literals in build files.** `versionName` and `versionCode` are supplied by
+  CI; the git tag is the source of truth. See [Releases](#releases).
 
-1. **Branch naming:** `feature/description`, `fix/description`, or `docs/description`
-2. **Commit messages:** `<action> <what> for <why>` (e.g., `add user model for auth feature`, `fix login redirect for expired sessions`)
-3. **CI checks:** All GitHub Actions checks must pass
-4. **Description:** Include what changed and why
+## Pull request process
 
-### CI Checks
+1. **Branch naming:** `feat/description`, `fix/description`, `chore/description`, or
+   `docs/description`
+2. **Commit messages:** conventional-commit style — `feat(auth): …`, `fix(meeting): …`,
+   `build: …` — with a body explaining *why*, not just what
+3. **CI checks:** all GitHub Actions checks must pass
+4. **Description:** what changed and why; the PR template covers the rest
 
-Every PR runs these checks automatically:
+### CI checks
 
-| Check   | What it validates                    |
-|---------|--------------------------------------|
-| Server  | `go vet`, build, tests               |
-| Web     | TypeScript type check, build (Biome) |
-| Android | Lint, unit tests                     |
-| iOS     | Build, test (simulator)              |
+Every PR runs [`pr-build.yml`](.github/workflows/pr-build.yml):
 
-### Before Submitting
+| Job         | What it does                                                              |
+|-------------|---------------------------------------------------------------------------|
+| Lint & Test | `./gradlew lint` and `./gradlew testDebugUnitTest`                         |
+| Dev build   | Builds a signed **dev** APK and comments install links on the PR           |
 
-Run checks locally to catch issues before CI:
+The dev APK has its own application ID (`com.bedrud.app.dev`) and app name, so reviewers
+can install it next to a real Bedrud build without the two colliding. The build job is
+skipped for Dependabot PRs, which by design cannot reach repository secrets.
+
+### Before submitting
+
+Run the same two checks CI gates on:
 
 ```bash
-# Server
-cd server && go vet ./... && go build ./... && go test -v -count=1 ./...
+./gradlew lint
+./gradlew testDebugUnitTest
 
-# Web
-cd apps/web && bun run check && bun run build
+# or, the same pair in one command
+make check
 ```
 
-## Reporting Issues
+`make help` lists the rest of the shortcuts, and `make doctor` diagnoses a machine that
+won't build. On Windows run them from Git Bash or WSL — `make` isn't bundled with Git for
+Windows (`winget install ezwinports.make` or `scoop install make`).
 
-File issues on [GitHub Issues](https://github.com/themadorg/bedrud/issues) with:
+Tests are JUnit 4 with MockK, OkHttp MockWebServer, and kotlinx-coroutines-test. There is
+no instrumented test directory. `InMemorySharedPreferences` in `testutil/` lets you inject
+into anything taking `SharedPreferences` without pulling in the Android framework.
+
+## Releases
+
+There is no version number stored in the repo. `versionCode` comes from the CI run number
+and `versionName` from the tag the release workflow was dispatched against, both passed to
+Gradle as `-P` flags — so a release is cut by tagging, never by editing a build file.
+
+Building and signing happens only in [`release.yml`](.github/workflows/release.yml), which
+is dispatched manually against a tag, gated on lint and unit tests passing for that exact
+commit, and on approval from the `beta-signing` / `production-signing` environments. The
+same tag can be released as `beta` first and promoted to `stable` later.
+
+## Reporting issues
+
+File issues on [GitHub Issues](https://github.com/themadorg/bedrud-android/issues) with:
 
 - Steps to reproduce
 - Expected vs actual behavior
-- Environment details (OS, browser, app version)
+- App version (Settings → About), Android version, and device
 
-## Documentation
-
-Documentation lives in `docs/` and is built with [MkDocs Material](https://squidfunk.github.io/mkdocs-material/).
-
-### Local Preview
-
-```bash
-pip install mkdocs-material
-mkdocs serve
-```
-
-Then open `http://localhost:8000` in your browser.
-
-## Related Documentation
-
-- [Development Workflow](docs/guides/development.md) — Detailed dev setup
-- [Architecture Overview](docs/architecture/overview.md) — How the pieces fit together
-- [Configuration](docs/getting-started/configuration.md) — Server and LiveKit settings
-- [API Reference](docs/api/authentication.md) — REST API endpoints
-- [Makefile Guide](docs/guides/makefile.md) — All build and dev commands
+Issues about the server, web app, or other clients belong on the
+[main Bedrud repository](https://github.com/themadorg/bedrud/issues) instead.
 
 ## License
 
-By contributing, you agree that your contributions will be licensed under the [Apache License 2.0](LICENSE).
+By contributing, you agree that your contributions will be licensed under the
+[Apache License 2.0](LICENSE).

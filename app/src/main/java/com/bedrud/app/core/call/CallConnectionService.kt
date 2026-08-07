@@ -11,6 +11,7 @@ import android.telecom.PhoneAccountHandle
 import android.telecom.TelecomManager
 import android.util.Log
 import com.bedrud.app.R
+import com.bedrud.app.core.deeplink.BedrudScheme
 
 class CallConnectionService : ConnectionService() {
 
@@ -69,6 +70,10 @@ class CallConnectionService : ConnectionService() {
             muteListener?.invoke(isMuted)
         }
 
+        // Deprecated alongside setAudioRoute (see below). Telecom still delivers this to a
+        // self-managed Connection, and it is the only signal that routing requests will now
+        // be honoured, so the override stays until the CallsManager migration.
+        @Suppress("OVERRIDE_DEPRECATION")
         override fun onCallAudioStateChanged(state: android.telecom.CallAudioState?) {
             // LiveKit manages capture/playback; system routes call audio.
             Log.d(
@@ -82,6 +87,7 @@ class CallConnectionService : ConnectionService() {
             // the Connection is created has no effect, even though activeConnection is already
             // non-null by then). This callback is the actual signal that Telecom is now
             // listening, so apply anything that was requested before that point now.
+            @Suppress("DEPRECATION")
             pendingAudioRoute?.let { route ->
                 pendingAudioRoute = null
                 Log.d(TAG, "Flushing pending audio route=$route")
@@ -96,7 +102,8 @@ class CallConnectionService : ConnectionService() {
 
     companion object {
         private const val TAG = "CallConnectionService"
-        const val SCHEME = "bedrud"
+        const val SCHEME = BedrudScheme.SCHEME
+        private const val ROOM_URI_AUTHORITY = "room"
         private var activeConnection: Connection? = null
         private var pendingAudioRoute: Int? = null
         var muteListener: ((Boolean) -> Unit)? = null
@@ -153,6 +160,14 @@ class CallConnectionService : ConnectionService() {
          * any active call. Going through the Connection gives this app the same routing
          * authority a system dialer has, which is what actually overrides that priority.
          */
+        // Connection.setAudioRoute is deprecated in favour of requestCallEndpointChange
+        // (API 34+) and, above that, the androidx.core.telecom CallsManager API. Neither is
+        // a drop-in here: minSdk is 28, so the old path has to stay for older devices
+        // regardless, and CallsManager replaces this whole ConnectionService rather than
+        // this one call. Doing it properly means running both paths against real Bluetooth,
+        // wired and speaker hardware - the exact routing this comment block explains is
+        // fragile - so it is deliberately left as its own piece of work.
+        @Suppress("DEPRECATION")
         fun setAudioRoute(route: Int) {
             Log.d(TAG, "setAudioRoute requested=$route activeConnection=${activeConnection != null}")
             val connection = activeConnection
@@ -171,7 +186,7 @@ class CallConnectionService : ConnectionService() {
         }
 
         fun roomUri(roomName: String): Uri =
-            Uri.parse("$SCHEME://room/${Uri.encode(roomName)}")
+            Uri.parse("$SCHEME://$ROOM_URI_AUTHORITY/${Uri.encode(roomName)}")
 
         private fun parseRoomName(address: Uri?): String? {
             address ?: return null

@@ -145,6 +145,13 @@ private const val AUTO_REFRESH_INTERVAL_MS = 60_000L
 // so a flaky request doesn't leave the list stale for a minute.
 private const val FAILED_FETCH_RETRY_MS = 5_000L
 
+// Cadence of the ticking clock that keeps the "Xm ago" recent-room labels advancing.
+private const val NOW_TICK_INTERVAL_MS = 60_000L
+
+// Ignore a silent refresh request that arrives within this window of the last fetch, so rapid tab
+// switching or flaky connectivity doesn't hammer the server.
+private const val MANUAL_REFRESH_DEBOUNCE_MS = 3_000L
+
 // ── Filter state ─────────────────────────────────────────────────────────────
 
 // ALL merges the active server's rooms with recent rooms from every server (recency/live first);
@@ -245,7 +252,7 @@ fun DashboardContent(
     var nowTickMs by remember { mutableLongStateOf(System.currentTimeMillis()) }
     LaunchedEffect(Unit) {
         while (true) {
-            delay(60_000L)
+            delay(NOW_TICK_INTERVAL_MS)
             nowTickMs = System.currentTimeMillis()
         }
     }
@@ -323,7 +330,7 @@ fun DashboardContent(
     fun silentlyRefreshRooms() {
         if (isLoading || isRefreshing) return
         if (showCreateDialog || roomToEdit != null || roomToDelete != null) return
-        if (System.currentTimeMillis() - lastFetchAtMs < 3_000L) return
+        if (System.currentTimeMillis() - lastFetchAtMs < MANUAL_REFRESH_DEBOUNCE_MS) return
         scope.launch { fetchRooms() }
     }
 
@@ -983,7 +990,7 @@ private fun RoomCard(
             icon = Icons.Default.Delete,
             containerColor = MaterialTheme.colorScheme.errorContainer,
             contentColor = MaterialTheme.colorScheme.onErrorContainer,
-            // Route through the confirm dialog (destructive), so snap back rather than dismiss.
+            // Route through the confirm dialog (destructive), so put the row back rather than dismiss.
             onTriggered = { onDelete(); false },
         )
     } else null
@@ -1158,7 +1165,9 @@ private data class SwipeAction(
     val icon: ImageVector,
     val containerColor: Color,
     val contentColor: Color,
-    // Returns true to let the row dismiss (instant action), false to snap back (deferred/confirmed).
+    // Returns true to leave the row dismissed (instant action), false to put it back
+    // (deferred/confirmed — the action opens a dialog, so the row should still be there
+    // behind it).
     val onTriggered: () -> Boolean,
 )
 
@@ -1174,16 +1183,21 @@ private fun SwipeableRoomRow(
         Box(modifier = modifier) { content() }
         return
     }
-    val state = rememberSwipeToDismissBoxState(
-        confirmValueChange = { value ->
-            if (value == SwipeToDismissBoxValue.EndToStart) action.onTriggered() else false
-        },
-    )
+    val state = rememberSwipeToDismissBoxState()
+    val scope = rememberCoroutineScope()
     SwipeToDismissBox(
         state = state,
         modifier = modifier,
         enableDismissFromStartToEnd = false,
         enableDismissFromEndToStart = true,
+        // Was confirmValueChange, which is deprecated: vetoing a settle from a callback is
+        // gone, so a swipe past the threshold always completes and the row is put back
+        // afterwards instead. onDismiss fires once, after the row has settled dismissed.
+        onDismiss = { value ->
+            if (value == SwipeToDismissBoxValue.EndToStart && !action.onTriggered()) {
+                scope.launch { state.reset() }
+            }
+        },
         backgroundContent = { SwipeActionBackground(action, state) },
     ) {
         content()

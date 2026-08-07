@@ -2,9 +2,9 @@ package com.bedrud.app.core.instance
 
 import android.content.Context
 import android.content.SharedPreferences
+import com.bedrud.app.core.prefs.getJsonList
+import com.bedrud.app.core.prefs.putJsonList
 import com.bedrud.app.models.Instance
-import com.google.gson.Gson
-import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -14,7 +14,6 @@ class InstanceStore(private val prefs: SharedPreferences) {
     constructor(context: Context) : this(
         context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
     )
-    private val gson = Gson()
 
     private val _instances = MutableStateFlow(loadInstances())
     val instances: StateFlow<List<Instance>> = _instances.asStateFlow()
@@ -67,19 +66,10 @@ class InstanceStore(private val prefs: SharedPreferences) {
     }
 
     private fun saveInstances(instances: List<Instance>) {
-        val json = gson.toJson(instances)
-        prefs.edit().putString(KEY_INSTANCES, json).apply()
+        prefs.putJsonList(KEY_INSTANCES, instances)
     }
 
-    private fun loadInstances(): List<Instance> {
-        val json = prefs.getString(KEY_INSTANCES, null) ?: return emptyList()
-        return try {
-            val type = object : TypeToken<List<Instance>>() {}.type
-            gson.fromJson(json, type)
-        } catch (e: Exception) {
-            emptyList()
-        }
-    }
+    private fun loadInstances(): List<Instance> = prefs.getJsonList(KEY_INSTANCES)
 
     companion object {
         private const val PREFS_NAME = "bedrud_instances"

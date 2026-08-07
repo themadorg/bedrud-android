@@ -30,6 +30,7 @@ import com.bedrud.app.core.call.CallService
 import com.bedrud.app.core.createLocaleContext
 import com.bedrud.app.core.deeplink.BedrudURLParser
 import com.bedrud.app.core.instance.InstanceManager
+import com.bedrud.app.core.meeting.VideoAspect
 import com.bedrud.app.core.recent.RecentRoomsStore
 import com.bedrud.app.core.pip.PipStateHolder
 import com.bedrud.app.ui.screens.auth.EmailLoginScreen
@@ -158,7 +159,7 @@ class MainActivity : ComponentActivity() {
         if (pipStateHolder.isInMeeting.value) {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 val params = PictureInPictureParams.Builder()
-                    .setAspectRatio(Rational(16, 9))
+                    .setAspectRatio(Rational(VideoAspect.WIDTH, VideoAspect.HEIGHT))
                     .build()
                 enterPictureInPictureMode(params)
             }

@@ -5,29 +5,19 @@ import com.bedrud.app.testutil.InMemorySharedPreferences
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.mockwebserver.MockResponse
-import okhttp3.mockwebserver.MockWebServer
-import org.junit.After
 import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
 
-class AuthInterceptorTest {
+class AuthInterceptorTest : MockApiTest() {
 
-    private lateinit var server: MockWebServer
     private lateinit var prefs: InMemorySharedPreferences
     private lateinit var authManager: AuthManager
 
     @Before
     fun setUp() {
-        server = MockWebServer()
-        server.start()
         prefs = InMemorySharedPreferences()
         authManager = AuthManager(prefs)
-    }
-
-    @After
-    fun tearDown() {
-        server.shutdown()
     }
 
     private fun buildClient(): OkHttpClient {

@@ -12,6 +12,12 @@ import org.json.JSONObject
 object ChatWire {
     const val CHAT_DATA_TOPIC = "chat"
 
+    /** Attachment kind for image payloads, shared with the meeting UI that sends/filters them. */
+    const val ATTACHMENT_KIND_IMAGE = "image"
+
+    // Wire message type carried in the payload's "type" field.
+    private const val TYPE_CHAT = "chat"
+
     /**
      * A decoded incoming chat payload. [senderName] may be blank — the caller falls back to the
      * LiveKit participant that delivered the packet.
@@ -29,7 +35,7 @@ object ChatWire {
         attachments: List<ChatAttachment>,
     ): ByteArray =
         JSONObject().apply {
-            put("type", "chat")
+            put("type", TYPE_CHAT)
             put("id", UUID.randomUUID().toString())
             put("timestamp", System.currentTimeMillis())
             put("message", text)
@@ -49,7 +55,7 @@ object ChatWire {
     fun parseChat(raw: ByteArray, topic: String?): IncomingChat? {
         return try {
             val json = JSONObject(String(raw, Charsets.UTF_8))
-            val isChat = topic == CHAT_DATA_TOPIC || json.optString("type") == "chat"
+            val isChat = topic == CHAT_DATA_TOPIC || json.optString("type") == TYPE_CHAT
             if (!isChat) return null
             IncomingChat(
                 senderName = json.optString("senderName", ""),
@@ -69,7 +75,7 @@ object ChatWire {
             val att = array.optJSONObject(i) ?: continue
             attachments.add(
                 ChatAttachment(
-                    kind = att.optString("kind", "image"),
+                    kind = att.optString("kind", ATTACHMENT_KIND_IMAGE),
                     url = att.optString("url", ""),
                     mime = att.optString("mime", ""),
                     w = att.optInt("w", 0),

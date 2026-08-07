@@ -88,5 +88,4 @@ private fun AudioDevice.toCallAudioRoute(): Int = when (this) {
     is AudioDevice.WiredHeadset -> CallAudioState.ROUTE_WIRED_HEADSET
     is AudioDevice.Speakerphone -> CallAudioState.ROUTE_SPEAKER
     is AudioDevice.Earpiece -> CallAudioState.ROUTE_EARPIECE
-    else -> CallAudioState.ROUTE_WIRED_OR_EARPIECE
 }

@@ -1,23 +1,13 @@
 package com.bedrud.app.ui.screens.meeting
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -51,78 +41,55 @@ fun MeetingRoomSettingsSheet(
     onSaved: (isPublic: Boolean, settings: RoomSettings) -> Unit,
 ) {
     val colors = meetingChromeColors()
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val scope = rememberCoroutineScope()
 
     var localIsPublic by remember { mutableStateOf(isPublic) }
     var isSaving by remember { mutableStateOf(false) }
 
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        sheetState = sheetState,
-        containerColor = colors.sheet,
-        dragHandle = {
-            Box(
-                modifier = Modifier
-                    .padding(top = 12.dp, bottom = 8.dp)
-                    .width(32.dp)
-                    .height(4.dp)
-                    .background(colors.dragHandle, RoundedCornerShape(2.dp)),
-            )
-        },
-    ) {
-        Column(
+    MeetingBottomSheet(onDismiss = onDismiss) {
+        Text(
+            text = stringResource(R.string.dashboard_roomSettings_title),
+            color = colors.onButton,
+            style = MaterialTheme.typography.titleMedium,
+            modifier = Modifier.padding(bottom = 4.dp),
+        )
+
+        RoomSettingsForm(
+            isPublic = localIsPublic,
+            onIsPublicChange = { localIsPublic = it },
+            contentColor = colors.onButton,
+            verticalSpacing = 10.dp,
+        )
+
+        Button(
+            onClick = {
+                if (isSaving) return@Button
+                val newSettings = settings.withLockedToggles()
+                isSaving = true
+                scope.launch {
+                    try {
+                        val saved = apiAction("Failed to save settings", { snackbarHostState.showSnackbar(it) }) {
+                            roomApi.updateRoomSettings(
+                                roomId,
+                                UpdateRoomSettingsRequest(isPublic = localIsPublic, settings = newSettings),
+                            )
+                        }
+                        if (saved) {
+                            onSaved(localIsPublic, newSettings)
+                            onDismiss()
+                        }
+                    } finally {
+                        isSaving = false
+                    }
+                }
+            },
+            enabled = !isSaving,
+            colors = ButtonDefaults.buttonColors(containerColor = colors.accent),
             modifier = Modifier
                 .fillMaxWidth()
-                .navigationBarsPadding()
-                .padding(horizontal = 20.dp)
-                .padding(bottom = 24.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
+                .padding(top = 4.dp),
         ) {
-            Text(
-                text = stringResource(R.string.dashboard_roomSettings_title),
-                color = colors.onButton,
-                style = MaterialTheme.typography.titleMedium,
-                modifier = Modifier.padding(bottom = 4.dp),
-            )
-
-            RoomSettingsForm(
-                isPublic = localIsPublic,
-                onIsPublicChange = { localIsPublic = it },
-                contentColor = colors.onButton,
-                verticalSpacing = 10.dp,
-            )
-
-            Button(
-                onClick = {
-                    if (isSaving) return@Button
-                    val newSettings = settings.withLockedToggles()
-                    isSaving = true
-                    scope.launch {
-                        try {
-                            val saved = apiAction("Failed to save settings", { snackbarHostState.showSnackbar(it) }) {
-                                roomApi.updateRoomSettings(
-                                    roomId,
-                                    UpdateRoomSettingsRequest(isPublic = localIsPublic, settings = newSettings),
-                                )
-                            }
-                            if (saved) {
-                                onSaved(localIsPublic, newSettings)
-                                onDismiss()
-                            }
-                        } finally {
-                            isSaving = false
-                        }
-                    }
-                },
-                enabled = !isSaving,
-                colors = ButtonDefaults.buttonColors(containerColor = colors.accent),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 4.dp),
-            ) {
-                Text(stringResource(R.string.common_button_save))
-            }
+            Text(stringResource(R.string.common_button_save))
         }
     }
 }

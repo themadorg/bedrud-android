@@ -2,6 +2,7 @@ package com.bedrud.app.core.chat
 
 import android.content.Context
 import coil.request.ImageRequest
+import com.bedrud.app.core.api.ApiHeaders
 
 object ChatImageUtils {
     fun resolveChatImageUrl(serverURL: String, url: String): String {
@@ -21,7 +22,7 @@ object ChatImageUtils {
         val resolved = resolveChatImageUrl(serverURL, url)
         val builder = ImageRequest.Builder(context).data(resolved)
         if (!accessToken.isNullOrBlank() && !url.startsWith("data:")) {
-            builder.setHeader("Authorization", "Bearer $accessToken")
+            builder.setHeader(ApiHeaders.AUTHORIZATION, ApiHeaders.bearer(accessToken))
         }
         return builder.build()
     }

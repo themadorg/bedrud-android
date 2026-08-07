@@ -106,11 +106,10 @@ import androidx.compose.ui.zIndex
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDirection
@@ -124,14 +123,23 @@ import com.bedrud.app.core.api.RoomApi
 import com.bedrud.app.core.api.parseApiErrorMessage
 import com.bedrud.app.core.call.CallService
 import com.bedrud.app.core.chat.ChatImageUtils
+import com.bedrud.app.core.chat.ChatUpload
 import com.bedrud.app.core.deeplink.BedrudURLParser
 import com.bedrud.app.core.instance.InstanceManager
+import com.bedrud.app.ui.components.BedrudButton
+import com.bedrud.app.ui.components.BedrudButtonVariant
 import com.bedrud.app.ui.components.BedrudScaffoldContentInsets
 import com.bedrud.app.ui.components.ChatImageLightbox
 import com.bedrud.app.ui.components.ConfirmDialog
 import com.bedrud.app.ui.components.InitialsAvatar
+ import com.bedrud.app.ui.theme.Dimens
+import com.bedrud.app.ui.util.setPlainText
 import com.bedrud.app.core.livekit.ChatMessage
 import com.bedrud.app.core.livekit.ConnectionState
+import com.bedrud.app.core.livekit.RoomManager
+import com.bedrud.app.core.meeting.VideoAspect
+import com.bedrud.app.core.meeting.chat.ChatWire
+import com.bedrud.app.core.meeting.stage.StageWire
 import com.bedrud.app.core.pip.PipStateHolder
 import com.bedrud.app.models.JoinRoomRequest
 import com.bedrud.app.models.JoinRoomResponse
@@ -164,12 +172,13 @@ fun MeetingScreen(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
-    val clipboard = LocalClipboardManager.current
+    val clipboard = LocalClipboard.current
     val screenShareFailedMessage = stringResource(R.string.meeting_error_screenShareFailed)
     val permissionsRequiredMessage = stringResource(R.string.meeting_error_permissionsRequired)
     val roomNoLongerExistsMessage = stringResource(R.string.meeting_error_roomNoLongerExists)
     val joinFailedMessage = stringResource(R.string.meeting_error_joinFailed)
     val linkCopiedMessage = stringResource(R.string.meeting_toast_linkCopied)
+    val clipLabel = stringResource(R.string.app_name)
     val isInPipMode by pipStateHolder.isInPipMode.collectAsState()
     val flatFabElevation = FloatingActionButtonDefaults.elevation(
         defaultElevation = 0.dp,
@@ -232,7 +241,7 @@ fun MeetingScreen(
     var isScreenShareFullscreen by rememberSaveable { mutableStateOf(false) }
 
     LaunchedEffect(activeStage?.kind) {
-        if (activeStage?.kind != "screenshare") {
+        if (activeStage?.kind != StageWire.KIND_SCREENSHARE) {
             isScreenShareFullscreen = false
         }
     }
@@ -427,14 +436,14 @@ fun MeetingScreen(
                     val audioState = rememberMeetingAudioState(roomManager.audioHandler)
 
                     val localIdentity = room.localParticipant.identity?.value
-                    val stageScreenShareIdentity = if (activeStage?.kind == "screenshare") {
+                    val stageScreenShareIdentity = if (activeStage?.kind == StageWire.KIND_SCREENSHARE) {
                         activeStage?.ownerIdentity
                     } else {
                         null
                     }
 
                     if (isInPipMode) {
-                        val pipStage = activeStage?.takeIf { it.kind == "screenshare" }
+                        val pipStage = activeStage?.takeIf { it.kind == StageWire.KIND_SCREENSHARE }
                         val pipParticipant = if (pipStage != null) {
                             participants.find { it.identity?.value == pipStage.ownerIdentity }
                         } else {
@@ -507,7 +516,7 @@ fun MeetingScreen(
                                     connectionState = connectionState
                                 )
 
-                                val screenShareStage = activeStage?.takeIf { it.kind == "screenshare" }
+                                val screenShareStage = activeStage?.takeIf { it.kind == StageWire.KIND_SCREENSHARE }
                                 if (screenShareStage != null && !isScreenShareFullscreen) {
                                     MeetingScreenShareStage(
                                         stage = screenShareStage,
@@ -623,8 +632,10 @@ fun MeetingScreen(
                                 },
                                 onCopyRoomLink = {
                                     val link = BedrudURLParser.buildMeetingLink(serverURL, roomName)
-                                    clipboard.setText(AnnotatedString(link))
-                                    scope.launch { snackbarHostState.showSnackbar(linkCopiedMessage) }
+                                    scope.launch {
+                                        clipboard.setPlainText(clipLabel, link)
+                                        snackbarHostState.showSnackbar(linkCopiedMessage)
+                                    }
                                 },
                                 onToggleDeafen = { scope.launch { roomManager.toggleDeafen() } },
                                 onOpenAudioSettings = { showAudioSheet = true },
@@ -669,34 +680,42 @@ fun MeetingScreen(
                                 AlertDialog(
                                     onDismissRequest = { showLeaveDialog = false },
                                     title = { Text(stringResource(R.string.meeting_dialog_leaveTitle)) },
-                                    text = { Text(stringResource(R.string.meeting_dialog_leaveMessage)) },
-                                    confirmButton = {
-                                        TextButton(onClick = {
-                                            showLeaveDialog = false
-                                            scope.launch {
-                                                try {
-                                                    roomApi.deleteRoom(roomId)
-                                                } catch (_: Exception) {}
-                                                CallService.stop(context)
-                                                onLeave()
-                                            }
-                                        }) {
-                                            Text(
-                                                stringResource(R.string.meeting_button_endForEveryone),
-                                                color = MaterialTheme.colorScheme.error,
+                                    text = {
+                                        Column {
+                                            Text(stringResource(R.string.meeting_dialog_leaveMessage))
+                                            Spacer(modifier = Modifier.height(Dimens.space16))
+                                            // Destructive alternative, kept secondary to "Just leave".
+                                            BedrudButton(
+                                                text = stringResource(R.string.meeting_button_endForEveryone),
+                                                variant = BedrudButtonVariant.DESTRUCTIVE_OUTLINE,
+                                                onClick = {
+                                                    showLeaveDialog = false
+                                                    scope.launch {
+                                                        try {
+                                                            roomApi.deleteRoom(roomId)
+                                                        } catch (_: Exception) {}
+                                                        CallService.stop(context)
+                                                        onLeave()
+                                                    }
+                                                },
+                                                modifier = Modifier.fillMaxWidth(),
                                             )
                                         }
                                     },
-                                    dismissButton = {
-                                        Row {
-                                            TextButton(onClick = {
+                                    confirmButton = {
+                                        BedrudButton(
+                                            text = stringResource(R.string.meeting_button_justLeave),
+                                            variant = BedrudButtonVariant.TONAL,
+                                            onClick = {
                                                 showLeaveDialog = false
                                                 CallService.stop(context)
                                                 onLeave()
-                                            }) { Text(stringResource(R.string.meeting_button_justLeave)) }
-                                            TextButton(onClick = { showLeaveDialog = false }) {
-                                                Text(stringResource(R.string.common_button_cancel))
-                                            }
+                                            },
+                                        )
+                                    },
+                                    dismissButton = {
+                                        TextButton(onClick = { showLeaveDialog = false }) {
+                                            Text(stringResource(R.string.common_button_cancel))
                                         }
                                     },
                                 )
@@ -765,7 +784,7 @@ fun MeetingScreen(
                                 )
                             }
 
-                            val fullscreenStage = activeStage?.takeIf { it.kind == "screenshare" }
+                            val fullscreenStage = activeStage?.takeIf { it.kind == StageWire.KIND_SCREENSHARE }
                             if (isScreenShareFullscreen && fullscreenStage != null) {
                                 MeetingScreenShareFullscreen(
                                     stage = fullscreenStage,
@@ -840,8 +859,10 @@ fun MeetingScreen(
                                 // Copy action lives on the box itself, pinned to its top-right.
                                 IconButton(
                                     onClick = {
-                                        clipboard.setText(AnnotatedString(connectionError))
-                                        scope.launch { snackbarHostState.showSnackbar(errorCopiedMessage) }
+                                        scope.launch {
+                                            clipboard.setPlainText(clipLabel, connectionError)
+                                            snackbarHostState.showSnackbar(errorCopiedMessage)
+                                        }
                                     },
                                 ) {
                                     Icon(
@@ -889,7 +910,7 @@ private fun ParticipantTile(
     mutedIdentities: Set<String> = emptySet(),
     onToggleLocalMute: (String) -> Unit = {},
 ) {
-    val identity = participant.identity?.value ?: "Unknown"
+    val identity = participant.identity?.value ?: RoomManager.UNKNOWN_PARTICIPANT_NAME
     val isVideoLocallyDisabled = identity in disabledVideoIdentities
     val isLocallyMuted = identity in mutedIdentities
     val kickFailedMessage = stringResource(R.string.meeting_error_kickFailed)
@@ -923,7 +944,7 @@ private fun ParticipantTile(
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .aspectRatio(16f / 9f)
+            .aspectRatio(VideoAspect.RATIO)
             .clip(RoundedCornerShape(12.dp))
             .background(MaterialTheme.colorScheme.surfaceVariant)
             .then(
@@ -1005,14 +1026,15 @@ private fun ParticipantTile(
                 onToggleLocalMute = { onToggleLocalMute(identity) },
                 isVideoLocallyDisabled = isVideoLocallyDisabled,
                 onToggleVideoDisabled = { onToggleVideoDisabled(identity) },
+                // roomApi is non-null in here: canOpenMenu already requires it.
                 onKickConfirmed = {
                     moderate(scope, snackbarHostState, kickFailedMessage) {
-                        roomApi?.kickParticipant(roomId, identity)
+                        roomApi.kickParticipant(roomId, identity)
                     }
                 },
                 onBan = {
                     moderate(scope, snackbarHostState, banFailedMessage) {
-                        roomApi?.banParticipant(roomId, identity)
+                        roomApi.banParticipant(roomId, identity)
                     }
                 },
             )
@@ -1455,20 +1477,19 @@ private fun ChatPanel(
                     ?: throw Exception("Cannot open image")
                 val bytes = stream.readBytes()
                 stream.close()
-                val mimeType = context.contentResolver.getType(uri) ?: "image/jpeg"
-                val ext = when (mimeType) {
-                    "image/png" -> "png"
-                    "image/gif" -> "gif"
-                    "image/webp" -> "webp"
-                    else -> "jpg"
-                }
+                val mimeType = context.contentResolver.getType(uri) ?: ChatUpload.DEFAULT_MIME
+                val ext = ChatUpload.extensionForMime(mimeType)
                 val requestBody = bytes.toRequestBody(mimeType.toMediaTypeOrNull())
-                val part = MultipartBody.Part.createFormData("file", "upload.$ext", requestBody)
+                val part = MultipartBody.Part.createFormData(
+                    ChatUpload.MULTIPART_FILE_FIELD,
+                    ChatUpload.fileName(ext),
+                    requestBody,
+                )
                 val response = roomApi.uploadChatImage(roomId, part)
                 if (response.isSuccessful) {
                     val result = response.body()!!
                     val attachment = com.bedrud.app.core.livekit.ChatAttachment(
-                        kind = "image",
+                        kind = ChatWire.ATTACHMENT_KIND_IMAGE,
                         url = result.url,
                         mime = result.mime,
                         w = result.width,
@@ -1662,7 +1683,7 @@ private fun ChatBubble(
             horizontalAlignment = if (message.isLocal) Alignment.End else Alignment.Start
         ) {
             // Image attachments
-            message.attachments.filter { it.kind == "image" }.forEach { att ->
+            message.attachments.filter { it.kind == ChatWire.ATTACHMENT_KIND_IMAGE }.forEach { att ->
                 val isDataUri = att.url.startsWith("data:")
                 if (isDataUri) {
                     // Decode base64 data URI to bitmap in-memory

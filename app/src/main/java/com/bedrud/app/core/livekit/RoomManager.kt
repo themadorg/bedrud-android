@@ -1,7 +1,6 @@
 package com.bedrud.app.core.livekit
 
 import android.app.Application
-import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Intent
 import android.os.Build
@@ -12,6 +11,7 @@ import com.bedrud.app.R
 import com.bedrud.app.core.call.CallConnectionService
 import com.bedrud.app.core.meeting.chat.ChatWire
 import com.bedrud.app.core.meeting.stage.StageWire
+import com.bedrud.app.core.registerNotificationChannel
 import com.bedrud.app.ui.screens.settings.SettingsStore
 import io.livekit.android.AudioOptions
 import io.livekit.android.LiveKit
@@ -47,7 +47,7 @@ enum class ConnectionState {
 }
 
 data class ChatAttachment(
-    val kind: String,   // "image"
+    val kind: String,   // e.g. ChatWire.ATTACHMENT_KIND_IMAGE
     val url: String,
     val mime: String,
     val w: Int = 0,
@@ -294,7 +294,7 @@ class RoomManager(
                         }
                         is RoomEvent.Disconnected -> {
                             // "PARTICIPANT_REMOVED" is the LiveKit disconnect reason for kick
-                            val kicked = event.reason?.name == "PARTICIPANT_REMOVED"
+                            val kicked = event.reason.name == "PARTICIPANT_REMOVED"
                             if (kicked) _wasKicked.value = true
                             _connectionState.value = ConnectionState.DISCONNECTED
                             onDisconnected?.invoke()
@@ -323,7 +323,7 @@ class RoomManager(
         val senderName = incoming.senderName.ifBlank {
             event.participant?.name
                 ?: event.participant?.identity?.value
-                ?: "Unknown"
+                ?: UNKNOWN_PARTICIPANT_NAME
         }
         _chatMessages.value += ChatMessage(
             senderName = senderName,
@@ -590,7 +590,7 @@ class RoomManager(
         }
 
         val stage = StageWire.MeetingStage(
-            kind = "screenshare",
+            kind = StageWire.KIND_SCREENSHARE,
             ownerIdentity = ownerIdentity,
             ownerName = ownerName,
             updatedAt = System.currentTimeMillis(),
@@ -605,7 +605,7 @@ class RoomManager(
         val room = _room ?: return
         val ownerIdentity = room.localParticipant.identity?.value ?: return
         val current = activeStageLocal ?: return
-        if (current.ownerIdentity != ownerIdentity || current.kind != "screenshare") return
+        if (current.ownerIdentity != ownerIdentity || current.kind != StageWire.KIND_SCREENSHARE) return
 
         activeStageLocal = null
         _activeStage.value = null
@@ -662,7 +662,7 @@ class RoomManager(
 
     private fun scheduleStageStateRequests() {
         eventScope?.launch {
-            for (delayMs in listOf(800L, 2000L, 4000L)) {
+            for (delayMs in STAGE_STATE_REQUEST_DELAYS_MS) {
                 delay(delayMs)
                 requestStageState()
             }
@@ -678,7 +678,7 @@ class RoomManager(
         val localIdentity = _room?.localParticipant?.identity?.value ?: return
         if (owned.ownerIdentity != localIdentity) return
         eventScope?.launch {
-            for (delayMs in listOf(400L, 1200L, 2500L)) {
+            for (delayMs in STAGE_STATE_PUSH_DELAYS_MS) {
                 delay(delayMs)
                 publishStageData(StageWire.encodeStageState(owned, System.currentTimeMillis()))
             }
@@ -687,16 +687,12 @@ class RoomManager(
 
     private fun ensureScreenShareNotificationChannel() {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
-        val channel = NotificationChannel(
-            SCREEN_SHARE_CHANNEL_ID,
-            application.getString(R.string.screen_share_channel_name),
-            NotificationManager.IMPORTANCE_LOW,
-        ).apply {
-            description = application.getString(R.string.screen_share_channel_description)
-            setShowBadge(false)
-        }
-        val manager = application.getSystemService(NotificationManager::class.java)
-        manager.createNotificationChannel(channel)
+        application.registerNotificationChannel(
+            id = SCREEN_SHARE_CHANNEL_ID,
+            name = application.getString(R.string.screen_share_channel_name),
+            importance = NotificationManager.IMPORTANCE_LOW,
+            description = application.getString(R.string.screen_share_channel_description),
+        )
     }
 
     private fun buildScreenShareNotification() =
@@ -713,7 +709,7 @@ class RoomManager(
     suspend fun sendChatMessage(text: String, attachments: List<ChatAttachment> = emptyList()) {
         val room = _room ?: return
         val localParticipant = room.localParticipant
-        val name = localParticipant.name ?: localParticipant.identity?.value ?: "Unknown"
+        val name = localParticipant.name ?: localParticipant.identity?.value ?: UNKNOWN_PARTICIPANT_NAME
         val identity = localParticipant.identity?.value ?: ""
 
         val sent = publishData(
@@ -745,5 +741,13 @@ class RoomManager(
         private const val TAG = "RoomManager"
         private const val SCREEN_SHARE_CHANNEL_ID = "bedrud_screen_share"
         private const val SCREEN_SHARE_NOTIFICATION_ID = 1002
+
+        /** Display name used when a participant has neither a name nor an identity. */
+        const val UNKNOWN_PARTICIPANT_NAME = "Unknown"
+
+        // Backoff schedules (ms) for the peer-to-peer stage gossip: newly joined peers re-ask for the
+        // current stage, and stage owners re-broadcast their state, so a dropped packet self-heals.
+        private val STAGE_STATE_REQUEST_DELAYS_MS = listOf(800L, 2000L, 4000L)
+        private val STAGE_STATE_PUSH_DELAYS_MS = listOf(400L, 1200L, 2500L)
     }
 }

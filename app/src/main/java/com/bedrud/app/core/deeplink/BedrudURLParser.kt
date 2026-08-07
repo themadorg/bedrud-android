@@ -8,6 +8,12 @@ data class BedrudMeetingURL(
 )
 
 object BedrudURLParser {
+    /** URL path segment for a meeting link (`{server}/m/{room}`); the canonical share path. */
+    private const val MEETING_PATH = "m"
+
+    /** Legacy/alternate URL path segment for a call link (`{server}/c/{room}`). */
+    private const val CALL_PATH = "c"
+
     /**
      * Parses a Bedrud meeting URL.
      *
@@ -40,7 +46,7 @@ object BedrudURLParser {
 
         // Expect /c/<room> or /m/<room>
         if (pathComponents.size < 2) return null
-        if (pathComponents[0] !in listOf("c", "m")) return null
+        if (pathComponents[0] !in listOf(CALL_PATH, MEETING_PATH)) return null
 
         val roomName = pathComponents[1]
         if (roomName.isEmpty()) return null
@@ -70,7 +76,7 @@ object BedrudURLParser {
         }
 
         val path = trimmed.substringBefore('?').substringBefore('#')
-        for (prefix in listOf("/m/", "/c/")) {
+        for (prefix in listOf("/$MEETING_PATH/", "/$CALL_PATH/")) {
             val index = path.indexOf(prefix)
             if (index >= 0) {
                 val slug = path.substring(index + prefix.length).trim('/').substringBefore('/')
@@ -85,7 +91,7 @@ object BedrudURLParser {
     fun buildMeetingLink(serverBaseURL: String, roomName: String): String {
         val base = serverBaseURL.trim().trimEnd('/')
         val slug = roomName.trim().trim('/')
-        return "$base/m/$slug"
+        return "$base/$MEETING_PATH/$slug"
     }
 
     /**
