@@ -59,6 +59,58 @@ From the command line:
 Debug APKs land in `app/build/outputs/apk/`. Builds are split per ABI
 (`arm64-v8a`, `armeabi-v7a`, `x86_64`) with a universal APK also produced.
 
+### Make targets
+
+A root `Makefile` wraps the commands above, plus the device, CI-parity, and release
+steps. It only launches `gradlew`, `adb`, `git` and `gh` — nothing is reimplemented, so
+the Gradle commands stay valid if you prefer them.
+
+```bash
+make help      # every target, grouped
+make doctor    # check JDK / SDK / adb / gh, and whether signing is configured
+
+make build           # debug APKs
+make build-dev       # dev APKs — install side by side with the real app
+make build-release   # release APKs
+
+make install         # build + install debug   (also: install-dev, uninstall, run)
+make logcat          # tail logcat for this app only
+
+make check           # lint + unit tests — exactly what CI gates a PR on
+make clean
+```
+
+Builds accept `SERVER=<host>` as a shorthand for `-PdefaultServerHost` (see below), e.g.
+`make build-dev SERVER=staging.example.com`.
+
+Releases are cut from git tags — there is no version number stored in the repo (see
+[Versioning](#versioning)):
+
+```bash
+make version                     # current tag, next patch/minor/major, release state
+make tag-patch                   # create the next tag locally (also: tag-minor, tag-major)
+make tag-push                    # push it
+make release-beta   TAG=1.3.1    # dispatch the signed release workflow for that tag
+make release-stable TAG=1.3.1    # …or promote it to stable
+make release-status              # recent release runs
+```
+
+On Windows, run these from Git Bash or WSL. `make` isn't bundled with Git for Windows —
+install it with `winget install ezwinports.make` or `scoop install make`.
+
+### Versioning
+
+`versionName` and `versionCode` are not stored in the repo. `versionCode` comes from the
+CI run number and `versionName` from the tag the release workflow was dispatched against,
+both passed to Gradle as `-P` flags (see `app/build.gradle.kts`). So the git tag is the
+single source of truth, and nothing needs a manual bump — `make tag-patch` and friends
+create tags, they don't edit files.
+
+Building and signing a release happens only in `.github/workflows/release.yml`, which is
+dispatched manually against a tag, gated on lint and unit tests passing for that exact
+commit, and on approval from the `beta-signing` / `production-signing` environments. The
+`make release-*` targets start that run; they never sign anything locally.
+
 ### Default server host
 
 The Add Instance screen pre-fills `bedrud.xyz` as the server host. To ship a build that
