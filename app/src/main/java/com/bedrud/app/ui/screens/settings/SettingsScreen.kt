@@ -28,6 +28,8 @@ import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import com.bedrud.app.ui.components.BedrudCompactTopBar
+import com.bedrud.app.ui.components.BedrudSnackbarHost
+import com.bedrud.app.ui.components.BedrudTabScaffoldContentInsets
 import com.bedrud.app.ui.components.CardSectionHeader
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
@@ -35,7 +37,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
-import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -84,14 +86,16 @@ fun SettingsContent(
     var newPassword by remember { mutableStateOf("") }
     var confirmPassword by remember { mutableStateOf("") }
 
-    Column(modifier = modifier.fillMaxSize()) {
-        BedrudCompactTopBar(title = stringResource(R.string.settings_title))
-
-        SnackbarHost(snackbarHostState)
-
+    Scaffold(
+        modifier = modifier.fillMaxSize(),
+        contentWindowInsets = BedrudTabScaffoldContentInsets,
+        topBar = { BedrudCompactTopBar(title = stringResource(R.string.settings_title)) },
+        snackbarHost = { BedrudSnackbarHost(snackbarHostState) }
+    ) { innerPadding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .padding(innerPadding)
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)

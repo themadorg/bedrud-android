@@ -180,12 +180,6 @@ fun MeetingScreen(
     val linkCopiedMessage = stringResource(R.string.meeting_toast_linkCopied)
     val clipLabel = stringResource(R.string.app_name)
     val isInPipMode by pipStateHolder.isInPipMode.collectAsState()
-    val flatFabElevation = FloatingActionButtonDefaults.elevation(
-        defaultElevation = 0.dp,
-        pressedElevation = 0.dp,
-        focusedElevation = 0.dp,
-        hoveredElevation = 0.dp
-    )
 
     val connectionState by roomManager.connectionState.collectAsState()
 
