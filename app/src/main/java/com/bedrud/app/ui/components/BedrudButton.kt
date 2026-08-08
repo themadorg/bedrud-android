@@ -27,10 +27,7 @@ enum class BedrudButtonVariant {
     TONAL,
     OUTLINE,
     GHOST,
-    DESTRUCTIVE,
-    /** Outlined button with an error-colored label — a destructive action shown as a secondary
-     *  option rather than the emphasized one (e.g. the "end for everyone" alternative). */
-    DESTRUCTIVE_OUTLINE
+    DESTRUCTIVE
 }
 
 @Composable
@@ -120,21 +117,6 @@ fun BedrudButton(
                 colors = ButtonDefaults.buttonColors(
                     containerColor = MaterialTheme.colorScheme.error,
                     contentColor = MaterialTheme.colorScheme.onError
-                ),
-                contentPadding = PaddingValues(horizontal = Dimens.space24, vertical = 0.dp)
-            ) {
-                ButtonContent(text, loading, leadingIcon, trailingIcon)
-            }
-        }
-
-        BedrudButtonVariant.DESTRUCTIVE_OUTLINE -> {
-            OutlinedButton(
-                onClick = onClick,
-                modifier = modifier.defaultMinSize(minHeight = Dimens.buttonHeight),
-                enabled = enabled && !loading,
-                shape = shape,
-                colors = ButtonDefaults.outlinedButtonColors(
-                    contentColor = MaterialTheme.colorScheme.error
                 ),
                 contentPadding = PaddingValues(horizontal = Dimens.space24, vertical = 0.dp)
             ) {
