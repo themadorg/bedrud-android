@@ -86,9 +86,10 @@
   <string name="meeting_status_connecting">در حال اتصال به <xliff:g id="roomName" example="Team Standup">%1$s</xliff:g>…</string>
   <string name="meeting_status_preparing">در حال آماده‌سازی…</string>
   <string name="meeting_dialog_leaveTitle">ترک جلسه</string>
-  <string name="meeting_dialog_leaveMessage">آیا می‌خواهید جلسه را برای همه پایان دهید یا فقط خارج شوید؟</string>
   <string name="meeting_button_endForEveryone">پایان برای همه</string>
   <string name="meeting_button_justLeave">فقط خروج</string>
+  <string name="meeting_leave_justLeaveDescription">دیگران در جلسه می‌مانند</string>
+  <string name="meeting_leave_endForEveryoneDescription">تماس را برای همه پایان می‌دهد</string>
   <string name="meeting_state_connectionFailed">اتصال شکست خورد</string>
   <string name="meeting_state_connectionFailedMessage">نمی‌توان به جلسه متصل شد</string>
   <string name="meeting_button_goBack">بازگشت</string>
