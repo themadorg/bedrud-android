@@ -88,9 +88,10 @@
   <string name="meeting_status_connecting"><xliff:g id="roomName" example="Team Standup">%1$s</xliff:g> bağlanıyor…</string>
   <string name="meeting_status_preparing">Hazırlanıyor…</string>
   <string name="meeting_dialog_leaveTitle">Toplantıdan Ayrıl</string>
-  <string name="meeting_dialog_leaveMessage">Toplantıyı herkes için sonlandırmak mı yoksa sadece ayrılmak mı istiyorsunuz?</string>
   <string name="meeting_button_endForEveryone">Herkes İçin Sonlandır</string>
   <string name="meeting_button_justLeave">Sadece Ayrıl</string>
+  <string name="meeting_leave_justLeaveDescription">Diğerleri toplantıda kalır</string>
+  <string name="meeting_leave_endForEveryoneDescription">Aramayı herkes için sonlandırır</string>
   <string name="meeting_state_connectionFailed">Bağlantı Başarısız</string>
   <string name="meeting_state_connectionFailedMessage">Toplantıya bağlanılamıyor</string>
   <string name="meeting_button_goBack">Geri Dön</string>

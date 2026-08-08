@@ -69,7 +69,6 @@ import androidx.compose.material.icons.filled.ScreenShare
 import androidx.compose.material.icons.filled.StopScreenShare
 import androidx.compose.material.icons.filled.Videocam
 import androidx.compose.material.icons.filled.VideocamOff
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.CircularProgressIndicator
@@ -86,7 +85,6 @@ import androidx.compose.material3.SmallFloatingActionButton
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -126,13 +124,10 @@ import com.bedrud.app.core.chat.ChatImageUtils
 import com.bedrud.app.core.chat.ChatUpload
 import com.bedrud.app.core.deeplink.BedrudURLParser
 import com.bedrud.app.core.instance.InstanceManager
-import com.bedrud.app.ui.components.BedrudButton
-import com.bedrud.app.ui.components.BedrudButtonVariant
 import com.bedrud.app.ui.components.BedrudScaffoldContentInsets
 import com.bedrud.app.ui.components.ChatImageLightbox
 import com.bedrud.app.ui.components.ConfirmDialog
 import com.bedrud.app.ui.components.InitialsAvatar
- import com.bedrud.app.ui.theme.Dimens
 import com.bedrud.app.ui.util.setPlainText
 import com.bedrud.app.core.livekit.ChatMessage
 import com.bedrud.app.core.livekit.ConnectionState
@@ -677,45 +672,21 @@ fun MeetingScreen(
                             }
 
                             if (showLeaveDialog) {
-                                AlertDialog(
-                                    onDismissRequest = { showLeaveDialog = false },
-                                    title = { Text(stringResource(R.string.meeting_dialog_leaveTitle)) },
-                                    text = {
-                                        Column {
-                                            Text(stringResource(R.string.meeting_dialog_leaveMessage))
-                                            Spacer(modifier = Modifier.height(Dimens.space16))
-                                            // Destructive alternative, kept secondary to "Just leave".
-                                            BedrudButton(
-                                                text = stringResource(R.string.meeting_button_endForEveryone),
-                                                variant = BedrudButtonVariant.DESTRUCTIVE_OUTLINE,
-                                                onClick = {
-                                                    showLeaveDialog = false
-                                                    scope.launch {
-                                                        try {
-                                                            roomApi.deleteRoom(roomId)
-                                                        } catch (_: Exception) {}
-                                                        CallService.stop(context)
-                                                        onLeave()
-                                                    }
-                                                },
-                                                modifier = Modifier.fillMaxWidth(),
-                                            )
-                                        }
+                                MeetingLeaveSheet(
+                                    onDismiss = { showLeaveDialog = false },
+                                    onJustLeave = {
+                                        showLeaveDialog = false
+                                        CallService.stop(context)
+                                        onLeave()
                                     },
-                                    confirmButton = {
-                                        BedrudButton(
-                                            text = stringResource(R.string.meeting_button_justLeave),
-                                            variant = BedrudButtonVariant.TONAL,
-                                            onClick = {
-                                                showLeaveDialog = false
-                                                CallService.stop(context)
-                                                onLeave()
-                                            },
-                                        )
-                                    },
-                                    dismissButton = {
-                                        TextButton(onClick = { showLeaveDialog = false }) {
-                                            Text(stringResource(R.string.common_button_cancel))
+                                    onEndForEveryone = {
+                                        showLeaveDialog = false
+                                        scope.launch {
+                                            try {
+                                                roomApi.deleteRoom(roomId)
+                                            } catch (_: Exception) {}
+                                            CallService.stop(context)
+                                            onLeave()
                                         }
                                     },
                                 )

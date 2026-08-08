@@ -88,9 +88,10 @@
   <string name="meeting_status_connecting">Conectando a <xliff:g id="roomName" example="Team Standup">%1$s</xliff:g>…</string>
   <string name="meeting_status_preparing">Preparando…</string>
   <string name="meeting_dialog_leaveTitle">Abandonar reunión</string>
-  <string name="meeting_dialog_leaveMessage">¿Quieres finalizar la reunión para todos o solo irte?</string>
   <string name="meeting_button_endForEveryone">Finalizar para todos</string>
   <string name="meeting_button_justLeave">Solo irme</string>
+  <string name="meeting_leave_justLeaveDescription">Los demás permanecen en la reunión</string>
+  <string name="meeting_leave_endForEveryoneDescription">Finaliza la llamada para todos</string>
   <string name="meeting_state_connectionFailed">Conexión fallida</string>
   <string name="meeting_state_connectionFailedMessage">No se puede conectar a la reunión</string>
   <string name="meeting_button_goBack">Volver</string>
