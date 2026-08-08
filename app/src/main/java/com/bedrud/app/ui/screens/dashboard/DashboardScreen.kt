@@ -229,6 +229,7 @@ fun DashboardContent(
     // Held here rather than inside the dialog: the failure arrives from the create call, and the
     // dialog stays open so the user can fix it and retry without retyping the name.
     var createRoomError by remember { mutableStateOf<String?>(null) }
+    var isCreatingRoom by remember { mutableStateOf(false) }
     var roomToEdit by remember { mutableStateOf<UserRoomResponse?>(null) }
     var roomToDelete by remember { mutableStateOf<UserRoomResponse?>(null) }
     var pendingServerSwitch by remember { mutableStateOf<PendingServerSwitch?>(null) }
@@ -369,9 +370,11 @@ fun DashboardContent(
             },
             errorMessage = createRoomError,
             onErrorCleared = { createRoomError = null },
+            isCreating = isCreatingRoom,
             onCreate = { name ->
                 scope.launch {
                     createRoomError = null
+                    isCreatingRoom = true
                     val room = apiBody(
                         createRoomFailedMsg,
                         { createRoomError = it },
@@ -405,7 +408,9 @@ fun DashboardContent(
                                 )
                             )
                         )
-                    } ?: return@launch
+                    }
+                    isCreatingRoom = false
+                    room ?: return@launch
                     showCreateDialog = false
                     pendingScrollToTopFor = room.name
                     loadRooms()
@@ -1419,6 +1424,10 @@ private fun SketchArrow(start: Offset, end: Offset, modifier: Modifier = Modifie
  * renders behind this dialog's scrim, where it reads as dimmed and unrelated to the button that was
  * just pressed. [onErrorCleared] fires when the name is edited, so a stale failure doesn't sit under
  * a name the user has since changed.
+ *
+ * While [isCreating] the dialog holds still: the confirm button shows its spinner and stops
+ * accepting taps, and neither Cancel nor a scrim tap can dismiss a request that is already on its
+ * way to the server — the same way the auth screens lock their back affordance while submitting.
  */
 @Composable
 private fun CreateRoomDialog(
@@ -1426,11 +1435,12 @@ private fun CreateRoomDialog(
     onCreate: (String) -> Unit,
     errorMessage: String?,
     onErrorCleared: () -> Unit,
+    isCreating: Boolean,
 ) {
     var roomName by remember { mutableStateOf("") }
 
     AlertDialog(
-        onDismissRequest = onDismiss,
+        onDismissRequest = { if (!isCreating) onDismiss() },
         title = { Text(stringResource(R.string.dashboard_dialog_createTitle)) },
         text = {
             Column {
@@ -1462,8 +1472,13 @@ private fun CreateRoomDialog(
                 text = stringResource(R.string.common_button_create),
                 variant = BedrudButtonVariant.TONAL,
                 onClick = { onCreate(roomName) },
+                loading = isCreating,
             )
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.common_button_cancel)) } }
+        dismissButton = {
+            TextButton(onClick = onDismiss, enabled = !isCreating) {
+                Text(stringResource(R.string.common_button_cancel))
+            }
+        }
     )
 }
