@@ -75,7 +75,7 @@ drive `animate*AsState` with `tween(Motion.durationMedium, easing = Motion.stand
 
 ## Components (`ui/components/`)
 
-- **`BedrudButton`** — 5 variants (PRIMARY, SECONDARY, OUTLINE, GHOST, DESTRUCTIVE). Token-driven height
+- **`BedrudButton`** — 6 variants (PRIMARY, SECONDARY, TONAL, OUTLINE, GHOST, DESTRUCTIVE). Token-driven height
   (`defaultMinSize(buttonHeight)`, so callers can grow it, e.g. `height(buttonHeightLarge)` for a full CTA),
   shape (`BedrudShapeTokens.button`), and padding. Built-in `loading` state.
 - **`BedrudCard` / `BedrudOutlinedCard`** — outline-first cards, tonal surface, minimal elevation.
@@ -94,6 +94,32 @@ drive `animate*AsState` with `tween(Motion.durationMedium, easing = Motion.stand
   (M3 `SwipeToDismissBox`) for a contextual action — **Remove** a recent from local history (instant),
   or **Delete** a room you own (routed through a confirm dialog).
 - **`DevOnly` / `DevHintBadge`** — see below.
+
+## Bottom sheets (`BedrudBottomSheet`)
+
+Every sheet in the app goes through **`BedrudBottomSheet`** so they share one container, one drag
+handle, one set of insets, and one gutter. It keeps the Material defaults deliberately:
+
+- **Material's drag handle**, not a hand-drawn bar. A bare `Box` can match the 32×4dp look but
+  carries none of the accessibility semantics or the expanded touch target.
+- **`BedrudShapeTokens.sheetTop`**, which is already M3's 28dp `extraLarge` top corners — the token
+  names the default rather than departing from it.
+- **`containerColor` is a parameter**, defaulting to M3's. The meeting chrome overrides it because
+  the call UI sits on a dark overlay; nowhere else should.
+
+**Actions inside a sheet are a list, not a stack of cards.** `BedrudSheetActionRow` follows the M3
+list-item spec — 56dp one-line, 72dp when it carries a supporting line, `iconMd` leading icon — and
+is deliberately **not** wrapped in a per-row filled or outlined container. M3 reserves per-item
+containers for *selectable cards*; a menu of actions is a list. Emphasis comes from `contentColor`
+(e.g. the error colour for a destructive choice), and selection from a trailing check, not from a
+filled row.
+
+That also avoids a trap worth recording: **never rely on a border to separate a control from a
+raised surface.** In the dark palette `outlineVariant` (`Stone800`, `#292524`) lands within two RGB
+units of a sheet or dialog surface (`#2b2624`), so a default `OutlinedButton` border is drawn and
+perceptually invisible there. Outlined controls read correctly on the app background
+(`Stone950`) and disappear on raised surfaces. If an outline is genuinely needed on a raised
+surface, give it an explicit colour with real contrast.
 
 ## Dev-only affordances
 
