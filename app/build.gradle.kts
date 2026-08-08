@@ -226,7 +226,7 @@ dependencies {
 
     // LiveKit
     implementation("io.livekit:livekit-android:2.27.0")
-    implementation("io.livekit:livekit-android-compose-components:2.4.0")
+    implementation("io.livekit:livekit-android-compose-components:2.4.1")
 
     // Retrofit + OkHttp
     implementation("com.squareup.retrofit2:retrofit:3.0.0")
