@@ -20,6 +20,10 @@ make check                       # lint + testDebugUnitTest — exactly what CI 
 make doctor                      # why won't it build here: JDK / SDK / adb / gh / signing
 ```
 
+For the single command to run before every commit, see **Verify command** under
+[Working Agreement](#working-agreement) — it folds install into the same invocation so the
+on-device pass doesn't pay Gradle's startup cost a second time.
+
 **Test stack:** JUnit 4, MockK, OkHttp MockWebServer, kotlinx-coroutines-test.
 **Test util:** `InMemorySharedPreferences` in `testutil/` — inject into any class taking `SharedPreferences` (InstanceStore, AuthManager). Avoid Android framework dependency.
 
@@ -92,7 +96,44 @@ Retrofit + OkHttp + Gson (not kotlinx-serialization for HTTP). `kotlin-serializa
 - **Keyboard:** The IME may cover the primary button, but the focused input must stay visible — make content scroll into view (ime-aware: `WindowInsets.ime` / `imePadding`), wherever reasonable, so the user sees what they type. The action key should dismiss the keyboard + run the primary action. App is edge-to-edge → react to ime insets, not window resizing.
 - **Dev-only UI:** Gate not-yet-wired UI or QA aids with `DevOnly { … }` / `DevHintBadge("…")` (visible on debug/`dev`, hidden on release) — backed by `BuildConfig.DEV_HINTS` via `core/DevFlags.kt`.
 
-## UI/UX Rewrite — Working Agreement
+## Working Agreement
+
+<!-- working-agreement: confirmed 2026-08-08 -->
+
+The maintainer's standing rules were reviewed rule by rule and **confirmed for this repo on
+2026-08-08 with no overrides** — every one applies as written. This section records only what is
+specific to bedrud, and corrects two rules this file previously stated out of date.
+
+### Project slots
+
+| Slot | Value |
+|---|---|
+| **Verify command** | `./gradlew lint testDebugUnitTest installDev -q` — one invocation, run in full before every commit. During rapid iteration run `./gradlew installDev -q` alone: it compiles and fails just as loudly, and lint/test aren't install dependencies so they wouldn't run anyway. `lint` + `testDebugUnitTest` are exactly what `pr-build.yml` gates a PR on. |
+| **Default branch** | `master`. The repo **squash-merges**, so `git branch --merged` never detects a merged feature branch — its tip SHA differs from what landed. Detect via `[origin/<name>: gone]` in `git branch -vv`, or a merged PR whose `headRefName` matches. |
+| **Design system** | Newest Material 3 incl. Expressive. Tokens in `ui/theme/`; rose `#E11D48` primary + teal `#14B8A6` tertiary on warm neutrals, full light+dark role set mapped in `Theme.kt`, `dynamicColor` off. |
+| **Locales** | 9 — ar, de, es, fa, fr, ja, ru, tr, zh. Lint treats `MissingTranslation` as an error and fails CI, so English-only is never enough. |
+| **Run target** | `dev` channel on the wired device (`applicationIdSuffix = ".dev"`, so it coexists with a stable install). Drive via adb: `screencap`, `input tap`, `dumpsys`, `logcat`. |
+| **Issues** | `[TASK]:` / `[BUG]:` titles, `- [ ]` checklist bodies, labels `roadmap` and `tech-debt` (both already exist — reuse, don't recreate). Every PR carries `Closes #N` so its issue auto-closes on merge. |
+
+### Overrides
+
+None. Every rule was confirmed unchanged. One was **strengthened**: always `git fetch` and resolve
+against `origin/master` before reading history or inspecting the tree — a stale local checkout
+otherwise reports files as absent that are already on master.
+
+### Corrections to what this section previously said
+
+Two rules changed after this section was first written, and it had not caught up:
+
+- **Never commit, push, or open/update a PR without explicit approval** (2026-08-02, reaffirmed
+  2026-08-06). This supersedes the earlier "commit + push the branch as you go to back it up".
+  Implement → verify → **stop** → report → wait for the explicit word. Applies mid-iteration and to
+  draft PRs; a specific change request is not itself approval to ship.
+- **Verify on-device yourself — don't hand it off** (2026-07-29). This supersedes the earlier
+  "the maintainer runs it themselves … don't self-run/screenshot the device". Build, `installDev`,
+  then drive via adb and report what you actually observed. The maintainer still signs off.
+
+### Doing UI/UX work
 
 The app's UI/UX is being reworked screen by screen. When doing this work:
 
@@ -107,17 +148,12 @@ The app's UI/UX is being reworked screen by screen. When doing this work:
   in `Color.kt`/`Theme.kt`, never per-screen.
 - **Unbuilt features get a dev-only hint.** If UI has no backing functionality yet, build it and mark it
   with `DevOnly`/`DevHintBadge` so it never misleads release users.
-- **Keep the repo in sync.** A change that adds/alters a feature also updates the affected docs
-  (README, this file, DESIGN.md) and `strings.xml` in the same PR.
-- **Open the PR only when the page is complete.** Commit + push the branch as you go to back it up,
-  but create the PR (`gh pr create`) once the whole page/feature is done — after all review iterations
-  and on-device approvals — so the PR and its description cover all the work. Don't open a draft early
-  and keep amending it.
-- **Verify, then hand off for sign-off.** Build, lint + test (`./gradlew :app:compileDebugKotlin`,
-  `:app:lintDebug`, `:app:testDebugUnitTest` — `lintDebug` catches CI blockers like `MissingTranslation`).
-  Then **the maintainer runs it themselves** on the dev channel (`./gradlew installDev`, or the `.run/`
-  "Install Dev" config) and approves — don't self-run/screenshot the device. Not approved → iterate;
-  commit/push only once they approve.
+- **Keep the repo in sync.** A user-facing capability updates the README **Feature list**; internal or
+  refactor work updates this file and DESIGN.md — not the README. Never document a feature before it
+  ships. `strings.xml` and all 9 locales land in the same change.
+- **One page = one unit.** Its own branch cut fresh from `master`, in its own worktree, never stacked on
+  another page's branch. Open the PR only when the page is complete — after every review iteration and
+  on-device approval — so the PR and its description cover all the work from the start.
 
 ## Release Signing
 
