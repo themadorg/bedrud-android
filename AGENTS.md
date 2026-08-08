@@ -20,6 +20,10 @@ make check                       # lint + testDebugUnitTest — exactly what CI 
 make doctor                      # why won't it build here: JDK / SDK / adb / gh / signing
 ```
 
+For the single command to run before every commit, see **Verify command** under
+[Working Agreement](#working-agreement) — it folds install into the same invocation so the
+on-device pass doesn't pay Gradle's startup cost a second time.
+
 **Test stack:** JUnit 4, MockK, OkHttp MockWebServer, kotlinx-coroutines-test.
 **Test util:** `InMemorySharedPreferences` in `testutil/` — inject into any class taking `SharedPreferences` (InstanceStore, AuthManager). Avoid Android framework dependency.
 
