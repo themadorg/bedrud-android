@@ -226,6 +226,9 @@ fun DashboardContent(
     var isRefreshing by remember { mutableStateOf(false) }
     var lastFetchAtMs by remember { mutableLongStateOf(0L) }
     var showCreateDialog by remember { mutableStateOf(false) }
+    // Held here rather than inside the dialog: the failure arrives from the create call, and the
+    // dialog stays open so the user can fix it and retry without retyping the name.
+    var createRoomError by remember { mutableStateOf<String?>(null) }
     var roomToEdit by remember { mutableStateOf<UserRoomResponse?>(null) }
     var roomToDelete by remember { mutableStateOf<UserRoomResponse?>(null) }
     var pendingServerSwitch by remember { mutableStateOf<PendingServerSwitch?>(null) }
@@ -360,12 +363,18 @@ fun DashboardContent(
 
     if (showCreateDialog) {
         CreateRoomDialog(
-            onDismiss = { showCreateDialog = false },
+            onDismiss = {
+                showCreateDialog = false
+                createRoomError = null
+            },
+            errorMessage = createRoomError,
+            onErrorCleared = { createRoomError = null },
             onCreate = { name ->
                 scope.launch {
+                    createRoomError = null
                     val room = apiBody(
                         createRoomFailedMsg,
-                        { snackbarHostState.showSnackbar(it) },
+                        { createRoomError = it },
                         classifyError = { it.toUserMessage(context) },
                     ) {
                         roomApi.createRoom(
@@ -1405,8 +1414,19 @@ private fun SketchArrow(start: Offset, end: Offset, modifier: Modifier = Modifie
 
 // ── Create room dialog ────────────────────────────────────────────────────────
 
+/**
+ * [errorMessage] is shown inside the dialog rather than in a snackbar: the Scaffold's snackbar
+ * renders behind this dialog's scrim, where it reads as dimmed and unrelated to the button that was
+ * just pressed. [onErrorCleared] fires when the name is edited, so a stale failure doesn't sit under
+ * a name the user has since changed.
+ */
 @Composable
-private fun CreateRoomDialog(onDismiss: () -> Unit, onCreate: (String) -> Unit) {
+private fun CreateRoomDialog(
+    onDismiss: () -> Unit,
+    onCreate: (String) -> Unit,
+    errorMessage: String?,
+    onErrorCleared: () -> Unit,
+) {
     var roomName by remember { mutableStateOf("") }
 
     AlertDialog(
@@ -1419,11 +1439,22 @@ private fun CreateRoomDialog(onDismiss: () -> Unit, onCreate: (String) -> Unit) 
                 Spacer(modifier = Modifier.height(Dimens.space16))
                 BedrudTextField(
                     value = roomName,
-                    onValueChange = { roomName = it },
+                    onValueChange = {
+                        roomName = it
+                        if (errorMessage != null) onErrorCleared()
+                    },
                     label = stringResource(R.string.dashboard_label_roomName),
                     textStyle = MaterialTheme.typography.bodyMedium,
                     textDirection = TextDirection.Ltr
                 )
+                if (errorMessage != null) {
+                    Spacer(modifier = Modifier.height(Dimens.space8))
+                    Text(
+                        text = errorMessage,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
             }
         },
         confirmButton = {
