@@ -5,19 +5,15 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -43,11 +39,11 @@ import com.bedrud.app.core.instance.InstanceManager
 import com.bedrud.app.models.ForgotPasswordRequest
 import com.bedrud.app.models.LoginRequest
 import com.bedrud.app.core.api.apiBody
+import com.bedrud.app.ui.components.BedrudBottomSheet
 import com.bedrud.app.ui.components.BedrudButton
 import com.bedrud.app.ui.components.BedrudButtonVariant
 import com.bedrud.app.ui.components.BedrudPasswordField
 import com.bedrud.app.ui.components.BedrudTextField
-import com.bedrud.app.ui.theme.BedrudShapeTokens
 import com.bedrud.app.ui.theme.Dimens
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
@@ -61,7 +57,6 @@ import org.koin.compose.koinInject
  * the app only kicks off the email — and the server always answers uniformly whether or not the
  * account exists (no enumeration), so the confirmation is deliberately non-committal.
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EmailLoginScreen(
     onLoginSuccess: () -> Unit,
@@ -235,7 +230,6 @@ fun EmailLoginScreen(
  * on the login form. Validates the email shape locally; on success the sheet closes and the caller
  * shows the uniform confirmation.
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ForgotPasswordSheet(
     initialEmail: String,
@@ -243,7 +237,6 @@ private fun ForgotPasswordSheet(
     onSubmit: suspend (String) -> Result<Unit>,
     onSent: (String) -> Unit
 ) {
-    val sheetState = rememberModalBottomSheetState()
     val scope = rememberCoroutineScope()
     val focusManager = LocalFocusManager.current
 
@@ -263,10 +256,7 @@ private fun ForgotPasswordSheet(
             isSending = true
             error = null
             onSubmit(target).fold(
-                onSuccess = {
-                    sheetState.hide()
-                    onSent(target)
-                },
+                onSuccess = { onSent(target) },
                 onFailure = {
                     error = it.message ?: genericMessage
                     isSending = false
@@ -275,18 +265,10 @@ private fun ForgotPasswordSheet(
         }
     }
 
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        sheetState = sheetState,
-        shape = BedrudShapeTokens.sheetTop
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = Dimens.screenPadding)
-                .padding(bottom = Dimens.space32)
-                .imePadding()
-        ) {
+    // Gutter, insets (including the keyboard), container, shape and drag handle all come from the
+    // scaffold — this sheet only supplies its form.
+    BedrudBottomSheet(onDismiss = onDismiss) {
+        Column(modifier = Modifier.fillMaxWidth()) {
             Text(
                 text = stringResource(R.string.auth_forgot_title),
                 style = MaterialTheme.typography.headlineSmall,
