@@ -226,6 +226,10 @@ fun DashboardContent(
     var isRefreshing by remember { mutableStateOf(false) }
     var lastFetchAtMs by remember { mutableLongStateOf(0L) }
     var showCreateDialog by remember { mutableStateOf(false) }
+    // Held here rather than inside the dialog: the failure arrives from the create call, and the
+    // dialog stays open so the user can fix it and retry without retyping the name.
+    var createRoomError by remember { mutableStateOf<String?>(null) }
+    var isCreatingRoom by remember { mutableStateOf(false) }
     var roomToEdit by remember { mutableStateOf<UserRoomResponse?>(null) }
     var roomToDelete by remember { mutableStateOf<UserRoomResponse?>(null) }
     var pendingServerSwitch by remember { mutableStateOf<PendingServerSwitch?>(null) }
@@ -360,12 +364,20 @@ fun DashboardContent(
 
     if (showCreateDialog) {
         CreateRoomDialog(
-            onDismiss = { showCreateDialog = false },
+            onDismiss = {
+                showCreateDialog = false
+                createRoomError = null
+            },
+            errorMessage = createRoomError,
+            onErrorCleared = { createRoomError = null },
+            isCreating = isCreatingRoom,
             onCreate = { name ->
                 scope.launch {
+                    createRoomError = null
+                    isCreatingRoom = true
                     val room = apiBody(
                         createRoomFailedMsg,
-                        { snackbarHostState.showSnackbar(it) },
+                        { createRoomError = it },
                         classifyError = { it.toUserMessage(context) },
                     ) {
                         roomApi.createRoom(
@@ -396,7 +408,9 @@ fun DashboardContent(
                                 )
                             )
                         )
-                    } ?: return@launch
+                    }
+                    isCreatingRoom = false
+                    room ?: return@launch
                     showCreateDialog = false
                     pendingScrollToTopFor = room.name
                     loadRooms()
@@ -1405,12 +1419,28 @@ private fun SketchArrow(start: Offset, end: Offset, modifier: Modifier = Modifie
 
 // ── Create room dialog ────────────────────────────────────────────────────────
 
+/**
+ * [errorMessage] is shown inside the dialog rather than in a snackbar: the Scaffold's snackbar
+ * renders behind this dialog's scrim, where it reads as dimmed and unrelated to the button that was
+ * just pressed. [onErrorCleared] fires when the name is edited, so a stale failure doesn't sit under
+ * a name the user has since changed.
+ *
+ * While [isCreating] the dialog holds still: the confirm button shows its spinner and stops
+ * accepting taps, and neither Cancel nor a scrim tap can dismiss a request that is already on its
+ * way to the server — the same way the auth screens lock their back affordance while submitting.
+ */
 @Composable
-private fun CreateRoomDialog(onDismiss: () -> Unit, onCreate: (String) -> Unit) {
+private fun CreateRoomDialog(
+    onDismiss: () -> Unit,
+    onCreate: (String) -> Unit,
+    errorMessage: String?,
+    onErrorCleared: () -> Unit,
+    isCreating: Boolean,
+) {
     var roomName by remember { mutableStateOf("") }
 
     AlertDialog(
-        onDismissRequest = onDismiss,
+        onDismissRequest = { if (!isCreating) onDismiss() },
         title = { Text(stringResource(R.string.dashboard_dialog_createTitle)) },
         text = {
             Column {
@@ -1419,11 +1449,22 @@ private fun CreateRoomDialog(onDismiss: () -> Unit, onCreate: (String) -> Unit) 
                 Spacer(modifier = Modifier.height(Dimens.space16))
                 BedrudTextField(
                     value = roomName,
-                    onValueChange = { roomName = it },
+                    onValueChange = {
+                        roomName = it
+                        if (errorMessage != null) onErrorCleared()
+                    },
                     label = stringResource(R.string.dashboard_label_roomName),
                     textStyle = MaterialTheme.typography.bodyMedium,
                     textDirection = TextDirection.Ltr
                 )
+                if (errorMessage != null) {
+                    Spacer(modifier = Modifier.height(Dimens.space8))
+                    Text(
+                        text = errorMessage,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
             }
         },
         confirmButton = {
@@ -1431,8 +1472,13 @@ private fun CreateRoomDialog(onDismiss: () -> Unit, onCreate: (String) -> Unit) 
                 text = stringResource(R.string.common_button_create),
                 variant = BedrudButtonVariant.TONAL,
                 onClick = { onCreate(roomName) },
+                loading = isCreating,
             )
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.common_button_cancel)) } }
+        dismissButton = {
+            TextButton(onClick = onDismiss, enabled = !isCreating) {
+                Text(stringResource(R.string.common_button_cancel))
+            }
+        }
     )
 }
