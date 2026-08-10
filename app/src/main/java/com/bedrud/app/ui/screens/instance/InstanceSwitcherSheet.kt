@@ -2,10 +2,10 @@ package com.bedrud.app.ui.screens.instance
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -16,13 +16,10 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -35,69 +32,51 @@ import androidx.compose.ui.unit.dp
 import com.bedrud.app.R
 import com.bedrud.app.core.instance.InstanceManager
 import com.bedrud.app.models.Instance
+import com.bedrud.app.ui.components.BedrudBottomSheet
+import com.bedrud.app.ui.components.BedrudSheetActionRow
+import com.bedrud.app.ui.components.BedrudSheetTitle
 import com.bedrud.app.ui.components.InitialsAvatar
+import com.bedrud.app.ui.theme.Dimens
 import com.bedrud.app.ui.theme.parseInstanceColor
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun InstanceSwitcherSheet(
     instanceManager: InstanceManager,
     onDismiss: () -> Unit,
     onAddInstance: () -> Unit
 ) {
-    val sheetState = rememberModalBottomSheetState()
     val instances by instanceManager.store.instances.collectAsState()
     val activeId by instanceManager.store.activeInstanceId.collectAsState()
 
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        sheetState = sheetState
-    ) {
-        Column(modifier = Modifier.padding(bottom = 24.dp)) {
-            Text(
-                text = stringResource(R.string.instance_title_switchServer),
-                style = MaterialTheme.typography.titleMedium,
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-            )
+    BedrudBottomSheet(onDismiss = onDismiss) {
+        BedrudSheetTitle(text = stringResource(R.string.instance_title_switchServer))
 
-            LazyColumn {
-                items(instances, key = { it.id }) { instance ->
-                    SwitcherRow(
-                        instance = instance,
-                        isActive = instance.id == activeId,
-                        onSelect = {
-                            instanceManager.switchTo(instance.id)
-                            onDismiss()
-                        }
-                    )
-                }
-            }
-
-            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable {
+        LazyColumn {
+            items(instances, key = { it.id }) { instance ->
+                SwitcherRow(
+                    instance = instance,
+                    isActive = instance.id == activeId,
+                    onSelect = {
+                        instanceManager.switchTo(instance.id)
                         onDismiss()
-                        onAddInstance()
                     }
-                    .padding(horizontal = 16.dp, vertical = 12.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Icon(
-                    Icons.Default.Add,
-                    contentDescription = stringResource(R.string.instance_button_addServer),
-                    tint = MaterialTheme.colorScheme.primary
-                )
-                Spacer(modifier = Modifier.width(12.dp))
-                Text(
-                    text = stringResource(R.string.instance_button_addServer),
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.primary
                 )
             }
         }
+
+        HorizontalDivider(modifier = Modifier.padding(vertical = Dimens.space8))
+
+        // "Add server" is a plain icon + label action, so it is the standard row rather than a
+        // hand-rolled one — same height, same inset, same icon size as every other sheet action.
+        BedrudSheetActionRow(
+            icon = Icons.Default.Add,
+            title = stringResource(R.string.instance_button_addServer),
+            contentColor = MaterialTheme.colorScheme.primary,
+            onClick = {
+                onDismiss()
+                onAddInstance()
+            }
+        )
     }
 }
 
@@ -107,11 +86,14 @@ private fun SwitcherRow(
     isActive: Boolean,
     onSelect: () -> Unit
 ) {
+    // Geometry mirrors BedrudSheetActionRow — two-line height, same horizontal inset, same gap —
+    // so a server row and an action row are indistinguishable in rhythm.
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onSelect)
-            .padding(horizontal = 16.dp, vertical = 12.dp),
+            .defaultMinSize(minHeight = Dimens.sheetRowHeightTwoLine)
+            .padding(horizontal = Dimens.space12),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
@@ -121,11 +103,11 @@ private fun SwitcherRow(
         ) {
             InitialsAvatar(
                 name = instance.displayName,
-                size = 32.dp,
+                size = SwitcherAvatar,
                 containerColor = parseInstanceColor(instance.iconColorHex)
             )
 
-            Spacer(modifier = Modifier.width(12.dp))
+            Spacer(modifier = Modifier.width(Dimens.space16))
 
             Column(modifier = Modifier.weight(1f)) {
                 Text(
@@ -149,8 +131,11 @@ private fun SwitcherRow(
                 Icons.Default.Check,
                 contentDescription = stringResource(R.string.instance_status_active),
                 tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(20.dp)
+                modifier = Modifier.size(Dimens.iconSm)
             )
         }
     }
 }
+
+// The server avatar is this sheet's own leading element, not a shared size.
+private val SwitcherAvatar = 32.dp
