@@ -88,9 +88,10 @@
   <string name="meeting_status_connecting"><xliff:g id="roomName" example="Team Standup">%1$s</xliff:g> に接続中…</string>
   <string name="meeting_status_preparing">準備中…</string>
   <string name="meeting_dialog_leaveTitle">退室</string>
-  <string name="meeting_dialog_leaveMessage">全員のミーティングを終了しますか、それとも自分だけ退室しますか？</string>
   <string name="meeting_button_endForEveryone">全員終了</string>
   <string name="meeting_button_justLeave">退室のみ</string>
+  <string name="meeting_leave_justLeaveDescription">他の参加者は会議に残ります</string>
+  <string name="meeting_leave_endForEveryoneDescription">全員の通話を終了します</string>
   <string name="meeting_state_connectionFailed">接続に失敗しました</string>
   <string name="meeting_state_connectionFailedMessage">ミーティングに接続できません</string>
   <string name="meeting_button_goBack">戻る</string>

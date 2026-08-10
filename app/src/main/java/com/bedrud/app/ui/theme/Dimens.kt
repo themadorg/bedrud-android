@@ -38,6 +38,13 @@ object Dimens {
     val borderThin = 1.dp
     val borderStrong = 2.dp
 
+    // ── Bottom sheets ──
+    // M3 list-item heights: a sheet action row is one-line, or two-line when it carries a
+    // supporting line explaining what the action does.
+    val sheetRowHeight = 56.dp
+    val sheetRowHeightTwoLine = 72.dp
+    val sheetPadding = 16.dp           // M3 list-item horizontal inset, also the sheet's own gutter
+
     // ── Top bar ──
     val topBarHeight = 64.dp           // M3 small-top-app-bar content height (below the status bar)
 
