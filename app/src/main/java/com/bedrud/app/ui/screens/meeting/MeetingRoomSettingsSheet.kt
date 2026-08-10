@@ -4,8 +4,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -16,20 +14,21 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
 import com.bedrud.app.R
 import com.bedrud.app.core.api.RoomApi
 import com.bedrud.app.core.api.apiAction
 import com.bedrud.app.models.RoomSettings
 import com.bedrud.app.models.UpdateRoomSettingsRequest
+import com.bedrud.app.ui.components.BedrudBottomSheet
+import com.bedrud.app.ui.components.BedrudSheetTitle
 import com.bedrud.app.ui.components.RoomSettingsForm
 import com.bedrud.app.ui.components.withLockedToggles
+import com.bedrud.app.ui.theme.Dimens
 import kotlinx.coroutines.launch
 
 // In-room mirror of RoomSettingsDialog (dashboard) — same three room-level toggles,
 // same PUT /room/{roomId}/settings endpoint, so a room's visibility/approval/E2EE can
 // be managed without leaving the call.
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MeetingRoomSettingsSheet(
     roomId: String,
@@ -46,19 +45,18 @@ fun MeetingRoomSettingsSheet(
     var localIsPublic by remember { mutableStateOf(isPublic) }
     var isSaving by remember { mutableStateOf(false) }
 
-    MeetingBottomSheet(onDismiss = onDismiss) {
-        Text(
+    BedrudBottomSheet(onDismiss = onDismiss) {
+        BedrudSheetTitle(
             text = stringResource(R.string.dashboard_roomSettings_title),
             color = colors.onButton,
-            style = MaterialTheme.typography.titleMedium,
-            modifier = Modifier.padding(bottom = 4.dp),
         )
 
+        // No verticalSpacing override: the form should read the same here as it does in the
+        // dashboard's room-settings dialog.
         RoomSettingsForm(
             isPublic = localIsPublic,
             onIsPublicChange = { localIsPublic = it },
             contentColor = colors.onButton,
-            verticalSpacing = 10.dp,
         )
 
         Button(
@@ -87,7 +85,7 @@ fun MeetingRoomSettingsSheet(
             colors = ButtonDefaults.buttonColors(containerColor = colors.accent),
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(top = 4.dp),
+                .padding(top = Dimens.space4),
         ) {
             Text(stringResource(R.string.common_button_save))
         }

@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -26,23 +27,29 @@ import com.bedrud.app.ui.theme.BedrudShapeTokens
 import com.bedrud.app.ui.theme.Dimens
 
 /**
- * The app's bottom sheet.
+ * The app's bottom sheet. Every sheet in the app is one of these.
  *
- * Every sheet goes through here so they share one container, one drag handle, one set of insets and
- * one gutter. The Material defaults are kept deliberately — the M3 drag handle rather than a
- * hand-drawn bar (it carries the accessibility semantics and touch target a bare `Box` does not),
- * and [BedrudShapeTokens.sheetTop], which is already M3's 28dp `extraLarge` top corners, just named.
+ * Container, drag handle, shape, insets and gutter are **fixed, not defaulted**. There is
+ * deliberately no colour parameter: a default is a suggestion, and the one sheet that took the
+ * suggestion up ended up rendering its container at `surface` — the exact colour of the screen
+ * behind it — so it had no edge at all with the camera off. M3's `surfaceContainerLow` exists to
+ * lift a sheet off the background, and it is opaque over video just the same, so there is no case
+ * where a darker container buys anything.
  *
- * [containerColor] is a parameter rather than fixed because the meeting chrome runs its own darker
- * overlay palette; everywhere else should take the default.
+ * The Material defaults are kept on purpose: the M3 drag handle rather than a hand-drawn bar (it
+ * carries the accessibility semantics and touch target a bare `Box` does not), and
+ * [BedrudShapeTokens.sheetTop], which is already M3's 28dp `extraLarge` top corners, just named.
+ *
+ * The sheet state is deliberately **not** a parameter either. Exposing it would put an
+ * experimental Material type in the signature, forcing `@OptIn` onto every screen that shows a
+ * sheet — re-leaking the Material detail this component exists to contain. Sheets are dismissed
+ * the way the rest of the app dismisses them: the caller stops composing them.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BedrudBottomSheet(
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
-    containerColor: Color = BottomSheetDefaults.ContainerColor,
-    dragHandleColor: Color? = null,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -52,16 +59,17 @@ fun BedrudBottomSheet(
         modifier = modifier,
         sheetState = sheetState,
         shape = BedrudShapeTokens.sheetTop,
-        containerColor = containerColor,
-        dragHandle = {
-            if (dragHandleColor != null) BottomSheetDefaults.DragHandle(color = dragHandleColor)
-            else BottomSheetDefaults.DragHandle()
-        },
+        containerColor = BottomSheetDefaults.ContainerColor,
+        dragHandle = { BottomSheetDefaults.DragHandle() },
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
+                // imePadding is unconditional: it resolves to zero with the keyboard down, so the
+                // sheets that carry an input need no special case. navigationBars first, so the
+                // consumed inset is not counted twice once the keyboard is up.
                 .navigationBarsPadding()
+                .imePadding()
                 .padding(horizontal = Dimens.sheetPadding)
                 .padding(bottom = Dimens.space24),
             verticalArrangement = Arrangement.spacedBy(Dimens.space4),

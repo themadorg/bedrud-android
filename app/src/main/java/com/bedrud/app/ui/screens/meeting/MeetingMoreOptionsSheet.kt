@@ -6,7 +6,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
@@ -21,13 +20,10 @@ import androidx.compose.material.icons.filled.People
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -36,9 +32,10 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.bedrud.app.R
+import com.bedrud.app.ui.components.BedrudBottomSheet
 import com.bedrud.app.ui.theme.BedrudShapeTokens
+import com.bedrud.app.ui.theme.Dimens
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MeetingMoreOptionsSheet(
     isCameraEnabled: Boolean,
@@ -55,24 +52,17 @@ fun MeetingMoreOptionsSheet(
     onOpenRoomSettings: () -> Unit,
 ) {
     val colors = meetingChromeColors()
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        sheetState = sheetState,
-        containerColor = colors.sheet,
-    ) {
+    BedrudBottomSheet(onDismiss = onDismiss) {
+        // Own Column: the quick actions sit further apart than the scaffold's default row spacing.
+        // Container, shape, gutter and insets still come from the scaffold.
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .navigationBarsPadding()
-                .padding(horizontal = 20.dp)
-                .padding(bottom = 24.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(Dimens.space12),
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterHorizontally),
+                horizontalArrangement = Arrangement.spacedBy(Dimens.space16, Alignment.CenterHorizontally),
             ) {
                 if (isCameraEnabled) {
                     SheetCircleAction(
@@ -171,14 +161,14 @@ private fun SheetCircleAction(
         onClick = onClick,
         shape = CircleShape,
         color = colors.button,
-        modifier = Modifier.size(64.dp),
+        modifier = Modifier.size(QuickActionSize),
     ) {
         Box(contentAlignment = Alignment.Center) {
             Icon(
                 imageVector = icon,
                 contentDescription = contentDescription,
                 tint = colors.onButton,
-                modifier = Modifier.size(28.dp),
+                modifier = Modifier.size(QuickActionIcon),
             )
         }
     }
@@ -200,10 +190,10 @@ private fun SheetLabeledButton(
         enabled = enabled,
         shape = BedrudShapeTokens.card,
         color = if (active) colors.buttonActive else colors.button,
-        modifier = modifier.height(72.dp),
+        modifier = modifier.height(TileHeight),
     ) {
         Column(
-            modifier = Modifier.padding(horizontal = 8.dp, vertical = 10.dp),
+            modifier = Modifier.padding(horizontal = Dimens.space8, vertical = TilePaddingVertical),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center,
         ) {
@@ -215,7 +205,7 @@ private fun SheetLabeledButton(
                         imageVector = icon,
                         contentDescription = null,
                         tint = colors.onButton,
-                        modifier = Modifier.size(22.dp),
+                        modifier = Modifier.size(TileIcon),
                     )
                 }
             } else {
@@ -223,7 +213,7 @@ private fun SheetLabeledButton(
                     imageVector = icon,
                     contentDescription = null,
                     tint = if (enabled) colors.onButton else colors.onButtonVariant,
-                    modifier = Modifier.size(22.dp),
+                    modifier = Modifier.size(TileIcon),
                 )
             }
             Text(
@@ -232,8 +222,19 @@ private fun SheetLabeledButton(
                 style = MaterialTheme.typography.labelMedium,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.padding(top = 6.dp),
+                modifier = Modifier.padding(top = TileLabelGap),
             )
         }
     }
 }
+
+// Sizes for this sheet's quick-action grid. Private and file-scoped: these describe one screen's
+// controls, not app-wide sizing, so they do not belong in the shared Dimens scale.
+// NOTE: TileIcon and TileLabelGap are off the 4dp grid, inherited from the original layout and
+// kept as-is so this migration changes no pixels. Worth revisiting in the call-screen redesign.
+private val QuickActionSize = 64.dp
+private val QuickActionIcon = 28.dp
+private val TileHeight = 72.dp
+private val TilePaddingVertical = 10.dp
+private val TileIcon = 22.dp
+private val TileLabelGap = 6.dp
