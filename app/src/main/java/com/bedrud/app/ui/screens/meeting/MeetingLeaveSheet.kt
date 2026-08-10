@@ -8,6 +8,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import com.bedrud.app.R
+import com.bedrud.app.ui.components.BedrudBottomSheet
 import com.bedrud.app.ui.components.BedrudButton
 import com.bedrud.app.ui.components.BedrudButtonVariant
 import com.bedrud.app.ui.components.BedrudSheetActionRow
@@ -29,7 +30,7 @@ fun MeetingLeaveSheet(
 ) {
     val colors = meetingChromeColors()
 
-    MeetingBottomSheet(onDismiss = onDismiss) {
+    BedrudBottomSheet(onDismiss = onDismiss) {
         BedrudSheetTitle(
             text = stringResource(R.string.meeting_dialog_leaveTitle),
             color = colors.onButton,

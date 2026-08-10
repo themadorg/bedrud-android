@@ -12,6 +12,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import com.bedrud.app.R
 import com.bedrud.app.core.livekit.CallAudioSwitch
+import com.bedrud.app.ui.components.BedrudBottomSheet
 import com.bedrud.app.ui.components.BedrudSheetActionRow
 import com.bedrud.app.ui.components.BedrudSheetTitle
 import com.bedrud.app.ui.theme.Dimens
@@ -24,7 +25,7 @@ fun MeetingAudioSourceSheet(
 ) {
     val colors = meetingChromeColors()
 
-    MeetingBottomSheet(onDismiss = onDismiss) {
+    BedrudBottomSheet(onDismiss = onDismiss) {
         BedrudSheetTitle(
             text = stringResource(R.string.meeting_audio_sheet_title),
             color = colors.onButton,
