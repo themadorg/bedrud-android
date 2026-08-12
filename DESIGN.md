@@ -145,6 +145,17 @@ the `meeting*` tokens in `Dimens.kt`, timing in `Motion.meetingChromeAutoHideDel
   controls bar) auto-hides after `meetingChromeAutoHideDelayMs` of inactivity; any tap toggles it
   back; while hidden the system bars hide too (immersive). The hardware back key collapses
   fullscreen instead of leaving the meeting.
+- **Sheets**: long-press a tile → `MeetingParticipantSheet` (per-viewer volume slider, local
+  mute / don't-watch / pin / fullscreen; admins get kick/ban plus the dev-hinted room mute /
+  room deafen / chat mute, #108). The top-bar invite entry, the "+N" tile and the more-options
+  "Invite a friend" row all open `MeetingInviteSheet` (participant avatar grid, share targets —
+  system share, copy, inline QR, email, Telegram, WhatsApp — and the raw link). The controls
+  bar's handle opens `MeetingMoreOptionsSheet`, which mirrors the five call controls along its
+  top and lists deafen, hide-all-cameras (viewer-side data saver), audio settings, the
+  dev-hinted noise suppression (#106), invite, and admin room settings. The output picker uses
+  trailing radios. `MeetingRecordingBanner` (dev-gated, #107) drops below the top bar from the
+  recording dot. There is no side panel anymore — the participants list lives in the invite
+  sheet.
 
 ## Dev-only affordances
 
