@@ -121,6 +121,31 @@ perceptually invisible there. Outlined controls read correctly on the app backgr
 (`Stone950`) and disappear on raised surfaces. If an outline is genuinely needed on a raised
 surface, give it an explicit colour with real contrast.
 
+## Meeting chrome
+
+The in-call screen has its own chrome standard (palette via `meetingChromeColors()`, metrics under
+the `meeting*` tokens in `Dimens.kt`, timing in `Motion.meetingChromeAutoHideDelayMs`):
+
+- **Top bar** (`MeetingTopBar`): invite/participants entry at the start; the room name centered,
+  with the recording dot (dev-gated until the server exposes recording state) and a reconnecting
+  dot when applicable; camera flip (**only while the local camera is live**) and audio output at
+  the end. The center block is weight-balanced so the title never shifts as trailing actions
+  appear.
+- **Controls bar** (`MeetingControlsBar`): a floating pill — camera, screen share, mic, chat,
+  hang-up — with a **drag handle** on top. Tapping the handle or swiping up anywhere on the bar
+  opens the more-options sheet, mirroring how a bottom sheet is pulled up. There is no "⋯" button.
+- **Grid** (`MeetingVideoGrid`): the local participant appears **only while their camera is on**
+  (no self-tile for an audio-only self; when that leaves the room view empty, an inline hint takes
+  the stage). Breakpoints: 1–3 tiles stack as full-width rows; 4 → 2×2; 5 → 2×2 plus one
+  half-width centered; 6 → 2×3; beyond that the last slot collapses into a **"+N"** tile that
+  opens the participants list. Landscape transposes rows into columns.
+- **Tiles**: name chip centered along the bottom edge, carrying mic-off / camera-off badges; a
+  fullscreen affordance sits in the top-end corner; long-press opens the participant actions.
+- **Per-tile fullscreen** (`MeetingParticipantFullscreen`): chrome (name chip, collapse button,
+  controls bar) auto-hides after `meetingChromeAutoHideDelayMs` of inactivity; any tap toggles it
+  back; while hidden the system bars hide too (immersive). The hardware back key collapses
+  fullscreen instead of leaving the meeting.
+
 ## Dev-only affordances
 
 Where UI exists but its backend/business logic doesn't yet, build the UI and mark it with a **dev-only**
