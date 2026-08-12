@@ -141,6 +141,12 @@ the `meeting*` tokens in `Dimens.kt`, timing in `Motion.meetingChromeAutoHideDel
   opens the participants list. Landscape transposes rows into columns.
 - **Tiles**: name chip centered along the bottom edge, carrying mic-off / camera-off badges; a
   fullscreen affordance sits in the top-end corner; long-press opens the participant actions.
+- **Streams** (`MeetingStreamTile`): every live screenshare gets a strip tile above the grid.
+  Several people can share at once; watching is **opt-in per viewer, one stream at a time**
+  (LiveKit selective subscription — no gossip protocol). Unwatched shares render as a
+  placeholder with a watch button, your own share offers stop, and long-pressing the watched
+  stream opens `MeetingStreamSheet` (dev-hinted volume until share audio exists (#105), leave
+  stream — neutral, not red: leaving is reversible).
 - **Per-tile fullscreen** (`MeetingParticipantFullscreen`): chrome (name chip, collapse button,
   controls bar) auto-hides after `meetingChromeAutoHideDelayMs` of inactivity; any tap toggles it
   back; while hidden the system bars hide too (immersive). The hardware back key collapses

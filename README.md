@@ -20,10 +20,9 @@ For the server, web app, and other platforms, see the [main Bedrud project](http
 - **Add a server by QR** — scan a Bedrud server's QR code to fill in its URL instead of typing it
 - **Meetings as real calls** — joining starts a self-managed telecom call, so meetings get proper audio routing, a call notification with mute/hangup, and survive backgrounding
 - **Picture-in-Picture** — keep the meeting visible while using other apps
-- **Screen sharing** and an adaptive video grid
+- **Screen sharing** — several people can present at once, and watching a stream is opt-in per viewer
 - **In-meeting chat** with image sharing, over the LiveKit data channel
-- **Shared stage** — screenshare and coordinated peer-to-peer
-- **Admin moderation** — kick, ban, mute, and stage controls for room hosts
+- **Admin moderation** — kick and ban controls for room hosts
 - **Flexible sign-in** — email/password, guest access, OAuth, and FIDO2 passkeys
 - **Localized** — 10 languages with right-to-left (Arabic, Persian) support
 
@@ -171,7 +170,7 @@ core/
   di/         Koin modules
   instance/   multi-server management
   livekit/    RoomManager — LiveKit lifecycle
-  meeting/    meeting logic + stage/ peer-to-peer stage protocol
+  meeting/    meeting logic (chat wire, video aspect)
   pip/        picture-in-picture state
   recent/     recent rooms
 ui/
