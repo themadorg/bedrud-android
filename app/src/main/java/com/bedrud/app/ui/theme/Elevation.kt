@@ -13,4 +13,8 @@ object Elevation {
     val level3 = 6.dp
     val level4 = 8.dp
     val level5 = 12.dp
+
+    // In-call floating controls pill — semantic pair, kept at the bar's established depth.
+    val controlsBarShadow = 4.dp
+    val controlsBarTonal = 2.dp
 }

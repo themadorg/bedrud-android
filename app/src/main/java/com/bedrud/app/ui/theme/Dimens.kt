@@ -63,4 +63,26 @@ object Dimens {
 
     // ── Brand ──
     val brandMark = 72.dp
+
+    // ── Meeting ──
+    val meetingTileGap = 8.dp            // gap between video tiles in the grid
+    val meetingGridBottomSpace = 104.dp  // grid clearance above the floating controls bar (incl. its drag handle)
+    val meetingTileAvatar = 56.dp        // avatar circle inside a video tile
+    val meetingTileAction = 32.dp        // tile corner action (fullscreen) touch circle
+    val meetingBadgeIcon = 14.dp         // mic/camera-off badges on the tile name chip
+    val meetingIndicatorDot = 8.dp       // top-bar dots (recording, reconnecting)
+    val meetingBarPaddingH = 10.dp       // controls bar inner horizontal padding
+    val meetingBarPaddingV = 8.dp        // controls bar inner vertical padding
+    val meetingBarItemGap = 8.dp         // gap between controls bar buttons
+    val meetingMediaButtonWidth = 52.dp  // camera/mic toggles (wider, rectangular)
+    val meetingMediaButtonHeight = 44.dp
+    val meetingCircleButton = 40.dp      // secondary round controls (share, chat)
+    val meetingEndCallButton = 52.dp     // hang-up circle
+    val meetingBarIconMedia = 22.dp
+    val meetingBarIconSm = 20.dp
+    val meetingBarIconLg = 24.dp
+    val meetingHandleWidth = 32.dp       // controls-bar drag handle (M3 sheet handle metrics)
+    val meetingHandleHeight = 4.dp
+    val meetingHandleSwipeThreshold = 24.dp // upward drag distance that opens the options sheet
+    val meetingFullscreenAvatar = 96.dp  // avatar circle when a participant is viewed fullscreen
 }

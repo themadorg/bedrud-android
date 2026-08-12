@@ -37,4 +37,6 @@ object BedrudShapeTokens {
     val chip = RoundedCornerShape(BedrudRadius.sm)
     val pill = RoundedCornerShape(BedrudRadius.full)  // badges, FABs, avatars
     val sheetTop = RoundedCornerShape(topStart = BedrudRadius.xxl, topEnd = BedrudRadius.xxl)
+    val videoTile = RoundedCornerShape(BedrudRadius.md) // in-meeting video/participant tiles
+    val controlsBar = RoundedCornerShape(BedrudRadius.xxl) // floating in-call controls pill
 }
