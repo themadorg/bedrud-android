@@ -151,6 +151,14 @@ the `meeting*` tokens in `Dimens.kt`, timing in `Motion.meetingChromeAutoHideDel
   controls bar) auto-hides after `meetingChromeAutoHideDelayMs` of inactivity; any tap toggles it
   back; while hidden the system bars hide too (immersive). The hardware back key collapses
   fullscreen instead of leaving the meeting.
+- **Audio input** (`MeetingAudioSettingsSheet`): output device + output volume (the voice-call
+  stream the hardware keys drive), and the input mode. **Push to talk** turns the mic slot into a
+  hold-to-talk pill — outlined idle, filled while transmitting — enabling the mic only while held
+  and never touching the persisted mic preference. **Voice activity** with auto sensitivity keeps
+  the platform's own processing (today's behavior); manual sensitivity engages
+  `VoiceGateProcessor`, a capture post-processor that mutes frames whose RMS falls below the
+  slider's dBFS threshold (with a ~300ms hangover so syllables don't clip). Noise suppression
+  (Off / Device) applies on the next join — the audio device module is built per connection.
 - **Sheets**: long-press a tile → `MeetingParticipantSheet` (per-viewer volume slider, local
   mute / don't-watch / pin / fullscreen; admins get kick/ban plus the dev-hinted room mute /
   room deafen / chat mute, #108). The top-bar invite entry, the "+N" tile and the more-options
