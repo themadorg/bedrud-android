@@ -291,4 +291,14 @@
   <string name="dashboard_error_deleteRoomFailed">Raum konnte nicht gelöscht werden</string>
   <string name="dashboard_error_saveSettingsFailed">Einstellungen konnten nicht gespeichert werden</string>
   <string name="dashboard_toast_settingsSaved">Einstellungen gespeichert</string>
+  <string name="meeting_contentDescription_invite">Einladen &amp; Teilnehmer</string>
+  <string name="meeting_contentDescription_audioOutput">Audioausgabe</string>
+  <string name="meeting_contentDescription_recording">Aufnahme aktiv</string>
+  <string name="meeting_contentDescription_tileFullscreen">Vollbild anzeigen</string>
+  <string name="meeting_contentDescription_tileExitFullscreen">Vollbild beenden</string>
+  <string name="meeting_contentDescription_micOff">Mikrofon aus</string>
+  <string name="meeting_contentDescription_cameraOff">Kamera aus</string>
+  <string name="meeting_status_reconnecting">Verbindung wird wiederhergestellt…</string>
+  <string name="meeting_empty_title">Sonst ist niemand hier</string>
+  <string name="meeting_empty_message">Lade andere ein oder schalte deine Kamera ein, um dich selbst zu sehen</string>
 </resources>

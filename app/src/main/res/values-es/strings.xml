@@ -291,4 +291,14 @@
   <string name="dashboard_error_deleteRoomFailed">No se pudo eliminar la sala</string>
   <string name="dashboard_error_saveSettingsFailed">No se pudo guardar la configuración</string>
   <string name="dashboard_toast_settingsSaved">Configuración guardada</string>
+  <string name="meeting_contentDescription_invite">Invitar y participantes</string>
+  <string name="meeting_contentDescription_audioOutput">Salida de audio</string>
+  <string name="meeting_contentDescription_recording">Grabación activa</string>
+  <string name="meeting_contentDescription_tileFullscreen">Ver en pantalla completa</string>
+  <string name="meeting_contentDescription_tileExitFullscreen">Salir de pantalla completa</string>
+  <string name="meeting_contentDescription_micOff">Micrófono apagado</string>
+  <string name="meeting_contentDescription_cameraOff">Cámara apagada</string>
+  <string name="meeting_status_reconnecting">Reconectando…</string>
+  <string name="meeting_empty_title">No hay nadie más aquí</string>
+  <string name="meeting_empty_message">Invita a otros o enciende tu cámara para verte</string>
 </resources>

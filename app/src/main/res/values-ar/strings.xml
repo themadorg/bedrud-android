@@ -291,4 +291,14 @@
   <string name="dashboard_error_deleteRoomFailed">تعذّر حذف الغرفة</string>
   <string name="dashboard_error_saveSettingsFailed">تعذّر حفظ الإعدادات</string>
   <string name="dashboard_toast_settingsSaved">تم حفظ الإعدادات</string>
+  <string name="meeting_contentDescription_invite">دعوة والمشاركون</string>
+  <string name="meeting_contentDescription_audioOutput">مخرج الصوت</string>
+  <string name="meeting_contentDescription_recording">التسجيل نشط</string>
+  <string name="meeting_contentDescription_tileFullscreen">عرض ملء الشاشة</string>
+  <string name="meeting_contentDescription_tileExitFullscreen">الخروج من ملء الشاشة</string>
+  <string name="meeting_contentDescription_micOff">الميكروفون مغلق</string>
+  <string name="meeting_contentDescription_cameraOff">الكاميرا مغلقة</string>
+  <string name="meeting_status_reconnecting">جارٍ إعادة الاتصال…</string>
+  <string name="meeting_empty_title">لا يوجد أحد آخر هنا</string>
+  <string name="meeting_empty_message">ادعُ الآخرين، أو شغّل الكاميرا لترى نفسك</string>
 </resources>

@@ -291,4 +291,14 @@
   <string name="dashboard_error_deleteRoomFailed">Impossible de supprimer le salon</string>
   <string name="dashboard_error_saveSettingsFailed">Impossible d\'enregistrer les paramètres</string>
   <string name="dashboard_toast_settingsSaved">Paramètres enregistrés</string>
+  <string name="meeting_contentDescription_invite">Inviter et participants</string>
+  <string name="meeting_contentDescription_audioOutput">Sortie audio</string>
+  <string name="meeting_contentDescription_recording">Enregistrement en cours</string>
+  <string name="meeting_contentDescription_tileFullscreen">Afficher en plein écran</string>
+  <string name="meeting_contentDescription_tileExitFullscreen">Quitter le plein écran</string>
+  <string name="meeting_contentDescription_micOff">Micro coupé</string>
+  <string name="meeting_contentDescription_cameraOff">Caméra désactivée</string>
+  <string name="meeting_status_reconnecting">Reconnexion…</string>
+  <string name="meeting_empty_title">Personne d\'autre n\'est ici</string>
+  <string name="meeting_empty_message">Invitez d\'autres personnes ou activez votre caméra pour vous voir</string>
 </resources>

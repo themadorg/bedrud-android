@@ -291,4 +291,14 @@
   <string name="dashboard_error_deleteRoomFailed">Oda silinemedi</string>
   <string name="dashboard_error_saveSettingsFailed">Ayarlar kaydedilemedi</string>
   <string name="dashboard_toast_settingsSaved">Ayarlar kaydedildi</string>
+  <string name="meeting_contentDescription_invite">Davet et ve katılımcılar</string>
+  <string name="meeting_contentDescription_audioOutput">Ses çıkışı</string>
+  <string name="meeting_contentDescription_recording">Kayıt etkin</string>
+  <string name="meeting_contentDescription_tileFullscreen">Tam ekran görüntüle</string>
+  <string name="meeting_contentDescription_tileExitFullscreen">Tam ekrandan çık</string>
+  <string name="meeting_contentDescription_micOff">Mikrofon kapalı</string>
+  <string name="meeting_contentDescription_cameraOff">Kamera kapalı</string>
+  <string name="meeting_status_reconnecting">Yeniden bağlanılıyor…</string>
+  <string name="meeting_empty_title">Burada başka kimse yok</string>
+  <string name="meeting_empty_message">Başkalarını davet edin veya kendinizi görmek için kameranızı açın</string>
 </resources>

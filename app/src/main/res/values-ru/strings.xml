@@ -291,4 +291,14 @@
   <string name="dashboard_error_deleteRoomFailed">Не удалось удалить комнату</string>
   <string name="dashboard_error_saveSettingsFailed">Не удалось сохранить настройки</string>
   <string name="dashboard_toast_settingsSaved">Настройки сохранены</string>
+  <string name="meeting_contentDescription_invite">Пригласить и участники</string>
+  <string name="meeting_contentDescription_audioOutput">Аудиовыход</string>
+  <string name="meeting_contentDescription_recording">Идёт запись</string>
+  <string name="meeting_contentDescription_tileFullscreen">Во весь экран</string>
+  <string name="meeting_contentDescription_tileExitFullscreen">Выйти из полноэкранного режима</string>
+  <string name="meeting_contentDescription_micOff">Микрофон выключен</string>
+  <string name="meeting_contentDescription_cameraOff">Камера выключена</string>
+  <string name="meeting_status_reconnecting">Переподключение…</string>
+  <string name="meeting_empty_title">Здесь больше никого нет</string>
+  <string name="meeting_empty_message">Пригласите других или включите камеру, чтобы увидеть себя</string>
 </resources>

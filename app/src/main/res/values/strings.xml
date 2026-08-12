@@ -295,4 +295,15 @@
   <string name="dashboard_error_deleteRoomFailed">Failed to delete room</string>
   <string name="dashboard_error_saveSettingsFailed">Failed to save settings</string>
   <string name="dashboard_toast_settingsSaved">Settings saved</string>
+  <string name="meeting_contentDescription_invite">Invite &amp; participants</string>
+  <string name="meeting_contentDescription_audioOutput">Audio output</string>
+  <string name="meeting_contentDescription_recording">Recording active</string>
+  <string name="meeting_contentDescription_tileFullscreen">View full screen</string>
+  <string name="meeting_contentDescription_tileExitFullscreen">Exit full screen</string>
+  <string name="meeting_contentDescription_micOff">Microphone off</string>
+  <string name="meeting_contentDescription_cameraOff">Camera off</string>
+  <string name="meeting_status_reconnecting">Reconnecting…</string>
+  <string name="meeting_tile_overflow" translatable="false">+<xliff:g id="count" example="3">%1$d</xliff:g></string>
+  <string name="meeting_empty_title">No one else is here</string>
+  <string name="meeting_empty_message">Invite others, or turn your camera on to see yourself</string>
 </resources>
