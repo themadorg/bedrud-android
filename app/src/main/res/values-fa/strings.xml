@@ -315,4 +315,15 @@
   <string name="meeting_stream_leave">خروج از پخش</string>
   <string name="meeting_stream_youArePresenting">در حال ارائه هستید</string>
   <string name="meeting_stream_stop">توقف اشتراک‌گذاری</string>
+  <string name="meeting_audio_outputVolume">میزان صدای خروجی</string>
+  <string name="meeting_audio_inputMode">حالت ورودی</string>
+  <string name="meeting_audio_mode_voiceActivity">فعالیت صوتی</string>
+  <string name="meeting_audio_mode_pushToTalk">فشار برای صحبت</string>
+  <string name="meeting_audio_autoSensitivity">حساسیت خودکار</string>
+  <string name="meeting_audio_sensitivity">حساسیت</string>
+  <string name="meeting_ptt_holdToTalk">برای صحبت نگه دارید</string>
+  <string name="meeting_ptt_talking">در حال صحبت…</string>
+  <string name="meeting_ns_off">خاموش</string>
+  <string name="meeting_ns_device">دستگاه (داخلی)</string>
+  <string name="meeting_ns_appliesNextJoin">از پیوستن بعدی اعمال می‌شود</string>
 </resources>

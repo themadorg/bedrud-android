@@ -318,4 +318,15 @@
   <string name="meeting_stream_leave">退出观看</string>
   <string name="meeting_stream_youArePresenting">你正在共享</string>
   <string name="meeting_stream_stop">停止共享</string>
+  <string name="meeting_audio_outputVolume">输出音量</string>
+  <string name="meeting_audio_inputMode">输入模式</string>
+  <string name="meeting_audio_mode_voiceActivity">语音活动</string>
+  <string name="meeting_audio_mode_pushToTalk">按键通话</string>
+  <string name="meeting_audio_autoSensitivity">自动灵敏度</string>
+  <string name="meeting_audio_sensitivity">灵敏度</string>
+  <string name="meeting_ptt_holdToTalk">按住说话</string>
+  <string name="meeting_ptt_talking">正在说话…</string>
+  <string name="meeting_ns_off">关闭</string>
+  <string name="meeting_ns_device">设备（内置）</string>
+  <string name="meeting_ns_appliesNextJoin">下次加入时生效</string>
 </resources>

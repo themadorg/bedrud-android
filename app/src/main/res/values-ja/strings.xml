@@ -318,4 +318,15 @@
   <string name="meeting_stream_leave">ストリームから退出</string>
   <string name="meeting_stream_youArePresenting">画面を共有中です</string>
   <string name="meeting_stream_stop">共有を停止</string>
+  <string name="meeting_audio_outputVolume">出力音量</string>
+  <string name="meeting_audio_inputMode">入力モード</string>
+  <string name="meeting_audio_mode_voiceActivity">音声アクティビティ</string>
+  <string name="meeting_audio_mode_pushToTalk">プッシュトゥトーク</string>
+  <string name="meeting_audio_autoSensitivity">自動感度</string>
+  <string name="meeting_audio_sensitivity">感度</string>
+  <string name="meeting_ptt_holdToTalk">長押しで話す</string>
+  <string name="meeting_ptt_talking">話しています…</string>
+  <string name="meeting_ns_off">オフ</string>
+  <string name="meeting_ns_device">デバイス（内蔵）</string>
+  <string name="meeting_ns_appliesNextJoin">次回の参加時に適用されます</string>
 </resources>

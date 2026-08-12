@@ -318,4 +318,15 @@
   <string name="meeting_stream_leave">Stream verlassen</string>
   <string name="meeting_stream_youArePresenting">Du präsentierst gerade</string>
   <string name="meeting_stream_stop">Freigabe beenden</string>
+  <string name="meeting_audio_outputVolume">Ausgabelautstärke</string>
+  <string name="meeting_audio_inputMode">Eingabemodus</string>
+  <string name="meeting_audio_mode_voiceActivity">Sprachaktivität</string>
+  <string name="meeting_audio_mode_pushToTalk">Push-to-Talk</string>
+  <string name="meeting_audio_autoSensitivity">Automatische Empfindlichkeit</string>
+  <string name="meeting_audio_sensitivity">Empfindlichkeit</string>
+  <string name="meeting_ptt_holdToTalk">Zum Sprechen gedrückt halten</string>
+  <string name="meeting_ptt_talking">Du sprichst…</string>
+  <string name="meeting_ns_off">Aus</string>
+  <string name="meeting_ns_device">Gerät (integriert)</string>
+  <string name="meeting_ns_appliesNextJoin">Gilt ab dem nächsten Beitritt</string>
 </resources>

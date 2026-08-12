@@ -318,4 +318,15 @@
   <string name="meeting_stream_leave">Покинуть трансляцию</string>
   <string name="meeting_stream_youArePresenting">Вы демонстрируете экран</string>
   <string name="meeting_stream_stop">Остановить показ</string>
+  <string name="meeting_audio_outputVolume">Громкость вывода</string>
+  <string name="meeting_audio_inputMode">Режим ввода</string>
+  <string name="meeting_audio_mode_voiceActivity">Голосовая активация</string>
+  <string name="meeting_audio_mode_pushToTalk">Нажми и говори</string>
+  <string name="meeting_audio_autoSensitivity">Авточувствительность</string>
+  <string name="meeting_audio_sensitivity">Чувствительность</string>
+  <string name="meeting_ptt_holdToTalk">Удерживайте, чтобы говорить</string>
+  <string name="meeting_ptt_talking">Вы говорите…</string>
+  <string name="meeting_ns_off">Выкл.</string>
+  <string name="meeting_ns_device">Устройство (встроенное)</string>
+  <string name="meeting_ns_appliesNextJoin">Применится при следующем входе</string>
 </resources>
