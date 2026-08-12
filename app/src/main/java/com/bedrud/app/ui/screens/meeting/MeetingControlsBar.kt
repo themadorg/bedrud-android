@@ -2,6 +2,7 @@ package com.bedrud.app.ui.screens.meeting
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -42,6 +43,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import com.bedrud.app.R
+import com.bedrud.app.core.audio.MeetingInputMode
 import com.bedrud.app.ui.theme.BedrudShapeTokens
 import com.bedrud.app.ui.theme.Dimens
 import com.bedrud.app.ui.theme.Elevation
@@ -60,6 +62,8 @@ fun MeetingControlsBar(
     isScreenShareEnabled: Boolean,
     showChat: Boolean,
     unreadCount: Int,
+    inputMode: MeetingInputMode = MeetingInputMode.VOICE_ACTIVITY,
+    onPushToTalkChange: (Boolean) -> Unit = {},
     onToggleMic: () -> Unit,
     onToggleCamera: () -> Unit,
     onToggleScreenShare: () -> Unit,
@@ -126,15 +130,23 @@ fun MeetingControlsBar(
                     containerColor = if (isScreenShareEnabled) colors.buttonActive else colors.button,
                 )
 
-                MeetMediaButton(
-                    colors = colors,
-                    enabled = isMicEnabled,
-                    hasError = micHasError,
-                    onClick = onToggleMic,
-                    enabledIcon = Icons.Default.Mic,
-                    disabledIcon = Icons.Default.MicOff,
-                    contentDescription = stringResource(R.string.meeting_contentDescription_toggleMic),
-                )
+                if (inputMode == MeetingInputMode.PUSH_TO_TALK) {
+                    HoldToTalkPill(
+                        colors = colors,
+                        transmitting = isMicEnabled,
+                        onPushToTalkChange = onPushToTalkChange,
+                    )
+                } else {
+                    MeetMediaButton(
+                        colors = colors,
+                        enabled = isMicEnabled,
+                        hasError = micHasError,
+                        onClick = onToggleMic,
+                        enabledIcon = Icons.Default.Mic,
+                        disabledIcon = Icons.Default.MicOff,
+                        contentDescription = stringResource(R.string.meeting_contentDescription_toggleMic),
+                    )
+                }
 
                 MeetCircleButton(
                     colors = colors,
@@ -178,6 +190,63 @@ private fun DragHandle(
                 .height(Dimens.meetingHandleHeight)
                 .background(color, CircleShape),
         )
+    }
+}
+
+/**
+ * Push-to-talk control: the mic slot widens into a pill that transmits only while held —
+ * outlined while idle, filled while talking, so the state needs no color code to learn.
+ */
+@Composable
+private fun HoldToTalkPill(
+    colors: MeetingChromeColors,
+    transmitting: Boolean,
+    onPushToTalkChange: (Boolean) -> Unit,
+) {
+    Surface(
+        shape = BedrudShapeTokens.pill,
+        color = if (transmitting) colors.buttonActive else colors.buttonMediaOff,
+        border = if (transmitting) {
+            null
+        } else {
+            androidx.compose.foundation.BorderStroke(Dimens.borderThin, colors.divider)
+        },
+        modifier = Modifier
+            .height(Dimens.meetingMediaButtonHeight)
+            .pointerInput(Unit) {
+                detectTapGestures(
+                    onPress = {
+                        onPushToTalkChange(true)
+                        try {
+                            awaitRelease()
+                        } finally {
+                            onPushToTalkChange(false)
+                        }
+                    },
+                )
+            },
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = Dimens.space16),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(Dimens.space8),
+        ) {
+            Icon(
+                imageVector = if (transmitting) Icons.Default.Mic else Icons.Default.MicOff,
+                contentDescription = stringResource(R.string.meeting_contentDescription_toggleMic),
+                tint = if (transmitting) colors.onButton else colors.onButtonMediaOff,
+                modifier = Modifier.size(Dimens.meetingBarIconMedia),
+            )
+            Text(
+                text = stringResource(
+                    if (transmitting) R.string.meeting_ptt_talking
+                    else R.string.meeting_ptt_holdToTalk
+                ),
+                style = MaterialTheme.typography.labelLarge,
+                color = if (transmitting) colors.onButton else colors.onButtonMediaOff,
+                maxLines = 1,
+            )
+        }
     }
 }
 

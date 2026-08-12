@@ -111,6 +111,7 @@ import com.bedrud.app.core.livekit.ConnectionState
 import com.bedrud.app.core.livekit.RoomManager
 import com.bedrud.app.core.meeting.chat.ChatWire
 import com.bedrud.app.core.pip.PipStateHolder
+import com.bedrud.app.ui.screens.settings.SettingsStore
 import com.bedrud.app.models.JoinRoomRequest
 import com.bedrud.app.models.JoinRoomResponse
 import io.livekit.android.compose.ui.ScaleType
@@ -131,7 +132,8 @@ fun MeetingScreen(
     roomName: String,
     onLeave: () -> Unit,
     instanceManager: InstanceManager = koinInject(),
-    pipStateHolder: PipStateHolder = koinInject()
+    pipStateHolder: PipStateHolder = koinInject(),
+    settingsStore: SettingsStore = koinInject(),
 ) {
     val roomApi = instanceManager.roomApi.collectAsState().value ?: return
     val roomManager = instanceManager.roomManager.collectAsState().value ?: return
@@ -189,6 +191,10 @@ fun MeetingScreen(
     var pinnedIdentity by rememberSaveable { mutableStateOf<String?>(null) }
     // Recording banner, behind the dev-gated recording dot. TODO(#107)
     var showRecordingBanner by remember { mutableStateOf(false) }
+    var showAudioSettingsSheet by remember { mutableStateOf(false) }
+    var showInputModeSheet by remember { mutableStateOf(false) }
+    var showNoiseSuppressionSheet by remember { mutableStateOf(false) }
+    var noiseSuppressionMode by remember { mutableStateOf(settingsStore.getNoiseSuppression()) }
 
     // Identities whose video this viewer has locally hidden (does not affect other viewers)
     var locallyHiddenVideoIdentities by remember { mutableStateOf(setOf<String>()) }
@@ -204,6 +210,9 @@ fun MeetingScreen(
     val locallyMutedIdentities by roomManager.locallyMutedIdentities.collectAsState()
     val onToggleLocalMute: (String) -> Unit = { identity -> roomManager.toggleLocalMute(identity) }
     val participantVolumes by roomManager.participantVolumes.collectAsState()
+    val inputMode by roomManager.inputMode.collectAsState()
+    val autoSensitivity by roomManager.autoSensitivity.collectAsState()
+    val voiceSensitivity by roomManager.voiceSensitivity.collectAsState()
 
     // Unread chat count while panel is closed
     var lastReadCount by rememberSaveable { mutableIntStateOf(0) }
@@ -693,6 +702,12 @@ fun MeetingScreen(
                                     isScreenShareEnabled = isScreenShareEnabled,
                                     showChat = showChat,
                                     unreadCount = unreadCount,
+                                    inputMode = inputMode,
+                                    onPushToTalkChange = { active ->
+                                        scope.launch {
+                                            roomManager.setPushToTalkTransmitting(active)
+                                        }
+                                    },
                                     onToggleMic = toggleMicAction,
                                     onToggleCamera = toggleCameraAction,
                                     onToggleScreenShare = toggleScreenShareAction,
@@ -724,7 +739,8 @@ fun MeetingScreen(
                                     onToggleHideAllIncomingVideo = {
                                         hideAllIncomingVideo = !hideAllIncomingVideo
                                     },
-                                    onOpenAudioSettings = { showAudioSheet = true },
+                                    onOpenAudioSettings = { showAudioSettingsSheet = true },
+                                    onOpenNoiseSuppression = { showNoiseSuppressionSheet = true },
                                     onOpenInvite = { showInviteSheet = true },
                                     onOpenRoomSettings = { showRoomSettingsSheet = true },
                                     onDismiss = { showMoreOptionsSheet = false },
@@ -828,6 +844,41 @@ fun MeetingScreen(
                                     audioHandler = roomManager.audioHandler,
                                     audioState = audioState,
                                     onDismiss = { showAudioSheet = false },
+                                )
+                            }
+
+                            if (showAudioSettingsSheet) {
+                                MeetingAudioSettingsSheet(
+                                    audioHandler = roomManager.audioHandler,
+                                    audioState = audioState,
+                                    inputMode = inputMode,
+                                    autoSensitivity = autoSensitivity,
+                                    sensitivity = voiceSensitivity,
+                                    onOpenInputModePicker = { showInputModeSheet = true },
+                                    onAutoSensitivityChange = { roomManager.setAutoSensitivity(it) },
+                                    onSensitivityChange = { roomManager.setVoiceSensitivity(it) },
+                                    onDismiss = { showAudioSettingsSheet = false },
+                                )
+                            }
+
+                            if (showInputModeSheet) {
+                                MeetingInputModeSheet(
+                                    inputMode = inputMode,
+                                    onSelect = { mode ->
+                                        scope.launch { roomManager.setInputMode(mode) }
+                                    },
+                                    onDismiss = { showInputModeSheet = false },
+                                )
+                            }
+
+                            if (showNoiseSuppressionSheet) {
+                                MeetingNoiseSuppressionSheet(
+                                    mode = noiseSuppressionMode,
+                                    onSelect = { mode ->
+                                        settingsStore.setNoiseSuppression(mode)
+                                        noiseSuppressionMode = mode
+                                    },
+                                    onDismiss = { showNoiseSuppressionSheet = false },
                                 )
                             }
 

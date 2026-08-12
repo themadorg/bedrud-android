@@ -36,8 +36,6 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
 import com.bedrud.app.R
 import com.bedrud.app.ui.components.BedrudSheetActionRow
-import com.bedrud.app.ui.components.DevHintBadge
-import com.bedrud.app.ui.components.DevOnly
 import com.bedrud.app.ui.theme.Dimens
 
 /**
@@ -66,6 +64,7 @@ fun MeetingMoreOptionsSheet(
     onToggleDeafen: () -> Unit,
     onToggleHideAllIncomingVideo: () -> Unit,
     onOpenAudioSettings: () -> Unit,
+    onOpenNoiseSuppression: () -> Unit,
     onOpenInvite: () -> Unit,
     onOpenRoomSettings: () -> Unit,
     onDismiss: () -> Unit,
@@ -170,15 +169,15 @@ fun MeetingMoreOptionsSheet(
                 onOpenAudioSettings()
             },
         )
-        DevOnly {
-            BedrudSheetActionRow(
-                icon = Icons.Default.GraphicEq,
-                title = stringResource(R.string.meeting_sheet_noiseSuppression),
-                contentColor = colors.onButton,
-                trailing = { DevHintBadge(stringResource(R.string.common_hint_comingSoon)) },
-                onClick = {},
-            )
-        }
+        BedrudSheetActionRow(
+            icon = Icons.Default.GraphicEq,
+            title = stringResource(R.string.meeting_sheet_noiseSuppression),
+            contentColor = colors.onButton,
+            onClick = {
+                onDismiss()
+                onOpenNoiseSuppression()
+            },
+        )
         BedrudSheetActionRow(
             icon = Icons.Default.PersonAdd,
             title = stringResource(R.string.meeting_sheet_inviteFriend),
