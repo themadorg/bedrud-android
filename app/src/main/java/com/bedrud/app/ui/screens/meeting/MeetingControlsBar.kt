@@ -1,10 +1,14 @@
 package com.bedrud.app.ui.screens.meeting
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.offset
@@ -12,7 +16,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Chat
 import androidx.compose.material.icons.automirrored.filled.ScreenShare
@@ -20,7 +23,6 @@ import androidx.compose.material.icons.automirrored.filled.StopScreenShare
 import androidx.compose.material.icons.filled.CallEnd
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.MicOff
-import androidx.compose.material.icons.filled.MoreHoriz
 import androidx.compose.material.icons.filled.Videocam
 import androidx.compose.material.icons.filled.VideocamOff
 import androidx.compose.material3.Badge
@@ -30,18 +32,25 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import com.bedrud.app.R
+import com.bedrud.app.ui.theme.BedrudShapeTokens
+import com.bedrud.app.ui.theme.Dimens
+import com.bedrud.app.ui.theme.Elevation
 
+/**
+ * The floating in-call controls pill: camera, screen share, mic, chat and hang-up, with a drag
+ * handle on top. Tapping the handle — or swiping up anywhere on the bar — opens the more-options
+ * sheet, mirroring how a bottom sheet is pulled up. The sheet itself is owned by the caller.
+ */
 @Composable
 fun MeetingControlsBar(
     isMicEnabled: Boolean,
@@ -49,127 +58,126 @@ fun MeetingControlsBar(
     micHasError: Boolean = false,
     cameraHasError: Boolean = false,
     isScreenShareEnabled: Boolean,
-    isDeafened: Boolean,
     showChat: Boolean,
-    showParticipants: Boolean,
     unreadCount: Int,
-    isRoomSettingsAvailable: Boolean,
     onToggleMic: () -> Unit,
     onToggleCamera: () -> Unit,
-    onSwitchCamera: () -> Unit,
     onToggleScreenShare: () -> Unit,
     onToggleChat: () -> Unit,
-    onToggleParticipants: () -> Unit,
-    onCopyRoomLink: () -> Unit,
-    onToggleDeafen: () -> Unit,
-    onOpenAudioSettings: () -> Unit,
-    onOpenRoomSettings: () -> Unit,
+    onOpenMoreOptions: () -> Unit,
     onEndCall: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val colors = meetingChromeColors()
-    var showMoreMenu by remember { mutableStateOf(false) }
+    val swipeThresholdPx = with(LocalDensity.current) {
+        Dimens.meetingHandleSwipeThreshold.toPx()
+    }
 
     Surface(
-        modifier = modifier.navigationBarsPadding(),
-        shape = RoundedCornerShape(28.dp),
-        color = colors.bar,
-        shadowElevation = 4.dp,
-        tonalElevation = 2.dp,
-        border = androidx.compose.foundation.BorderStroke(1.dp, colors.divider),
-    ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            MeetMediaButton(
-                colors = colors,
-                enabled = isCameraEnabled,
-                hasError = cameraHasError,
-                onClick = onToggleCamera,
-                enabledIcon = Icons.Default.Videocam,
-                disabledIcon = Icons.Default.VideocamOff,
-                contentDescription = stringResource(R.string.meeting_contentDescription_toggleCamera),
-            )
-
-            MeetCircleButton(
-                colors = colors,
-                onClick = onToggleScreenShare,
-                icon = if (isScreenShareEnabled) Icons.AutoMirrored.Filled.StopScreenShare
-                else Icons.AutoMirrored.Filled.ScreenShare,
-                contentDescription = stringResource(R.string.meeting_contentDescription_toggleScreenShare),
-                containerColor = if (isScreenShareEnabled) colors.buttonActive else colors.button,
-            )
-
-            MeetMediaButton(
-                colors = colors,
-                enabled = isMicEnabled,
-                hasError = micHasError,
-                onClick = onToggleMic,
-                enabledIcon = Icons.Default.Mic,
-                disabledIcon = Icons.Default.MicOff,
-                contentDescription = stringResource(R.string.meeting_contentDescription_toggleMic),
-            )
-
-            MeetCircleButton(
-                colors = colors,
-                onClick = onToggleChat,
-                icon = Icons.AutoMirrored.Filled.Chat,
-                contentDescription = stringResource(R.string.meeting_contentDescription_toggleChat),
-                containerColor = if (showChat) colors.buttonActive else colors.button,
-                badge = if (unreadCount > 0) {
-                    if (unreadCount > 9) "9+" else unreadCount.toString()
-                } else {
-                    null
-                },
-            )
-
-            MeetCircleButton(
-                colors = colors,
-                onClick = { showMoreMenu = true },
-                icon = Icons.Default.MoreHoriz,
-                contentDescription = stringResource(R.string.meeting_contentDescription_moreOptions),
-                containerColor = if (showMoreMenu || showParticipants) {
-                    colors.buttonActive
-                } else {
-                    colors.button
-                },
-            )
-
-            if (showMoreMenu) {
-                MeetingMoreOptionsSheet(
-                    isCameraEnabled = isCameraEnabled,
-                    isDeafened = isDeafened,
-                    unreadCount = unreadCount,
-                    isRoomSettingsAvailable = isRoomSettingsAvailable,
-                    onDismiss = { showMoreMenu = false },
-                    onSwitchCamera = onSwitchCamera,
-                    onToggleChat = onToggleChat,
-                    onToggleParticipants = onToggleParticipants,
-                    onCopyRoomLink = onCopyRoomLink,
-                    onToggleDeafen = onToggleDeafen,
-                    onOpenAudioSettings = {
-                        showMoreMenu = false
-                        onOpenAudioSettings()
-                    },
-                    onOpenRoomSettings = {
-                        showMoreMenu = false
-                        onOpenRoomSettings()
+        modifier = modifier
+            .navigationBarsPadding()
+            .pointerInput(Unit) {
+                var dragTotal = 0f
+                detectVerticalDragGestures(
+                    onDragStart = { dragTotal = 0f },
+                    onVerticalDrag = { _, dragAmount -> dragTotal += dragAmount },
+                    onDragEnd = {
+                        if (dragTotal < -swipeThresholdPx) onOpenMoreOptions()
                     },
                 )
-            }
-
-            Box(
-                modifier = Modifier
-                    .padding(horizontal = 2.dp)
-                    .width(1.dp)
-                    .height(32.dp)
-                    .background(colors.divider),
+            },
+        shape = BedrudShapeTokens.controlsBar,
+        color = colors.bar,
+        shadowElevation = Elevation.controlsBarShadow,
+        tonalElevation = Elevation.controlsBarTonal,
+        border = androidx.compose.foundation.BorderStroke(Dimens.borderThin, colors.divider),
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            DragHandle(
+                color = colors.dragHandle,
+                onClick = onOpenMoreOptions,
             )
 
-            MeetEndCallButton(colors = colors, onClick = onEndCall)
+            Row(
+                modifier = Modifier.padding(
+                    start = Dimens.meetingBarPaddingH,
+                    end = Dimens.meetingBarPaddingH,
+                    bottom = Dimens.meetingBarPaddingV,
+                ),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(Dimens.meetingBarItemGap),
+            ) {
+                MeetMediaButton(
+                    colors = colors,
+                    enabled = isCameraEnabled,
+                    hasError = cameraHasError,
+                    onClick = onToggleCamera,
+                    enabledIcon = Icons.Default.Videocam,
+                    disabledIcon = Icons.Default.VideocamOff,
+                    contentDescription = stringResource(R.string.meeting_contentDescription_toggleCamera),
+                )
+
+                MeetCircleButton(
+                    colors = colors,
+                    onClick = onToggleScreenShare,
+                    icon = if (isScreenShareEnabled) Icons.AutoMirrored.Filled.StopScreenShare
+                    else Icons.AutoMirrored.Filled.ScreenShare,
+                    contentDescription = stringResource(R.string.meeting_contentDescription_toggleScreenShare),
+                    containerColor = if (isScreenShareEnabled) colors.buttonActive else colors.button,
+                )
+
+                MeetMediaButton(
+                    colors = colors,
+                    enabled = isMicEnabled,
+                    hasError = micHasError,
+                    onClick = onToggleMic,
+                    enabledIcon = Icons.Default.Mic,
+                    disabledIcon = Icons.Default.MicOff,
+                    contentDescription = stringResource(R.string.meeting_contentDescription_toggleMic),
+                )
+
+                MeetCircleButton(
+                    colors = colors,
+                    onClick = onToggleChat,
+                    icon = Icons.AutoMirrored.Filled.Chat,
+                    contentDescription = stringResource(R.string.meeting_contentDescription_toggleChat),
+                    containerColor = if (showChat) colors.buttonActive else colors.button,
+                    badge = if (unreadCount > 0) {
+                        if (unreadCount > 9) "9+" else unreadCount.toString()
+                    } else {
+                        null
+                    },
+                )
+
+                MeetEndCallButton(colors = colors, onClick = onEndCall)
+            }
         }
+    }
+}
+
+/**
+ * The pull-up affordance above the controls. Sized like the M3 sheet drag handle, wrapped in a
+ * larger clickable area so it is also a tap target, with the more-options semantics.
+ */
+@Composable
+private fun DragHandle(
+    color: Color,
+    onClick: () -> Unit,
+) {
+    val description = stringResource(R.string.meeting_contentDescription_moreOptions)
+    Box(
+        modifier = Modifier
+            .clickable(onClick = onClick)
+            .padding(horizontal = Dimens.space16, vertical = Dimens.space6)
+            .semantics { contentDescription = description },
+        contentAlignment = Alignment.Center,
+    ) {
+        Box(
+            modifier = Modifier
+                .width(Dimens.meetingHandleWidth)
+                .height(Dimens.meetingHandleHeight)
+                .background(color, CircleShape),
+        )
     }
 }
 
@@ -183,10 +191,15 @@ private fun MeetMediaButton(
     disabledIcon: ImageVector,
     contentDescription: String,
 ) {
-    Box(modifier = Modifier.size(width = 52.dp, height = 44.dp)) {
+    Box(
+        modifier = Modifier.size(
+            width = Dimens.meetingMediaButtonWidth,
+            height = Dimens.meetingMediaButtonHeight,
+        ),
+    ) {
         Surface(
             onClick = onClick,
-            shape = RoundedCornerShape(12.dp),
+            shape = BedrudShapeTokens.field,
             color = if (enabled) colors.button else colors.buttonMediaOff,
             modifier = Modifier.fillMaxSize(),
         ) {
@@ -195,7 +208,7 @@ private fun MeetMediaButton(
                     imageVector = if (enabled) enabledIcon else disabledIcon,
                     contentDescription = contentDescription,
                     tint = if (enabled) colors.onButton else colors.onButtonMediaOff,
-                    modifier = Modifier.size(22.dp),
+                    modifier = Modifier.size(Dimens.meetingBarIconMedia),
                 )
             }
         }
@@ -204,8 +217,8 @@ private fun MeetMediaButton(
             Box(
                 modifier = Modifier
                     .align(Alignment.TopEnd)
-                    .offset(x = 4.dp, y = (-4).dp)
-                    .size(16.dp)
+                    .offset(x = Dimens.space4, y = -Dimens.space4)
+                    .size(Dimens.iconXs)
                     .background(colors.warning, CircleShape),
                 contentAlignment = Alignment.Center,
             ) {
@@ -233,14 +246,14 @@ private fun MeetCircleButton(
             onClick = onClick,
             shape = CircleShape,
             color = containerColor,
-            modifier = Modifier.size(40.dp),
+            modifier = Modifier.size(Dimens.meetingCircleButton),
         ) {
             Box(contentAlignment = Alignment.Center) {
                 Icon(
                     imageVector = icon,
                     contentDescription = contentDescription,
                     tint = colors.onButton,
-                    modifier = Modifier.size(20.dp),
+                    modifier = Modifier.size(Dimens.meetingBarIconSm),
                 )
             }
         }
@@ -268,14 +281,14 @@ private fun MeetEndCallButton(
         onClick = onClick,
         shape = CircleShape,
         color = colors.endCall,
-        modifier = Modifier.size(52.dp),
+        modifier = Modifier.size(Dimens.meetingEndCallButton),
     ) {
         Box(contentAlignment = Alignment.Center) {
             Icon(
                 imageVector = Icons.Default.CallEnd,
                 contentDescription = stringResource(R.string.meeting_contentDescription_leaveCall),
                 tint = colors.onEndCall,
-                modifier = Modifier.size(24.dp),
+                modifier = Modifier.size(Dimens.meetingBarIconLg),
             )
         }
     }
