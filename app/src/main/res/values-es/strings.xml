@@ -319,10 +319,4 @@
   <string name="meeting_invite_qrDescription">Código QR del enlace de la sala</string>
   <string name="meeting_invite_appNotInstalled">Esa app no está instalada</string>
   <string name="common_hint_comingSoon">Próximamente</string>
-  <string name="meeting_sheet_chat">Chat</string>
-  <string name="meeting_sheet_settings">Ajustes</string>
-  <string name="meeting_sheet_addOthers">Añadir a otros</string>
-  <string name="meeting_sheet_flipCamera">Cambiar cámara</string>
-  <string name="meeting_contentDescription_participants">Participantes</string>
-  <string name="meeting_contentDescription_copyRoomLink">Copiar enlace de la sala</string>
 </resources>

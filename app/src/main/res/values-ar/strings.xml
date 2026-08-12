@@ -319,10 +319,4 @@
   <string name="meeting_invite_qrDescription">رمز QR لرابط الغرفة</string>
   <string name="meeting_invite_appNotInstalled">هذا التطبيق غير مثبّت</string>
   <string name="common_hint_comingSoon">قريبًا</string>
-  <string name="meeting_sheet_chat">الدردشة</string>
-  <string name="meeting_sheet_settings">الإعدادات</string>
-  <string name="meeting_sheet_addOthers">إضافة آخرين</string>
-  <string name="meeting_sheet_flipCamera">قلب الكاميرا</string>
-  <string name="meeting_contentDescription_participants">المشاركون</string>
-  <string name="meeting_contentDescription_copyRoomLink">نسخ رابط الغرفة</string>
 </resources>

@@ -316,10 +316,4 @@
   <string name="meeting_invite_qrDescription">کد QR پیوند اتاق</string>
   <string name="meeting_invite_appNotInstalled">این برنامه نصب نیست</string>
   <string name="common_hint_comingSoon">به‌زودی</string>
-  <string name="meeting_sheet_chat">گفتگو</string>
-  <string name="meeting_sheet_settings">تنظیمات صدا</string>
-  <string name="meeting_sheet_addOthers">افزودن دیگران</string>
-  <string name="meeting_sheet_flipCamera">چرخش دوربین</string>
-  <string name="meeting_contentDescription_participants">شرکت‌کنندگان</string>
-  <string name="meeting_contentDescription_copyRoomLink">کپی لینک اتاق</string>
 </resources>

@@ -319,10 +319,4 @@
   <string name="meeting_invite_qrDescription">Oda bağlantısı QR kodu</string>
   <string name="meeting_invite_appNotInstalled">Bu uygulama yüklü değil</string>
   <string name="common_hint_comingSoon">Çok yakında</string>
-  <string name="meeting_sheet_chat">Sohbet</string>
-  <string name="meeting_sheet_settings">Ayarlar</string>
-  <string name="meeting_sheet_addOthers">Başkalarını ekle</string>
-  <string name="meeting_sheet_flipCamera">Kamerayı çevir</string>
-  <string name="meeting_contentDescription_participants">Katılımcılar</string>
-  <string name="meeting_contentDescription_copyRoomLink">Oda bağlantısını kopyala</string>
 </resources>

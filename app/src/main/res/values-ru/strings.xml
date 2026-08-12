@@ -319,10 +319,4 @@
   <string name="meeting_invite_qrDescription">QR-код ссылки на комнату</string>
   <string name="meeting_invite_appNotInstalled">Это приложение не установлено</string>
   <string name="common_hint_comingSoon">Скоро</string>
-  <string name="meeting_sheet_chat">Чат</string>
-  <string name="meeting_sheet_settings">Настройки</string>
-  <string name="meeting_sheet_addOthers">Добавить других</string>
-  <string name="meeting_sheet_flipCamera">Переключить камеру</string>
-  <string name="meeting_contentDescription_participants">Участники</string>
-  <string name="meeting_contentDescription_copyRoomLink">Скопировать ссылку на комнату</string>
 </resources>

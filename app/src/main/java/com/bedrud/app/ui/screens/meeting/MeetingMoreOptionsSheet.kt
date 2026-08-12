@@ -2,113 +2,116 @@ package com.bedrud.app.ui.screens.meeting
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Chat
+import androidx.compose.material.icons.automirrored.filled.ScreenShare
+import androidx.compose.material.icons.automirrored.filled.StopScreenShare
 import androidx.compose.material.icons.automirrored.filled.VolumeOff
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
-import androidx.compose.material.icons.filled.Cameraswitch
+import androidx.compose.material.icons.filled.CallEnd
+import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.Headset
+import androidx.compose.material.icons.filled.Mic
+import androidx.compose.material.icons.filled.MicOff
 import androidx.compose.material.icons.filled.PersonAdd
-import androidx.compose.material.icons.filled.People
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Videocam
+import androidx.compose.material.icons.filled.VideocamOff
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
-import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
 import com.bedrud.app.R
-import com.bedrud.app.ui.theme.BedrudShapeTokens
+import com.bedrud.app.ui.components.BedrudSheetActionRow
+import com.bedrud.app.ui.components.DevHintBadge
+import com.bedrud.app.ui.components.DevOnly
+import com.bedrud.app.ui.theme.Dimens
 
-@OptIn(ExperimentalMaterial3Api::class)
+/**
+ * The pull-up options sheet behind the controls bar's drag handle. The call controls repeat along
+ * its top so pulling the bar up never takes them away, then the room-level options follow as
+ * standard sheet rows.
+ *
+ * Noise suppression ships as a dev-only "coming soon" row. TODO(#106): wire the selector once the
+ * suppression modes exist.
+ */
 @Composable
 fun MeetingMoreOptionsSheet(
+    isMicEnabled: Boolean,
     isCameraEnabled: Boolean,
-    isDeafened: Boolean,
+    isScreenShareEnabled: Boolean,
+    showChat: Boolean,
     unreadCount: Int,
+    isDeafened: Boolean,
+    hideAllIncomingVideo: Boolean,
     isRoomSettingsAvailable: Boolean,
-    onDismiss: () -> Unit,
-    onSwitchCamera: () -> Unit,
+    onToggleMic: () -> Unit,
+    onToggleCamera: () -> Unit,
+    onToggleScreenShare: () -> Unit,
     onToggleChat: () -> Unit,
-    onToggleParticipants: () -> Unit,
-    onCopyRoomLink: () -> Unit,
+    onEndCall: () -> Unit,
     onToggleDeafen: () -> Unit,
+    onToggleHideAllIncomingVideo: () -> Unit,
     onOpenAudioSettings: () -> Unit,
+    onOpenInvite: () -> Unit,
     onOpenRoomSettings: () -> Unit,
+    onDismiss: () -> Unit,
 ) {
     val colors = meetingChromeColors()
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
-    ModalBottomSheet(
-        onDismissRequest = onDismiss,
-        sheetState = sheetState,
-        containerColor = colors.sheet,
-    ) {
-        Column(
+    MeetingBottomSheet(onDismiss = onDismiss) {
+        // The call controls, mirrored from the bar
+        Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .navigationBarsPadding()
-                .padding(horizontal = 20.dp)
-                .padding(bottom = 24.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+                .padding(bottom = Dimens.space8),
+            horizontalArrangement = Arrangement.spacedBy(
+                Dimens.space16,
+                Alignment.CenterHorizontally,
+            ),
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterHorizontally),
-            ) {
-                if (isCameraEnabled) {
-                    SheetCircleAction(
-                        colors = colors,
-                        icon = Icons.Default.Cameraswitch,
-                        contentDescription = stringResource(R.string.meeting_contentDescription_switchCamera),
-                        onClick = {
-                            onSwitchCamera()
-                            onDismiss()
-                        },
-                    )
-                }
-                SheetCircleAction(
-                    colors = colors,
-                    icon = Icons.Default.People,
-                    contentDescription = stringResource(R.string.meeting_contentDescription_participants),
-                    onClick = {
-                        onToggleParticipants()
-                        onDismiss()
-                    },
-                )
-                SheetCircleAction(
-                    colors = colors,
-                    icon = Icons.Default.PersonAdd,
-                    contentDescription = stringResource(R.string.meeting_contentDescription_copyRoomLink),
-                    onClick = {
-                        onCopyRoomLink()
-                        onDismiss()
-                    },
-                )
-            }
-
-            SheetLabeledButton(
+            SheetCircleAction(
+                colors = colors,
+                icon = if (isCameraEnabled) Icons.Default.Videocam else Icons.Default.VideocamOff,
+                contentDescription = stringResource(R.string.meeting_contentDescription_toggleCamera),
+                containerColor = if (isCameraEnabled) colors.button else colors.buttonMediaOff,
+                tint = if (isCameraEnabled) colors.onButton else colors.onButtonMediaOff,
+                onClick = onToggleCamera,
+            )
+            SheetCircleAction(
+                colors = colors,
+                icon = if (isScreenShareEnabled) Icons.AutoMirrored.Filled.StopScreenShare
+                else Icons.AutoMirrored.Filled.ScreenShare,
+                contentDescription = stringResource(R.string.meeting_contentDescription_toggleScreenShare),
+                containerColor = if (isScreenShareEnabled) colors.buttonActive else colors.button,
+                onClick = onToggleScreenShare,
+            )
+            SheetCircleAction(
+                colors = colors,
+                icon = if (isMicEnabled) Icons.Default.Mic else Icons.Default.MicOff,
+                contentDescription = stringResource(R.string.meeting_contentDescription_toggleMic),
+                containerColor = if (isMicEnabled) colors.button else colors.buttonMediaOff,
+                tint = if (isMicEnabled) colors.onButton else colors.onButtonMediaOff,
+                onClick = onToggleMic,
+            )
+            SheetCircleAction(
                 colors = colors,
                 icon = Icons.AutoMirrored.Filled.Chat,
-                label = stringResource(R.string.meeting_sheet_chat),
+                contentDescription = stringResource(R.string.meeting_contentDescription_toggleChat),
+                containerColor = if (showChat) colors.buttonActive else colors.button,
                 badge = if (unreadCount > 0) {
                     if (unreadCount > 9) "9+" else unreadCount.toString()
                 } else {
@@ -118,44 +121,83 @@ fun MeetingMoreOptionsSheet(
                     onToggleChat()
                     onDismiss()
                 },
-                modifier = Modifier.fillMaxWidth(),
             )
-
-            SheetLabeledButton(
+            SheetCircleAction(
                 colors = colors,
-                icon = if (isDeafened) Icons.AutoMirrored.Filled.VolumeOff else Icons.AutoMirrored.Filled.VolumeUp,
-                label = stringResource(R.string.meeting_sheet_deafen),
-                active = isDeafened,
-                onClick = {
-                    onToggleDeafen()
-                    onDismiss()
-                },
-                modifier = Modifier.fillMaxWidth(),
-            )
-
-            SheetLabeledButton(
-                colors = colors,
-                icon = Icons.Default.Headset,
-                label = stringResource(R.string.meeting_sheet_settings),
+                icon = Icons.Default.CallEnd,
+                contentDescription = stringResource(R.string.meeting_contentDescription_leaveCall),
+                containerColor = colors.endCall,
+                tint = colors.onEndCall,
                 onClick = {
                     onDismiss()
-                    onOpenAudioSettings()
+                    onEndCall()
                 },
-                modifier = Modifier.fillMaxWidth(),
             )
+        }
 
-            if (isRoomSettingsAvailable) {
-                SheetLabeledButton(
-                    colors = colors,
-                    icon = Icons.Default.Settings,
-                    label = stringResource(R.string.meeting_sheet_roomSettings),
-                    onClick = {
-                        onDismiss()
-                        onOpenRoomSettings()
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                )
-            }
+        HorizontalDivider(color = colors.divider)
+
+        BedrudSheetActionRow(
+            icon = if (isDeafened) Icons.AutoMirrored.Filled.VolumeOff
+            else Icons.AutoMirrored.Filled.VolumeUp,
+            title = stringResource(R.string.meeting_sheet_deafen),
+            contentColor = if (isDeafened) colors.selected else colors.onButton,
+            onClick = {
+                onToggleDeafen()
+                onDismiss()
+            },
+        )
+        BedrudSheetActionRow(
+            icon = if (hideAllIncomingVideo) Icons.Default.Videocam else Icons.Default.VideocamOff,
+            title = stringResource(
+                if (hideAllIncomingVideo) R.string.meeting_sheet_showAllCameras
+                else R.string.meeting_sheet_disableAllCameras
+            ),
+            supportingText = stringResource(R.string.meeting_sheet_disableAllCamerasDescription),
+            contentColor = if (hideAllIncomingVideo) colors.selected else colors.onButton,
+            supportingColor = colors.onButtonVariant,
+            onClick = {
+                onToggleHideAllIncomingVideo()
+                onDismiss()
+            },
+        )
+        BedrudSheetActionRow(
+            icon = Icons.Default.Headset,
+            title = stringResource(R.string.meeting_sheet_audioSettings),
+            contentColor = colors.onButton,
+            onClick = {
+                onDismiss()
+                onOpenAudioSettings()
+            },
+        )
+        DevOnly {
+            BedrudSheetActionRow(
+                icon = Icons.Default.GraphicEq,
+                title = stringResource(R.string.meeting_sheet_noiseSuppression),
+                contentColor = colors.onButton,
+                trailing = { DevHintBadge(stringResource(R.string.common_hint_comingSoon)) },
+                onClick = {},
+            )
+        }
+        BedrudSheetActionRow(
+            icon = Icons.Default.PersonAdd,
+            title = stringResource(R.string.meeting_sheet_inviteFriend),
+            contentColor = colors.onButton,
+            onClick = {
+                onDismiss()
+                onOpenInvite()
+            },
+        )
+        if (isRoomSettingsAvailable) {
+            BedrudSheetActionRow(
+                icon = Icons.Default.Settings,
+                title = stringResource(R.string.meeting_sheet_roomSettings),
+                contentColor = colors.onButton,
+                onClick = {
+                    onDismiss()
+                    onOpenRoomSettings()
+                },
+            )
         }
     }
 }
@@ -166,74 +208,30 @@ private fun SheetCircleAction(
     icon: ImageVector,
     contentDescription: String,
     onClick: () -> Unit,
-) {
-    Surface(
-        onClick = onClick,
-        shape = CircleShape,
-        color = colors.button,
-        modifier = Modifier.size(64.dp),
-    ) {
-        Box(contentAlignment = Alignment.Center) {
-            Icon(
-                imageVector = icon,
-                contentDescription = contentDescription,
-                tint = colors.onButton,
-                modifier = Modifier.size(28.dp),
-            )
-        }
-    }
-}
-
-@Composable
-private fun SheetLabeledButton(
-    colors: MeetingChromeColors,
-    icon: ImageVector,
-    label: String,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
+    containerColor: Color = colors.button,
+    tint: Color = colors.onButton,
     badge: String? = null,
-    enabled: Boolean = true,
-    active: Boolean = false,
 ) {
-    Surface(
-        onClick = onClick,
-        enabled = enabled,
-        shape = BedrudShapeTokens.card,
-        color = if (active) colors.buttonActive else colors.button,
-        modifier = modifier.height(72.dp),
-    ) {
-        Column(
-            modifier = Modifier.padding(horizontal = 8.dp, vertical = 10.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center,
+    val button = @Composable {
+        Surface(
+            onClick = onClick,
+            shape = CircleShape,
+            color = containerColor,
+            modifier = Modifier.size(Dimens.inviteTargetSize),
         ) {
-            if (badge != null) {
-                BadgedBox(
-                    badge = { Badge { Text(badge) } },
-                ) {
-                    Icon(
-                        imageVector = icon,
-                        contentDescription = null,
-                        tint = colors.onButton,
-                        modifier = Modifier.size(22.dp),
-                    )
-                }
-            } else {
+            Box(contentAlignment = Alignment.Center) {
                 Icon(
                     imageVector = icon,
-                    contentDescription = null,
-                    tint = if (enabled) colors.onButton else colors.onButtonVariant,
-                    modifier = Modifier.size(22.dp),
+                    contentDescription = contentDescription,
+                    tint = tint,
+                    modifier = Modifier.size(Dimens.iconMd),
                 )
             }
-            Text(
-                text = label,
-                color = if (enabled) colors.onButton else colors.onButtonVariant,
-                style = MaterialTheme.typography.labelMedium,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.padding(top = 6.dp),
-            )
         }
+    }
+    if (badge != null) {
+        BadgedBox(badge = { Badge { Text(badge) } }) { button() }
+    } else {
+        button()
     }
 }

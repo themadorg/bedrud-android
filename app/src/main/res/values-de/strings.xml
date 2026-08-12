@@ -319,10 +319,4 @@
   <string name="meeting_invite_qrDescription">QR-Code des Raumlinks</string>
   <string name="meeting_invite_appNotInstalled">Diese App ist nicht installiert</string>
   <string name="common_hint_comingSoon">Bald verfügbar</string>
-  <string name="meeting_sheet_chat">Chat</string>
-  <string name="meeting_sheet_settings">Einstellungen</string>
-  <string name="meeting_sheet_addOthers">Andere hinzufügen</string>
-  <string name="meeting_sheet_flipCamera">Kamera wechseln</string>
-  <string name="meeting_contentDescription_participants">Teilnehmer</string>
-  <string name="meeting_contentDescription_copyRoomLink">Raum-Link kopieren</string>
 </resources>

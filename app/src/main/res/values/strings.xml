@@ -326,10 +326,4 @@
   <string name="common_hint_comingSoon">Coming soon</string>
   <string name="meeting_invite_telegram" translatable="false">Telegram</string>
   <string name="meeting_invite_whatsapp" translatable="false">WhatsApp</string>
-  <string name="meeting_sheet_chat">Chat</string>
-  <string name="meeting_sheet_settings">Audio Settings</string>
-  <string name="meeting_sheet_addOthers">Add others</string>
-  <string name="meeting_sheet_flipCamera">Flip camera</string>
-  <string name="meeting_contentDescription_participants">Participants</string>
-  <string name="meeting_contentDescription_copyRoomLink">Copy room link</string>
 </resources>

@@ -1,6 +1,7 @@
 package com.bedrud.app.ui.screens.meeting
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -47,6 +48,7 @@ fun MeetingTopBar(
     onInvite: () -> Unit,
     onSwitchCamera: () -> Unit,
     onOpenAudioOutput: () -> Unit,
+    onRecordingClick: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val colors = meetingChromeColors()
@@ -87,7 +89,7 @@ fun MeetingTopBar(
             // Recording indicator — dev-gated placeholder until the server exposes recording
             // state. TODO(#107): drive from real room recording state and drop the gate.
             DevOnly {
-                RecordingDot()
+                RecordingDot(onClick = onRecordingClick)
             }
             if (connectionState == ConnectionState.RECONNECTING) {
                 ReconnectingDot()
@@ -121,15 +123,22 @@ fun MeetingTopBar(
 }
 
 @Composable
-private fun RecordingDot() {
+private fun RecordingDot(onClick: () -> Unit) {
     val description = stringResource(R.string.meeting_contentDescription_recording)
     Box(
         modifier = Modifier
-            .size(Dimens.meetingIndicatorDot)
             .clip(CircleShape)
-            .background(MaterialTheme.colorScheme.error)
-            .semantics { contentDescription = description },
-    )
+            .clickable(onClick = onClick)
+            .padding(Dimens.space4),
+    ) {
+        Box(
+            modifier = Modifier
+                .size(Dimens.meetingIndicatorDot)
+                .clip(CircleShape)
+                .background(MaterialTheme.colorScheme.error)
+                .semantics { contentDescription = description },
+        )
+    }
 }
 
 @Composable

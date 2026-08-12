@@ -319,10 +319,4 @@
   <string name="meeting_invite_qrDescription">房间链接二维码</string>
   <string name="meeting_invite_appNotInstalled">未安装该应用</string>
   <string name="common_hint_comingSoon">即将推出</string>
-  <string name="meeting_sheet_chat">聊天</string>
-  <string name="meeting_sheet_settings">设置</string>
-  <string name="meeting_sheet_addOthers">添加其他人</string>
-  <string name="meeting_sheet_flipCamera">翻转摄像头</string>
-  <string name="meeting_contentDescription_participants">参与者</string>
-  <string name="meeting_contentDescription_copyRoomLink">复制房间链接</string>
 </resources>
