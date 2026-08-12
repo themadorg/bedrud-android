@@ -8,11 +8,15 @@ import android.util.Log
 import androidx.annotation.StringRes
 import androidx.core.app.NotificationCompat
 import com.bedrud.app.R
+import com.bedrud.app.core.audio.MeetingInputMode
+import com.bedrud.app.core.audio.NoiseSuppressionMode
+import com.bedrud.app.core.audio.VoiceGateProcessor
 import com.bedrud.app.core.call.CallConnectionService
 import com.bedrud.app.core.meeting.chat.ChatWire
 import com.bedrud.app.core.registerNotificationChannel
 import com.bedrud.app.ui.screens.settings.SettingsStore
 import io.livekit.android.AudioOptions
+import io.livekit.android.audio.AudioProcessorOptions
 import io.livekit.android.LiveKit
 import io.livekit.android.LiveKitOverrides
 import io.livekit.android.events.RoomEvent
@@ -132,6 +136,22 @@ class RoomManager(
     private val _watchedStreamIdentity = MutableStateFlow<String?>(null)
     val watchedStreamIdentity: StateFlow<String?> = _watchedStreamIdentity.asStateFlow()
 
+    // Input mode (voice activity / push-to-talk) with its manual voice gate. The gate object is
+    // handed to LiveKit at connect and reconfigured in place afterwards.
+    private val voiceGate = VoiceGateProcessor()
+    private val _inputMode = MutableStateFlow(settingsStore.getInputMode())
+    val inputMode: StateFlow<MeetingInputMode> = _inputMode.asStateFlow()
+    private val _autoSensitivity = MutableStateFlow(settingsStore.getAutoSensitivity())
+    val autoSensitivity: StateFlow<Boolean> = _autoSensitivity.asStateFlow()
+    private val _voiceSensitivity = MutableStateFlow(settingsStore.getVoiceSensitivity())
+    val voiceSensitivity: StateFlow<Float> = _voiceSensitivity.asStateFlow()
+
+    private fun syncVoiceGate() {
+        voiceGate.sensitivity = _voiceSensitivity.value
+        voiceGate.gateEnabled =
+            _inputMode.value == MeetingInputMode.VOICE_ACTIVITY && !_autoSensitivity.value
+    }
+
     suspend fun connectIfNeeded(
         url: String,
         token: String,
@@ -156,11 +176,20 @@ class RoomManager(
             val audioHandler = CallAudioSwitch(application)
             _audioHandler = audioHandler
 
+            syncVoiceGate()
+            val useDeviceNoiseSuppression =
+                settingsStore.getNoiseSuppression() == NoiseSuppressionMode.DEVICE
             val room = LiveKit.create(
                 application,
                 overrides = LiveKitOverrides(
                     audioOptions = AudioOptions(
                         audioHandler = audioHandler,
+                        javaAudioDeviceModuleCustomizer = { builder ->
+                            builder.setUseHardwareNoiseSuppressor(useDeviceNoiseSuppression)
+                        },
+                        audioProcessorOptions = AudioProcessorOptions(
+                            capturePostProcessor = voiceGate,
+                        ),
                     ),
                 ),
             )
@@ -186,7 +215,8 @@ class RoomManager(
             // on a fresh install); camera stays off until the user turns it on. A silent
             // non-publish only flags micMediaError here — no banner during connect.
             setTrackEnabled(
-                enabled = settingsStore.getMicEnabled(),
+                enabled = settingsStore.getMicEnabled() &&
+                    _inputMode.value != MeetingInputMode.PUSH_TO_TALK,
                 label = "microphone",
                 deviceErrorRes = R.string.meeting_error_microphoneFailed,
                 stateFlow = _isMicEnabled,
@@ -436,6 +466,55 @@ class RoomManager(
 
     suspend fun toggleMicrophone() {
         setMicrophoneEnabled(!_isMicEnabled.value)
+    }
+
+    /**
+     * Push-to-talk transmit state: enables the mic only while held, without touching the user's
+     * persisted mic preference. Ignored outside push-to-talk mode.
+     */
+    suspend fun setPushToTalkTransmitting(active: Boolean) {
+        if (_inputMode.value != MeetingInputMode.PUSH_TO_TALK) return
+        val localParticipant = _room?.localParticipant ?: return
+        if (active && _isDeafened.value) {
+            _isDeafened.value = false
+            settingsStore.setDeafened(false)
+            reapplyAllVolumes()
+        }
+        setTrackEnabled(
+            enabled = active,
+            label = "microphone",
+            deviceErrorRes = R.string.meeting_error_microphoneFailed,
+            stateFlow = _isMicEnabled,
+            errorFlow = _micMediaError,
+            sync = ::syncMicrophoneState,
+            setEnabled = { localParticipant.setMicrophoneEnabled(it) },
+            onApplied = { CallConnectionService.updateMuteState(!it) },
+        )
+    }
+
+    /** Switch input modes: push-to-talk holds the mic closed until pressed, voice activity restores the persisted mic state. */
+    suspend fun setInputMode(mode: MeetingInputMode) {
+        if (_inputMode.value == mode) return
+        settingsStore.setInputMode(mode)
+        _inputMode.value = mode
+        syncVoiceGate()
+        when (mode) {
+            MeetingInputMode.PUSH_TO_TALK -> setPushToTalkTransmitting(false)
+            MeetingInputMode.VOICE_ACTIVITY -> setMicrophoneEnabled(settingsStore.getMicEnabled())
+        }
+    }
+
+    fun setAutoSensitivity(value: Boolean) {
+        settingsStore.setAutoSensitivity(value)
+        _autoSensitivity.value = value
+        syncVoiceGate()
+    }
+
+    fun setVoiceSensitivity(value: Float) {
+        val clamped = value.coerceIn(0f, 1f)
+        settingsStore.setVoiceSensitivity(clamped)
+        _voiceSensitivity.value = clamped
+        syncVoiceGate()
     }
 
     suspend fun toggleDeafen() {
