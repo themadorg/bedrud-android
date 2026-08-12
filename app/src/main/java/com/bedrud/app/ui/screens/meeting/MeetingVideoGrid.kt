@@ -40,7 +40,6 @@ import com.bedrud.app.core.livekit.RoomManager
 import com.bedrud.app.ui.components.InitialsAvatar
 import com.bedrud.app.ui.theme.BedrudShapeTokens
 import com.bedrud.app.ui.theme.Dimens
-import io.livekit.android.compose.ui.ScaleType
 import io.livekit.android.compose.ui.VideoTrackView
 import io.livekit.android.room.Room
 import io.livekit.android.room.participant.Participant
@@ -73,7 +72,6 @@ fun MeetingVideoGrid(
     tiles: List<Participant>,
     room: Room,
     localIdentity: String?,
-    stageScreenShareIdentity: String?,
     disabledVideoIdentities: Set<String>,
     hideAllIncomingVideo: Boolean,
     mutedIdentities: Set<String>,
@@ -99,7 +97,6 @@ fun MeetingVideoGrid(
                     participant = participant,
                     isLocalParticipant = participant.identity?.value == localIdentity,
                     room = room,
-                    stageScreenShareIdentity = stageScreenShareIdentity,
                     disabledVideoIdentities = disabledVideoIdentities,
                     hideAllIncomingVideo = hideAllIncomingVideo,
                     mutedIdentities = mutedIdentities,
@@ -196,7 +193,6 @@ internal fun ParticipantTile(
     participant: Participant,
     isLocalParticipant: Boolean = false,
     room: Room? = null,
-    stageScreenShareIdentity: String? = null,
     disabledVideoIdentities: Set<String> = emptySet(),
     hideAllIncomingVideo: Boolean = false,
     mutedIdentities: Set<String> = emptySet(),
@@ -209,12 +205,6 @@ internal fun ParticipantTile(
     val isVideoLocallyDisabled =
         identity in disabledVideoIdentities || (!isLocalParticipant && hideAllIncomingVideo)
     val isLocallyMuted = identity in mutedIdentities
-
-    val screenShareRef = if (identity != stageScreenShareIdentity) {
-        resolveParticipantScreenShare(participant)
-    } else {
-        null
-    }
 
     val cameraPublication = participant.getTrackPublication(Track.Source.CAMERA)
     val cameraTrack = cameraPublication
@@ -252,15 +242,6 @@ internal fun ParticipantTile(
         contentAlignment = Alignment.Center
     ) {
         when {
-            screenShareRef != null && screenShareRef.isRenderable && room != null -> {
-                VideoTrackView(
-                    trackReference = screenShareRef.trackReference,
-                    modifier = Modifier.fillMaxSize(),
-                    room = room,
-                    mirror = false,
-                    scaleType = ScaleType.FitInside,
-                )
-            }
             cameraTrack != null && !isCameraMuted && !isVideoLocallyDisabled && room != null -> {
                 VideoTrackView(
                     videoTrack = cameraTrack,

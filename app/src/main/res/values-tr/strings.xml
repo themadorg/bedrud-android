@@ -318,9 +318,4 @@
   <string name="meeting_stream_leave">Yayından ayrıl</string>
   <string name="meeting_stream_youArePresenting">Sunum yapıyorsunuz</string>
   <string name="meeting_stream_stop">Paylaşımı durdur</string>
-  <string name="meeting_error_alreadyPresenting"><xliff:g id="name" example="Alex">%1$s</xliff:g> zaten sunum yapıyor</string>
-  <string name="meeting_stage_screenShareTitle">Ekran paylaşımı</string>
-  <string name="meeting_contentDescription_maximizeScreenShare">Tam ekran</string>
-  <string name="meeting_contentDescription_minimizeScreenShare">Tam ekrandan çık</string>
-  <string name="meeting_contentDescription_stopScreenShare">Ekran paylaşımını durdur</string>
 </resources>

@@ -110,7 +110,6 @@ import com.bedrud.app.core.livekit.ChatMessage
 import com.bedrud.app.core.livekit.ConnectionState
 import com.bedrud.app.core.livekit.RoomManager
 import com.bedrud.app.core.meeting.chat.ChatWire
-import com.bedrud.app.core.meeting.stage.StageWire
 import com.bedrud.app.core.pip.PipStateHolder
 import com.bedrud.app.models.JoinRoomRequest
 import com.bedrud.app.models.JoinRoomResponse
@@ -174,7 +173,7 @@ fun MeetingScreen(
     val wasKicked by roomManager.wasKicked.collectAsState()
 
     val participantVersion by roomManager.participantVersion.collectAsState()
-    val activeStage by roomManager.activeStage.collectAsState()
+    val watchedStreamIdentity by roomManager.watchedStreamIdentity.collectAsState()
     val chatMessages by roomManager.chatMessages.collectAsState()
     var showChat by remember { mutableStateOf(false) }
     var showInviteSheet by remember { mutableStateOf(false) }
@@ -182,6 +181,8 @@ fun MeetingScreen(
 
     // Long-pressing a tile opens the participant sheet for that identity
     var participantSheetIdentity by remember { mutableStateOf<String?>(null) }
+    // Long-pressing the watched stream opens its sheet
+    var streamSheetIdentity by remember { mutableStateOf<String?>(null) }
     // Viewer-side "hide all cameras" (data saver) from the more-options sheet
     var hideAllIncomingVideo by remember { mutableStateOf(false) }
     // Pinned participant leads the grid ordering
@@ -214,17 +215,10 @@ fun MeetingScreen(
     var showAudioSheet by remember { mutableStateOf(false) }
     var showRoomSettingsSheet by remember { mutableStateOf(false) }
     var showMoreOptionsSheet by remember { mutableStateOf(false) }
-    var isScreenShareFullscreen by rememberSaveable { mutableStateOf(false) }
 
     // Per-tile fullscreen: which participant fills the screen, and whether its chrome is showing
     var fullscreenParticipantIdentity by rememberSaveable { mutableStateOf<String?>(null) }
     var fullscreenChromeVisible by remember { mutableStateOf(true) }
-
-    LaunchedEffect(activeStage?.kind) {
-        if (activeStage?.kind != StageWire.KIND_SCREENSHARE) {
-            isScreenShareFullscreen = false
-        }
-    }
 
     var roomInfo by remember { mutableStateOf<JoinRoomResponse?>(null) }
     var isJoining by remember { mutableStateOf(true) }
@@ -416,16 +410,11 @@ fun MeetingScreen(
                     val audioState = rememberMeetingAudioState(roomManager.audioHandler)
 
                     val localIdentity = room.localParticipant.identity?.value
-                    val stageScreenShareIdentity = if (activeStage?.kind == StageWire.KIND_SCREENSHARE) {
-                        activeStage?.ownerIdentity
-                    } else {
-                        null
-                    }
 
                     if (isInPipMode) {
-                        val pipStage = activeStage?.takeIf { it.kind == StageWire.KIND_SCREENSHARE }
-                        val pipParticipant = if (pipStage != null) {
-                            participants.find { it.identity?.value == pipStage.ownerIdentity }
+                        val pipWatchedIdentity = watchedStreamIdentity
+                        val pipParticipant = if (pipWatchedIdentity != null) {
+                            participants.find { it.identity?.value == pipWatchedIdentity }
                         } else {
                             participants.firstOrNull {
                                 it.identity != room.localParticipant.identity
@@ -454,7 +443,7 @@ fun MeetingScreen(
                                     pipParticipant.identity?.value in locallyHiddenVideoIdentities
 
                                 val pipTrack = when {
-                                    pipStage != null && screenShareTrack != null && !isScreenShareMuted ->
+                                    pipWatchedIdentity != null && screenShareTrack != null && !isScreenShareMuted ->
                                         screenShareTrack
                                     cameraTrack != null && !isCameraMuted && !isPipVideoLocallyDisabled -> cameraTrack
                                     else -> null
@@ -510,17 +499,34 @@ fun MeetingScreen(
                                     )
                                 }
 
-                                val screenShareStage = activeStage?.takeIf { it.kind == StageWire.KIND_SCREENSHARE }
-                                if (screenShareStage != null && !isScreenShareFullscreen) {
-                                    MeetingScreenShareStage(
-                                        stage = screenShareStage,
+                                // Every live screenshare gets its own strip tile; watching is
+                                // opt-in per viewer, one stream at a time.
+                                val streamParticipants = remember(participantVersion) {
+                                    participants.filter {
+                                        it.getTrackPublication(Track.Source.SCREEN_SHARE) != null
+                                    }
+                                }
+                                streamParticipants.forEach { presenter ->
+                                    val presenterIdentity = presenter.identity?.value
+                                    MeetingStreamTile(
+                                        participant = presenter,
+                                        isLocal = presenterIdentity == localIdentity,
+                                        isWatched = presenterIdentity == watchedStreamIdentity,
                                         room = room,
                                         participantVersion = participantVersion,
-                                        isOwner = screenShareStage.ownerIdentity == localIdentity,
-                                        onStop = {
+                                        onWatch = { roomManager.watchStream(presenterIdentity) },
+                                        onExpand = {
+                                            if (presenterIdentity != null) {
+                                                fullscreenParticipantIdentity = presenterIdentity
+                                                fullscreenChromeVisible = true
+                                            }
+                                        },
+                                        onOpenStreamSheet = {
+                                            streamSheetIdentity = presenterIdentity
+                                        },
+                                        onStopShare = {
                                             scope.launch { roomManager.stopScreenShare() }
                                         },
-                                        onMaximize = { isScreenShareFullscreen = true },
                                         modifier = Modifier
                                             .fillMaxWidth()
                                             .padding(horizontal = Dimens.space8)
@@ -568,7 +574,6 @@ fun MeetingScreen(
                                         tiles = gridTiles,
                                         room = room,
                                         localIdentity = localIdentity,
-                                        stageScreenShareIdentity = stageScreenShareIdentity,
                                         disabledVideoIdentities = locallyHiddenVideoIdentities,
                                         hideAllIncomingVideo = hideAllIncomingVideo,
                                         mutedIdentities = locallyMutedIdentities,
@@ -768,6 +773,22 @@ fun MeetingScreen(
                                 }
                             }
 
+                            streamSheetIdentity?.let { sheetIdentity ->
+                                val presenter = participants.find {
+                                    it.identity?.value == sheetIdentity
+                                }
+                                if (presenter == null) {
+                                    streamSheetIdentity = null
+                                } else {
+                                    MeetingStreamSheet(
+                                        presenterName = presenter.name?.ifBlank { sheetIdentity }
+                                            ?: sheetIdentity,
+                                        onLeaveStream = { roomManager.watchStream(null) },
+                                        onDismiss = { streamSheetIdentity = null },
+                                    )
+                                }
+                            }
+
                             if (showInviteSheet) {
                                 val inviteParticipants = remember(participantVersion) {
                                     participants.map { participant ->
@@ -879,23 +900,6 @@ fun MeetingScreen(
                                 )
                             }
 
-                            val fullscreenStage = activeStage?.takeIf { it.kind == StageWire.KIND_SCREENSHARE }
-                            if (isScreenShareFullscreen && fullscreenStage != null) {
-                                MeetingScreenShareFullscreen(
-                                    stage = fullscreenStage,
-                                    room = room,
-                                    participantVersion = participantVersion,
-                                    isOwner = fullscreenStage.ownerIdentity == localIdentity,
-                                    onMinimize = { isScreenShareFullscreen = false },
-                                    onStop = {
-                                        isScreenShareFullscreen = false
-                                        scope.launch { roomManager.stopScreenShare() }
-                                    },
-                                    modifier = Modifier
-                                        .fillMaxSize()
-                                        .zIndex(6f),
-                                )
-                            }
                         }
                     }
                 }

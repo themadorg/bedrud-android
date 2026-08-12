@@ -318,9 +318,4 @@
   <string name="meeting_stream_leave">ストリームから退出</string>
   <string name="meeting_stream_youArePresenting">画面を共有中です</string>
   <string name="meeting_stream_stop">共有を停止</string>
-  <string name="meeting_error_alreadyPresenting"><xliff:g id="name" example="Alex">%1$s</xliff:g>さんがすでに発表しています</string>
-  <string name="meeting_stage_screenShareTitle">画面共有</string>
-  <string name="meeting_contentDescription_maximizeScreenShare">全画面</string>
-  <string name="meeting_contentDescription_minimizeScreenShare">全画面を終了</string>
-  <string name="meeting_contentDescription_stopScreenShare">画面共有を停止</string>
 </resources>

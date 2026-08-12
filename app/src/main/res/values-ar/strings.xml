@@ -318,9 +318,4 @@
   <string name="meeting_stream_leave">مغادرة البث</string>
   <string name="meeting_stream_youArePresenting">أنت تعرض الآن</string>
   <string name="meeting_stream_stop">إيقاف المشاركة</string>
-  <string name="meeting_error_alreadyPresenting"><xliff:g id="name" example="Alex">%1$s</xliff:g> يعرض بالفعل</string>
-  <string name="meeting_stage_screenShareTitle">مشاركة الشاشة</string>
-  <string name="meeting_contentDescription_maximizeScreenShare">ملء الشاشة</string>
-  <string name="meeting_contentDescription_minimizeScreenShare">الخروج من ملء الشاشة</string>
-  <string name="meeting_contentDescription_stopScreenShare">إيقاف مشاركة الشاشة</string>
 </resources>

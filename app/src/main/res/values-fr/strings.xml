@@ -318,9 +318,4 @@
   <string name="meeting_stream_leave">Quitter le flux</string>
   <string name="meeting_stream_youArePresenting">Vous présentez</string>
   <string name="meeting_stream_stop">Arrêter le partage</string>
-  <string name="meeting_error_alreadyPresenting"><xliff:g id="name" example="Alex">%1$s</xliff:g> présente déjà</string>
-  <string name="meeting_stage_screenShareTitle">Partage d\'écran</string>
-  <string name="meeting_contentDescription_maximizeScreenShare">Plein écran</string>
-  <string name="meeting_contentDescription_minimizeScreenShare">Quitter le plein écran</string>
-  <string name="meeting_contentDescription_stopScreenShare">Arrêter le partage d\'écran</string>
 </resources>

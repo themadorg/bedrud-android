@@ -318,9 +318,4 @@
   <string name="meeting_stream_leave">退出观看</string>
   <string name="meeting_stream_youArePresenting">你正在共享</string>
   <string name="meeting_stream_stop">停止共享</string>
-  <string name="meeting_error_alreadyPresenting"><xliff:g id="name" example="Alex">%1$s</xliff:g> 正在演示</string>
-  <string name="meeting_stage_screenShareTitle">屏幕共享</string>
-  <string name="meeting_contentDescription_maximizeScreenShare">全屏</string>
-  <string name="meeting_contentDescription_minimizeScreenShare">退出全屏</string>
-  <string name="meeting_contentDescription_stopScreenShare">停止屏幕共享</string>
 </resources>

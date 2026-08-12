@@ -315,9 +315,4 @@
   <string name="meeting_stream_leave">خروج از پخش</string>
   <string name="meeting_stream_youArePresenting">در حال ارائه هستید</string>
   <string name="meeting_stream_stop">توقف اشتراک‌گذاری</string>
-  <string name="meeting_error_alreadyPresenting"><xliff:g id="name" example="Alex">%1$s</xliff:g> در حال ارائه است</string>
-  <string name="meeting_stage_screenShareTitle">اشتراک‌گذاری صفحه</string>
-  <string name="meeting_contentDescription_maximizeScreenShare">تمام‌صفحه</string>
-  <string name="meeting_contentDescription_minimizeScreenShare">خروج از تمام‌صفحه</string>
-  <string name="meeting_contentDescription_stopScreenShare">توقف اشتراک‌گذاری صفحه</string>
 </resources>
