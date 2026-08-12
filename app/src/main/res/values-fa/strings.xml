@@ -221,10 +221,6 @@
   <string name="profile_label_provider">ارائه‌دهنده</string>
   <string name="profile_button_signOut">خروج</string>
 
-  <string name="meeting_contentDescription_stopScreenShare">توقف اشتراک‌گذاری صفحه</string>
-  <string name="meeting_contentDescription_maximizeScreenShare">تمام‌صفحه</string>
-  <string name="meeting_contentDescription_minimizeScreenShare">خروج از تمام‌صفحه</string>
-  <string name="meeting_stage_screenShareTitle">اشتراک‌گذاری صفحه</string>
   <string name="meeting_stage_screenSharePresenting"><xliff:g id="name" example="Alex">%1$s</xliff:g> در حال ارائه است</string>
   <string name="meeting_stage_screenShareWaiting">در انتظار صفحه <xliff:g id="name" example="Alex">%1$s</xliff:g>…</string>
   <string name="meeting_contentDescription_closeImagePreview">بستن پیش‌نمایش تصویر</string>
@@ -274,7 +270,6 @@
   <string name="meeting_error_cameraSwitchFailed">تعویض دوربین ممکن نشد</string>
   <string name="meeting_error_screenShareUnavailable">هم‌رسانی صفحه در دسترس نیست</string>
   <string name="meeting_error_screenShareStopFailed">توقف هم‌رسانی صفحه ممکن نشد</string>
-  <string name="meeting_error_alreadyPresenting"><xliff:g id="name" example="Alex">%1$s</xliff:g> در حال ارائه است</string>
   <string name="meeting_error_messageSendFailed">ارسال پیام شما ممکن نشد</string>
   <string name="meeting_error_kickFailed">حذف شرکت‌کننده ممکن نشد</string>
   <string name="meeting_error_banFailed">مسدود کردن شرکت‌کننده ممکن نشد</string>
@@ -316,4 +311,13 @@
   <string name="meeting_invite_qrDescription">کد QR پیوند اتاق</string>
   <string name="meeting_invite_appNotInstalled">این برنامه نصب نیست</string>
   <string name="common_hint_comingSoon">به‌زودی</string>
+  <string name="meeting_stream_watch">تماشای پخش</string>
+  <string name="meeting_stream_leave">خروج از پخش</string>
+  <string name="meeting_stream_youArePresenting">در حال ارائه هستید</string>
+  <string name="meeting_stream_stop">توقف اشتراک‌گذاری</string>
+  <string name="meeting_error_alreadyPresenting"><xliff:g id="name" example="Alex">%1$s</xliff:g> در حال ارائه است</string>
+  <string name="meeting_stage_screenShareTitle">اشتراک‌گذاری صفحه</string>
+  <string name="meeting_contentDescription_maximizeScreenShare">تمام‌صفحه</string>
+  <string name="meeting_contentDescription_minimizeScreenShare">خروج از تمام‌صفحه</string>
+  <string name="meeting_contentDescription_stopScreenShare">توقف اشتراک‌گذاری صفحه</string>
 </resources>

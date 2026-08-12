@@ -224,10 +224,6 @@
   <string name="profile_label_provider">提供商</string>
   <string name="profile_button_signOut">退出登录</string>
 
-  <string name="meeting_contentDescription_stopScreenShare">停止屏幕共享</string>
-  <string name="meeting_contentDescription_maximizeScreenShare">全屏</string>
-  <string name="meeting_contentDescription_minimizeScreenShare">退出全屏</string>
-  <string name="meeting_stage_screenShareTitle">屏幕共享</string>
   <string name="meeting_stage_screenSharePresenting"><xliff:g id="name" example="Alex">%1$s</xliff:g> 正在演示</string>
   <string name="meeting_stage_screenShareWaiting">正在等待 <xliff:g id="name" example="Alex">%1$s</xliff:g> 的屏幕…</string>
   <string name="meeting_contentDescription_closeImagePreview">关闭图片预览</string>
@@ -277,7 +273,6 @@
   <string name="meeting_error_cameraSwitchFailed">无法切换摄像头</string>
   <string name="meeting_error_screenShareUnavailable">屏幕共享不可用</string>
   <string name="meeting_error_screenShareStopFailed">无法停止屏幕共享</string>
-  <string name="meeting_error_alreadyPresenting"><xliff:g id="name" example="Alex">%1$s</xliff:g> 正在演示</string>
   <string name="meeting_error_messageSendFailed">无法发送您的消息</string>
   <string name="meeting_error_kickFailed">无法移除参与者</string>
   <string name="meeting_error_banFailed">无法封禁参与者</string>
@@ -319,4 +314,13 @@
   <string name="meeting_invite_qrDescription">房间链接二维码</string>
   <string name="meeting_invite_appNotInstalled">未安装该应用</string>
   <string name="common_hint_comingSoon">即将推出</string>
+  <string name="meeting_stream_watch">观看共享</string>
+  <string name="meeting_stream_leave">退出观看</string>
+  <string name="meeting_stream_youArePresenting">你正在共享</string>
+  <string name="meeting_stream_stop">停止共享</string>
+  <string name="meeting_error_alreadyPresenting"><xliff:g id="name" example="Alex">%1$s</xliff:g> 正在演示</string>
+  <string name="meeting_stage_screenShareTitle">屏幕共享</string>
+  <string name="meeting_contentDescription_maximizeScreenShare">全屏</string>
+  <string name="meeting_contentDescription_minimizeScreenShare">退出全屏</string>
+  <string name="meeting_contentDescription_stopScreenShare">停止屏幕共享</string>
 </resources>

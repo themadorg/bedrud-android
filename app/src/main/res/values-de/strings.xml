@@ -224,10 +224,6 @@
   <string name="profile_label_provider">Anbieter</string>
   <string name="profile_button_signOut">Abmelden</string>
 
-  <string name="meeting_contentDescription_stopScreenShare">Bildschirmfreigabe beenden</string>
-  <string name="meeting_contentDescription_maximizeScreenShare">Vollbild</string>
-  <string name="meeting_contentDescription_minimizeScreenShare">Vollbild beenden</string>
-  <string name="meeting_stage_screenShareTitle">Bildschirmfreigabe</string>
   <string name="meeting_stage_screenSharePresenting"><xliff:g id="name" example="Alex">%1$s</xliff:g> präsentiert</string>
   <string name="meeting_stage_screenShareWaiting">Warte auf den Bildschirm von <xliff:g id="name" example="Alex">%1$s</xliff:g>…</string>
   <string name="meeting_contentDescription_closeImagePreview">Bildvorschau schließen</string>
@@ -277,7 +273,6 @@
   <string name="meeting_error_cameraSwitchFailed">Kamera konnte nicht gewechselt werden</string>
   <string name="meeting_error_screenShareUnavailable">Bildschirmfreigabe ist nicht verfügbar</string>
   <string name="meeting_error_screenShareStopFailed">Bildschirmfreigabe konnte nicht beendet werden</string>
-  <string name="meeting_error_alreadyPresenting"><xliff:g id="name" example="Alex">%1$s</xliff:g> präsentiert bereits</string>
   <string name="meeting_error_messageSendFailed">Deine Nachricht konnte nicht gesendet werden</string>
   <string name="meeting_error_kickFailed">Teilnehmer konnte nicht entfernt werden</string>
   <string name="meeting_error_banFailed">Teilnehmer konnte nicht gesperrt werden</string>
@@ -319,4 +314,13 @@
   <string name="meeting_invite_qrDescription">QR-Code des Raumlinks</string>
   <string name="meeting_invite_appNotInstalled">Diese App ist nicht installiert</string>
   <string name="common_hint_comingSoon">Bald verfügbar</string>
+  <string name="meeting_stream_watch">Stream ansehen</string>
+  <string name="meeting_stream_leave">Stream verlassen</string>
+  <string name="meeting_stream_youArePresenting">Du präsentierst gerade</string>
+  <string name="meeting_stream_stop">Freigabe beenden</string>
+  <string name="meeting_error_alreadyPresenting"><xliff:g id="name" example="Alex">%1$s</xliff:g> präsentiert bereits</string>
+  <string name="meeting_stage_screenShareTitle">Bildschirmfreigabe</string>
+  <string name="meeting_contentDescription_maximizeScreenShare">Vollbild</string>
+  <string name="meeting_contentDescription_minimizeScreenShare">Vollbild beenden</string>
+  <string name="meeting_contentDescription_stopScreenShare">Bildschirmfreigabe beenden</string>
 </resources>
