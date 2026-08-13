@@ -85,4 +85,9 @@ object Dimens {
     val meetingHandleHeight = 4.dp
     val meetingHandleSwipeThreshold = 24.dp // upward drag distance that opens the options sheet
     val meetingFullscreenAvatar = 96.dp  // avatar circle when a participant is viewed fullscreen
+
+    // ── Meeting: invite sheet ──
+    val inviteGridMaxHeight = 280.dp     // participant avatar grid scrolls beyond this
+    val inviteTargetSize = 56.dp         // share-target circles (send, copy, QR, apps)
+    val inviteQrSize = 240.dp            // rendered room-link QR code
 }

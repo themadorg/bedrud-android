@@ -102,6 +102,11 @@ class RoomManager(
     private val _locallyMutedIdentities = MutableStateFlow<Set<String>>(emptySet())
     val locallyMutedIdentities: StateFlow<Set<String>> = _locallyMutedIdentities.asStateFlow()
 
+    // Per-participant playback volume for this viewer only (1.0 when unset). A local mute
+    // overrides it to zero without losing the chosen level.
+    private val _participantVolumes = MutableStateFlow<Map<String, Float>>(emptyMap())
+    val participantVolumes: StateFlow<Map<String, Float>> = _participantVolumes.asStateFlow()
+
     // Incremented on every participant change to trigger recomposition
     private val _participantVersion = MutableStateFlow(0)
     val participantVersion: StateFlow<Int> = _participantVersion.asStateFlow()
@@ -350,6 +355,7 @@ class RoomManager(
         _isDeafened.value = settingsStore.getDeafened()
         micMutedBeforeDeafen = false
         _locallyMutedIdentities.value = emptySet()
+        _participantVolumes.value = emptyMap()
         _participantVersion.value = 0
         _chatMessages.value = emptyList()
         _wasKicked.value = false
@@ -468,10 +474,22 @@ class RoomManager(
         }
     }
 
+    /** Adjust how loud [identity] plays for this viewer only. */
+    fun setParticipantVolume(identity: String, volume: Float) {
+        _participantVolumes.value =
+            _participantVolumes.value + (identity to volume.coerceIn(0f, 1f))
+        val participant = _room?.remoteParticipants?.values
+            ?.find { it.identity?.value == identity } ?: return
+        val effective = effectiveVolumeFor(identity)
+        for ((_, track) in participant.audioTrackPublications) {
+            (track as? RemoteAudioTrack)?.setVolume(effective)
+        }
+    }
+
     private fun effectiveVolumeFor(identity: String?): Double {
         if (_isDeafened.value) return 0.0
         if (identity != null && identity in _locallyMutedIdentities.value) return 0.0
-        return 1.0
+        return (identity?.let { _participantVolumes.value[it] } ?: 1f).toDouble()
     }
 
     private fun reapplyAllVolumes() {

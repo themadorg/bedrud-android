@@ -19,17 +19,14 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Fullscreen
 import androidx.compose.material.icons.filled.MicOff
+import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material.icons.filled.VideocamOff
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -39,7 +36,6 @@ import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.text.style.TextOverflow
 import coil.compose.AsyncImage
 import com.bedrud.app.R
-import com.bedrud.app.core.api.RoomApi
 import com.bedrud.app.core.livekit.RoomManager
 import com.bedrud.app.ui.components.InitialsAvatar
 import com.bedrud.app.ui.theme.BedrudShapeTokens
@@ -76,17 +72,13 @@ private fun gridRows(count: Int): List<Int> = when (count) {
 fun MeetingVideoGrid(
     tiles: List<Participant>,
     room: Room,
-    isAdmin: Boolean,
     localIdentity: String?,
-    roomId: String,
-    roomApi: RoomApi?,
-    snackbarHostState: SnackbarHostState,
-    scope: kotlinx.coroutines.CoroutineScope,
     stageScreenShareIdentity: String?,
     disabledVideoIdentities: Set<String>,
-    onToggleVideoDisabled: (String) -> Unit,
+    hideAllIncomingVideo: Boolean,
     mutedIdentities: Set<String>,
-    onToggleLocalMute: (String) -> Unit,
+    pinnedIdentity: String?,
+    onOpenParticipantActions: (String) -> Unit,
     onExpandTile: (String) -> Unit,
     onOverflowClick: () -> Unit,
     modifier: Modifier = Modifier,
@@ -105,18 +97,14 @@ fun MeetingVideoGrid(
                 val participant = visible[slotIndex]
                 ParticipantTile(
                     participant = participant,
-                    isAdmin = isAdmin,
                     isLocalParticipant = participant.identity?.value == localIdentity,
-                    roomId = roomId,
-                    roomApi = roomApi,
-                    snackbarHostState = snackbarHostState,
-                    scope = scope,
                     room = room,
                     stageScreenShareIdentity = stageScreenShareIdentity,
                     disabledVideoIdentities = disabledVideoIdentities,
-                    onToggleVideoDisabled = onToggleVideoDisabled,
+                    hideAllIncomingVideo = hideAllIncomingVideo,
                     mutedIdentities = mutedIdentities,
-                    onToggleLocalMute = onToggleLocalMute,
+                    isPinned = participant.identity?.value == pinnedIdentity,
+                    onOpenParticipantActions = onOpenParticipantActions,
                     onExpand = onExpandTile,
                     modifier = slotModifier,
                 )
@@ -206,26 +194,21 @@ private fun RowScope.HalfWidthCentered(
 @Composable
 internal fun ParticipantTile(
     participant: Participant,
-    isAdmin: Boolean = false,
     isLocalParticipant: Boolean = false,
-    roomId: String = "",
-    roomApi: RoomApi? = null,
-    snackbarHostState: SnackbarHostState? = null,
-    scope: kotlinx.coroutines.CoroutineScope? = null,
     room: Room? = null,
     stageScreenShareIdentity: String? = null,
     disabledVideoIdentities: Set<String> = emptySet(),
-    onToggleVideoDisabled: (String) -> Unit = {},
+    hideAllIncomingVideo: Boolean = false,
     mutedIdentities: Set<String> = emptySet(),
-    onToggleLocalMute: (String) -> Unit = {},
+    isPinned: Boolean = false,
+    onOpenParticipantActions: ((String) -> Unit)? = null,
     onExpand: ((String) -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
     val identity = participant.identity?.value ?: RoomManager.UNKNOWN_PARTICIPANT_NAME
-    val isVideoLocallyDisabled = identity in disabledVideoIdentities
+    val isVideoLocallyDisabled =
+        identity in disabledVideoIdentities || (!isLocalParticipant && hideAllIncomingVideo)
     val isLocallyMuted = identity in mutedIdentities
-    val kickFailedMessage = stringResource(R.string.meeting_error_kickFailed)
-    val banFailedMessage = stringResource(R.string.meeting_error_banFailed)
 
     val screenShareRef = if (identity != stageScreenShareIdentity) {
         resolveParticipantScreenShare(participant)
@@ -252,8 +235,7 @@ internal fun ParticipantTile(
         }
     }
 
-    var showMenu by remember { mutableStateOf(false) }
-    val canOpenMenu = !isLocalParticipant && roomApi != null
+    val canOpenMenu = !isLocalParticipant && onOpenParticipantActions != null
 
     Box(
         modifier = modifier
@@ -263,7 +245,7 @@ internal fun ParticipantTile(
                 if (canOpenMenu) {
                     Modifier.combinedClickable(
                         onClick = {},
-                        onLongClick = { showMenu = true }
+                        onLongClick = { onOpenParticipantActions?.invoke(identity) }
                     )
                 } else Modifier
             ),
@@ -321,6 +303,14 @@ internal fun ParticipantTile(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(Dimens.space4),
         ) {
+            if (isPinned) {
+                Icon(
+                    imageVector = Icons.Default.PushPin,
+                    contentDescription = stringResource(R.string.meeting_action_pin),
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(Dimens.meetingBadgeIcon),
+                )
+            }
             Text(
                 text = name,
                 style = MaterialTheme.typography.labelSmall.copy(textDirection = TextDirection.Content),
@@ -366,30 +356,6 @@ internal fun ParticipantTile(
                     )
                 }
             }
-        }
-
-        // Participant actions menu
-        if (canOpenMenu) {
-            ParticipantActionsMenu(
-                expanded = showMenu,
-                onDismiss = { showMenu = false },
-                isAdmin = isAdmin,
-                isLocallyMuted = isLocallyMuted,
-                onToggleLocalMute = { onToggleLocalMute(identity) },
-                isVideoLocallyDisabled = isVideoLocallyDisabled,
-                onToggleVideoDisabled = { onToggleVideoDisabled(identity) },
-                // roomApi is non-null in here: canOpenMenu already requires it.
-                onKickConfirmed = {
-                    moderate(scope, snackbarHostState, kickFailedMessage) {
-                        roomApi.kickParticipant(roomId, identity)
-                    }
-                },
-                onBan = {
-                    moderate(scope, snackbarHostState, banFailedMessage) {
-                        roomApi.banParticipant(roomId, identity)
-                    }
-                },
-            )
         }
     }
 }
