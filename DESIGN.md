@@ -159,6 +159,12 @@ the `meeting*` tokens in `Dimens.kt`, timing in `Motion.meetingChromeAutoHideDel
   `VoiceGateProcessor`, a capture post-processor that mutes frames whose RMS falls below the
   slider's dBFS threshold (with a ~300ms hangover so syllables don't clip). Noise suppression
   (Off / Device) applies on the next join — the audio device module is built per connection.
+- **Mic meter**: the same processor always measures (gating stays conditional), publishing a
+  0..1 level that the pill renders as four bars in place of the mic glyph whenever audio is
+  actually being captured — same slot, so the bar's geometry never moves. The UI samples the
+  level per animation frame inside the draw scope rather than through a flow, so a 100 Hz audio
+  signal costs redraws, not recompositions. While the manual gate is closed the bars dim, which
+  makes the sensitivity threshold visible instead of guesswork.
 - **Sheets**: long-press a tile → `MeetingParticipantSheet` (per-viewer volume slider, local
   mute / don't-watch / pin / fullscreen; admins get kick/ban plus the dev-hinted room mute /
   room deafen / chat mute, #108). The top-bar invite entry, the "+N" tile and the more-options
