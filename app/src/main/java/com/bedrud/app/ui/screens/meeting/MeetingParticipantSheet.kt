@@ -33,6 +33,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import com.bedrud.app.R
 import com.bedrud.app.core.api.RoomApi
+import com.bedrud.app.ui.components.BedrudBottomSheet
 import com.bedrud.app.ui.components.BedrudSheetActionRow
 import com.bedrud.app.ui.components.BedrudSheetTitle
 import com.bedrud.app.ui.components.ConfirmDialog
@@ -93,7 +94,7 @@ fun MeetingParticipantSheet(
         )
     }
 
-    MeetingBottomSheet(onDismiss = onDismiss) {
+    BedrudBottomSheet(onDismiss = onDismiss) {
         BedrudSheetTitle(text = name, color = colors.onButton)
         HorizontalDivider(color = colors.divider)
 

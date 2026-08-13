@@ -118,7 +118,7 @@ fun MeetingControlsBar(
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             DragHandle(
-                color = colors.dragHandle,
+                color = colors.onButtonVariant.copy(alpha = DragHandleAlpha),
                 onClick = onOpenMoreOptions,
             )
 
@@ -487,6 +487,10 @@ private fun MicLevelBars(
         }
     }
 }
+
+// The bar's own pull-up handle, not a sheet's: the shared sheet scaffold fixes its handle, so this
+// one carries its own tint. Matches the sheet handle's weight against the chrome.
+private const val DragHandleAlpha = 0.55f
 
 private const val MeterBarCount = 4
 private val MeterBarScales = floatArrayOf(0.55f, 1f, 0.8f, 0.45f)

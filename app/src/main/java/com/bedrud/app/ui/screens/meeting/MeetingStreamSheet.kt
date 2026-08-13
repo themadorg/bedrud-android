@@ -7,6 +7,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.stringResource
 import com.bedrud.app.R
+import com.bedrud.app.ui.components.BedrudBottomSheet
 import com.bedrud.app.ui.components.BedrudSheetActionRow
 import com.bedrud.app.ui.components.BedrudSheetTitle
 import com.bedrud.app.ui.components.DevHintBadge
@@ -26,7 +27,7 @@ fun MeetingStreamSheet(
 ) {
     val colors = meetingChromeColors()
 
-    MeetingBottomSheet(onDismiss = onDismiss) {
+    BedrudBottomSheet(onDismiss = onDismiss) {
         BedrudSheetTitle(
             text = stringResource(R.string.meeting_stage_screenSharePresenting, presenterName),
             color = colors.onButton,

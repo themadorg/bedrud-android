@@ -36,6 +36,7 @@ import com.bedrud.app.R
 import com.bedrud.app.core.audio.MeetingInputMode
 import com.bedrud.app.core.audio.NoiseSuppressionMode
 import com.bedrud.app.core.livekit.CallAudioSwitch
+import com.bedrud.app.ui.components.BedrudBottomSheet
 import com.bedrud.app.ui.components.BedrudSheetActionRow
 import com.bedrud.app.ui.components.BedrudSheetTitle
 import com.bedrud.app.ui.theme.Dimens
@@ -73,7 +74,7 @@ fun MeetingAudioSettingsSheet(
     }
     var sensitivityValue by remember { mutableFloatStateOf(sensitivity) }
 
-    MeetingBottomSheet(onDismiss = onDismiss) {
+    BedrudBottomSheet(onDismiss = onDismiss) {
         BedrudSheetTitle(
             text = stringResource(R.string.meeting_sheet_audioSettings),
             color = colors.onButton,
@@ -237,7 +238,7 @@ fun MeetingInputModeSheet(
 ) {
     val colors = meetingChromeColors()
 
-    MeetingBottomSheet(onDismiss = onDismiss) {
+    BedrudBottomSheet(onDismiss = onDismiss) {
         BedrudSheetTitle(
             text = stringResource(R.string.meeting_audio_inputMode),
             color = colors.onButton,
@@ -277,7 +278,7 @@ fun MeetingNoiseSuppressionSheet(
 ) {
     val colors = meetingChromeColors()
 
-    MeetingBottomSheet(onDismiss = onDismiss) {
+    BedrudBottomSheet(onDismiss = onDismiss) {
         BedrudSheetTitle(
             text = stringResource(R.string.meeting_sheet_noiseSuppression),
             color = colors.onButton,

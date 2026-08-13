@@ -20,6 +20,7 @@ so there are no magic values scattered through screens.
 | `Dimens.kt`         | Spacing scale (4dp grid) + component sizes/heights/icon sizes                      | No raw `n.dp` for spacing/sizing        |
 | `Elevation.kt`      | Tonal elevation levels                                                             | Surfaces stay low (outline-first)       |
 | `Motion.kt`         | Durations + easing for transitions                                                 | No inline animation timings             |
+| `Alpha.kt`          | Opacity tokens (`disabled`) for content the app dims itself                        | No inline alpha floats                  |
 
 **The rule:** screens and components reference `MaterialTheme.*` + the token objects. Raw hex colors and
 raw `n.dp` literals don't belong in `ui/screens/**` or `ui/components/**`.
@@ -73,6 +74,15 @@ Elevation is tonal and light — the app leans on outlines + tonal surfaces over
 sit at level 0–1. Motion uses shared duration tokens (`durationShort/Medium/Long`) + `standardEasing`;
 drive `animate*AsState` with `tween(Motion.durationMedium, easing = Motion.standardEasing)`.
 
+## Disabled state (`Alpha.kt`)
+
+M3 components (buttons, radios, fields) already dim themselves when `enabled = false`. Where the app
+disables a *composite* instead — a whole card that can't be picked, a logo behind an unavailable
+sign-in method — M3's own answer is the normal colors at reduced opacity, so apply `Alpha.disabled`
+(0.38) rather than swapping in muted colors. Recolouring a container to `onSurfaceVariant` is not
+enough on its own: that is also what an unselected-but-selectable element looks like, so the
+disabled state reads as merely deselected.
+
 ## Components (`ui/components/`)
 
 - **`BedrudButton`** — 6 variants (PRIMARY, SECONDARY, TONAL, OUTLINE, GHOST, DESTRUCTIVE). Token-driven height
@@ -98,14 +108,29 @@ drive `animate*AsState` with `tween(Motion.durationMedium, easing = Motion.stand
 ## Bottom sheets (`BedrudBottomSheet`)
 
 Every sheet in the app goes through **`BedrudBottomSheet`** so they share one container, one drag
-handle, one set of insets, and one gutter. It keeps the Material defaults deliberately:
+handle, one shape, one set of insets, and one gutter. Those are **fixed, not defaulted** — the
+component takes no colour, shape or state parameters at all:
 
 - **Material's drag handle**, not a hand-drawn bar. A bare `Box` can match the 32×4dp look but
   carries none of the accessibility semantics or the expanded touch target.
 - **`BedrudShapeTokens.sheetTop`**, which is already M3's 28dp `extraLarge` top corners — the token
   names the default rather than departing from it.
-- **`containerColor` is a parameter**, defaulting to M3's. The meeting chrome overrides it because
-  the call UI sits on a dark overlay; nowhere else should.
+- **`BottomSheetDefaults.ContainerColor`** (`surfaceContainerLow`), with no override available.
+- **`navigationBarsPadding()` then `imePadding()`**, always. IME padding resolves to zero with the
+  keyboard down, so a sheet carrying a text field needs no special case, and nav-bar insets already
+  consumed are not counted twice.
+
+**Why there is no `containerColor` parameter.** There used to be, defaulting to M3's, and the one
+caller that overrode it — the meeting chrome — set the container to `surface`. In the dark palette
+that is `Stone950` `#0C0A09`: the *exact* colour of `background`, which is what the meeting screen
+draws behind it. The sheet therefore had no edge at all whenever the camera was off. M3's
+`surfaceContainerLow` (`#161311`) exists precisely to lift a sheet off the background, and it is
+equally opaque over video, so a darker container bought nothing anywhere. A default is a
+suggestion; the fix was to delete the knob, not to re-tune it.
+
+The sheet state is not a parameter either: exposing it would put an experimental Material type in
+the signature and force `@OptIn` onto every screen that shows a sheet. `ModalBottomSheet` is now
+referenced in exactly one file.
 
 **Actions inside a sheet are a list, not a stack of cards.** `BedrudSheetActionRow` follows the M3
 list-item spec — 56dp one-line, 72dp when it carries a supporting line, `iconMd` leading icon — and

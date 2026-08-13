@@ -51,6 +51,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import coil.compose.AsyncImage
 import com.bedrud.app.R
+import com.bedrud.app.ui.components.BedrudBottomSheet
 import com.bedrud.app.ui.components.InitialsAvatar
 import com.bedrud.app.ui.theme.BedrudShapeTokens
 import com.bedrud.app.ui.theme.Dimens
@@ -89,7 +90,7 @@ fun MeetingInviteSheet(
     val appNotInstalledMessage = stringResource(R.string.meeting_invite_appNotInstalled)
     var showQr by remember { mutableStateOf(false) }
 
-    MeetingBottomSheet(onDismiss = onDismiss) {
+    BedrudBottomSheet(onDismiss = onDismiss) {
         Text(
             text = stringResource(R.string.meeting_panel_participants, participants.size),
             color = colors.onButton,

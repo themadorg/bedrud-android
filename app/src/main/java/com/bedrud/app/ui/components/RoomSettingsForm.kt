@@ -17,6 +17,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.bedrud.app.R
 import com.bedrud.app.models.RoomSettings
+import com.bedrud.app.ui.theme.Dimens
 
 /**
  * The room-level settings toggles shared by the dashboard's settings dialog and the in-meeting
@@ -32,7 +33,7 @@ fun RoomSettingsForm(
     onIsPublicChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
     contentColor: Color = Color.Unspecified,
-    verticalSpacing: Dp = 4.dp,
+    verticalSpacing: Dp = Dimens.space4,
 ) {
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(verticalSpacing)) {
         RoomSettingToggleRow(
