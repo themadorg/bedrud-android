@@ -51,6 +51,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
@@ -72,6 +73,7 @@ import com.bedrud.app.core.instance.ServerUrlCanonicalizer
 import com.bedrud.app.ui.components.BedrudButton
 import com.bedrud.app.ui.components.BedrudScaffoldContentInsets
 import com.bedrud.app.ui.components.DevOnly
+import com.bedrud.app.ui.theme.Alpha
 import com.bedrud.app.ui.theme.BedrudShapeTokens
 import com.bedrud.app.ui.theme.Dimens
 import com.bedrud.app.ui.theme.Motion
@@ -379,8 +381,12 @@ private fun ServerChoiceCard(
     val borderWidth = if (selected) Dimens.borderStrong else Dimens.borderThin
 
     Surface(
+        // A disabled card's own colors are indistinguishable from an unselected-but-selectable
+        // one, so without this the "already added" state reads as merely deselected. Dimming the
+        // whole Surface fades border, title, address and badge together in one pass.
         modifier = modifier
             .fillMaxWidth()
+            .alpha(if (enabled) 1f else Alpha.disabled)
             .selectable(
                 selected = selected,
                 enabled = enabled,

@@ -52,15 +52,13 @@ import com.bedrud.app.ui.components.BedrudButton
 import com.bedrud.app.ui.components.BedrudButtonVariant
 import com.bedrud.app.ui.components.BedrudTextField
 import com.bedrud.app.ui.theme.BedrudShapeTokens
+import com.bedrud.app.ui.theme.Alpha
 import com.bedrud.app.ui.theme.Dimens
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 
 /** Which sign-in action is currently in flight, so only its button shows a spinner. */
 private enum class HubAction { PASSKEY, GUEST }
-
-/** M3 disabled-content alpha, used to grey out unavailable OAuth logos. */
-private const val DisabledLogoAlpha = 0.38f
 
 /** The OAuth providers the app knows about, in display order (backend ids: google/github/twitter). */
 private data class OAuthOption(
@@ -317,7 +315,7 @@ private fun OAuthProviderButton(
     val contentDescription = stringResource(R.string.auth_oauth_continueWithFormat, option.label)
     val logoModifier = Modifier
         .size(Dimens.iconMd)
-        .alpha(if (enabled) 1f else DisabledLogoAlpha)
+        .alpha(if (enabled) 1f else Alpha.disabled)
     Surface(
         onClick = onClick,
         enabled = enabled,

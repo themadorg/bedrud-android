@@ -20,6 +20,7 @@ so there are no magic values scattered through screens.
 | `Dimens.kt`         | Spacing scale (4dp grid) + component sizes/heights/icon sizes                      | No raw `n.dp` for spacing/sizing        |
 | `Elevation.kt`      | Tonal elevation levels                                                             | Surfaces stay low (outline-first)       |
 | `Motion.kt`         | Durations + easing for transitions                                                 | No inline animation timings             |
+| `Alpha.kt`          | Opacity tokens (`disabled`) for content the app dims itself                        | No inline alpha floats                  |
 
 **The rule:** screens and components reference `MaterialTheme.*` + the token objects. Raw hex colors and
 raw `n.dp` literals don't belong in `ui/screens/**` or `ui/components/**`.
@@ -72,6 +73,15 @@ icon sizes `iconXs 16 · iconSm 18 · iconMd 24 · iconLg 32`, `avatar 40`, `bra
 Elevation is tonal and light — the app leans on outlines + tonal surfaces over shadows; most surfaces
 sit at level 0–1. Motion uses shared duration tokens (`durationShort/Medium/Long`) + `standardEasing`;
 drive `animate*AsState` with `tween(Motion.durationMedium, easing = Motion.standardEasing)`.
+
+## Disabled state (`Alpha.kt`)
+
+M3 components (buttons, radios, fields) already dim themselves when `enabled = false`. Where the app
+disables a *composite* instead — a whole card that can't be picked, a logo behind an unavailable
+sign-in method — M3's own answer is the normal colors at reduced opacity, so apply `Alpha.disabled`
+(0.38) rather than swapping in muted colors. Recolouring a container to `onSurfaceVariant` is not
+enough on its own: that is also what an unselected-but-selectable element looks like, so the
+disabled state reads as merely deselected.
 
 ## Components (`ui/components/`)
 
