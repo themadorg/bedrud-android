@@ -56,6 +56,48 @@ class VoiceGateProcessorTest {
     }
 
     @Test
+    fun `meter level tracks loudness even when gating is off`() {
+        val gate = VoiceGateProcessor()
+        gate.gateEnabled = false
+
+        gate.processAudio(1, 480, bufferOf(amplitude = 0.0))
+        assertEquals(0f, gate.level, 0.001f)
+
+        gate.processAudio(1, 480, bufferOf(amplitude = 1.0)) // ~-3 dBFS
+        val loud = gate.level
+        assertTrue("expected a near-full meter, got $loud", loud > 0.9f)
+
+        gate.processAudio(1, 480, bufferOf(amplitude = 0.02)) // ~-37 dBFS
+        val quiet = gate.level
+        assertTrue("expected a mid meter, got $quiet", quiet in 0.1f..0.7f)
+        // Gating stays off, so nothing is ever held back.
+        assertTrue(gate.gateOpen)
+    }
+
+    @Test
+    fun `gate open flag reports when the manual gate holds audio back`() {
+        val gate = VoiceGateProcessor()
+        gate.gateEnabled = true
+        gate.sensitivity = 0.5f // threshold -50 dBFS
+
+        gate.processAudio(1, 480, bufferOf(amplitude = 0.5))
+        assertTrue(gate.gateOpen)
+
+        repeat(VoiceGateProcessor.HangoverFrames + 1) {
+            gate.processAudio(1, 480, bufferOf(amplitude = 0.0005))
+        }
+        assertFalse(gate.gateOpen)
+    }
+
+    @Test
+    fun `meter normalization clamps at the floor and full scale`() {
+        assertEquals(0f, VoiceGateProcessor.normalizedLevel(VoiceGateProcessor.MeterFloorDb), 0.001f)
+        assertEquals(0f, VoiceGateProcessor.normalizedLevel(-120.0), 0.001f)
+        assertEquals(1f, VoiceGateProcessor.normalizedLevel(0.0), 0.001f)
+        assertEquals(0.5f, VoiceGateProcessor.normalizedLevel(VoiceGateProcessor.MeterFloorDb / 2), 0.001f)
+    }
+
+    @Test
     fun `disabled gate leaves audio untouched`() {
         val gate = VoiceGateProcessor()
         gate.gateEnabled = false

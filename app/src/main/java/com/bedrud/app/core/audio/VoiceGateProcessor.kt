@@ -24,31 +24,58 @@ class VoiceGateProcessor : AudioProcessorInterface {
     @Volatile
     var sensitivity: Float = DefaultSensitivity
 
+    /**
+     * Latest capture level, 0..1, for the in-call mic meter. Written on the audio thread and
+     * sampled by the UI per animation frame.
+     */
+    @Volatile
+    var level: Float = 0f
+        private set
+
+    /** False only while the manual gate is actively holding audio back. */
+    @Volatile
+    var gateOpen: Boolean = true
+        private set
+
     private var hangoverFramesLeft = 0
 
-    override fun isEnabled(): Boolean = gateEnabled
+    // Always on: the meter needs every frame. Gating stays conditional on [gateEnabled], so
+    // measuring here never changes what is transmitted.
+    override fun isEnabled(): Boolean = true
 
     override fun getName(): String = NAME
 
     override fun initializeAudioProcessing(sampleRateHz: Int, numChannels: Int) {
         hangoverFramesLeft = 0
+        level = 0f
+        gateOpen = true
     }
 
     override fun resetAudioProcessing(newRate: Int) {
         hangoverFramesLeft = 0
+        level = 0f
+        gateOpen = true
     }
 
     override fun processAudio(numBands: Int, numFrames: Int, buffer: ByteBuffer) {
-        if (!gateEnabled) return
         val levelDb = rmsDbfs(buffer)
+        level = normalizedLevel(levelDb)
+
+        if (!gateEnabled) {
+            gateOpen = true
+            return
+        }
         if (levelDb >= thresholdDb(sensitivity)) {
             hangoverFramesLeft = HangoverFrames
+            gateOpen = true
             return
         }
         if (hangoverFramesLeft > 0) {
             hangoverFramesLeft--
+            gateOpen = true
             return
         }
+        gateOpen = false
         silence(buffer)
     }
 
@@ -68,6 +95,13 @@ class VoiceGateProcessor : AudioProcessorInterface {
 
         /** dBFS floor reported for an all-zero frame. */
         const val SilenceFloorDb = -120.0
+
+        /** Quietest level the meter shows; anything at or below reads as zero. */
+        const val MeterFloorDb = -60.0
+
+        /** Maps a dBFS reading onto the meter's 0..1 range. */
+        fun normalizedLevel(levelDb: Double): Float =
+            ((levelDb - MeterFloorDb) / -MeterFloorDb).coerceIn(0.0, 1.0).toFloat()
 
         /** Threshold in dBFS for a 0..1 sensitivity — linear between min and max. */
         fun thresholdDb(sensitivity: Float): Double {

@@ -146,6 +146,12 @@ class RoomManager(
     private val _voiceSensitivity = MutableStateFlow(settingsStore.getVoiceSensitivity())
     val voiceSensitivity: StateFlow<Float> = _voiceSensitivity.asStateFlow()
 
+    /** Live mic capture level (0..1) for the in-call meter; sampled per frame by the UI. */
+    fun currentMicLevel(): Float = if (_isMicEnabled.value) voiceGate.level else 0f
+
+    /** False only while the manual voice gate is holding audio back. */
+    fun isVoiceGateOpen(): Boolean = voiceGate.gateOpen
+
     private fun syncVoiceGate() {
         voiceGate.sensitivity = _voiceSensitivity.value
         voiceGate.gateEnabled =
