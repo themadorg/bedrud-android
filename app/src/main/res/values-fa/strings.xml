@@ -297,9 +297,7 @@
   <string name="meeting_action_chatMute">بی‌صدا کردن گفتگو</string>
   <string name="meeting_sheet_disableAllCameras">پنهان‌کردن همه دوربین‌ها</string>
   <string name="meeting_sheet_disableAllCamerasDescription">نمایش ویدیوی دریافتی را فقط برای شما متوقف می‌کند</string>
-  <string name="meeting_sheet_showAllCameras">نمایش همه دوربین‌ها</string>
   <string name="meeting_sheet_noiseSuppression">حذف نویز</string>
-  <string name="meeting_sheet_inviteFriend">دعوت از دوست</string>
   <string name="meeting_sheet_audioSettings">تنظیمات صدا</string>
   <string name="meeting_recording_title">ضبط اتاق فعال است</string>
   <string name="meeting_recording_message">در این اتاق، همه گفتگوها، دوربین‌ها، اشتراک‌های صفحه و صدا ضبط می‌شوند.</string>
@@ -321,9 +319,11 @@
   <string name="meeting_audio_mode_pushToTalk">فشار برای صحبت</string>
   <string name="meeting_audio_autoSensitivity">حساسیت خودکار</string>
   <string name="meeting_audio_sensitivity">حساسیت</string>
-  <string name="meeting_ptt_holdToTalk">برای صحبت نگه دارید</string>
   <string name="meeting_ptt_talking">در حال صحبت…</string>
   <string name="meeting_ns_off">خاموش</string>
   <string name="meeting_ns_device">دستگاه (داخلی)</string>
   <string name="meeting_ns_appliesNextJoin">از پیوستن بعدی اعمال می‌شود</string>
+  <string name="meeting_ptt_openMic">میکروفون باز</string>
+  <string name="meeting_sheet_inviteFriend">دعوت از دوست</string>
+  <string name="meeting_sheet_showAllCameras">نمایش همه دوربین‌ها</string>
 </resources>

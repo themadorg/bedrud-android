@@ -300,9 +300,7 @@
   <string name="meeting_action_chatMute">Couper le chat</string>
   <string name="meeting_sheet_disableAllCameras">Masquer toutes les caméras</string>
   <string name="meeting_sheet_disableAllCamerasDescription">Cesse d\'afficher la vidéo entrante, pour vous seulement</string>
-  <string name="meeting_sheet_showAllCameras">Afficher toutes les caméras</string>
   <string name="meeting_sheet_noiseSuppression">Réduction du bruit</string>
-  <string name="meeting_sheet_inviteFriend">Inviter un ami</string>
   <string name="meeting_sheet_audioSettings">Réglages audio</string>
   <string name="meeting_recording_title">Enregistrement de la salle actif</string>
   <string name="meeting_recording_message">Dans cette salle, tous les chats, caméras, partages d\'écran et l\'audio sont enregistrés.</string>
@@ -324,9 +322,11 @@
   <string name="meeting_audio_mode_pushToTalk">Appuyer pour parler</string>
   <string name="meeting_audio_autoSensitivity">Sensibilité automatique</string>
   <string name="meeting_audio_sensitivity">Sensibilité</string>
-  <string name="meeting_ptt_holdToTalk">Maintenez pour parler</string>
   <string name="meeting_ptt_talking">Vous parlez…</string>
   <string name="meeting_ns_off">Désactivée</string>
   <string name="meeting_ns_device">Appareil (intégrée)</string>
   <string name="meeting_ns_appliesNextJoin">Prend effet à la prochaine connexion</string>
+  <string name="meeting_ptt_openMic">Micro ouvert</string>
+  <string name="meeting_sheet_inviteFriend">Inviter un ami</string>
+  <string name="meeting_sheet_showAllCameras">Afficher toutes les caméras</string>
 </resources>

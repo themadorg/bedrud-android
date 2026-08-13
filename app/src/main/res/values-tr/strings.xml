@@ -300,9 +300,7 @@
   <string name="meeting_action_chatMute">Sohbeti sustur</string>
   <string name="meeting_sheet_disableAllCameras">Tüm kameraları gizle</string>
   <string name="meeting_sheet_disableAllCamerasDescription">Gelen videoyu yalnızca senin için gizler</string>
-  <string name="meeting_sheet_showAllCameras">Tüm kameraları göster</string>
   <string name="meeting_sheet_noiseSuppression">Gürültü bastırma</string>
-  <string name="meeting_sheet_inviteFriend">Bir arkadaşını davet et</string>
   <string name="meeting_sheet_audioSettings">Ses ayarları</string>
   <string name="meeting_recording_title">Oda kaydı etkin</string>
   <string name="meeting_recording_message">Bu odada tüm sohbetler, kameralar, ekran paylaşımları ve ses kaydedilir.</string>
@@ -324,9 +322,11 @@
   <string name="meeting_audio_mode_pushToTalk">Bas-konuş</string>
   <string name="meeting_audio_autoSensitivity">Otomatik hassasiyet</string>
   <string name="meeting_audio_sensitivity">Hassasiyet</string>
-  <string name="meeting_ptt_holdToTalk">Konuşmak için basılı tut</string>
   <string name="meeting_ptt_talking">Konuşuyorsunuz…</string>
   <string name="meeting_ns_off">Kapalı</string>
   <string name="meeting_ns_device">Cihaz (yerleşik)</string>
   <string name="meeting_ns_appliesNextJoin">Bir sonraki katılımda geçerli olur</string>
+  <string name="meeting_ptt_openMic">Açık mikrofon</string>
+  <string name="meeting_sheet_inviteFriend">Bir arkadaşını davet et</string>
+  <string name="meeting_sheet_showAllCameras">Tüm kameraları göster</string>
 </resources>

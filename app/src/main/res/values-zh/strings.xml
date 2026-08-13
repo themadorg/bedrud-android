@@ -300,9 +300,7 @@
   <string name="meeting_action_chatMute">禁言聊天</string>
   <string name="meeting_sheet_disableAllCameras">隐藏所有摄像头</string>
   <string name="meeting_sheet_disableAllCamerasDescription">仅对你停止显示传入视频</string>
-  <string name="meeting_sheet_showAllCameras">显示所有摄像头</string>
   <string name="meeting_sheet_noiseSuppression">降噪</string>
-  <string name="meeting_sheet_inviteFriend">邀请朋友</string>
   <string name="meeting_sheet_audioSettings">音频设置</string>
   <string name="meeting_recording_title">房间正在录制</string>
   <string name="meeting_recording_message">在此房间中，所有聊天、摄像头、屏幕共享和音频都会被录制。</string>
@@ -324,9 +322,11 @@
   <string name="meeting_audio_mode_pushToTalk">按键通话</string>
   <string name="meeting_audio_autoSensitivity">自动灵敏度</string>
   <string name="meeting_audio_sensitivity">灵敏度</string>
-  <string name="meeting_ptt_holdToTalk">按住说话</string>
   <string name="meeting_ptt_talking">正在说话…</string>
   <string name="meeting_ns_off">关闭</string>
   <string name="meeting_ns_device">设备（内置）</string>
   <string name="meeting_ns_appliesNextJoin">下次加入时生效</string>
+  <string name="meeting_ptt_openMic">开放麦克风</string>
+  <string name="meeting_sheet_inviteFriend">邀请朋友</string>
+  <string name="meeting_sheet_showAllCameras">显示所有摄像头</string>
 </resources>

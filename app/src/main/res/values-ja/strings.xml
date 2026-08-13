@@ -300,9 +300,7 @@
   <string name="meeting_action_chatMute">チャットをミュート</string>
   <string name="meeting_sheet_disableAllCameras">すべてのカメラを非表示</string>
   <string name="meeting_sheet_disableAllCamerasDescription">受信映像の表示を自分だけ停止します</string>
-  <string name="meeting_sheet_showAllCameras">すべてのカメラを表示</string>
   <string name="meeting_sheet_noiseSuppression">ノイズ抑制</string>
-  <string name="meeting_sheet_inviteFriend">友達を招待</string>
   <string name="meeting_sheet_audioSettings">オーディオ設定</string>
   <string name="meeting_recording_title">ルーム録画中</string>
   <string name="meeting_recording_message">このルームでは、すべてのチャット、カメラ、画面共有、音声が記録されます。</string>
@@ -324,9 +322,11 @@
   <string name="meeting_audio_mode_pushToTalk">プッシュトゥトーク</string>
   <string name="meeting_audio_autoSensitivity">自動感度</string>
   <string name="meeting_audio_sensitivity">感度</string>
-  <string name="meeting_ptt_holdToTalk">長押しで話す</string>
   <string name="meeting_ptt_talking">話しています…</string>
   <string name="meeting_ns_off">オフ</string>
   <string name="meeting_ns_device">デバイス（内蔵）</string>
   <string name="meeting_ns_appliesNextJoin">次回の参加時に適用されます</string>
+  <string name="meeting_ptt_openMic">オープンマイク</string>
+  <string name="meeting_sheet_inviteFriend">友達を招待</string>
+  <string name="meeting_sheet_showAllCameras">すべてのカメラを表示</string>
 </resources>
