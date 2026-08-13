@@ -117,8 +117,6 @@
   <string name="meeting_contentDescription_switchCamera">تبديل الكاميرا</string>
   <string name="meeting_contentDescription_toggleScreenShare">تبديل مشاركة الشاشة</string>
   <string name="meeting_contentDescription_toggleChat">تبديل الدردشة</string>
-  <string name="meeting_contentDescription_participants">المشاركون</string>
-  <string name="meeting_contentDescription_copyRoomLink">نسخ رابط الغرفة</string>
   <string name="meeting_toast_linkCopied">تم نسخ رابط الغرفة</string>
   <string name="meeting_toast_errorCopied">تم نسخ تفاصيل الخطأ</string>
   <string name="meeting_contentDescription_leaveCall">مغادرة المكالمة</string>
@@ -226,10 +224,6 @@
   <string name="profile_label_provider">المزود</string>
   <string name="profile_button_signOut">تسجيل الخروج</string>
 
-  <string name="meeting_contentDescription_stopScreenShare">إيقاف مشاركة الشاشة</string>
-  <string name="meeting_contentDescription_maximizeScreenShare">ملء الشاشة</string>
-  <string name="meeting_contentDescription_minimizeScreenShare">الخروج من ملء الشاشة</string>
-  <string name="meeting_stage_screenShareTitle">مشاركة الشاشة</string>
   <string name="meeting_stage_screenSharePresenting"><xliff:g id="name" example="Alex">%1$s</xliff:g> يعرض الآن</string>
   <string name="meeting_stage_screenShareWaiting">في انتظار شاشة <xliff:g id="name" example="Alex">%1$s</xliff:g>…</string>
   <string name="meeting_contentDescription_closeImagePreview">إغلاق معاينة الصورة</string>
@@ -243,11 +237,7 @@
   <string name="meeting_error_screenShareFailed">تعذّر بدء مشاركة الشاشة.</string>
   <string name="meeting_error_roomNoLongerExists">هذه الغرفة لم تعد موجودة</string>
   <string name="meeting_error_joinFailed">فشل الانضمام إلى الغرفة</string>
-  <string name="meeting_sheet_chat">الدردشة</string>
-  <string name="meeting_sheet_addOthers">إضافة آخرين</string>
   <string name="meeting_share_chooserTitle">مشاركة رابط الاجتماع</string>
-  <string name="meeting_sheet_flipCamera">قلب الكاميرا</string>
-  <string name="meeting_sheet_settings">الإعدادات</string>
   <string name="meeting_sheet_roomSettings">إعدادات الغرفة</string>
   <string name="meeting_sheet_deafen">كتم السماع</string>
   <string name="meeting_sheet_tools">الأدوات</string>
@@ -283,7 +273,6 @@
   <string name="meeting_error_cameraSwitchFailed">تعذّر تبديل الكاميرا</string>
   <string name="meeting_error_screenShareUnavailable">مشاركة الشاشة غير متاحة</string>
   <string name="meeting_error_screenShareStopFailed">تعذّر إيقاف مشاركة الشاشة</string>
-  <string name="meeting_error_alreadyPresenting"><xliff:g id="name" example="Alex">%1$s</xliff:g> يعرض بالفعل</string>
   <string name="meeting_error_messageSendFailed">تعذّر إرسال رسالتك</string>
   <string name="meeting_error_kickFailed">تعذّرت إزالة المشارك</string>
   <string name="meeting_error_banFailed">تعذّر حظر المشارك</string>
@@ -291,4 +280,51 @@
   <string name="dashboard_error_deleteRoomFailed">تعذّر حذف الغرفة</string>
   <string name="dashboard_error_saveSettingsFailed">تعذّر حفظ الإعدادات</string>
   <string name="dashboard_toast_settingsSaved">تم حفظ الإعدادات</string>
+  <string name="meeting_contentDescription_invite">دعوة والمشاركون</string>
+  <string name="meeting_contentDescription_audioOutput">مخرج الصوت</string>
+  <string name="meeting_contentDescription_recording">التسجيل نشط</string>
+  <string name="meeting_contentDescription_tileFullscreen">عرض ملء الشاشة</string>
+  <string name="meeting_contentDescription_tileExitFullscreen">الخروج من ملء الشاشة</string>
+  <string name="meeting_contentDescription_micOff">الميكروفون مغلق</string>
+  <string name="meeting_contentDescription_cameraOff">الكاميرا مغلقة</string>
+  <string name="meeting_status_reconnecting">جارٍ إعادة الاتصال…</string>
+  <string name="meeting_empty_title">لا يوجد أحد آخر هنا</string>
+  <string name="meeting_empty_message">ادعُ الآخرين، أو شغّل الكاميرا لترى نفسك</string>
+  <string name="meeting_participant_volume">مستوى الصوت</string>
+  <string name="meeting_action_dontWatch">عدم المشاهدة</string>
+  <string name="meeting_action_watch">مشاهدة</string>
+  <string name="meeting_action_pin">تثبيت</string>
+  <string name="meeting_action_unpin">إلغاء التثبيت</string>
+  <string name="meeting_action_roomMute">كتم في الغرفة</string>
+  <string name="meeting_action_roomDeafen">منع السماع في الغرفة</string>
+  <string name="meeting_action_chatMute">كتم الدردشة</string>
+  <string name="meeting_sheet_disableAllCameras">إخفاء كل الكاميرات</string>
+  <string name="meeting_sheet_disableAllCamerasDescription">يوقف عرض الفيديو الوارد لك فقط</string>
+  <string name="meeting_sheet_noiseSuppression">كتم الضوضاء</string>
+  <string name="meeting_sheet_audioSettings">إعدادات الصوت</string>
+  <string name="meeting_recording_title">تسجيل الغرفة نشط</string>
+  <string name="meeting_recording_message">في هذه الغرفة، تُسجَّل كل الدردشات والكاميرات ومشاركات الشاشة والصوت.</string>
+  <string name="meeting_recording_acknowledge">فهمت</string>
+  <string name="meeting_invite_sendInvite">إرسال دعوة</string>
+  <string name="meeting_invite_copyLink">نسخ الرابط</string>
+  <string name="meeting_invite_qrCode">رمز QR</string>
+  <string name="meeting_invite_email">البريد الإلكتروني</string>
+  <string name="meeting_invite_qrDescription">رمز QR لرابط الغرفة</string>
+  <string name="meeting_invite_appNotInstalled">هذا التطبيق غير مثبّت</string>
+  <string name="common_hint_comingSoon">قريبًا</string>
+  <string name="meeting_stream_watch">مشاهدة البث</string>
+  <string name="meeting_stream_leave">مغادرة البث</string>
+  <string name="meeting_stream_youArePresenting">أنت تعرض الآن</string>
+  <string name="meeting_stream_stop">إيقاف المشاركة</string>
+  <string name="meeting_audio_outputVolume">مستوى صوت الإخراج</string>
+  <string name="meeting_audio_inputMode">وضع الإدخال</string>
+  <string name="meeting_audio_mode_voiceActivity">النشاط الصوتي</string>
+  <string name="meeting_audio_mode_pushToTalk">اضغط للتحدث</string>
+  <string name="meeting_audio_autoSensitivity">حساسية تلقائية</string>
+  <string name="meeting_audio_sensitivity">الحساسية</string>
+  <string name="meeting_ptt_talking">جارٍ التحدث…</string>
+  <string name="meeting_ns_off">إيقاف</string>
+  <string name="meeting_ns_device">الجهاز (مدمج)</string>
+  <string name="meeting_ns_appliesNextJoin">يسري عند انضمامك التالي</string>
+  <string name="meeting_ptt_openMic">ميكروفون مفتوح</string>
 </resources>

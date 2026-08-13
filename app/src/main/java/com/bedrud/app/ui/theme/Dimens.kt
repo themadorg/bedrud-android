@@ -63,4 +63,34 @@ object Dimens {
 
     // ── Brand ──
     val brandMark = 72.dp
+
+    // ── Meeting ──
+    val meetingTileGap = 8.dp            // gap between video tiles in the grid
+    val meetingGridBottomSpace = 128.dp  // grid clearance above the floating controls bar (incl. its drag handle)
+    val meetingTileAvatar = 56.dp        // avatar circle inside a video tile
+    val meetingTileAction = 32.dp        // tile corner action (fullscreen) touch circle
+    val meetingBadgeIcon = 14.dp         // mic/camera-off badges on the tile name chip
+    val meetingIndicatorDot = 8.dp       // top-bar dots (recording, reconnecting)
+    val meetingBarPaddingH = 10.dp       // controls bar inner horizontal padding
+    val meetingBarPaddingV = 16.dp       // controls bar bottom inset — mirrors the drag-handle block above the row
+    val meetingBarItemGap = 8.dp         // gap between controls bar buttons
+    val meetingMediaButtonWidth = 56.dp  // camera/mic toggles (wider, rectangular)
+    val meetingMediaButtonHeight = 48.dp
+    val meetingCircleButton = 44.dp      // secondary round controls (share, chat)
+    val meetingEndCallWidth = 56.dp      // hang-up pill width — equal to the camera toggle so the sides stay symmetric
+    val meetingBarIconMedia = 22.dp
+    val meetingBarIconSm = 20.dp
+    val meetingBarIconLg = 24.dp
+    val meetingHandleWidth = 32.dp       // controls-bar drag handle (M3 sheet handle metrics)
+    val meetingHandleHeight = 4.dp
+    val meetingHandleSwipeThreshold = 24.dp // upward drag distance that opens the options sheet
+    val meetingFullscreenAvatar = 96.dp  // avatar circle when a participant is viewed fullscreen
+    val meetingMicPillMaxWidth = 136.dp  // mic pill cap (both modes): sides never squeeze at this width
+    val meetingSliderThumb = 20.dp       // compact round slider thumb (in-call sliders)
+    val meetingSliderTrack = 4.dp        // compact slider track height
+
+    // ── Meeting: invite sheet ──
+    val inviteGridMaxHeight = 280.dp     // participant avatar grid scrolls beyond this
+    val inviteTargetSize = 56.dp         // share-target circles (send, copy, QR, apps)
+    val inviteQrSize = 240.dp            // rendered room-link QR code
 }

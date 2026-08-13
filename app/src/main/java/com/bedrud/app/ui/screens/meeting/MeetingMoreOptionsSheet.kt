@@ -1,240 +1,168 @@
 package com.bedrud.app.ui.screens.meeting
 
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.Chat
 import androidx.compose.material.icons.automirrored.filled.VolumeOff
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
-import androidx.compose.material.icons.filled.Cameraswitch
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.Headset
-import androidx.compose.material.icons.filled.PersonAdd
-import androidx.compose.material.icons.filled.People
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material3.Badge
-import androidx.compose.material3.BadgedBox
+import androidx.compose.material.icons.filled.Videocam
+import androidx.compose.material.icons.filled.VideocamOff
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
 import com.bedrud.app.R
+import com.bedrud.app.core.audio.MeetingInputMode
 import com.bedrud.app.ui.components.BedrudBottomSheet
-import com.bedrud.app.ui.theme.BedrudShapeTokens
+import com.bedrud.app.ui.components.BedrudSheetActionRow
 import com.bedrud.app.ui.theme.Dimens
 
+/**
+ * The pull-up options sheet behind the controls bar's drag handle. The call controls repeat along
+ * its top so pulling the bar up never takes them away, then the room-level options follow as
+ * standard sheet rows. Toggles keep the sheet open; navigation rows close it.
+ */
 @Composable
 fun MeetingMoreOptionsSheet(
+    isMicEnabled: Boolean,
     isCameraEnabled: Boolean,
-    isDeafened: Boolean,
+    micHasError: Boolean = false,
+    cameraHasError: Boolean = false,
+    isScreenShareEnabled: Boolean,
+    showChat: Boolean,
     unreadCount: Int,
+    isDeafened: Boolean,
+    hideAllIncomingVideo: Boolean,
     isRoomSettingsAvailable: Boolean,
-    onDismiss: () -> Unit,
-    onSwitchCamera: () -> Unit,
+    inputMode: MeetingInputMode = MeetingInputMode.VOICE_ACTIVITY,
+    micLevelProvider: () -> Float = { 0f },
+    voiceGateOpenProvider: () -> Boolean = { true },
+    onPushToTalkChange: (Boolean) -> Unit = {},
+    onToggleMic: () -> Unit,
+    onToggleCamera: () -> Unit,
+    onToggleScreenShare: () -> Unit,
     onToggleChat: () -> Unit,
-    onToggleParticipants: () -> Unit,
-    onCopyRoomLink: () -> Unit,
+    onEndCall: () -> Unit,
     onToggleDeafen: () -> Unit,
+    onToggleHideAllIncomingVideo: () -> Unit,
     onOpenAudioSettings: () -> Unit,
+    onOpenNoiseSuppression: () -> Unit,
     onOpenRoomSettings: () -> Unit,
+    onDismiss: () -> Unit,
 ) {
     val colors = meetingChromeColors()
 
     BedrudBottomSheet(onDismiss = onDismiss) {
-        // Own Column: the quick actions sit further apart than the scaffold's default row spacing.
-        // Container, shape, gutter and insets still come from the scaffold.
-        Column(
-            modifier = Modifier.fillMaxWidth(),
-            verticalArrangement = Arrangement.spacedBy(Dimens.space12),
+        // The exact controls from the bar, pulled up with the sheet
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = Dimens.space8),
+            contentAlignment = Alignment.Center,
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(Dimens.space16, Alignment.CenterHorizontally),
-            ) {
-                if (isCameraEnabled) {
-                    SheetCircleAction(
-                        colors = colors,
-                        icon = Icons.Default.Cameraswitch,
-                        contentDescription = stringResource(R.string.meeting_contentDescription_switchCamera),
-                        onClick = {
-                            onSwitchCamera()
-                            onDismiss()
-                        },
-                    )
-                }
-                SheetCircleAction(
-                    colors = colors,
-                    icon = Icons.Default.People,
-                    contentDescription = stringResource(R.string.meeting_contentDescription_participants),
-                    onClick = {
-                        onToggleParticipants()
-                        onDismiss()
-                    },
-                )
-                SheetCircleAction(
-                    colors = colors,
-                    icon = Icons.Default.PersonAdd,
-                    contentDescription = stringResource(R.string.meeting_contentDescription_copyRoomLink),
-                    onClick = {
-                        onCopyRoomLink()
-                        onDismiss()
-                    },
-                )
-            }
-
-            SheetLabeledButton(
-                colors = colors,
-                icon = Icons.AutoMirrored.Filled.Chat,
-                label = stringResource(R.string.meeting_sheet_chat),
-                badge = if (unreadCount > 0) {
-                    if (unreadCount > 9) "9+" else unreadCount.toString()
-                } else {
-                    null
-                },
-                onClick = {
+            MeetingCallControlsRow(
+                isMicEnabled = isMicEnabled,
+                isCameraEnabled = isCameraEnabled,
+                micHasError = micHasError,
+                cameraHasError = cameraHasError,
+                isScreenShareEnabled = isScreenShareEnabled,
+                showChat = showChat,
+                unreadCount = unreadCount,
+                inputMode = inputMode,
+                micLevelProvider = micLevelProvider,
+                voiceGateOpenProvider = voiceGateOpenProvider,
+                onPushToTalkChange = onPushToTalkChange,
+                onToggleMic = onToggleMic,
+                onToggleCamera = onToggleCamera,
+                onToggleScreenShare = onToggleScreenShare,
+                onToggleChat = {
                     onToggleChat()
                     onDismiss()
                 },
-                modifier = Modifier.fillMaxWidth(),
-            )
-
-            SheetLabeledButton(
-                colors = colors,
-                icon = if (isDeafened) Icons.AutoMirrored.Filled.VolumeOff else Icons.AutoMirrored.Filled.VolumeUp,
-                label = stringResource(R.string.meeting_sheet_deafen),
-                active = isDeafened,
-                onClick = {
-                    onToggleDeafen()
+                onEndCall = {
                     onDismiss()
+                    onEndCall()
                 },
                 modifier = Modifier.fillMaxWidth(),
             )
-
-            SheetLabeledButton(
-                colors = colors,
-                icon = Icons.Default.Headset,
-                label = stringResource(R.string.meeting_sheet_settings),
-                onClick = {
-                    onDismiss()
-                    onOpenAudioSettings()
-                },
-                modifier = Modifier.fillMaxWidth(),
-            )
-
-            if (isRoomSettingsAvailable) {
-                SheetLabeledButton(
-                    colors = colors,
-                    icon = Icons.Default.Settings,
-                    label = stringResource(R.string.meeting_sheet_roomSettings),
-                    onClick = {
-                        onDismiss()
-                        onOpenRoomSettings()
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                )
-            }
         }
-    }
-}
 
-@Composable
-private fun SheetCircleAction(
-    colors: MeetingChromeColors,
-    icon: ImageVector,
-    contentDescription: String,
-    onClick: () -> Unit,
-) {
-    Surface(
-        onClick = onClick,
-        shape = CircleShape,
-        color = colors.button,
-        modifier = Modifier.size(QuickActionSize),
-    ) {
-        Box(contentAlignment = Alignment.Center) {
-            Icon(
-                imageVector = icon,
-                contentDescription = contentDescription,
-                tint = colors.onButton,
-                modifier = Modifier.size(QuickActionIcon),
-            )
-        }
-    }
-}
+        HorizontalDivider(color = colors.divider)
 
-@Composable
-private fun SheetLabeledButton(
-    colors: MeetingChromeColors,
-    icon: ImageVector,
-    label: String,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-    badge: String? = null,
-    enabled: Boolean = true,
-    active: Boolean = false,
-) {
-    Surface(
-        onClick = onClick,
-        enabled = enabled,
-        shape = BedrudShapeTokens.card,
-        color = if (active) colors.buttonActive else colors.button,
-        modifier = modifier.height(TileHeight),
-    ) {
-        Column(
-            modifier = Modifier.padding(horizontal = Dimens.space8, vertical = TilePaddingVertical),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center,
-        ) {
-            if (badge != null) {
-                BadgedBox(
-                    badge = { Badge { Text(badge) } },
-                ) {
+        // Toggles, not navigation: the accent tint plus a trailing check carries the state (the
+        // sheet's selection language, same as the output picker) and the sheet stays open so the
+        // flip is visible.
+        BedrudSheetActionRow(
+            icon = if (isDeafened) Icons.AutoMirrored.Filled.VolumeOff
+            else Icons.AutoMirrored.Filled.VolumeUp,
+            title = stringResource(R.string.meeting_sheet_deafen),
+            contentColor = if (isDeafened) colors.accent else colors.onButton,
+            trailing = {
+                if (isDeafened) {
                     Icon(
-                        imageVector = icon,
+                        imageVector = Icons.Default.Check,
                         contentDescription = null,
-                        tint = colors.onButton,
-                        modifier = Modifier.size(TileIcon),
+                        tint = colors.accent,
+                        modifier = Modifier.size(Dimens.iconSm),
                     )
                 }
-            } else {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = null,
-                    tint = if (enabled) colors.onButton else colors.onButtonVariant,
-                    modifier = Modifier.size(TileIcon),
-                )
-            }
-            Text(
-                text = label,
-                color = if (enabled) colors.onButton else colors.onButtonVariant,
-                style = MaterialTheme.typography.labelMedium,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.padding(top = TileLabelGap),
+            },
+            onClick = onToggleDeafen,
+        )
+        BedrudSheetActionRow(
+            icon = if (hideAllIncomingVideo) Icons.Default.VideocamOff else Icons.Default.Videocam,
+            title = stringResource(R.string.meeting_sheet_disableAllCameras),
+            supportingText = stringResource(R.string.meeting_sheet_disableAllCamerasDescription),
+            contentColor = if (hideAllIncomingVideo) colors.accent else colors.onButton,
+            supportingColor = colors.onButtonVariant,
+            trailing = {
+                if (hideAllIncomingVideo) {
+                    Icon(
+                        imageVector = Icons.Default.Check,
+                        contentDescription = null,
+                        tint = colors.accent,
+                        modifier = Modifier.size(Dimens.iconSm),
+                    )
+                }
+            },
+            onClick = onToggleHideAllIncomingVideo,
+        )
+        BedrudSheetActionRow(
+            icon = Icons.Default.Headset,
+            title = stringResource(R.string.meeting_sheet_audioSettings),
+            contentColor = colors.onButton,
+            onClick = {
+                onDismiss()
+                onOpenAudioSettings()
+            },
+        )
+        BedrudSheetActionRow(
+            icon = Icons.Default.GraphicEq,
+            title = stringResource(R.string.meeting_sheet_noiseSuppression),
+            contentColor = colors.onButton,
+            onClick = {
+                onDismiss()
+                onOpenNoiseSuppression()
+            },
+        )
+        if (isRoomSettingsAvailable) {
+            BedrudSheetActionRow(
+                icon = Icons.Default.Settings,
+                title = stringResource(R.string.meeting_sheet_roomSettings),
+                contentColor = colors.onButton,
+                onClick = {
+                    onDismiss()
+                    onOpenRoomSettings()
+                },
             )
         }
     }
 }
-
-// Sizes for this sheet's quick-action grid. Private and file-scoped: these describe one screen's
-// controls, not app-wide sizing, so they do not belong in the shared Dimens scale.
-// NOTE: TileIcon and TileLabelGap are off the 4dp grid, inherited from the original layout and
-// kept as-is so this migration changes no pixels. Worth revisiting in the call-screen redesign.
-private val QuickActionSize = 64.dp
-private val QuickActionIcon = 28.dp
-private val TileHeight = 72.dp
-private val TilePaddingVertical = 10.dp
-private val TileIcon = 22.dp
-private val TileLabelGap = 6.dp

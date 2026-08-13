@@ -146,6 +146,62 @@ perceptually invisible there. Outlined controls read correctly on the app backgr
 (`Stone950`) and disappear on raised surfaces. If an outline is genuinely needed on a raised
 surface, give it an explicit colour with real contrast.
 
+## Meeting chrome
+
+The in-call screen has its own chrome standard (palette via `meetingChromeColors()`, metrics under
+the `meeting*` tokens in `Dimens.kt`, timing in `Motion.meetingChromeAutoHideDelayMs`):
+
+- **Top bar** (`MeetingTopBar`): invite/participants entry at the start; the room name centered,
+  with the recording dot (dev-gated until the server exposes recording state) and a reconnecting
+  dot when applicable; camera flip (**only while the local camera is live**) and audio output at
+  the end. The center block is weight-balanced so the title never shifts as trailing actions
+  appear.
+- **Controls bar** (`MeetingControlsBar`): a floating pill — camera, screen share, mic, chat,
+  hang-up — with a **drag handle** on top. Tapping the handle or swiping up anywhere on the bar
+  opens the more-options sheet, mirroring how a bottom sheet is pulled up. There is no "⋯" button.
+- **Grid** (`MeetingVideoGrid`): the local participant appears **only while their camera is on**
+  (no self-tile for an audio-only self; when that leaves the room view empty, an inline hint takes
+  the stage). Breakpoints: 1–3 tiles stack as full-width rows; 4 → 2×2; 5 → 2×2 plus one
+  half-width centered; 6 → 2×3; beyond that the last slot collapses into a **"+N"** tile that
+  opens the participants list. Landscape transposes rows into columns.
+- **Tiles**: name chip centered along the bottom edge, carrying mic-off / camera-off badges; a
+  fullscreen affordance sits in the top-end corner; long-press opens the participant actions.
+- **Streams** (`MeetingStreamTile`): every live screenshare gets a strip tile above the grid.
+  Several people can share at once; watching is **opt-in per viewer, one stream at a time**
+  (LiveKit selective subscription — no gossip protocol). Unwatched shares render as a
+  placeholder with a watch button, your own share offers stop, and long-pressing the watched
+  stream opens `MeetingStreamSheet` (dev-hinted volume until share audio exists (#105), leave
+  stream — neutral, not red: leaving is reversible).
+- **Per-tile fullscreen** (`MeetingParticipantFullscreen`): chrome (name chip, collapse button,
+  controls bar) auto-hides after `meetingChromeAutoHideDelayMs` of inactivity; any tap toggles it
+  back; while hidden the system bars hide too (immersive). The hardware back key collapses
+  fullscreen instead of leaving the meeting.
+- **Audio input** (`MeetingAudioSettingsSheet`): output device + output volume (the voice-call
+  stream the hardware keys drive), and the input mode. **Push to talk** turns the mic slot into a
+  hold-to-talk pill — outlined idle, filled while transmitting — enabling the mic only while held
+  and never touching the persisted mic preference. **Voice activity** with auto sensitivity keeps
+  the platform's own processing (today's behavior); manual sensitivity engages
+  `VoiceGateProcessor`, a capture post-processor that mutes frames whose RMS falls below the
+  slider's dBFS threshold (with a ~300ms hangover so syllables don't clip). Noise suppression
+  (Off / Device) applies on the next join — the audio device module is built per connection.
+- **Mic meter**: the same processor always measures (gating stays conditional), publishing a
+  0..1 level that the pill renders as four bars in place of the mic glyph whenever audio is
+  actually being captured — same slot, so the bar's geometry never moves. The UI samples the
+  level per animation frame inside the draw scope rather than through a flow, so a 100 Hz audio
+  signal costs redraws, not recompositions. While the manual gate is closed the bars dim, which
+  makes the sensitivity threshold visible instead of guesswork.
+- **Sheets**: long-press a tile → `MeetingParticipantSheet` (per-viewer volume slider, local
+  mute / don't-watch / pin / fullscreen; admins get kick/ban plus the dev-hinted room mute /
+  room deafen / chat mute, #108). The top-bar invite entry, the "+N" tile and the more-options
+  "Invite a friend" row all open `MeetingInviteSheet` (participant avatar grid, share targets —
+  system share, copy, inline QR, email, Telegram, WhatsApp — and the raw link). The controls
+  bar's handle opens `MeetingMoreOptionsSheet`, which mirrors the five call controls along its
+  top and lists deafen, hide-all-cameras (viewer-side data saver), audio settings, the
+  dev-hinted noise suppression (#106), invite, and admin room settings. The output picker uses
+  trailing radios. `MeetingRecordingBanner` (dev-gated, #107) drops below the top bar from the
+  recording dot. There is no side panel anymore — the participants list lives in the invite
+  sheet.
+
 ## Dev-only affordances
 
 Where UI exists but its backend/business logic doesn't yet, build the UI and mark it with a **dev-only**

@@ -117,8 +117,6 @@
   <string name="meeting_contentDescription_switchCamera">カメラを切り替え</string>
   <string name="meeting_contentDescription_toggleScreenShare">画面共有の切り替え</string>
   <string name="meeting_contentDescription_toggleChat">チャットの切り替え</string>
-  <string name="meeting_contentDescription_participants">参加者</string>
-  <string name="meeting_contentDescription_copyRoomLink">ルームリンクをコピー</string>
   <string name="meeting_toast_linkCopied">ルームリンクをコピーしました</string>
   <string name="meeting_toast_errorCopied">エラーの詳細をコピーしました</string>
   <string name="meeting_contentDescription_leaveCall">通話を切断</string>
@@ -226,10 +224,6 @@
   <string name="profile_label_provider">プロバイダー</string>
   <string name="profile_button_signOut">サインアウト</string>
 
-  <string name="meeting_contentDescription_stopScreenShare">画面共有を停止</string>
-  <string name="meeting_contentDescription_maximizeScreenShare">全画面</string>
-  <string name="meeting_contentDescription_minimizeScreenShare">全画面を終了</string>
-  <string name="meeting_stage_screenShareTitle">画面共有</string>
   <string name="meeting_stage_screenSharePresenting"><xliff:g id="name" example="Alex">%1$s</xliff:g> が共有中</string>
   <string name="meeting_stage_screenShareWaiting"><xliff:g id="name" example="Alex">%1$s</xliff:g> の画面を待機中…</string>
   <string name="meeting_contentDescription_closeImagePreview">画像プレビューを閉じる</string>
@@ -243,11 +237,7 @@
   <string name="meeting_error_screenShareFailed">画面共有を開始できませんでした。</string>
   <string name="meeting_error_roomNoLongerExists">このルームは存在しません</string>
   <string name="meeting_error_joinFailed">ルームへの参加に失敗しました</string>
-  <string name="meeting_sheet_chat">チャット</string>
-  <string name="meeting_sheet_addOthers">他の人を追加</string>
   <string name="meeting_share_chooserTitle">ミーティングリンクを共有</string>
-  <string name="meeting_sheet_flipCamera">カメラを切り替え</string>
-  <string name="meeting_sheet_settings">設定</string>
   <string name="meeting_sheet_roomSettings">ルーム設定</string>
   <string name="meeting_sheet_deafen">スピーカーミュート</string>
   <string name="meeting_sheet_tools">ツール</string>
@@ -283,7 +273,6 @@
   <string name="meeting_error_cameraSwitchFailed">カメラを切り替えられませんでした</string>
   <string name="meeting_error_screenShareUnavailable">画面共有は利用できません</string>
   <string name="meeting_error_screenShareStopFailed">画面共有を停止できませんでした</string>
-  <string name="meeting_error_alreadyPresenting"><xliff:g id="name" example="Alex">%1$s</xliff:g>さんがすでに発表しています</string>
   <string name="meeting_error_messageSendFailed">メッセージを送信できませんでした</string>
   <string name="meeting_error_kickFailed">参加者を削除できませんでした</string>
   <string name="meeting_error_banFailed">参加者をブロックできませんでした</string>
@@ -291,4 +280,51 @@
   <string name="dashboard_error_deleteRoomFailed">ルームを削除できませんでした</string>
   <string name="dashboard_error_saveSettingsFailed">設定を保存できませんでした</string>
   <string name="dashboard_toast_settingsSaved">設定を保存しました</string>
+  <string name="meeting_contentDescription_invite">招待と参加者</string>
+  <string name="meeting_contentDescription_audioOutput">オーディオ出力</string>
+  <string name="meeting_contentDescription_recording">録画中</string>
+  <string name="meeting_contentDescription_tileFullscreen">全画面表示</string>
+  <string name="meeting_contentDescription_tileExitFullscreen">全画面を終了</string>
+  <string name="meeting_contentDescription_micOff">マイクオフ</string>
+  <string name="meeting_contentDescription_cameraOff">カメラオフ</string>
+  <string name="meeting_status_reconnecting">再接続中…</string>
+  <string name="meeting_empty_title">他には誰もいません</string>
+  <string name="meeting_empty_message">他の人を招待するか、カメラをオンにして自分を表示しましょう</string>
+  <string name="meeting_participant_volume">音量</string>
+  <string name="meeting_action_dontWatch">表示しない</string>
+  <string name="meeting_action_watch">表示する</string>
+  <string name="meeting_action_pin">ピン留め</string>
+  <string name="meeting_action_unpin">ピン留め解除</string>
+  <string name="meeting_action_roomMute">全員に対してミュート</string>
+  <string name="meeting_action_roomDeafen">音声を聞こえなくする</string>
+  <string name="meeting_action_chatMute">チャットをミュート</string>
+  <string name="meeting_sheet_disableAllCameras">すべてのカメラを非表示</string>
+  <string name="meeting_sheet_disableAllCamerasDescription">受信映像の表示を自分だけ停止します</string>
+  <string name="meeting_sheet_noiseSuppression">ノイズ抑制</string>
+  <string name="meeting_sheet_audioSettings">オーディオ設定</string>
+  <string name="meeting_recording_title">ルーム録画中</string>
+  <string name="meeting_recording_message">このルームでは、すべてのチャット、カメラ、画面共有、音声が記録されます。</string>
+  <string name="meeting_recording_acknowledge">了解</string>
+  <string name="meeting_invite_sendInvite">招待を送信</string>
+  <string name="meeting_invite_copyLink">リンクをコピー</string>
+  <string name="meeting_invite_qrCode">QRコード</string>
+  <string name="meeting_invite_email">メール</string>
+  <string name="meeting_invite_qrDescription">ルームリンクのQRコード</string>
+  <string name="meeting_invite_appNotInstalled">そのアプリはインストールされていません</string>
+  <string name="common_hint_comingSoon">近日公開</string>
+  <string name="meeting_stream_watch">ストリームを見る</string>
+  <string name="meeting_stream_leave">ストリームから退出</string>
+  <string name="meeting_stream_youArePresenting">画面を共有中です</string>
+  <string name="meeting_stream_stop">共有を停止</string>
+  <string name="meeting_audio_outputVolume">出力音量</string>
+  <string name="meeting_audio_inputMode">入力モード</string>
+  <string name="meeting_audio_mode_voiceActivity">音声アクティビティ</string>
+  <string name="meeting_audio_mode_pushToTalk">プッシュトゥトーク</string>
+  <string name="meeting_audio_autoSensitivity">自動感度</string>
+  <string name="meeting_audio_sensitivity">感度</string>
+  <string name="meeting_ptt_talking">話しています…</string>
+  <string name="meeting_ns_off">オフ</string>
+  <string name="meeting_ns_device">デバイス（内蔵）</string>
+  <string name="meeting_ns_appliesNextJoin">次回の参加時に適用されます</string>
+  <string name="meeting_ptt_openMic">オープンマイク</string>
 </resources>

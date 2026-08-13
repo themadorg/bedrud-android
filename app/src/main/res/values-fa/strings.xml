@@ -115,8 +115,6 @@
   <string name="meeting_contentDescription_switchCamera">تغییر دوربین</string>
   <string name="meeting_contentDescription_toggleScreenShare">تغییر اشتراک‌گذاری صفحه</string>
   <string name="meeting_contentDescription_toggleChat">تغییر چت</string>
-  <string name="meeting_contentDescription_participants">شرکت‌کنندگان</string>
-  <string name="meeting_contentDescription_copyRoomLink">کپی لینک اتاق</string>
   <string name="meeting_toast_linkCopied">لینک اتاق کپی شد</string>
   <string name="meeting_toast_errorCopied">جزئیات خطا کپی شد</string>
   <string name="meeting_contentDescription_leaveCall">خروج از تماس</string>
@@ -223,10 +221,6 @@
   <string name="profile_label_provider">ارائه‌دهنده</string>
   <string name="profile_button_signOut">خروج</string>
 
-  <string name="meeting_contentDescription_stopScreenShare">توقف اشتراک‌گذاری صفحه</string>
-  <string name="meeting_contentDescription_maximizeScreenShare">تمام‌صفحه</string>
-  <string name="meeting_contentDescription_minimizeScreenShare">خروج از تمام‌صفحه</string>
-  <string name="meeting_stage_screenShareTitle">اشتراک‌گذاری صفحه</string>
   <string name="meeting_stage_screenSharePresenting"><xliff:g id="name" example="Alex">%1$s</xliff:g> در حال ارائه است</string>
   <string name="meeting_stage_screenShareWaiting">در انتظار صفحه <xliff:g id="name" example="Alex">%1$s</xliff:g>…</string>
   <string name="meeting_contentDescription_closeImagePreview">بستن پیش‌نمایش تصویر</string>
@@ -240,11 +234,7 @@
   <string name="meeting_error_screenShareFailed">شروع اشتراک‌گذاری صفحه ممکن نشد.</string>
   <string name="meeting_error_roomNoLongerExists">این اتاق دیگر وجود ندارد</string>
   <string name="meeting_error_joinFailed">پیوستن به اتاق ناموفق بود</string>
-  <string name="meeting_sheet_chat">گفتگو</string>
-  <string name="meeting_sheet_addOthers">افزودن دیگران</string>
   <string name="meeting_share_chooserTitle">اشتراک لینک جلسه</string>
-  <string name="meeting_sheet_flipCamera">چرخش دوربین</string>
-  <string name="meeting_sheet_settings">تنظیمات صدا</string>
   <string name="meeting_sheet_roomSettings">تنظیمات اتاق</string>
   <string name="meeting_sheet_deafen">قطع شنیدن</string>
   <string name="meeting_sheet_tools">ابزارها</string>
@@ -280,7 +270,6 @@
   <string name="meeting_error_cameraSwitchFailed">تعویض دوربین ممکن نشد</string>
   <string name="meeting_error_screenShareUnavailable">هم‌رسانی صفحه در دسترس نیست</string>
   <string name="meeting_error_screenShareStopFailed">توقف هم‌رسانی صفحه ممکن نشد</string>
-  <string name="meeting_error_alreadyPresenting"><xliff:g id="name" example="Alex">%1$s</xliff:g> در حال ارائه است</string>
   <string name="meeting_error_messageSendFailed">ارسال پیام شما ممکن نشد</string>
   <string name="meeting_error_kickFailed">حذف شرکت‌کننده ممکن نشد</string>
   <string name="meeting_error_banFailed">مسدود کردن شرکت‌کننده ممکن نشد</string>
@@ -288,4 +277,51 @@
   <string name="dashboard_error_deleteRoomFailed">حذف اتاق ممکن نشد</string>
   <string name="dashboard_error_saveSettingsFailed">ذخیره تنظیمات ممکن نشد</string>
   <string name="dashboard_toast_settingsSaved">تنظیمات ذخیره شد</string>
+  <string name="meeting_contentDescription_invite">دعوت و شرکت‌کنندگان</string>
+  <string name="meeting_contentDescription_audioOutput">خروجی صدا</string>
+  <string name="meeting_contentDescription_recording">ضبط فعال است</string>
+  <string name="meeting_contentDescription_tileFullscreen">نمایش تمام‌صفحه</string>
+  <string name="meeting_contentDescription_tileExitFullscreen">خروج از تمام‌صفحه</string>
+  <string name="meeting_contentDescription_micOff">میکروفون خاموش است</string>
+  <string name="meeting_contentDescription_cameraOff">دوربین خاموش است</string>
+  <string name="meeting_status_reconnecting">در حال اتصال دوباره…</string>
+  <string name="meeting_empty_title">کس دیگری اینجا نیست</string>
+  <string name="meeting_empty_message">دیگران را دعوت کنید یا دوربین را روشن کنید تا خودتان را ببینید</string>
+  <string name="meeting_participant_volume">میزان صدا</string>
+  <string name="meeting_action_dontWatch">تماشا نکردن</string>
+  <string name="meeting_action_watch">تماشا</string>
+  <string name="meeting_action_pin">سنجاق</string>
+  <string name="meeting_action_unpin">برداشتن سنجاق</string>
+  <string name="meeting_action_roomMute">بی‌صدا در اتاق</string>
+  <string name="meeting_action_roomDeafen">قطع شنیدن در اتاق</string>
+  <string name="meeting_action_chatMute">بی‌صدا کردن گفتگو</string>
+  <string name="meeting_sheet_disableAllCameras">پنهان‌کردن همه دوربین‌ها</string>
+  <string name="meeting_sheet_disableAllCamerasDescription">نمایش ویدیوی دریافتی را فقط برای شما متوقف می‌کند</string>
+  <string name="meeting_sheet_noiseSuppression">حذف نویز</string>
+  <string name="meeting_sheet_audioSettings">تنظیمات صدا</string>
+  <string name="meeting_recording_title">ضبط اتاق فعال است</string>
+  <string name="meeting_recording_message">در این اتاق، همه گفتگوها، دوربین‌ها، اشتراک‌های صفحه و صدا ضبط می‌شوند.</string>
+  <string name="meeting_recording_acknowledge">متوجه شدم</string>
+  <string name="meeting_invite_sendInvite">ارسال دعوت</string>
+  <string name="meeting_invite_copyLink">کپی پیوند</string>
+  <string name="meeting_invite_qrCode">کد QR</string>
+  <string name="meeting_invite_email">ایمیل</string>
+  <string name="meeting_invite_qrDescription">کد QR پیوند اتاق</string>
+  <string name="meeting_invite_appNotInstalled">این برنامه نصب نیست</string>
+  <string name="common_hint_comingSoon">به‌زودی</string>
+  <string name="meeting_stream_watch">تماشای پخش</string>
+  <string name="meeting_stream_leave">خروج از پخش</string>
+  <string name="meeting_stream_youArePresenting">در حال ارائه هستید</string>
+  <string name="meeting_stream_stop">توقف اشتراک‌گذاری</string>
+  <string name="meeting_audio_outputVolume">میزان صدای خروجی</string>
+  <string name="meeting_audio_inputMode">حالت ورودی</string>
+  <string name="meeting_audio_mode_voiceActivity">فعالیت صوتی</string>
+  <string name="meeting_audio_mode_pushToTalk">فشار برای صحبت</string>
+  <string name="meeting_audio_autoSensitivity">حساسیت خودکار</string>
+  <string name="meeting_audio_sensitivity">حساسیت</string>
+  <string name="meeting_ptt_talking">در حال صحبت…</string>
+  <string name="meeting_ns_off">خاموش</string>
+  <string name="meeting_ns_device">دستگاه (داخلی)</string>
+  <string name="meeting_ns_appliesNextJoin">از پیوستن بعدی اعمال می‌شود</string>
+  <string name="meeting_ptt_openMic">میکروفون باز</string>
 </resources>

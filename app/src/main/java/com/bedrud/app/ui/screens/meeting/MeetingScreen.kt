@@ -6,21 +6,16 @@ import android.content.Context
 import android.content.pm.PackageManager
 import android.media.projection.MediaProjectionManager
 import android.os.Build
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInHorizontally
-import androidx.compose.animation.slideOutHorizontally
-import androidx.compose.ui.platform.LocalLayoutDirection
-import androidx.compose.ui.unit.LayoutDirection
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -45,35 +40,18 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.Chat
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Badge
-import androidx.compose.material.icons.filled.CallEnd
-import androidx.compose.material.icons.filled.Cameraswitch
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.Mic
-import androidx.compose.material.icons.filled.MicOff
-import androidx.compose.material.icons.filled.People
-import androidx.compose.material.icons.filled.ScreenShare
-import androidx.compose.material.icons.filled.StopScreenShare
-import androidx.compose.material.icons.filled.Videocam
-import androidx.compose.material.icons.filled.VideocamOff
-import androidx.compose.material3.Badge
-import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.Icon
@@ -127,15 +105,15 @@ import com.bedrud.app.core.instance.InstanceManager
 import com.bedrud.app.ui.components.BedrudScaffoldContentInsets
 import com.bedrud.app.ui.components.ChatImageLightbox
 import com.bedrud.app.ui.components.ConfirmDialog
-import com.bedrud.app.ui.components.InitialsAvatar
+import com.bedrud.app.ui.theme.Dimens
 import com.bedrud.app.ui.util.setPlainText
 import com.bedrud.app.core.livekit.ChatMessage
 import com.bedrud.app.core.livekit.ConnectionState
 import com.bedrud.app.core.livekit.RoomManager
 import com.bedrud.app.core.meeting.VideoAspect
 import com.bedrud.app.core.meeting.chat.ChatWire
-import com.bedrud.app.core.meeting.stage.StageWire
 import com.bedrud.app.core.pip.PipStateHolder
+import com.bedrud.app.ui.screens.settings.SettingsStore
 import com.bedrud.app.models.JoinRoomRequest
 import com.bedrud.app.models.JoinRoomResponse
 import io.livekit.android.compose.ui.ScaleType
@@ -156,7 +134,8 @@ fun MeetingScreen(
     roomName: String,
     onLeave: () -> Unit,
     instanceManager: InstanceManager = koinInject(),
-    pipStateHolder: PipStateHolder = koinInject()
+    pipStateHolder: PipStateHolder = koinInject(),
+    settingsStore: SettingsStore = koinInject(),
 ) {
     val roomApi = instanceManager.roomApi.collectAsState().value ?: return
     val roomManager = instanceManager.roomManager.collectAsState().value ?: return
@@ -198,11 +177,26 @@ fun MeetingScreen(
     val wasKicked by roomManager.wasKicked.collectAsState()
 
     val participantVersion by roomManager.participantVersion.collectAsState()
-    val activeStage by roomManager.activeStage.collectAsState()
+    val watchedStreamIdentity by roomManager.watchedStreamIdentity.collectAsState()
     val chatMessages by roomManager.chatMessages.collectAsState()
     var showChat by remember { mutableStateOf(false) }
-    var showParticipants by remember { mutableStateOf(false) }
+    var showInviteSheet by remember { mutableStateOf(false) }
     var chatInput by remember { mutableStateOf("") }
+
+    // Long-pressing a tile opens the participant sheet for that identity
+    var participantSheetIdentity by remember { mutableStateOf<String?>(null) }
+    // Long-pressing the watched stream opens its sheet
+    var streamSheetIdentity by remember { mutableStateOf<String?>(null) }
+    // Viewer-side "hide all cameras" (data saver) from the more-options sheet
+    var hideAllIncomingVideo by remember { mutableStateOf(false) }
+    // Pinned participant leads the grid ordering
+    var pinnedIdentity by rememberSaveable { mutableStateOf<String?>(null) }
+    // Recording banner, behind the dev-gated recording dot. TODO(#107)
+    var showRecordingBanner by remember { mutableStateOf(false) }
+    var showAudioSettingsSheet by remember { mutableStateOf(false) }
+    var showInputModeSheet by remember { mutableStateOf(false) }
+    var showNoiseSuppressionSheet by remember { mutableStateOf(false) }
+    var noiseSuppressionMode by remember { mutableStateOf(settingsStore.getNoiseSuppression()) }
 
     // Identities whose video this viewer has locally hidden (does not affect other viewers)
     var locallyHiddenVideoIdentities by remember { mutableStateOf(setOf<String>()) }
@@ -217,6 +211,10 @@ fun MeetingScreen(
     // Identities this viewer has locally muted (does not affect what other participants hear)
     val locallyMutedIdentities by roomManager.locallyMutedIdentities.collectAsState()
     val onToggleLocalMute: (String) -> Unit = { identity -> roomManager.toggleLocalMute(identity) }
+    val participantVolumes by roomManager.participantVolumes.collectAsState()
+    val inputMode by roomManager.inputMode.collectAsState()
+    val autoSensitivity by roomManager.autoSensitivity.collectAsState()
+    val voiceSensitivity by roomManager.voiceSensitivity.collectAsState()
 
     // Unread chat count while panel is closed
     var lastReadCount by rememberSaveable { mutableIntStateOf(0) }
@@ -227,13 +225,11 @@ fun MeetingScreen(
     var showLeaveDialog by remember { mutableStateOf(false) }
     var showAudioSheet by remember { mutableStateOf(false) }
     var showRoomSettingsSheet by remember { mutableStateOf(false) }
-    var isScreenShareFullscreen by rememberSaveable { mutableStateOf(false) }
+    var showMoreOptionsSheet by remember { mutableStateOf(false) }
 
-    LaunchedEffect(activeStage?.kind) {
-        if (activeStage?.kind != StageWire.KIND_SCREENSHARE) {
-            isScreenShareFullscreen = false
-        }
-    }
+    // Per-tile fullscreen: which participant fills the screen, and whether its chrome is showing
+    var fullscreenParticipantIdentity by rememberSaveable { mutableStateOf<String?>(null) }
+    var fullscreenChromeVisible by remember { mutableStateOf(true) }
 
     var roomInfo by remember { mutableStateOf<JoinRoomResponse?>(null) }
     var isJoining by remember { mutableStateOf(true) }
@@ -425,16 +421,11 @@ fun MeetingScreen(
                     val audioState = rememberMeetingAudioState(roomManager.audioHandler)
 
                     val localIdentity = room.localParticipant.identity?.value
-                    val stageScreenShareIdentity = if (activeStage?.kind == StageWire.KIND_SCREENSHARE) {
-                        activeStage?.ownerIdentity
-                    } else {
-                        null
-                    }
 
                     if (isInPipMode) {
-                        val pipStage = activeStage?.takeIf { it.kind == StageWire.KIND_SCREENSHARE }
-                        val pipParticipant = if (pipStage != null) {
-                            participants.find { it.identity?.value == pipStage.ownerIdentity }
+                        val pipWatchedIdentity = watchedStreamIdentity
+                        val pipParticipant = if (pipWatchedIdentity != null) {
+                            participants.find { it.identity?.value == pipWatchedIdentity }
                         } else {
                             participants.firstOrNull {
                                 it.identity != room.localParticipant.identity
@@ -463,7 +454,7 @@ fun MeetingScreen(
                                     pipParticipant.identity?.value in locallyHiddenVideoIdentities
 
                                 val pipTrack = when {
-                                    pipStage != null && screenShareTrack != null && !isScreenShareMuted ->
+                                    pipWatchedIdentity != null && screenShareTrack != null && !isScreenShareMuted ->
                                         screenShareTrack
                                     cameraTrack != null && !isCameraMuted && !isPipVideoLocallyDisabled -> cameraTrack
                                     else -> null
@@ -492,160 +483,430 @@ fun MeetingScreen(
                                 .background(MaterialTheme.colorScheme.background)
                                 .padding(padding)
                         ) {
-                            if (!showChat) {
+                            val isTileFullscreen = fullscreenParticipantIdentity != null
+                            if (!showChat && !isTileFullscreen) {
                             Column(
                                 modifier = Modifier
                                     .fillMaxSize()
                                     .background(MaterialTheme.colorScheme.background)
                             ) {
-                                // Meeting Header HUD
-                                MeetingHeaderHUD(
+                                MeetingTopBar(
                                     roomName = roomName,
-                                    participantCount = participants.size,
-                                    connectionState = connectionState
+                                    connectionState = connectionState,
+                                    isCameraEnabled = isCameraEnabled,
+                                    onInvite = { showInviteSheet = true },
+                                    onSwitchCamera = { roomManager.switchCamera() },
+                                    onOpenAudioOutput = { showAudioSheet = true },
+                                    onRecordingClick = { showRecordingBanner = true },
                                 )
 
-                                val screenShareStage = activeStage?.takeIf { it.kind == StageWire.KIND_SCREENSHARE }
-                                if (screenShareStage != null && !isScreenShareFullscreen) {
-                                    MeetingScreenShareStage(
-                                        stage = screenShareStage,
+
+                                // Every live screenshare gets its own strip tile; watching is
+                                // opt-in per viewer, one stream at a time.
+                                val streamParticipants = remember(participantVersion) {
+                                    participants.filter {
+                                        it.getTrackPublication(Track.Source.SCREEN_SHARE) != null
+                                    }
+                                }
+                                // Grid tiles: the local participant only while their camera is
+                                // on (there is no self-tile for an audio-only self), then the
+                                // remote participants.
+                                val gridTiles = remember(participantVersion, isCameraEnabled, pinnedIdentity) {
+                                    buildList {
+                                        if (isCameraEnabled) add(room.localParticipant)
+                                        addAll(room.remoteParticipants.values)
+                                    }.sortedByDescending { it.identity?.value == pinnedIdentity }
+                                }
+                                // With no grid underneath, streams take the stage and share the
+                                // full height instead of staying strip-sized.
+                                val expandStreams =
+                                    gridTiles.isEmpty() && streamParticipants.isNotEmpty()
+                                streamParticipants.forEach { presenter ->
+                                    val presenterIdentity = presenter.identity?.value
+                                    MeetingStreamTile(
+                                        participant = presenter,
+                                        isLocal = presenterIdentity == localIdentity,
+                                        isWatched = presenterIdentity == watchedStreamIdentity,
                                         room = room,
                                         participantVersion = participantVersion,
-                                        isOwner = screenShareStage.ownerIdentity == localIdentity,
-                                        onStop = {
+                                        onWatch = { roomManager.watchStream(presenterIdentity) },
+                                        onExpand = {
+                                            if (presenterIdentity != null) {
+                                                fullscreenParticipantIdentity = presenterIdentity
+                                                fullscreenChromeVisible = true
+                                            }
+                                        },
+                                        onOpenStreamSheet = {
+                                            streamSheetIdentity = presenterIdentity
+                                        },
+                                        onStopShare = {
                                             scope.launch { roomManager.stopScreenShare() }
                                         },
-                                        onMaximize = { isScreenShareFullscreen = true },
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(horizontal = 8.dp)
-                                            .padding(bottom = 8.dp),
+                                        modifier = if (expandStreams) {
+                                            Modifier
+                                                .weight(1f)
+                                                .fillMaxWidth()
+                                                .padding(horizontal = Dimens.space8)
+                                                .padding(bottom = Dimens.meetingGridBottomSpace)
+                                        } else {
+                                            Modifier
+                                                .fillMaxWidth()
+                                                .padding(horizontal = Dimens.space8)
+                                                .padding(bottom = Dimens.space8)
+                                                .aspectRatio(VideoAspect.RATIO)
+                                        },
                                     )
                                 }
 
-                                val columns = when {
-                                    participants.size <= 1 -> 1
-                                    participants.size <= 4 -> 2
-                                    else -> 3
+                                if (gridTiles.isEmpty() && streamParticipants.isEmpty()) {
+                                    // Alone with the camera off: there is no self-tile, so give
+                                    // the stage a hint instead of a blank void.
+                                    Column(
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .fillMaxWidth()
+                                            .padding(horizontal = Dimens.screenPadding)
+                                            .padding(bottom = Dimens.meetingGridBottomSpace),
+                                        verticalArrangement = Arrangement.Center,
+                                        horizontalAlignment = Alignment.CenterHorizontally,
+                                    ) {
+                                        Text(
+                                            text = stringResource(R.string.meeting_empty_title),
+                                            style = MaterialTheme.typography.titleMedium,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            textAlign = TextAlign.Center,
+                                        )
+                                        Spacer(modifier = Modifier.height(Dimens.space8))
+                                        Text(
+                                            text = stringResource(R.string.meeting_empty_message),
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            textAlign = TextAlign.Center,
+                                        )
+                                    }
+                                } else if (gridTiles.isNotEmpty()) {
+                                    MeetingVideoGrid(
+                                        tiles = gridTiles,
+                                        room = room,
+                                        localIdentity = localIdentity,
+                                        disabledVideoIdentities = locallyHiddenVideoIdentities,
+                                        hideAllIncomingVideo = hideAllIncomingVideo,
+                                        mutedIdentities = locallyMutedIdentities,
+                                        pinnedIdentity = pinnedIdentity,
+                                        onOpenParticipantActions = { identity ->
+                                            participantSheetIdentity = identity
+                                        },
+                                        onExpandTile = { identity ->
+                                            fullscreenParticipantIdentity = identity
+                                            fullscreenChromeVisible = true
+                                        },
+                                        onOverflowClick = { showInviteSheet = true },
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .fillMaxWidth()
+                                            .padding(horizontal = Dimens.space8)
+                                            .padding(bottom = Dimens.meetingGridBottomSpace),
+                                    )
                                 }
+                            }
+                            }
 
-                                LazyVerticalGrid(
-                                    columns = GridCells.Fixed(columns),
+                            if (showRecordingBanner && !isTileFullscreen && !showChat) {
+                                MeetingRecordingBanner(
+                                    elapsedLabel = RecordingElapsedPlaceholder,
+                                    onAcknowledge = { showRecordingBanner = false },
                                     modifier = Modifier
-                                        .weight(1f)
-                                        .fillMaxWidth()
-                                        .padding(horizontal = 8.dp)
-                                        .padding(bottom = 88.dp),
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                                ) {
-                                    items(
-                                        participants,
-                                        key = { it.identity?.value ?: it.hashCode() }
-                                    ) { participant ->
-                                        val isLocalParticipant = participant.identity == room.localParticipant.identity
-                                        ParticipantTile(
-                                            participant = participant,
-                                            isAdmin = isAdmin,
-                                            isLocalParticipant = isLocalParticipant,
-                                            roomId = roomId,
-                                            roomApi = roomApi,
-                                            snackbarHostState = snackbarHostState,
-                                            scope = scope,
-                                            room = room,
-                                            stageScreenShareIdentity = stageScreenShareIdentity,
-                                            disabledVideoIdentities = locallyHiddenVideoIdentities,
-                                            onToggleVideoDisabled = onToggleVideoDisabled,
-                                            mutedIdentities = locallyMutedIdentities,
-                                            onToggleLocalMute = onToggleLocalMute,
+                                        .align(Alignment.TopCenter)
+                                        .padding(top = Dimens.space56)
+                                        .padding(horizontal = Dimens.space8),
+                                )
+                            }
+
+                            val fullscreenParticipant = fullscreenParticipantIdentity?.let { id ->
+                                participants.find { it.identity?.value == id }
+                            }
+                            // Leave fullscreen automatically when that participant leaves the room.
+                            LaunchedEffect(fullscreenParticipantIdentity, participantVersion) {
+                                if (fullscreenParticipantIdentity != null && fullscreenParticipant == null) {
+                                    fullscreenParticipantIdentity = null
+                                }
+                            }
+                            // The hardware back key leaves fullscreen first, like the collapse
+                            // button, instead of leaving the meeting screen.
+                            BackHandler(enabled = fullscreenParticipant != null) {
+                                fullscreenParticipantIdentity = null
+                            }
+                            if (fullscreenParticipant != null) {
+                                MeetingParticipantFullscreen(
+                                    participant = fullscreenParticipant,
+                                    room = room,
+                                    participantVersion = participantVersion,
+                                    chromeVisible = fullscreenChromeVisible,
+                                    isVideoLocallyDisabled =
+                                        fullscreenParticipant.identity?.value in locallyHiddenVideoIdentities,
+                                    onToggleChrome = { fullscreenChromeVisible = !fullscreenChromeVisible },
+                                    onAutoHideChrome = { fullscreenChromeVisible = false },
+                                    onCollapse = { fullscreenParticipantIdentity = null },
+                                    modifier = Modifier.fillMaxSize(),
+                                )
+                            }
+
+                            val roomLink = remember(serverURL, roomName) {
+                                BedrudURLParser.buildMeetingLink(serverURL, roomName)
+                            }
+                            val copyRoomLink = {
+                                scope.launch {
+                                    clipboard.setPlainText(clipLabel, roomLink)
+                                    snackbarHostState.showSnackbar(linkCopiedMessage)
+                                }
+                                Unit
+                            }
+                            val toggleMicAction = {
+                                val action: () -> Unit = {
+                                    scope.launch { roomManager.toggleMicrophone() }
+                                    Unit
+                                }
+                                if (hasPermission(Manifest.permission.RECORD_AUDIO)) {
+                                    action()
+                                } else {
+                                    pendingMediaAction = action
+                                    permissionLauncher.launch(arrayOf(Manifest.permission.RECORD_AUDIO))
+                                }
+                            }
+                            val toggleCameraAction = {
+                                val action: () -> Unit = {
+                                    scope.launch { roomManager.toggleCamera() }
+                                    Unit
+                                }
+                                if (hasPermission(Manifest.permission.CAMERA)) {
+                                    action()
+                                } else {
+                                    pendingMediaAction = action
+                                    permissionLauncher.launch(arrayOf(Manifest.permission.CAMERA))
+                                }
+                            }
+                            val toggleScreenShareAction = {
+                                if (isScreenShareEnabled) {
+                                    scope.launch { roomManager.stopScreenShare() }
+                                    Unit
+                                } else {
+                                    val projectionManager = context.getSystemService(
+                                        Context.MEDIA_PROJECTION_SERVICE
+                                    ) as MediaProjectionManager
+                                    screenCaptureLauncher.launch(
+                                        projectionManager.createScreenCaptureIntent()
+                                    )
+                                }
+                            }
+                            val toggleChatAction = {
+                                showChat = !showChat
+                            }
+                            val endCallAction = {
+                                if (isAdmin) {
+                                    showLeaveDialog = true
+                                } else {
+                                    CallService.stop(context)
+                                    onLeave()
+                                }
+                            }
+
+                            if (!isTileFullscreen || fullscreenChromeVisible) {
+                                MeetingControlsBar(
+                                    isMicEnabled = isMicEnabled,
+                                    isCameraEnabled = isCameraEnabled,
+                                    micHasError = micMediaError,
+                                    cameraHasError = cameraMediaError,
+                                    isScreenShareEnabled = isScreenShareEnabled,
+                                    showChat = showChat,
+                                    unreadCount = unreadCount,
+                                    inputMode = inputMode,
+                                    micLevelProvider = { roomManager.currentMicLevel() },
+                                    voiceGateOpenProvider = { roomManager.isVoiceGateOpen() },
+                                    onPushToTalkChange = { active ->
+                                        scope.launch {
+                                            roomManager.setPushToTalkTransmitting(active)
+                                        }
+                                    },
+                                    onToggleMic = toggleMicAction,
+                                    onToggleCamera = toggleCameraAction,
+                                    onToggleScreenShare = toggleScreenShareAction,
+                                    onToggleChat = toggleChatAction,
+                                    onOpenMoreOptions = { showMoreOptionsSheet = true },
+                                    onEndCall = endCallAction,
+                                    modifier = Modifier
+                                        .align(Alignment.BottomCenter)
+                                        .padding(bottom = Dimens.space12),
+                                )
+                            }
+
+                            if (showMoreOptionsSheet) {
+                                MeetingMoreOptionsSheet(
+                                    isMicEnabled = isMicEnabled,
+                                    isCameraEnabled = isCameraEnabled,
+                                    micHasError = micMediaError,
+                                    cameraHasError = cameraMediaError,
+                                    isScreenShareEnabled = isScreenShareEnabled,
+                                    showChat = showChat,
+                                    unreadCount = unreadCount,
+                                    isDeafened = isDeafened,
+                                    hideAllIncomingVideo = hideAllIncomingVideo,
+                                    isRoomSettingsAvailable = isAdmin,
+                                    inputMode = inputMode,
+                                    micLevelProvider = { roomManager.currentMicLevel() },
+                                    voiceGateOpenProvider = { roomManager.isVoiceGateOpen() },
+                                    onPushToTalkChange = { active ->
+                                        scope.launch {
+                                            roomManager.setPushToTalkTransmitting(active)
+                                        }
+                                    },
+                                    onToggleMic = toggleMicAction,
+                                    onToggleCamera = toggleCameraAction,
+                                    onToggleScreenShare = toggleScreenShareAction,
+                                    onToggleChat = toggleChatAction,
+                                    onEndCall = endCallAction,
+                                    onToggleDeafen = { scope.launch { roomManager.toggleDeafen() } },
+                                    onToggleHideAllIncomingVideo = {
+                                        hideAllIncomingVideo = !hideAllIncomingVideo
+                                    },
+                                    onOpenAudioSettings = { showAudioSettingsSheet = true },
+                                    onOpenNoiseSuppression = { showNoiseSuppressionSheet = true },
+                                    onOpenRoomSettings = { showRoomSettingsSheet = true },
+                                    onDismiss = { showMoreOptionsSheet = false },
+                                )
+                            }
+
+                            participantSheetIdentity?.let { sheetIdentity ->
+                                val sheetParticipant = participants.find {
+                                    it.identity?.value == sheetIdentity
+                                }
+                                if (sheetParticipant == null) {
+                                    participantSheetIdentity = null
+                                } else {
+                                    MeetingParticipantSheet(
+                                        name = sheetParticipant.name?.ifBlank { sheetIdentity }
+                                            ?: sheetIdentity,
+                                        identity = sheetIdentity,
+                                        isAdmin = isAdmin,
+                                        roomId = roomId,
+                                        roomApi = roomApi,
+                                        snackbarHostState = snackbarHostState,
+                                        scope = scope,
+                                        volume = participantVolumes[sheetIdentity] ?: 1f,
+                                        onVolumeChange = {
+                                            roomManager.setParticipantVolume(sheetIdentity, it)
+                                        },
+                                        isLocallyMuted = sheetIdentity in locallyMutedIdentities,
+                                        onToggleLocalMute = { onToggleLocalMute(sheetIdentity) },
+                                        isVideoLocallyDisabled =
+                                            sheetIdentity in locallyHiddenVideoIdentities,
+                                        onToggleVideoDisabled = {
+                                            onToggleVideoDisabled(sheetIdentity)
+                                        },
+                                        isPinned = pinnedIdentity == sheetIdentity,
+                                        onTogglePin = {
+                                            pinnedIdentity =
+                                                if (pinnedIdentity == sheetIdentity) null
+                                                else sheetIdentity
+                                        },
+                                        onFullscreen = {
+                                            fullscreenParticipantIdentity = sheetIdentity
+                                            fullscreenChromeVisible = true
+                                        },
+                                        onDismiss = { participantSheetIdentity = null },
+                                    )
+                                }
+                            }
+
+                            streamSheetIdentity?.let { sheetIdentity ->
+                                val presenter = participants.find {
+                                    it.identity?.value == sheetIdentity
+                                }
+                                if (presenter == null) {
+                                    streamSheetIdentity = null
+                                } else {
+                                    MeetingStreamSheet(
+                                        presenterName = presenter.name?.ifBlank { sheetIdentity }
+                                            ?: sheetIdentity,
+                                        onLeaveStream = { roomManager.watchStream(null) },
+                                        onDismiss = { streamSheetIdentity = null },
+                                    )
+                                }
+                            }
+
+                            if (showInviteSheet) {
+                                val inviteParticipants = remember(participantVersion) {
+                                    participants.map { participant ->
+                                        val identity = participant.identity?.value
+                                            ?: RoomManager.UNKNOWN_PARTICIPANT_NAME
+                                        InviteSheetParticipant(
+                                            identity = identity,
+                                            name = participant.name?.ifBlank { identity } ?: identity,
+                                            avatarUrl = participant.metadata?.let { meta ->
+                                                try {
+                                                    val obj = JSONObject(meta)
+                                                    if (obj.has("avatarUrl")) {
+                                                        obj.getString("avatarUrl")
+                                                    } else {
+                                                        null
+                                                    }
+                                                } catch (_: Exception) {
+                                                    null
+                                                }
+                                            },
+                                            isLocal = identity == localIdentity,
                                         )
                                     }
                                 }
-
+                                MeetingInviteSheet(
+                                    participants = inviteParticipants,
+                                    roomLink = roomLink,
+                                    snackbarHostState = snackbarHostState,
+                                    scope = scope,
+                                    onCopyLink = copyRoomLink,
+                                    onDismiss = { showInviteSheet = false },
+                                )
                             }
-                            }
-
-                            MeetingControlsBar(
-                                isMicEnabled = isMicEnabled,
-                                isCameraEnabled = isCameraEnabled,
-                                micHasError = micMediaError,
-                                cameraHasError = cameraMediaError,
-                                isScreenShareEnabled = isScreenShareEnabled,
-                                isDeafened = isDeafened,
-                                showChat = showChat,
-                                showParticipants = showParticipants,
-                                unreadCount = unreadCount,
-                                isRoomSettingsAvailable = isAdmin,
-                                onToggleMic = {
-                                    val action: () -> Unit = {
-                                        scope.launch { roomManager.toggleMicrophone() }
-                                    }
-                                    if (hasPermission(Manifest.permission.RECORD_AUDIO)) {
-                                        action()
-                                    } else {
-                                        pendingMediaAction = action
-                                        permissionLauncher.launch(arrayOf(Manifest.permission.RECORD_AUDIO))
-                                    }
-                                },
-                                onToggleCamera = {
-                                    val action: () -> Unit = {
-                                        scope.launch { roomManager.toggleCamera() }
-                                    }
-                                    if (hasPermission(Manifest.permission.CAMERA)) {
-                                        action()
-                                    } else {
-                                        pendingMediaAction = action
-                                        permissionLauncher.launch(arrayOf(Manifest.permission.CAMERA))
-                                    }
-                                },
-                                onSwitchCamera = { roomManager.switchCamera() },
-                                onToggleScreenShare = {
-                                    if (isScreenShareEnabled) {
-                                        scope.launch { roomManager.stopScreenShare() }
-                                    } else {
-                                        val projectionManager = context.getSystemService(
-                                            Context.MEDIA_PROJECTION_SERVICE
-                                        ) as MediaProjectionManager
-                                        screenCaptureLauncher.launch(
-                                            projectionManager.createScreenCaptureIntent()
-                                        )
-                                    }
-                                },
-                                onToggleChat = {
-                                    showChat = !showChat
-                                    if (showChat) showParticipants = false
-                                },
-                                onToggleParticipants = {
-                                    showParticipants = !showParticipants
-                                    if (showParticipants) showChat = false
-                                },
-                                onCopyRoomLink = {
-                                    val link = BedrudURLParser.buildMeetingLink(serverURL, roomName)
-                                    scope.launch {
-                                        clipboard.setPlainText(clipLabel, link)
-                                        snackbarHostState.showSnackbar(linkCopiedMessage)
-                                    }
-                                },
-                                onToggleDeafen = { scope.launch { roomManager.toggleDeafen() } },
-                                onOpenAudioSettings = { showAudioSheet = true },
-                                onOpenRoomSettings = { showRoomSettingsSheet = true },
-                                onEndCall = {
-                                    if (isAdmin) showLeaveDialog = true
-                                    else {
-                                        CallService.stop(context)
-                                        onLeave()
-                                    }
-                                },
-                                modifier = Modifier
-                                    .align(Alignment.BottomCenter)
-                                    .padding(bottom = 12.dp),
-                            )
 
                             if (showAudioSheet) {
                                 MeetingAudioSourceSheet(
                                     audioHandler = roomManager.audioHandler,
                                     audioState = audioState,
                                     onDismiss = { showAudioSheet = false },
+                                )
+                            }
+
+                            if (showAudioSettingsSheet) {
+                                MeetingAudioSettingsSheet(
+                                    audioHandler = roomManager.audioHandler,
+                                    audioState = audioState,
+                                    inputMode = inputMode,
+                                    autoSensitivity = autoSensitivity,
+                                    sensitivity = voiceSensitivity,
+                                    onOpenInputModePicker = { showInputModeSheet = true },
+                                    onAutoSensitivityChange = { roomManager.setAutoSensitivity(it) },
+                                    onSensitivityChange = { roomManager.setVoiceSensitivity(it) },
+                                    onDismiss = { showAudioSettingsSheet = false },
+                                )
+                            }
+
+                            if (showInputModeSheet) {
+                                MeetingInputModeSheet(
+                                    inputMode = inputMode,
+                                    onSelect = { mode ->
+                                        scope.launch { roomManager.setInputMode(mode) }
+                                    },
+                                    onDismiss = { showInputModeSheet = false },
+                                )
+                            }
+
+                            if (showNoiseSuppressionSheet) {
+                                MeetingNoiseSuppressionSheet(
+                                    mode = noiseSuppressionMode,
+                                    onSelect = { mode ->
+                                        settingsStore.setNoiseSuppression(mode)
+                                        noiseSuppressionMode = mode
+                                    },
+                                    onDismiss = { showNoiseSuppressionSheet = false },
                                 )
                             }
 
@@ -718,54 +979,6 @@ fun MeetingScreen(
                                 )
                             }
 
-                            val layoutDirection = LocalLayoutDirection.current
-                            val slideIn = slideInHorizontally(
-                                initialOffsetX = { if (layoutDirection == LayoutDirection.Rtl) it else -it }
-                            )
-                            val slideOut = slideOutHorizontally(
-                                targetOffsetX = { if (layoutDirection == LayoutDirection.Rtl) it else -it }
-                            )
-
-                            // Participants panel - slides in from the start side
-                            AnimatedVisibility(
-                                visible = showParticipants && !showChat,
-                                enter = slideIn,
-                                exit = slideOut,
-                                modifier = Modifier.align(Alignment.CenterStart)
-                            ) {
-                                ParticipantsPanel(
-                                    participants = participants,
-                                    localIdentity = room.localParticipant.identity?.value,
-                                    isAdmin = isAdmin,
-                                    roomId = roomId,
-                                    roomApi = roomApi,
-                                    snackbarHostState = snackbarHostState,
-                                    scope = scope,
-                                    disabledVideoIdentities = locallyHiddenVideoIdentities,
-                                    onToggleVideoDisabled = onToggleVideoDisabled,
-                                    mutedIdentities = locallyMutedIdentities,
-                                    onToggleLocalMute = onToggleLocalMute,
-                                    onClose = { showParticipants = false }
-                                )
-                            }
-
-                            val fullscreenStage = activeStage?.takeIf { it.kind == StageWire.KIND_SCREENSHARE }
-                            if (isScreenShareFullscreen && fullscreenStage != null) {
-                                MeetingScreenShareFullscreen(
-                                    stage = fullscreenStage,
-                                    room = room,
-                                    participantVersion = participantVersion,
-                                    isOwner = fullscreenStage.ownerIdentity == localIdentity,
-                                    onMinimize = { isScreenShareFullscreen = false },
-                                    onStop = {
-                                        isScreenShareFullscreen = false
-                                        scope.launch { roomManager.stopScreenShare() }
-                                    },
-                                    modifier = Modifier
-                                        .fillMaxSize()
-                                        .zIndex(6f),
-                                )
-                            }
                         }
                     }
                 }
@@ -858,250 +1071,6 @@ fun MeetingScreen(
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class)
-@Composable
-private fun ParticipantTile(
-    participant: Participant,
-    isAdmin: Boolean = false,
-    isLocalParticipant: Boolean = false,
-    roomId: String = "",
-    roomApi: RoomApi? = null,
-    snackbarHostState: SnackbarHostState? = null,
-    scope: kotlinx.coroutines.CoroutineScope? = null,
-    room: Room? = null,
-    stageScreenShareIdentity: String? = null,
-    disabledVideoIdentities: Set<String> = emptySet(),
-    onToggleVideoDisabled: (String) -> Unit = {},
-    mutedIdentities: Set<String> = emptySet(),
-    onToggleLocalMute: (String) -> Unit = {},
-) {
-    val identity = participant.identity?.value ?: RoomManager.UNKNOWN_PARTICIPANT_NAME
-    val isVideoLocallyDisabled = identity in disabledVideoIdentities
-    val isLocallyMuted = identity in mutedIdentities
-    val kickFailedMessage = stringResource(R.string.meeting_error_kickFailed)
-    val banFailedMessage = stringResource(R.string.meeting_error_banFailed)
-
-    val screenShareRef = if (identity != stageScreenShareIdentity) {
-        resolveParticipantScreenShare(participant)
-    } else {
-        null
-    }
-
-    val cameraPublication = participant.getTrackPublication(Track.Source.CAMERA)
-    val cameraTrack = cameraPublication
-        ?.track as? io.livekit.android.room.track.VideoTrack
-    val isCameraMuted = cameraPublication?.muted == true
-    val name = participant.name?.ifBlank { identity } ?: identity
-
-    // Parse avatar URL from participant metadata
-    val avatarUrl = remember(participant.metadata) {
-        participant.metadata?.let { meta ->
-            try {
-                val obj = JSONObject(meta)
-                if (obj.has("avatarUrl")) obj.getString("avatarUrl") else null
-            } catch (_: Exception) { null }
-        }
-    }
-
-    var showMenu by remember { mutableStateOf(false) }
-    val canOpenMenu = !isLocalParticipant && roomApi != null
-
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .aspectRatio(VideoAspect.RATIO)
-            .clip(RoundedCornerShape(12.dp))
-            .background(MaterialTheme.colorScheme.surfaceVariant)
-            .then(
-                if (canOpenMenu) {
-                    Modifier.combinedClickable(
-                        onClick = {},
-                        onLongClick = { showMenu = true }
-                    )
-                } else Modifier
-            ),
-        contentAlignment = Alignment.Center
-    ) {
-        when {
-            screenShareRef != null && screenShareRef.isRenderable && room != null -> {
-                VideoTrackView(
-                    trackReference = screenShareRef.trackReference,
-                    modifier = Modifier.fillMaxSize(),
-                    room = room,
-                    mirror = false,
-                    scaleType = ScaleType.FitInside,
-                )
-            }
-            cameraTrack != null && !isCameraMuted && !isVideoLocallyDisabled && room != null -> {
-                VideoTrackView(
-                    videoTrack = cameraTrack,
-                    modifier = Modifier.fillMaxSize(),
-                    passedRoom = room,
-                )
-            }
-            !avatarUrl.isNullOrBlank() -> {
-                AsyncImage(
-                    model = avatarUrl,
-                    contentDescription = stringResource(R.string.meeting_contentDescription_participantAvatar),
-                    modifier = Modifier
-                        .size(56.dp)
-                        .clip(CircleShape),
-                    contentScale = androidx.compose.ui.layout.ContentScale.Crop,
-                )
-            }
-            else -> {
-                // Initials placeholder
-                InitialsAvatar(
-                    name = name,
-                    size = 56.dp,
-                    textStyle = MaterialTheme.typography.headlineMedium,
-                    contentColor = MaterialTheme.colorScheme.onPrimary,
-                    fallbackInitial = ""
-                )
-            }
-        }
-
-        // Name label
-        Box(
-            modifier = Modifier
-                .align(Alignment.BottomStart)
-                .padding(8.dp)
-                .background(
-                    MaterialTheme.colorScheme.surface.copy(alpha = 0.7f),
-                    RoundedCornerShape(4.dp)
-                )
-                .padding(horizontal = 8.dp, vertical = 4.dp)
-        ) {
-            Text(
-                text = name,
-                style = MaterialTheme.typography.labelSmall.copy(textDirection = TextDirection.Content),
-                color = MaterialTheme.colorScheme.onSurface,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-        }
-
-        // Participant actions menu
-        if (canOpenMenu) {
-            ParticipantActionsMenu(
-                expanded = showMenu,
-                onDismiss = { showMenu = false },
-                isAdmin = isAdmin,
-                isLocallyMuted = isLocallyMuted,
-                onToggleLocalMute = { onToggleLocalMute(identity) },
-                isVideoLocallyDisabled = isVideoLocallyDisabled,
-                onToggleVideoDisabled = { onToggleVideoDisabled(identity) },
-                // roomApi is non-null in here: canOpenMenu already requires it.
-                onKickConfirmed = {
-                    moderate(scope, snackbarHostState, kickFailedMessage) {
-                        roomApi.kickParticipant(roomId, identity)
-                    }
-                },
-                onBan = {
-                    moderate(scope, snackbarHostState, banFailedMessage) {
-                        roomApi.banParticipant(roomId, identity)
-                    }
-                },
-            )
-        }
-    }
-}
-
-/**
- * The long-press/three-dot menu shared by the participant tile and the participants panel row:
- * local mute and local video for everyone, kick/ban for admins. Kick asks for confirmation here
- * so both entry points behave the same; ban stays immediate.
- */
-@Composable
-private fun ParticipantActionsMenu(
-    expanded: Boolean,
-    onDismiss: () -> Unit,
-    isAdmin: Boolean,
-    isLocallyMuted: Boolean,
-    onToggleLocalMute: () -> Unit,
-    isVideoLocallyDisabled: Boolean,
-    onToggleVideoDisabled: () -> Unit,
-    onKickConfirmed: () -> Unit,
-    onBan: () -> Unit,
-) {
-    var showKickConfirm by remember { mutableStateOf(false) }
-    if (showKickConfirm) {
-        ConfirmDialog(
-            title = stringResource(R.string.meeting_dialog_kickTitle),
-            message = stringResource(R.string.meeting_dialog_kickMessage),
-            confirmLabel = stringResource(R.string.meeting_action_kick),
-            onConfirm = {
-                showKickConfirm = false
-                onKickConfirmed()
-            },
-            onDismiss = { showKickConfirm = false },
-        )
-    }
-    DropdownMenu(expanded = expanded, onDismissRequest = onDismiss) {
-        DropdownMenuItem(
-            text = {
-                Text(
-                    stringResource(
-                        if (isLocallyMuted) R.string.meeting_action_unmute
-                        else R.string.meeting_action_mute
-                    )
-                )
-            },
-            onClick = {
-                onDismiss()
-                onToggleLocalMute()
-            }
-        )
-        DropdownMenuItem(
-            text = {
-                Text(
-                    stringResource(
-                        if (isVideoLocallyDisabled) R.string.meeting_action_enableVideo
-                        else R.string.meeting_action_disableVideo
-                    )
-                )
-            },
-            onClick = {
-                onDismiss()
-                onToggleVideoDisabled()
-            }
-        )
-        if (isAdmin) {
-            DropdownMenuItem(
-                text = { Text(stringResource(R.string.meeting_action_kick), color = MaterialTheme.colorScheme.error) },
-                onClick = {
-                    onDismiss()
-                    showKickConfirm = true
-                }
-            )
-            DropdownMenuItem(
-                text = { Text(stringResource(R.string.meeting_action_ban), color = MaterialTheme.colorScheme.error) },
-                onClick = {
-                    onDismiss()
-                    onBan()
-                }
-            )
-        }
-    }
-}
-
-/** Fire-and-forget moderation call; a thrown failure surfaces as a snackbar with [fallbackMessage]. */
-private fun moderate(
-    scope: kotlinx.coroutines.CoroutineScope?,
-    snackbarHostState: SnackbarHostState?,
-    fallbackMessage: String,
-    action: suspend () -> Unit,
-) {
-    scope?.launch {
-        try {
-            action()
-        } catch (e: Exception) {
-            // Show the caller's localized fallback rather than the raw (untranslated) exception text.
-            snackbarHostState?.showSnackbar(fallbackMessage)
-        }
-    }
-}
-
 @Composable
 private fun PanelHeader(
     title: String,
@@ -1131,156 +1100,6 @@ private fun PanelHeader(
 }
 
 // ── Participants Panel ─────────────────────────────────────────────────────────
-
-@Composable
-private fun ParticipantsPanel(
-    participants: List<Participant>,
-    localIdentity: String?,
-    isAdmin: Boolean,
-    roomId: String,
-    roomApi: RoomApi?,
-    snackbarHostState: SnackbarHostState,
-    scope: kotlinx.coroutines.CoroutineScope,
-    disabledVideoIdentities: Set<String>,
-    onToggleVideoDisabled: (String) -> Unit,
-    mutedIdentities: Set<String>,
-    onToggleLocalMute: (String) -> Unit,
-    onClose: () -> Unit
-) {
-    Column(
-        modifier = Modifier
-            .width(300.dp)
-            .fillMaxHeight()
-            .background(MaterialTheme.colorScheme.surface)
-    ) {
-        PanelHeader(
-            title = stringResource(R.string.meeting_panel_participants, participants.size),
-            onClose = onClose,
-            closeContentDescription = stringResource(R.string.meeting_contentDescription_close),
-        )
-
-        LazyColumn(
-            modifier = Modifier.weight(1f),
-            contentPadding = androidx.compose.foundation.layout.PaddingValues(8.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp)
-        ) {
-            items(participants) { participant ->
-                val identity = participant.identity?.value ?: ""
-                val name = participant.name?.ifBlank { identity } ?: identity
-                val isLocal = identity == localIdentity
-
-                ParticipantListRow(
-                    name = name,
-                    identity = identity,
-                    isLocal = isLocal,
-                    isAdmin = isAdmin,
-                    roomId = roomId,
-                    roomApi = roomApi,
-                    snackbarHostState = snackbarHostState,
-                    scope = scope,
-                    isVideoLocallyDisabled = identity in disabledVideoIdentities,
-                    onToggleVideoDisabled = { onToggleVideoDisabled(identity) },
-                    isLocallyMuted = identity in mutedIdentities,
-                    onToggleLocalMute = { onToggleLocalMute(identity) }
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun ParticipantListRow(
-    name: String,
-    identity: String,
-    isLocal: Boolean,
-    isAdmin: Boolean,
-    roomId: String,
-    roomApi: RoomApi?,
-    snackbarHostState: SnackbarHostState,
-    scope: kotlinx.coroutines.CoroutineScope,
-    isVideoLocallyDisabled: Boolean = false,
-    onToggleVideoDisabled: () -> Unit = {},
-    isLocallyMuted: Boolean = false,
-    onToggleLocalMute: () -> Unit = {}
-) {
-    var showMenu by remember { mutableStateOf(false) }
-    val kickFailedMessage = stringResource(R.string.meeting_error_kickFailed)
-    val banFailedMessage = stringResource(R.string.meeting_error_banFailed)
-    val avatarColor = remember(name) {
-        val colors = listOf(0xFF6366F1, 0xFF8B5CF6, 0xFF06B6D4, 0xFF10B981, 0xFFF59E0B, 0xFFEF4444)
-        colors[Math.abs(name.hashCode()) % colors.size]
-    }
-
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(8.dp))
-            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
-            .padding(horizontal = 8.dp, vertical = 6.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        InitialsAvatar(
-            name = name,
-            containerColor = androidx.compose.ui.graphics.Color(avatarColor),
-            fallbackInitial = ""
-        )
-
-        Column(modifier = Modifier.weight(1f)) {
-            Row(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    text = name,
-                    style = MaterialTheme.typography.bodyMedium,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                if (isLocal) {
-                    Text(
-                        text = stringResource(R.string.meeting_label_you),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                }
-            }
-        }
-
-        // Three-dot menu (on remote participants only)
-        if (!isLocal && roomApi != null) {
-            Box {
-                IconButton(
-                    onClick = { showMenu = true },
-                    modifier = Modifier.size(28.dp)
-                ) {
-                    Icon(
-                        Icons.Default.Badge,
-                        contentDescription = stringResource(R.string.meeting_contentDescription_moreOptions),
-                        modifier = Modifier.size(16.dp),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-                ParticipantActionsMenu(
-                    expanded = showMenu,
-                    onDismiss = { showMenu = false },
-                    isAdmin = isAdmin,
-                    isLocallyMuted = isLocallyMuted,
-                    onToggleLocalMute = onToggleLocalMute,
-                    isVideoLocallyDisabled = isVideoLocallyDisabled,
-                    onToggleVideoDisabled = onToggleVideoDisabled,
-                    onKickConfirmed = {
-                        moderate(scope, snackbarHostState, kickFailedMessage) {
-                            roomApi.kickParticipant(roomId, identity)
-                        }
-                    },
-                    onBan = {
-                        moderate(scope, snackbarHostState, banFailedMessage) {
-                            roomApi.banParticipant(roomId, identity)
-                        }
-                    },
-                )
-            }
-        }
-    }
-}
 
 // ── Kicked screen ─────────────────────────────────────────────────────────────
 
@@ -1317,70 +1136,6 @@ private fun KickedScreen(onBack: () -> Unit) {
             androidx.compose.material3.FilledTonalButton(onClick = onBack) {
                 Text(stringResource(R.string.meeting_button_backToDashboard))
             }
-        }
-    }
-}
-
-// ── Meeting header HUD ────────────────────────────────────────────────────────
-
-@Composable
-private fun MeetingHeaderHUD(
-    roomName: String,
-    participantCount: Int,
-    connectionState: ConnectionState
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 12.dp, vertical = 6.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        // Left spacer, balances the trailing content so the room name centers in the full bar
-        Spacer(modifier = Modifier.weight(1f))
-
-        // Room name (monospace)
-        Text(
-            text = roomName,
-            style = MaterialTheme.typography.bodySmall.copy(
-                fontFamily = FontFamily.Monospace,
-                textDirection = TextDirection.Ltr
-            ),
-            color = MaterialTheme.colorScheme.onBackground,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.weight(1f)
-        )
-
-        // Participant count + connection state dot
-        Row(
-            modifier = Modifier.weight(1f),
-            horizontalArrangement = Arrangement.End,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Icon(Icons.Default.People, contentDescription = null,
-                modifier = Modifier.size(14.dp),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant)
-            Spacer(modifier = Modifier.width(2.dp))
-            Text(participantCount.toString(), style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant)
-
-            Spacer(modifier = Modifier.width(8.dp))
-
-            // Connection state dot
-            Box(
-                modifier = Modifier
-                    .size(8.dp)
-                    .clip(CircleShape)
-                    .background(
-                        when (connectionState) {
-                            ConnectionState.CONNECTED -> MaterialTheme.colorScheme.primary
-                            ConnectionState.RECONNECTING -> MaterialTheme.colorScheme.tertiary
-                            else -> MaterialTheme.colorScheme.error
-                        }
-                    )
-            )
         }
     }
 }

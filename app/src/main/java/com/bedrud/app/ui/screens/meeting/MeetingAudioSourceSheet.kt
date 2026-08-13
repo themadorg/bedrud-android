@@ -1,11 +1,9 @@
 package com.bedrud.app.ui.screens.meeting
 
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.RadioButton
+import androidx.compose.material3.RadioButtonDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -46,18 +44,18 @@ fun MeetingAudioSourceSheet(
                 BedrudSheetActionRow(
                     icon = audioDeviceIcon(device),
                     title = audioDeviceLabel(device),
-                    // Selection is the trailing check, per M3 — not a filled row. A tinted label
-                    // alone would be too quiet to read as "this is the one in use".
+                    // Selection is a trailing radio, per the design's output picker — the row
+                    // stays unfilled, and the accent-tinted label backs the radio up.
                     contentColor = if (selected) colors.accent else colors.onButton,
                     trailing = {
-                        if (selected) {
-                            Icon(
-                                imageVector = Icons.Default.Check,
-                                contentDescription = null,
-                                tint = colors.accent,
-                                modifier = Modifier.size(Dimens.iconSm),
-                            )
-                        }
+                        RadioButton(
+                            selected = selected,
+                            onClick = { audioState.selectDevice(audioHandler, device) },
+                            colors = RadioButtonDefaults.colors(
+                                selectedColor = colors.accent,
+                                unselectedColor = colors.onButtonVariant,
+                            ),
+                        )
                     },
                     onClick = { audioState.selectDevice(audioHandler, device) },
                 )

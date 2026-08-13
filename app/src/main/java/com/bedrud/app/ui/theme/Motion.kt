@@ -13,5 +13,8 @@ object Motion {
     const val durationMedium = 250
     const val durationLong = 400
 
+    /** Idle time before the in-call fullscreen chrome hides itself. */
+    const val meetingChromeAutoHideDelayMs = 3500L
+
     val standardEasing = FastOutSlowInEasing
 }

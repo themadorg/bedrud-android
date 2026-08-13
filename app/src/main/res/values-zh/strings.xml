@@ -117,8 +117,6 @@
   <string name="meeting_contentDescription_switchCamera">切换摄像头方向</string>
   <string name="meeting_contentDescription_toggleScreenShare">切换屏幕共享</string>
   <string name="meeting_contentDescription_toggleChat">切换聊天</string>
-  <string name="meeting_contentDescription_participants">参与者</string>
-  <string name="meeting_contentDescription_copyRoomLink">复制房间链接</string>
   <string name="meeting_toast_linkCopied">房间链接已复制</string>
   <string name="meeting_toast_errorCopied">已复制错误详情</string>
   <string name="meeting_contentDescription_leaveCall">离开通话</string>
@@ -226,10 +224,6 @@
   <string name="profile_label_provider">提供商</string>
   <string name="profile_button_signOut">退出登录</string>
 
-  <string name="meeting_contentDescription_stopScreenShare">停止屏幕共享</string>
-  <string name="meeting_contentDescription_maximizeScreenShare">全屏</string>
-  <string name="meeting_contentDescription_minimizeScreenShare">退出全屏</string>
-  <string name="meeting_stage_screenShareTitle">屏幕共享</string>
   <string name="meeting_stage_screenSharePresenting"><xliff:g id="name" example="Alex">%1$s</xliff:g> 正在演示</string>
   <string name="meeting_stage_screenShareWaiting">正在等待 <xliff:g id="name" example="Alex">%1$s</xliff:g> 的屏幕…</string>
   <string name="meeting_contentDescription_closeImagePreview">关闭图片预览</string>
@@ -243,11 +237,7 @@
   <string name="meeting_error_screenShareFailed">无法开始屏幕共享。</string>
   <string name="meeting_error_roomNoLongerExists">此房间已不存在</string>
   <string name="meeting_error_joinFailed">加入房间失败</string>
-  <string name="meeting_sheet_chat">聊天</string>
-  <string name="meeting_sheet_addOthers">添加其他人</string>
   <string name="meeting_share_chooserTitle">分享会议链接</string>
-  <string name="meeting_sheet_flipCamera">翻转摄像头</string>
-  <string name="meeting_sheet_settings">设置</string>
   <string name="meeting_sheet_roomSettings">房间设置</string>
   <string name="meeting_sheet_deafen">拒听</string>
   <string name="meeting_sheet_tools">工具</string>
@@ -283,7 +273,6 @@
   <string name="meeting_error_cameraSwitchFailed">无法切换摄像头</string>
   <string name="meeting_error_screenShareUnavailable">屏幕共享不可用</string>
   <string name="meeting_error_screenShareStopFailed">无法停止屏幕共享</string>
-  <string name="meeting_error_alreadyPresenting"><xliff:g id="name" example="Alex">%1$s</xliff:g> 正在演示</string>
   <string name="meeting_error_messageSendFailed">无法发送您的消息</string>
   <string name="meeting_error_kickFailed">无法移除参与者</string>
   <string name="meeting_error_banFailed">无法封禁参与者</string>
@@ -291,4 +280,51 @@
   <string name="dashboard_error_deleteRoomFailed">无法删除房间</string>
   <string name="dashboard_error_saveSettingsFailed">无法保存设置</string>
   <string name="dashboard_toast_settingsSaved">设置已保存</string>
+  <string name="meeting_contentDescription_invite">邀请与参与者</string>
+  <string name="meeting_contentDescription_audioOutput">音频输出</string>
+  <string name="meeting_contentDescription_recording">正在录制</string>
+  <string name="meeting_contentDescription_tileFullscreen">全屏查看</string>
+  <string name="meeting_contentDescription_tileExitFullscreen">退出全屏</string>
+  <string name="meeting_contentDescription_micOff">麦克风已关闭</string>
+  <string name="meeting_contentDescription_cameraOff">摄像头已关闭</string>
+  <string name="meeting_status_reconnecting">正在重新连接…</string>
+  <string name="meeting_empty_title">这里没有其他人</string>
+  <string name="meeting_empty_message">邀请其他人，或打开摄像头查看自己</string>
+  <string name="meeting_participant_volume">音量</string>
+  <string name="meeting_action_dontWatch">不再观看</string>
+  <string name="meeting_action_watch">观看</string>
+  <string name="meeting_action_pin">固定</string>
+  <string name="meeting_action_unpin">取消固定</string>
+  <string name="meeting_action_roomMute">在房间内静音</string>
+  <string name="meeting_action_roomDeafen">在房间内禁听</string>
+  <string name="meeting_action_chatMute">禁言聊天</string>
+  <string name="meeting_sheet_disableAllCameras">隐藏所有摄像头</string>
+  <string name="meeting_sheet_disableAllCamerasDescription">仅对你停止显示传入视频</string>
+  <string name="meeting_sheet_noiseSuppression">降噪</string>
+  <string name="meeting_sheet_audioSettings">音频设置</string>
+  <string name="meeting_recording_title">房间正在录制</string>
+  <string name="meeting_recording_message">在此房间中，所有聊天、摄像头、屏幕共享和音频都会被录制。</string>
+  <string name="meeting_recording_acknowledge">知道了</string>
+  <string name="meeting_invite_sendInvite">发送邀请</string>
+  <string name="meeting_invite_copyLink">复制链接</string>
+  <string name="meeting_invite_qrCode">二维码</string>
+  <string name="meeting_invite_email">电子邮件</string>
+  <string name="meeting_invite_qrDescription">房间链接二维码</string>
+  <string name="meeting_invite_appNotInstalled">未安装该应用</string>
+  <string name="common_hint_comingSoon">即将推出</string>
+  <string name="meeting_stream_watch">观看共享</string>
+  <string name="meeting_stream_leave">退出观看</string>
+  <string name="meeting_stream_youArePresenting">你正在共享</string>
+  <string name="meeting_stream_stop">停止共享</string>
+  <string name="meeting_audio_outputVolume">输出音量</string>
+  <string name="meeting_audio_inputMode">输入模式</string>
+  <string name="meeting_audio_mode_voiceActivity">语音活动</string>
+  <string name="meeting_audio_mode_pushToTalk">按键通话</string>
+  <string name="meeting_audio_autoSensitivity">自动灵敏度</string>
+  <string name="meeting_audio_sensitivity">灵敏度</string>
+  <string name="meeting_ptt_talking">正在说话…</string>
+  <string name="meeting_ns_off">关闭</string>
+  <string name="meeting_ns_device">设备（内置）</string>
+  <string name="meeting_ns_appliesNextJoin">下次加入时生效</string>
+  <string name="meeting_ptt_openMic">开放麦克风</string>
 </resources>

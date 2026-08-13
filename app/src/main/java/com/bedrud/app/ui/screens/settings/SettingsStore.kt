@@ -6,6 +6,9 @@ import android.text.TextUtils
 import android.view.View
 import androidx.annotation.StringRes
 import com.bedrud.app.R
+import com.bedrud.app.core.audio.MeetingInputMode
+import com.bedrud.app.core.audio.NoiseSuppressionMode
+import com.bedrud.app.core.audio.VoiceGateProcessor
 import com.bedrud.app.core.prefs.getEnum
 import com.bedrud.app.core.prefs.putEnum
 import java.util.Locale
@@ -96,6 +99,33 @@ class SettingsStore(context: Context) {
         prefs.edit().putBoolean(KEY_DEAFENED, value).apply()
     }
 
+    fun getInputMode(): MeetingInputMode =
+        prefs.getEnum(KEY_INPUT_MODE, MeetingInputMode.VOICE_ACTIVITY)
+
+    fun setInputMode(value: MeetingInputMode) {
+        prefs.putEnum(KEY_INPUT_MODE, value)
+    }
+
+    fun getAutoSensitivity(): Boolean = prefs.getBoolean(KEY_AUTO_SENSITIVITY, true)
+
+    fun setAutoSensitivity(value: Boolean) {
+        prefs.edit().putBoolean(KEY_AUTO_SENSITIVITY, value).apply()
+    }
+
+    fun getVoiceSensitivity(): Float =
+        prefs.getFloat(KEY_VOICE_SENSITIVITY, VoiceGateProcessor.DefaultSensitivity)
+
+    fun setVoiceSensitivity(value: Float) {
+        prefs.edit().putFloat(KEY_VOICE_SENSITIVITY, value.coerceIn(0f, 1f)).apply()
+    }
+
+    fun getNoiseSuppression(): NoiseSuppressionMode =
+        prefs.getEnum(KEY_NOISE_SUPPRESSION, NoiseSuppressionMode.DEVICE)
+
+    fun setNoiseSuppression(value: NoiseSuppressionMode) {
+        prefs.putEnum(KEY_NOISE_SUPPRESSION, value)
+    }
+
     private fun loadAppearance(): AppAppearance =
         prefs.getEnum(KEY_APPEARANCE, AppAppearance.SYSTEM)
 
@@ -110,5 +140,9 @@ class SettingsStore(context: Context) {
         private const val KEY_LAST_TAB = "bedrud_last_tab"
         private const val KEY_MIC_ENABLED = "bedrud_mic_enabled"
         private const val KEY_DEAFENED = "bedrud_deafened"
+        private const val KEY_INPUT_MODE = "bedrud_input_mode"
+        private const val KEY_AUTO_SENSITIVITY = "bedrud_auto_sensitivity"
+        private const val KEY_VOICE_SENSITIVITY = "bedrud_voice_sensitivity"
+        private const val KEY_NOISE_SUPPRESSION = "bedrud_noise_suppression"
     }
 }
