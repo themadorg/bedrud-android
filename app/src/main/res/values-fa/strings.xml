@@ -324,6 +324,4 @@
   <string name="meeting_ns_device">دستگاه (داخلی)</string>
   <string name="meeting_ns_appliesNextJoin">از پیوستن بعدی اعمال می‌شود</string>
   <string name="meeting_ptt_openMic">میکروفون باز</string>
-  <string name="meeting_sheet_inviteFriend">دعوت از دوست</string>
-  <string name="meeting_sheet_showAllCameras">نمایش همه دوربین‌ها</string>
 </resources>

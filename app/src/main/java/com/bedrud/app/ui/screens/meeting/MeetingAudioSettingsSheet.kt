@@ -10,15 +10,16 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.VolumeDown
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
+import androidx.compose.material.icons.filled.Block
 import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.Mic
+import androidx.compose.material.icons.filled.PhoneAndroid
+import androidx.compose.material.icons.filled.TouchApp
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.RadioButtonDefaults
-import androidx.compose.material3.Slider
-import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
@@ -31,8 +32,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
 import com.bedrud.app.R
 import com.bedrud.app.core.audio.MeetingInputMode
 import com.bedrud.app.core.audio.NoiseSuppressionMode
@@ -130,7 +129,6 @@ fun MeetingAudioSettingsSheet(
         VolumeSliderRow(
             value = outputVolume,
             label = stringResource(R.string.meeting_audio_outputVolume),
-            accent = colors.accent,
             iconTint = colors.onButtonVariant,
             onValueChange = { value ->
                 outputVolume = value
@@ -184,7 +182,6 @@ fun MeetingAudioSettingsSheet(
                 VolumeSliderRow(
                     value = sensitivityValue,
                     label = stringResource(R.string.meeting_audio_sensitivity),
-                    accent = colors.accent,
                     iconTint = colors.onButtonVariant,
                     onValueChange = { value ->
                         sensitivityValue = value
@@ -200,7 +197,6 @@ fun MeetingAudioSettingsSheet(
 private fun VolumeSliderRow(
     value: Float,
     label: String,
-    accent: androidx.compose.ui.graphics.Color,
     iconTint: androidx.compose.ui.graphics.Color,
     onValueChange: (Float) -> Unit,
 ) {
@@ -217,16 +213,11 @@ private fun VolumeSliderRow(
             tint = iconTint,
             modifier = Modifier.size(Dimens.iconMd),
         )
-        Slider(
+        MeetingCompactSlider(
             value = value,
             onValueChange = onValueChange,
-            modifier = Modifier
-                .weight(1f)
-                .semantics { contentDescription = label },
-            colors = SliderDefaults.colors(
-                thumbColor = accent,
-                activeTrackColor = accent,
-            ),
+            label = label,
+            modifier = Modifier.weight(1f),
         )
         Icon(
             imageVector = Icons.AutoMirrored.Filled.VolumeUp,
@@ -253,6 +244,7 @@ fun MeetingInputModeSheet(
         )
         ModeRow(
             title = stringResource(R.string.meeting_audio_mode_pushToTalk),
+            icon = Icons.Default.TouchApp,
             selected = inputMode == MeetingInputMode.PUSH_TO_TALK,
             colors = colors,
             onClick = {
@@ -262,6 +254,7 @@ fun MeetingInputModeSheet(
         )
         ModeRow(
             title = stringResource(R.string.meeting_audio_mode_voiceActivity),
+            icon = Icons.Default.GraphicEq,
             selected = inputMode == MeetingInputMode.VOICE_ACTIVITY,
             colors = colors,
             onClick = {
@@ -297,6 +290,7 @@ fun MeetingNoiseSuppressionSheet(
         )
         ModeRow(
             title = stringResource(R.string.meeting_ns_off),
+            icon = Icons.Default.Block,
             selected = mode == NoiseSuppressionMode.OFF,
             colors = colors,
             onClick = {
@@ -306,6 +300,7 @@ fun MeetingNoiseSuppressionSheet(
         )
         ModeRow(
             title = stringResource(R.string.meeting_ns_device),
+            icon = Icons.Default.PhoneAndroid,
             selected = mode == NoiseSuppressionMode.DEVICE,
             colors = colors,
             onClick = {
@@ -319,12 +314,13 @@ fun MeetingNoiseSuppressionSheet(
 @Composable
 private fun ModeRow(
     title: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
     selected: Boolean,
     colors: MeetingChromeColors,
     onClick: () -> Unit,
 ) {
     BedrudSheetActionRow(
-        icon = Icons.Default.GraphicEq,
+        icon = icon,
         title = title,
         contentColor = if (selected) colors.accent else colors.onButton,
         trailing = {

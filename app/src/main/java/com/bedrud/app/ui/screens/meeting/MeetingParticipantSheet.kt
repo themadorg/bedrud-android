@@ -21,8 +21,6 @@ import androidx.compose.material.icons.filled.VideocamOff
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Slider
-import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -33,8 +31,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
 import com.bedrud.app.R
 import com.bedrud.app.core.api.RoomApi
 import com.bedrud.app.ui.components.BedrudSheetActionRow
@@ -115,20 +111,14 @@ fun MeetingParticipantSheet(
                 tint = colors.onButtonVariant,
                 modifier = Modifier.size(Dimens.iconMd),
             )
-            val volumeLabel = stringResource(R.string.meeting_participant_volume)
-            Slider(
+            MeetingCompactSlider(
                 value = sliderValue,
                 onValueChange = {
                     sliderValue = it
                     onVolumeChange(it)
                 },
-                modifier = Modifier
-                    .weight(1f)
-                    .semantics { contentDescription = volumeLabel },
-                colors = SliderDefaults.colors(
-                    thumbColor = colors.accent,
-                    activeTrackColor = colors.accent,
-                ),
+                label = stringResource(R.string.meeting_participant_volume),
+                modifier = Modifier.weight(1f),
             )
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.VolumeUp,

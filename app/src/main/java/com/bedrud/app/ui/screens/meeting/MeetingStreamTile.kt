@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -30,7 +29,6 @@ import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.text.style.TextOverflow
 import com.bedrud.app.R
 import com.bedrud.app.core.livekit.RoomManager
-import com.bedrud.app.core.meeting.VideoAspect
 import com.bedrud.app.ui.theme.BedrudShapeTokens
 import com.bedrud.app.ui.theme.Dimens
 import io.livekit.android.compose.ui.ScaleType
@@ -69,8 +67,6 @@ fun MeetingStreamTile(
 
     Box(
         modifier = modifier
-            .fillMaxWidth()
-            .aspectRatio(VideoAspect.RATIO)
             .clip(BedrudShapeTokens.videoTile)
             .background(MaterialTheme.colorScheme.surfaceVariant)
             .then(

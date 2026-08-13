@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.WindowInsets
@@ -109,6 +110,7 @@ import com.bedrud.app.ui.util.setPlainText
 import com.bedrud.app.core.livekit.ChatMessage
 import com.bedrud.app.core.livekit.ConnectionState
 import com.bedrud.app.core.livekit.RoomManager
+import com.bedrud.app.core.meeting.VideoAspect
 import com.bedrud.app.core.meeting.chat.ChatWire
 import com.bedrud.app.core.pip.PipStateHolder
 import com.bedrud.app.ui.screens.settings.SettingsStore
@@ -498,15 +500,6 @@ fun MeetingScreen(
                                     onRecordingClick = { showRecordingBanner = true },
                                 )
 
-                                if (showRecordingBanner) {
-                                    MeetingRecordingBanner(
-                                        elapsedLabel = RecordingElapsedPlaceholder,
-                                        onAcknowledge = { showRecordingBanner = false },
-                                        modifier = Modifier
-                                            .padding(horizontal = Dimens.space8)
-                                            .padding(bottom = Dimens.space8),
-                                    )
-                                }
 
                                 // Every live screenshare gets its own strip tile; watching is
                                 // opt-in per viewer, one stream at a time.
@@ -515,6 +508,19 @@ fun MeetingScreen(
                                         it.getTrackPublication(Track.Source.SCREEN_SHARE) != null
                                     }
                                 }
+                                // Grid tiles: the local participant only while their camera is
+                                // on (there is no self-tile for an audio-only self), then the
+                                // remote participants.
+                                val gridTiles = remember(participantVersion, isCameraEnabled, pinnedIdentity) {
+                                    buildList {
+                                        if (isCameraEnabled) add(room.localParticipant)
+                                        addAll(room.remoteParticipants.values)
+                                    }.sortedByDescending { it.identity?.value == pinnedIdentity }
+                                }
+                                // With no grid underneath, streams take the stage and share the
+                                // full height instead of staying strip-sized.
+                                val expandStreams =
+                                    gridTiles.isEmpty() && streamParticipants.isNotEmpty()
                                 streamParticipants.forEach { presenter ->
                                     val presenterIdentity = presenter.identity?.value
                                     MeetingStreamTile(
@@ -536,31 +542,31 @@ fun MeetingScreen(
                                         onStopShare = {
                                             scope.launch { roomManager.stopScreenShare() }
                                         },
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(horizontal = Dimens.space8)
-                                            .padding(bottom = Dimens.space8),
+                                        modifier = if (expandStreams) {
+                                            Modifier
+                                                .weight(1f)
+                                                .fillMaxWidth()
+                                                .padding(horizontal = Dimens.space8)
+                                                .padding(bottom = Dimens.meetingGridBottomSpace)
+                                        } else {
+                                            Modifier
+                                                .fillMaxWidth()
+                                                .padding(horizontal = Dimens.space8)
+                                                .padding(bottom = Dimens.space8)
+                                                .aspectRatio(VideoAspect.RATIO)
+                                        },
                                     )
                                 }
 
-                                // Grid tiles: the local participant only while their camera is
-                                // on (there is no self-tile for an audio-only self), then the
-                                // remote participants.
-                                val gridTiles = remember(participantVersion, isCameraEnabled, pinnedIdentity) {
-                                    buildList {
-                                        if (isCameraEnabled) add(room.localParticipant)
-                                        addAll(room.remoteParticipants.values)
-                                    }.sortedByDescending { it.identity?.value == pinnedIdentity }
-                                }
-
-                                if (gridTiles.isEmpty()) {
+                                if (gridTiles.isEmpty() && streamParticipants.isEmpty()) {
                                     // Alone with the camera off: there is no self-tile, so give
                                     // the stage a hint instead of a blank void.
                                     Column(
                                         modifier = Modifier
                                             .weight(1f)
                                             .fillMaxWidth()
-                                            .padding(horizontal = Dimens.screenPadding),
+                                            .padding(horizontal = Dimens.screenPadding)
+                                            .padding(bottom = Dimens.meetingGridBottomSpace),
                                         verticalArrangement = Arrangement.Center,
                                         horizontalAlignment = Alignment.CenterHorizontally,
                                     ) {
@@ -578,7 +584,7 @@ fun MeetingScreen(
                                             textAlign = TextAlign.Center,
                                         )
                                     }
-                                } else {
+                                } else if (gridTiles.isNotEmpty()) {
                                     MeetingVideoGrid(
                                         tiles = gridTiles,
                                         room = room,
@@ -603,6 +609,17 @@ fun MeetingScreen(
                                     )
                                 }
                             }
+                            }
+
+                            if (showRecordingBanner && !isTileFullscreen && !showChat) {
+                                MeetingRecordingBanner(
+                                    elapsedLabel = RecordingElapsedPlaceholder,
+                                    onAcknowledge = { showRecordingBanner = false },
+                                    modifier = Modifier
+                                        .align(Alignment.TopCenter)
+                                        .padding(top = Dimens.space56)
+                                        .padding(horizontal = Dimens.space8),
+                                )
                             }
 
                             val fullscreenParticipant = fullscreenParticipantIdentity?.let { id ->
@@ -703,6 +720,8 @@ fun MeetingScreen(
                                     showChat = showChat,
                                     unreadCount = unreadCount,
                                     inputMode = inputMode,
+                                    micLevelProvider = { roomManager.currentMicLevel() },
+                                    voiceGateOpenProvider = { roomManager.isVoiceGateOpen() },
                                     onPushToTalkChange = { active ->
                                         scope.launch {
                                             roomManager.setPushToTalkTransmitting(active)
@@ -724,12 +743,22 @@ fun MeetingScreen(
                                 MeetingMoreOptionsSheet(
                                     isMicEnabled = isMicEnabled,
                                     isCameraEnabled = isCameraEnabled,
+                                    micHasError = micMediaError,
+                                    cameraHasError = cameraMediaError,
                                     isScreenShareEnabled = isScreenShareEnabled,
                                     showChat = showChat,
                                     unreadCount = unreadCount,
                                     isDeafened = isDeafened,
                                     hideAllIncomingVideo = hideAllIncomingVideo,
                                     isRoomSettingsAvailable = isAdmin,
+                                    inputMode = inputMode,
+                                    micLevelProvider = { roomManager.currentMicLevel() },
+                                    voiceGateOpenProvider = { roomManager.isVoiceGateOpen() },
+                                    onPushToTalkChange = { active ->
+                                        scope.launch {
+                                            roomManager.setPushToTalkTransmitting(active)
+                                        }
+                                    },
                                     onToggleMic = toggleMicAction,
                                     onToggleCamera = toggleCameraAction,
                                     onToggleScreenShare = toggleScreenShareAction,
@@ -741,7 +770,6 @@ fun MeetingScreen(
                                     },
                                     onOpenAudioSettings = { showAudioSettingsSheet = true },
                                     onOpenNoiseSuppression = { showNoiseSuppressionSheet = true },
-                                    onOpenInvite = { showInviteSheet = true },
                                     onOpenRoomSettings = { showRoomSettingsSheet = true },
                                     onDismiss = { showMoreOptionsSheet = false },
                                 )

@@ -334,6 +334,4 @@
   <string name="meeting_ns_device">Device (built-in)</string>
   <string name="meeting_ns_appliesNextJoin">Takes effect the next time you join</string>
   <string name="meeting_ptt_openMic">Open Mic</string>
-  <string name="meeting_sheet_inviteFriend">Invite a friend</string>
-  <string name="meeting_sheet_showAllCameras">Show all cameras</string>
 </resources>

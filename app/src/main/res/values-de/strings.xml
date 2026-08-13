@@ -327,6 +327,4 @@
   <string name="meeting_ns_device">Gerät (integriert)</string>
   <string name="meeting_ns_appliesNextJoin">Gilt ab dem nächsten Beitritt</string>
   <string name="meeting_ptt_openMic">Offenes Mikro</string>
-  <string name="meeting_sheet_inviteFriend">Jemanden einladen</string>
-  <string name="meeting_sheet_showAllCameras">Alle Kameras einblenden</string>
 </resources>

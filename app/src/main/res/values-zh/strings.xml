@@ -327,6 +327,4 @@
   <string name="meeting_ns_device">设备（内置）</string>
   <string name="meeting_ns_appliesNextJoin">下次加入时生效</string>
   <string name="meeting_ptt_openMic">开放麦克风</string>
-  <string name="meeting_sheet_inviteFriend">邀请朋友</string>
-  <string name="meeting_sheet_showAllCameras">显示所有摄像头</string>
 </resources>

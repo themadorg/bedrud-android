@@ -327,6 +327,4 @@
   <string name="meeting_ns_device">Устройство (встроенное)</string>
   <string name="meeting_ns_appliesNextJoin">Применится при следующем входе</string>
   <string name="meeting_ptt_openMic">Микрофон вкл.</string>
-  <string name="meeting_sheet_inviteFriend">Пригласить друга</string>
-  <string name="meeting_sheet_showAllCameras">Показать все камеры</string>
 </resources>

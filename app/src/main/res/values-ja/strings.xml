@@ -327,6 +327,4 @@
   <string name="meeting_ns_device">デバイス（内蔵）</string>
   <string name="meeting_ns_appliesNextJoin">次回の参加時に適用されます</string>
   <string name="meeting_ptt_openMic">オープンマイク</string>
-  <string name="meeting_sheet_inviteFriend">友達を招待</string>
-  <string name="meeting_sheet_showAllCameras">すべてのカメラを表示</string>
 </resources>
