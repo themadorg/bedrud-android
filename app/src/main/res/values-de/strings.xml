@@ -224,10 +224,6 @@
   <string name="profile_label_provider">Anbieter</string>
   <string name="profile_button_signOut">Abmelden</string>
 
-  <string name="meeting_contentDescription_stopScreenShare">Bildschirmfreigabe beenden</string>
-  <string name="meeting_contentDescription_maximizeScreenShare">Vollbild</string>
-  <string name="meeting_contentDescription_minimizeScreenShare">Vollbild beenden</string>
-  <string name="meeting_stage_screenShareTitle">Bildschirmfreigabe</string>
   <string name="meeting_stage_screenSharePresenting"><xliff:g id="name" example="Alex">%1$s</xliff:g> präsentiert</string>
   <string name="meeting_stage_screenShareWaiting">Warte auf den Bildschirm von <xliff:g id="name" example="Alex">%1$s</xliff:g>…</string>
   <string name="meeting_contentDescription_closeImagePreview">Bildvorschau schließen</string>
@@ -277,7 +273,6 @@
   <string name="meeting_error_cameraSwitchFailed">Kamera konnte nicht gewechselt werden</string>
   <string name="meeting_error_screenShareUnavailable">Bildschirmfreigabe ist nicht verfügbar</string>
   <string name="meeting_error_screenShareStopFailed">Bildschirmfreigabe konnte nicht beendet werden</string>
-  <string name="meeting_error_alreadyPresenting"><xliff:g id="name" example="Alex">%1$s</xliff:g> präsentiert bereits</string>
   <string name="meeting_error_messageSendFailed">Deine Nachricht konnte nicht gesendet werden</string>
   <string name="meeting_error_kickFailed">Teilnehmer konnte nicht entfernt werden</string>
   <string name="meeting_error_banFailed">Teilnehmer konnte nicht gesperrt werden</string>
@@ -305,9 +300,7 @@
   <string name="meeting_action_chatMute">Chat sperren</string>
   <string name="meeting_sheet_disableAllCameras">Alle Kameras ausblenden</string>
   <string name="meeting_sheet_disableAllCamerasDescription">Blendet eingehendes Video nur für dich aus</string>
-  <string name="meeting_sheet_showAllCameras">Alle Kameras einblenden</string>
   <string name="meeting_sheet_noiseSuppression">Rauschunterdrückung</string>
-  <string name="meeting_sheet_inviteFriend">Jemanden einladen</string>
   <string name="meeting_sheet_audioSettings">Audioeinstellungen</string>
   <string name="meeting_recording_title">Raumaufnahme aktiv</string>
   <string name="meeting_recording_message">In diesem Raum werden alle Chats, Kameras, Bildschirmfreigaben und Audio aufgezeichnet.</string>
@@ -319,4 +312,19 @@
   <string name="meeting_invite_qrDescription">QR-Code des Raumlinks</string>
   <string name="meeting_invite_appNotInstalled">Diese App ist nicht installiert</string>
   <string name="common_hint_comingSoon">Bald verfügbar</string>
+  <string name="meeting_stream_watch">Stream ansehen</string>
+  <string name="meeting_stream_leave">Stream verlassen</string>
+  <string name="meeting_stream_youArePresenting">Du präsentierst gerade</string>
+  <string name="meeting_stream_stop">Freigabe beenden</string>
+  <string name="meeting_audio_outputVolume">Ausgabelautstärke</string>
+  <string name="meeting_audio_inputMode">Eingabemodus</string>
+  <string name="meeting_audio_mode_voiceActivity">Sprachaktivität</string>
+  <string name="meeting_audio_mode_pushToTalk">Push-to-Talk</string>
+  <string name="meeting_audio_autoSensitivity">Automatische Empfindlichkeit</string>
+  <string name="meeting_audio_sensitivity">Empfindlichkeit</string>
+  <string name="meeting_ptt_talking">Du sprichst…</string>
+  <string name="meeting_ns_off">Aus</string>
+  <string name="meeting_ns_device">Gerät (integriert)</string>
+  <string name="meeting_ns_appliesNextJoin">Gilt ab dem nächsten Beitritt</string>
+  <string name="meeting_ptt_openMic">Offenes Mikro</string>
 </resources>

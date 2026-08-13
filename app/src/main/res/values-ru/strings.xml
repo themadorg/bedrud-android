@@ -224,10 +224,6 @@
   <string name="profile_label_provider">Провайдер</string>
   <string name="profile_button_signOut">Выйти</string>
 
-  <string name="meeting_contentDescription_stopScreenShare">Остановить демонстрацию экрана</string>
-  <string name="meeting_contentDescription_maximizeScreenShare">На весь экран</string>
-  <string name="meeting_contentDescription_minimizeScreenShare">Выйти из полноэкранного режима</string>
-  <string name="meeting_stage_screenShareTitle">Демонстрация экрана</string>
   <string name="meeting_stage_screenSharePresenting"><xliff:g id="name" example="Alex">%1$s</xliff:g> демонстрирует экран</string>
   <string name="meeting_stage_screenShareWaiting">Ожидание экрана <xliff:g id="name" example="Alex">%1$s</xliff:g>…</string>
   <string name="meeting_contentDescription_closeImagePreview">Закрыть просмотр изображения</string>
@@ -277,7 +273,6 @@
   <string name="meeting_error_cameraSwitchFailed">Не удалось переключить камеру</string>
   <string name="meeting_error_screenShareUnavailable">Демонстрация экрана недоступна</string>
   <string name="meeting_error_screenShareStopFailed">Не удалось остановить демонстрацию экрана</string>
-  <string name="meeting_error_alreadyPresenting"><xliff:g id="name" example="Alex">%1$s</xliff:g> уже ведёт показ</string>
   <string name="meeting_error_messageSendFailed">Не удалось отправить сообщение</string>
   <string name="meeting_error_kickFailed">Не удалось удалить участника</string>
   <string name="meeting_error_banFailed">Не удалось заблокировать участника</string>
@@ -305,9 +300,7 @@
   <string name="meeting_action_chatMute">Запретить чат</string>
   <string name="meeting_sheet_disableAllCameras">Скрыть все камеры</string>
   <string name="meeting_sheet_disableAllCamerasDescription">Перестаёт показывать входящее видео только у вас</string>
-  <string name="meeting_sheet_showAllCameras">Показать все камеры</string>
   <string name="meeting_sheet_noiseSuppression">Шумоподавление</string>
-  <string name="meeting_sheet_inviteFriend">Пригласить друга</string>
   <string name="meeting_sheet_audioSettings">Настройки звука</string>
   <string name="meeting_recording_title">Идёт запись комнаты</string>
   <string name="meeting_recording_message">В этой комнате записываются все чаты, камеры, демонстрации экрана и звук.</string>
@@ -319,4 +312,19 @@
   <string name="meeting_invite_qrDescription">QR-код ссылки на комнату</string>
   <string name="meeting_invite_appNotInstalled">Это приложение не установлено</string>
   <string name="common_hint_comingSoon">Скоро</string>
+  <string name="meeting_stream_watch">Смотреть трансляцию</string>
+  <string name="meeting_stream_leave">Покинуть трансляцию</string>
+  <string name="meeting_stream_youArePresenting">Вы демонстрируете экран</string>
+  <string name="meeting_stream_stop">Остановить показ</string>
+  <string name="meeting_audio_outputVolume">Громкость вывода</string>
+  <string name="meeting_audio_inputMode">Режим ввода</string>
+  <string name="meeting_audio_mode_voiceActivity">Голосовая активация</string>
+  <string name="meeting_audio_mode_pushToTalk">Нажми и говори</string>
+  <string name="meeting_audio_autoSensitivity">Авточувствительность</string>
+  <string name="meeting_audio_sensitivity">Чувствительность</string>
+  <string name="meeting_ptt_talking">Вы говорите…</string>
+  <string name="meeting_ns_off">Выкл.</string>
+  <string name="meeting_ns_device">Устройство (встроенное)</string>
+  <string name="meeting_ns_appliesNextJoin">Применится при следующем входе</string>
+  <string name="meeting_ptt_openMic">Микрофон вкл.</string>
 </resources>

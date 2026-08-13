@@ -141,10 +141,30 @@ the `meeting*` tokens in `Dimens.kt`, timing in `Motion.meetingChromeAutoHideDel
   opens the participants list. Landscape transposes rows into columns.
 - **Tiles**: name chip centered along the bottom edge, carrying mic-off / camera-off badges; a
   fullscreen affordance sits in the top-end corner; long-press opens the participant actions.
+- **Streams** (`MeetingStreamTile`): every live screenshare gets a strip tile above the grid.
+  Several people can share at once; watching is **opt-in per viewer, one stream at a time**
+  (LiveKit selective subscription — no gossip protocol). Unwatched shares render as a
+  placeholder with a watch button, your own share offers stop, and long-pressing the watched
+  stream opens `MeetingStreamSheet` (dev-hinted volume until share audio exists (#105), leave
+  stream — neutral, not red: leaving is reversible).
 - **Per-tile fullscreen** (`MeetingParticipantFullscreen`): chrome (name chip, collapse button,
   controls bar) auto-hides after `meetingChromeAutoHideDelayMs` of inactivity; any tap toggles it
   back; while hidden the system bars hide too (immersive). The hardware back key collapses
   fullscreen instead of leaving the meeting.
+- **Audio input** (`MeetingAudioSettingsSheet`): output device + output volume (the voice-call
+  stream the hardware keys drive), and the input mode. **Push to talk** turns the mic slot into a
+  hold-to-talk pill — outlined idle, filled while transmitting — enabling the mic only while held
+  and never touching the persisted mic preference. **Voice activity** with auto sensitivity keeps
+  the platform's own processing (today's behavior); manual sensitivity engages
+  `VoiceGateProcessor`, a capture post-processor that mutes frames whose RMS falls below the
+  slider's dBFS threshold (with a ~300ms hangover so syllables don't clip). Noise suppression
+  (Off / Device) applies on the next join — the audio device module is built per connection.
+- **Mic meter**: the same processor always measures (gating stays conditional), publishing a
+  0..1 level that the pill renders as four bars in place of the mic glyph whenever audio is
+  actually being captured — same slot, so the bar's geometry never moves. The UI samples the
+  level per animation frame inside the draw scope rather than through a flow, so a 100 Hz audio
+  signal costs redraws, not recompositions. While the manual gate is closed the bars dim, which
+  makes the sensitivity threshold visible instead of guesswork.
 - **Sheets**: long-press a tile → `MeetingParticipantSheet` (per-viewer volume slider, local
   mute / don't-watch / pin / fullscreen; admins get kick/ban plus the dev-hinted room mute /
   room deafen / chat mute, #108). The top-bar invite entry, the "+N" tile and the more-options

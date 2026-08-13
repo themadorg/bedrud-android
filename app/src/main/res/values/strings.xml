@@ -116,10 +116,6 @@
   <string name="meeting_contentDescription_toggleCamera">Toggle Camera</string>
   <string name="meeting_contentDescription_switchCamera">Switch Camera</string>
   <string name="meeting_contentDescription_toggleScreenShare">Toggle Screen Share</string>
-  <string name="meeting_contentDescription_stopScreenShare">Stop screen share</string>
-  <string name="meeting_contentDescription_maximizeScreenShare">Full screen</string>
-  <string name="meeting_contentDescription_minimizeScreenShare">Exit full screen</string>
-  <string name="meeting_stage_screenShareTitle">Screen share</string>
   <string name="meeting_stage_screenSharePresenting"><xliff:g id="name" example="Alex">%1$s</xliff:g> is presenting</string>
   <string name="meeting_stage_screenShareWaiting">Waiting for <xliff:g id="name" example="Alex">%1$s</xliff:g>\'s screen…</string>
   <string name="meeting_contentDescription_toggleChat">Toggle Chat</string>
@@ -279,7 +275,6 @@
   <string name="meeting_error_cameraSwitchFailed">Couldn\'t switch camera</string>
   <string name="meeting_error_screenShareUnavailable">Screen sharing isn\'t available</string>
   <string name="meeting_error_screenShareStopFailed">Couldn\'t stop screen sharing</string>
-  <string name="meeting_error_alreadyPresenting"><xliff:g id="name" example="Alex">%1$s</xliff:g> is already presenting</string>
   <string name="meeting_error_messageSendFailed">Couldn\'t send your message</string>
   <string name="meeting_error_kickFailed">Failed to remove participant</string>
   <string name="meeting_error_banFailed">Failed to ban participant</string>
@@ -310,9 +305,7 @@
   <string name="meeting_action_chatMute">Chat mute</string>
   <string name="meeting_sheet_disableAllCameras">Hide all cameras</string>
   <string name="meeting_sheet_disableAllCamerasDescription">Stops showing incoming video, just for you</string>
-  <string name="meeting_sheet_showAllCameras">Show all cameras</string>
   <string name="meeting_sheet_noiseSuppression">Noise suppression</string>
-  <string name="meeting_sheet_inviteFriend">Invite a friend</string>
   <string name="meeting_sheet_audioSettings">Audio settings</string>
   <string name="meeting_recording_title">Room recording active</string>
   <string name="meeting_recording_message">In this room, all chats, cameras, screen shares, and audio are recorded.</string>
@@ -326,4 +319,19 @@
   <string name="common_hint_comingSoon">Coming soon</string>
   <string name="meeting_invite_telegram" translatable="false">Telegram</string>
   <string name="meeting_invite_whatsapp" translatable="false">WhatsApp</string>
+  <string name="meeting_stream_watch">Watch stream</string>
+  <string name="meeting_stream_leave">Leave stream</string>
+  <string name="meeting_stream_youArePresenting">You\'re presenting</string>
+  <string name="meeting_stream_stop">Stop sharing</string>
+  <string name="meeting_audio_outputVolume">Output volume</string>
+  <string name="meeting_audio_inputMode">Input mode</string>
+  <string name="meeting_audio_mode_voiceActivity">Voice activity</string>
+  <string name="meeting_audio_mode_pushToTalk">Push to talk</string>
+  <string name="meeting_audio_autoSensitivity">Auto sensitivity</string>
+  <string name="meeting_audio_sensitivity">Sensitivity</string>
+  <string name="meeting_ptt_talking">Talking…</string>
+  <string name="meeting_ns_off">Off</string>
+  <string name="meeting_ns_device">Device (built-in)</string>
+  <string name="meeting_ns_appliesNextJoin">Takes effect the next time you join</string>
+  <string name="meeting_ptt_openMic">Open Mic</string>
 </resources>

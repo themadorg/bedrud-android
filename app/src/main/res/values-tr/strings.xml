@@ -224,10 +224,6 @@
   <string name="profile_label_provider">Sağlayıcı</string>
   <string name="profile_button_signOut">Çıkış Yap</string>
 
-  <string name="meeting_contentDescription_stopScreenShare">Ekran paylaşımını durdur</string>
-  <string name="meeting_contentDescription_maximizeScreenShare">Tam ekran</string>
-  <string name="meeting_contentDescription_minimizeScreenShare">Tam ekrandan çık</string>
-  <string name="meeting_stage_screenShareTitle">Ekran paylaşımı</string>
   <string name="meeting_stage_screenSharePresenting"><xliff:g id="name" example="Alex">%1$s</xliff:g> sunum yapıyor</string>
   <string name="meeting_stage_screenShareWaiting"><xliff:g id="name" example="Alex">%1$s</xliff:g> kişisinin ekranı bekleniyor…</string>
   <string name="meeting_contentDescription_closeImagePreview">Görsel önizlemesini kapat</string>
@@ -277,7 +273,6 @@
   <string name="meeting_error_cameraSwitchFailed">Kamera değiştirilemedi</string>
   <string name="meeting_error_screenShareUnavailable">Ekran paylaşımı kullanılamıyor</string>
   <string name="meeting_error_screenShareStopFailed">Ekran paylaşımı durdurulamadı</string>
-  <string name="meeting_error_alreadyPresenting"><xliff:g id="name" example="Alex">%1$s</xliff:g> zaten sunum yapıyor</string>
   <string name="meeting_error_messageSendFailed">Mesajınız gönderilemedi</string>
   <string name="meeting_error_kickFailed">Katılımcı çıkarılamadı</string>
   <string name="meeting_error_banFailed">Katılımcı engellenemedi</string>
@@ -305,9 +300,7 @@
   <string name="meeting_action_chatMute">Sohbeti sustur</string>
   <string name="meeting_sheet_disableAllCameras">Tüm kameraları gizle</string>
   <string name="meeting_sheet_disableAllCamerasDescription">Gelen videoyu yalnızca senin için gizler</string>
-  <string name="meeting_sheet_showAllCameras">Tüm kameraları göster</string>
   <string name="meeting_sheet_noiseSuppression">Gürültü bastırma</string>
-  <string name="meeting_sheet_inviteFriend">Bir arkadaşını davet et</string>
   <string name="meeting_sheet_audioSettings">Ses ayarları</string>
   <string name="meeting_recording_title">Oda kaydı etkin</string>
   <string name="meeting_recording_message">Bu odada tüm sohbetler, kameralar, ekran paylaşımları ve ses kaydedilir.</string>
@@ -319,4 +312,19 @@
   <string name="meeting_invite_qrDescription">Oda bağlantısı QR kodu</string>
   <string name="meeting_invite_appNotInstalled">Bu uygulama yüklü değil</string>
   <string name="common_hint_comingSoon">Çok yakında</string>
+  <string name="meeting_stream_watch">Yayını izle</string>
+  <string name="meeting_stream_leave">Yayından ayrıl</string>
+  <string name="meeting_stream_youArePresenting">Sunum yapıyorsunuz</string>
+  <string name="meeting_stream_stop">Paylaşımı durdur</string>
+  <string name="meeting_audio_outputVolume">Çıkış ses düzeyi</string>
+  <string name="meeting_audio_inputMode">Giriş modu</string>
+  <string name="meeting_audio_mode_voiceActivity">Ses etkinliği</string>
+  <string name="meeting_audio_mode_pushToTalk">Bas-konuş</string>
+  <string name="meeting_audio_autoSensitivity">Otomatik hassasiyet</string>
+  <string name="meeting_audio_sensitivity">Hassasiyet</string>
+  <string name="meeting_ptt_talking">Konuşuyorsunuz…</string>
+  <string name="meeting_ns_off">Kapalı</string>
+  <string name="meeting_ns_device">Cihaz (yerleşik)</string>
+  <string name="meeting_ns_appliesNextJoin">Bir sonraki katılımda geçerli olur</string>
+  <string name="meeting_ptt_openMic">Açık mikrofon</string>
 </resources>

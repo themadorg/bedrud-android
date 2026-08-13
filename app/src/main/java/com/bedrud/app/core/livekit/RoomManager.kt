@@ -8,12 +8,15 @@ import android.util.Log
 import androidx.annotation.StringRes
 import androidx.core.app.NotificationCompat
 import com.bedrud.app.R
+import com.bedrud.app.core.audio.MeetingInputMode
+import com.bedrud.app.core.audio.NoiseSuppressionMode
+import com.bedrud.app.core.audio.VoiceGateProcessor
 import com.bedrud.app.core.call.CallConnectionService
 import com.bedrud.app.core.meeting.chat.ChatWire
-import com.bedrud.app.core.meeting.stage.StageWire
 import com.bedrud.app.core.registerNotificationChannel
 import com.bedrud.app.ui.screens.settings.SettingsStore
 import io.livekit.android.AudioOptions
+import io.livekit.android.audio.AudioProcessorOptions
 import io.livekit.android.LiveKit
 import io.livekit.android.LiveKitOverrides
 import io.livekit.android.events.RoomEvent
@@ -22,10 +25,13 @@ import io.livekit.android.room.Room
 import io.livekit.android.room.RoomException
 import io.livekit.android.room.track.DataPublishReliability
 import io.livekit.android.room.participant.LocalParticipant
+import io.livekit.android.room.participant.Participant
 import io.livekit.android.room.track.CameraPosition
 import io.livekit.android.room.track.LocalVideoTrack
 import io.livekit.android.room.track.RemoteAudioTrack
+import io.livekit.android.room.track.RemoteTrackPublication
 import io.livekit.android.room.track.Track
+import io.livekit.android.room.track.TrackPublication
 import io.livekit.android.room.track.screencapture.ScreenCaptureParams
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -125,10 +131,32 @@ class RoomManager(
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error.asStateFlow()
 
-    private val _activeStage = MutableStateFlow<StageWire.MeetingStage?>(null)
-    val activeStage: StateFlow<StageWire.MeetingStage?> = _activeStage.asStateFlow()
+    // Which participant's screenshare this viewer is watching — at most one at a time.
+    // The published track itself announces a share; watching is a per-viewer subscription.
+    private val _watchedStreamIdentity = MutableStateFlow<String?>(null)
+    val watchedStreamIdentity: StateFlow<String?> = _watchedStreamIdentity.asStateFlow()
 
-    private var activeStageLocal: StageWire.MeetingStage? = null
+    // Input mode (voice activity / push-to-talk) with its manual voice gate. The gate object is
+    // handed to LiveKit at connect and reconfigured in place afterwards.
+    private val voiceGate = VoiceGateProcessor()
+    private val _inputMode = MutableStateFlow(settingsStore.getInputMode())
+    val inputMode: StateFlow<MeetingInputMode> = _inputMode.asStateFlow()
+    private val _autoSensitivity = MutableStateFlow(settingsStore.getAutoSensitivity())
+    val autoSensitivity: StateFlow<Boolean> = _autoSensitivity.asStateFlow()
+    private val _voiceSensitivity = MutableStateFlow(settingsStore.getVoiceSensitivity())
+    val voiceSensitivity: StateFlow<Float> = _voiceSensitivity.asStateFlow()
+
+    /** Live mic capture level (0..1) for the in-call meter; sampled per frame by the UI. */
+    fun currentMicLevel(): Float = if (_isMicEnabled.value) voiceGate.level else 0f
+
+    /** False only while the manual voice gate is holding audio back. */
+    fun isVoiceGateOpen(): Boolean = voiceGate.gateOpen
+
+    private fun syncVoiceGate() {
+        voiceGate.sensitivity = _voiceSensitivity.value
+        voiceGate.gateEnabled =
+            _inputMode.value == MeetingInputMode.VOICE_ACTIVITY && !_autoSensitivity.value
+    }
 
     suspend fun connectIfNeeded(
         url: String,
@@ -154,11 +182,20 @@ class RoomManager(
             val audioHandler = CallAudioSwitch(application)
             _audioHandler = audioHandler
 
+            syncVoiceGate()
+            val useDeviceNoiseSuppression =
+                settingsStore.getNoiseSuppression() == NoiseSuppressionMode.DEVICE
             val room = LiveKit.create(
                 application,
                 overrides = LiveKitOverrides(
                     audioOptions = AudioOptions(
                         audioHandler = audioHandler,
+                        javaAudioDeviceModuleCustomizer = { builder ->
+                            builder.setUseHardwareNoiseSuppressor(useDeviceNoiseSuppression)
+                        },
+                        audioProcessorOptions = AudioProcessorOptions(
+                            capturePostProcessor = voiceGate,
+                        ),
                     ),
                 ),
             )
@@ -184,7 +221,8 @@ class RoomManager(
             // on a fresh install); camera stays off until the user turns it on. A silent
             // non-publish only flags micMediaError here — no banner during connect.
             setTrackEnabled(
-                enabled = settingsStore.getMicEnabled(),
+                enabled = settingsStore.getMicEnabled() &&
+                    _inputMode.value != MeetingInputMode.PUSH_TO_TALK,
                 label = "microphone",
                 deviceErrorRes = R.string.meeting_error_microphoneFailed,
                 stateFlow = _isMicEnabled,
@@ -212,24 +250,14 @@ class RoomManager(
             eventScope?.launch {
                 room.events.collect { event ->
                     when (event) {
-                        is RoomEvent.DataReceived -> {
-                            if (event.topic == StageWire.STAGE_DATA_TOPIC) {
-                                handleStageData(event)
-                            } else {
-                                handleDataReceived(event)
-                            }
-                        }
-                        is RoomEvent.ParticipantConnected -> {
-                            _participantVersion.value++
-                            requestStageState()
-                            pushOwnedStageState()
-                        }
+                        is RoomEvent.DataReceived -> handleDataReceived(event)
+                        is RoomEvent.ParticipantConnected -> _participantVersion.value++
                         is RoomEvent.ParticipantDisconnected -> {
                             val disconnectedIdentity = event.participant.identity?.value
                             if (disconnectedIdentity != null &&
-                                activeStageLocal?.ownerIdentity == disconnectedIdentity
+                                _watchedStreamIdentity.value == disconnectedIdentity
                             ) {
-                                applyRemoteStage(null)
+                                _watchedStreamIdentity.value = null
                             }
                             _participantVersion.value++
                         }
@@ -237,6 +265,7 @@ class RoomManager(
                             if (effectiveVolumeFor(event.participant.identity?.value) == 0.0) {
                                 (event.track as? RemoteAudioTrack)?.setVolume(0.0)
                             }
+                            enforceStreamSubscription(event.participant, event.publication)
                             _participantVersion.value++
                         }
                         is RoomEvent.TrackUnsubscribed -> _participantVersion.value++
@@ -246,14 +275,20 @@ class RoomManager(
                             ) {
                                 _isScreenShareEnabled.value = true
                             }
+                            enforceStreamSubscription(event.participant, event.publication)
                             _participantVersion.value++
                         }
                         is RoomEvent.LocalTrackSubscribed -> _participantVersion.value++
                         is RoomEvent.TrackUnpublished -> {
-                            if (event.publication.source == Track.Source.SCREEN_SHARE &&
-                                event.participant == room.localParticipant
-                            ) {
-                                _isScreenShareEnabled.value = false
+                            if (event.publication.source == Track.Source.SCREEN_SHARE) {
+                                if (event.participant == room.localParticipant) {
+                                    _isScreenShareEnabled.value = false
+                                } else if (
+                                    event.participant.identity?.value ==
+                                        _watchedStreamIdentity.value
+                                ) {
+                                    _watchedStreamIdentity.value = null
+                                }
                             }
                             _participantVersion.value++
                         }
@@ -309,7 +344,6 @@ class RoomManager(
                 }
             }
 
-            scheduleStageStateRequests()
 
             Log.d(TAG, "Connected to room: ${room.name}")
         } catch (e: RoomException) {
@@ -360,8 +394,7 @@ class RoomManager(
         _chatMessages.value = emptyList()
         _wasKicked.value = false
         _error.value = null
-        activeStageLocal = null
-        _activeStage.value = null
+        _watchedStreamIdentity.value = null
         Log.d(TAG, "Disconnected from room")
     }
 
@@ -439,6 +472,55 @@ class RoomManager(
 
     suspend fun toggleMicrophone() {
         setMicrophoneEnabled(!_isMicEnabled.value)
+    }
+
+    /**
+     * Push-to-talk transmit state: enables the mic only while held, without touching the user's
+     * persisted mic preference. Ignored outside push-to-talk mode.
+     */
+    suspend fun setPushToTalkTransmitting(active: Boolean) {
+        if (_inputMode.value != MeetingInputMode.PUSH_TO_TALK) return
+        val localParticipant = _room?.localParticipant ?: return
+        if (active && _isDeafened.value) {
+            _isDeafened.value = false
+            settingsStore.setDeafened(false)
+            reapplyAllVolumes()
+        }
+        setTrackEnabled(
+            enabled = active,
+            label = "microphone",
+            deviceErrorRes = R.string.meeting_error_microphoneFailed,
+            stateFlow = _isMicEnabled,
+            errorFlow = _micMediaError,
+            sync = ::syncMicrophoneState,
+            setEnabled = { localParticipant.setMicrophoneEnabled(it) },
+            onApplied = { CallConnectionService.updateMuteState(!it) },
+        )
+    }
+
+    /** Switch input modes: push-to-talk holds the mic closed until pressed, voice activity restores the persisted mic state. */
+    suspend fun setInputMode(mode: MeetingInputMode) {
+        if (_inputMode.value == mode) return
+        settingsStore.setInputMode(mode)
+        _inputMode.value = mode
+        syncVoiceGate()
+        when (mode) {
+            MeetingInputMode.PUSH_TO_TALK -> setPushToTalkTransmitting(false)
+            MeetingInputMode.VOICE_ACTIVITY -> setMicrophoneEnabled(settingsStore.getMicEnabled())
+        }
+    }
+
+    fun setAutoSensitivity(value: Boolean) {
+        settingsStore.setAutoSensitivity(value)
+        _autoSensitivity.value = value
+        syncVoiceGate()
+    }
+
+    fun setVoiceSensitivity(value: Float) {
+        val clamped = value.coerceIn(0f, 1f)
+        settingsStore.setVoiceSensitivity(clamped)
+        _voiceSensitivity.value = clamped
+        syncVoiceGate()
     }
 
     suspend fun toggleDeafen() {
@@ -545,10 +627,6 @@ class RoomManager(
 
     suspend fun startScreenShare(mediaProjectionPermissionResultData: Intent): Boolean {
         val localParticipant = _room?.localParticipant ?: return false
-        if (!claimScreenShareStage()) {
-            return false
-        }
-
         try {
             ensureScreenShareNotificationChannel()
             val published = localParticipant.setScreenShareEnabled(
@@ -559,24 +637,20 @@ class RoomManager(
                     notification = buildScreenShareNotification(),
                     onStop = {
                         eventScope?.launch {
-                            clearOwnedScreenShareStage()
                             _isScreenShareEnabled.value = false
                         }
                     },
                 ),
             )
             if (!published) {
-                clearOwnedScreenShareStage()
                 _isScreenShareEnabled.value = false
                 _error.value = application.getString(R.string.meeting_error_screenShareFailed)
                 return false
             }
             _isScreenShareEnabled.value = localParticipant.isScreenShareEnabled
-            pushOwnedStageState()
             return true
         } catch (e: Exception) {
             Log.e(TAG, "Failed to start screen share", e)
-            clearOwnedScreenShareStage()
             _isScreenShareEnabled.value = false
             _error.value = application.getString(R.string.meeting_error_screenShareUnavailable)
             return false
@@ -588,48 +662,44 @@ class RoomManager(
         try {
             localParticipant.setScreenShareEnabled(false)
             _isScreenShareEnabled.value = localParticipant.isScreenShareEnabled
-            clearOwnedScreenShareStage()
         } catch (e: Exception) {
             Log.e(TAG, "Failed to stop screen share", e)
             _error.value = application.getString(R.string.meeting_error_screenShareStopFailed)
         }
     }
 
-    private suspend fun claimScreenShareStage(): Boolean {
-        val room = _room ?: return false
-        val localParticipant = room.localParticipant
-        val ownerIdentity = localParticipant.identity?.value ?: return false
-        val ownerName = localParticipant.name ?: ownerIdentity
-
-        val current = activeStageLocal
-        if (current != null && current.ownerIdentity != ownerIdentity) {
-            _error.value = application.getString(R.string.meeting_error_alreadyPresenting, current.ownerName)
-            return false
+    /**
+     * Watch [identity]'s screenshare (or stop watching with null). At most one stream plays at a
+     * time: subscribing to the new one unsubscribes every other share for this viewer only.
+     */
+    fun watchStream(identity: String?) {
+        val room = _room ?: return
+        _watchedStreamIdentity.value = identity
+        for (participant in room.remoteParticipants.values) {
+            val publication = participant.getTrackPublication(Track.Source.SCREEN_SHARE)
+                as? RemoteTrackPublication ?: continue
+            val shouldWatch = participant.identity?.value == identity
+            if (publication.subscribed != shouldWatch) {
+                publication.setSubscribed(shouldWatch)
+            }
         }
-
-        val stage = StageWire.MeetingStage(
-            kind = StageWire.KIND_SCREENSHARE,
-            ownerIdentity = ownerIdentity,
-            ownerName = ownerName,
-            updatedAt = System.currentTimeMillis(),
-        )
-        activeStageLocal = stage
-        _activeStage.value = stage
-        publishStageData(StageWire.encodeStageSet(stage))
-        return true
+        _participantVersion.value++
     }
 
-    private suspend fun clearOwnedScreenShareStage() {
-        val room = _room ?: return
-        val ownerIdentity = room.localParticipant.identity?.value ?: return
-        val current = activeStageLocal ?: return
-        if (current.ownerIdentity != ownerIdentity || current.kind != StageWire.KIND_SCREENSHARE) return
-
-        activeStageLocal = null
-        _activeStage.value = null
-        publishStageData(
-            StageWire.encodeStageClear(ownerIdentity, System.currentTimeMillis()),
-        )
+    /**
+     * Screenshares are opt-in per viewer: whenever one is published (or autoSubscribe races one
+     * in), keep only the watched participant's share subscribed.
+     */
+    private fun enforceStreamSubscription(
+        participant: Participant,
+        publication: TrackPublication,
+    ) {
+        if (publication.source != Track.Source.SCREEN_SHARE) return
+        val remotePublication = publication as? RemoteTrackPublication ?: return
+        val shouldWatch = participant.identity?.value == _watchedStreamIdentity.value
+        if (remotePublication.subscribed != shouldWatch) {
+            remotePublication.setSubscribed(shouldWatch)
+        }
     }
 
     /** Publishes on the reliable data channel; false (plus a log line) when publishing throws. */
@@ -645,61 +715,6 @@ class RoomManager(
         } catch (e: Exception) {
             Log.e(TAG, "Failed to publish data on topic '$topic'", e)
             false
-        }
-    }
-
-    private suspend fun publishStageData(data: ByteArray) {
-        publishData(StageWire.STAGE_DATA_TOPIC, data)
-    }
-
-    private fun handleStageData(event: RoomEvent.DataReceived) {
-        val message = StageWire.parse(event.data) ?: return
-        val localIdentity = _room?.localParticipant?.identity?.value
-
-        when (message) {
-            is StageWire.StageMessage.Set -> applyRemoteStage(message.stage)
-            is StageWire.StageMessage.Clear -> applyRemoteStage(null)
-            is StageWire.StageMessage.State -> applyRemoteStage(message.stage)
-            is StageWire.StageMessage.Request -> {
-                val owned = activeStageLocal ?: return
-                if (owned.ownerIdentity != localIdentity) return
-                eventScope?.launch {
-                    publishStageData(
-                        StageWire.encodeStageState(owned, System.currentTimeMillis()),
-                    )
-                }
-            }
-        }
-    }
-
-    private fun applyRemoteStage(stage: StageWire.MeetingStage?) {
-        activeStageLocal = stage
-        _activeStage.value = stage
-        _participantVersion.value++
-    }
-
-    private fun scheduleStageStateRequests() {
-        eventScope?.launch {
-            for (delayMs in STAGE_STATE_REQUEST_DELAYS_MS) {
-                delay(delayMs)
-                requestStageState()
-            }
-        }
-    }
-
-    private suspend fun requestStageState() {
-        publishStageData(StageWire.encodeStageRequest(System.currentTimeMillis()))
-    }
-
-    private fun pushOwnedStageState() {
-        val owned = activeStageLocal ?: return
-        val localIdentity = _room?.localParticipant?.identity?.value ?: return
-        if (owned.ownerIdentity != localIdentity) return
-        eventScope?.launch {
-            for (delayMs in STAGE_STATE_PUSH_DELAYS_MS) {
-                delay(delayMs)
-                publishStageData(StageWire.encodeStageState(owned, System.currentTimeMillis()))
-            }
         }
     }
 
@@ -765,7 +780,5 @@ class RoomManager(
 
         // Backoff schedules (ms) for the peer-to-peer stage gossip: newly joined peers re-ask for the
         // current stage, and stage owners re-broadcast their state, so a dropped packet self-heals.
-        private val STAGE_STATE_REQUEST_DELAYS_MS = listOf(800L, 2000L, 4000L)
-        private val STAGE_STATE_PUSH_DELAYS_MS = listOf(400L, 1200L, 2500L)
     }
 }
