@@ -177,8 +177,9 @@ fun MeetingScreen(
     val wasKicked by roomManager.wasKicked.collectAsState()
 
     val participantVersion by roomManager.participantVersion.collectAsState()
-    // Who the room says it hears.
+    // Who the room says it hears, and why it might not be hearing this device.
     val speakingLevels by roomManager.speakingLevels.collectAsState()
+    val voiceAlert by roomManager.voiceAlert.collectAsState()
     val watchedStreamIdentity by roomManager.watchedStreamIdentity.collectAsState()
     val chatMessages by roomManager.chatMessages.collectAsState()
     var showChat by remember { mutableStateOf(false) }
@@ -716,6 +717,13 @@ fun MeetingScreen(
                             }
 
                             if (!isTileFullscreen || fullscreenChromeVisible) {
+                                MeetingVoiceAlertChip(
+                                    alert = voiceAlert,
+                                    onOpenAudioSettings = { showAudioSettingsSheet = true },
+                                    modifier = Modifier
+                                        .align(Alignment.BottomCenter)
+                                        .padding(bottom = Dimens.meetingGridBottomSpace),
+                                )
                                 MeetingControlsBar(
                                     isMicEnabled = isMicEnabled,
                                     isCameraEnabled = isCameraEnabled,

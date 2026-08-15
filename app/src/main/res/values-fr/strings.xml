@@ -289,6 +289,10 @@
   <string name="meeting_contentDescription_cameraOff">Caméra désactivée</string>
   <string name="meeting_contentDescription_speaking">Parle</string>
   <string name="meeting_status_reconnecting">Reconnexion…</string>
+  <string name="meeting_voiceAlert_muted">Votre micro est coupé</string>
+  <string name="meeting_voiceAlert_pushToTalk">Maintenez le bouton du micro pour parler</string>
+  <string name="meeting_voiceAlert_gateClosed">La détection vocale ne vous capte pas</string>
+  <string name="meeting_voiceAlert_notReachingRoom">Les autres ne vous entendent peut-être pas</string>
   <string name="meeting_empty_title">Personne d\'autre n\'est ici</string>
   <string name="meeting_empty_message">Invitez d\'autres personnes ou activez votre caméra pour vous voir</string>
   <string name="meeting_participant_volume">Volume</string>
