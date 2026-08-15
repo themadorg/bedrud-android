@@ -211,6 +211,17 @@ the `meeting*` tokens in `Dimens.kt`, timing in `Motion.meetingChromeAutoHideDel
   proof that your audio reached the SFU and was announced to the room, where the mic meter only
   proves the microphone works. Colour never carries it alone — speech also earns a badge in the
   name chip, in the mic-off badge's slot (a muted participant is never a speaking one).
+- **Mute is a soft mute.** Muting through LiveKit disables the underlying track, and a disabled
+  track stops feeding the capture chain — so a plain mute leaves nothing to measure and no way to
+  notice you talking into a muted microphone. The track therefore stays enabled and the room is
+  kept from hearing anything by two independent means: the **publication is muted**, which is what
+  every other participant's mute indicator reads and what the server is told, and **every captured
+  frame is zeroed** by `VoiceGateProcessor.forceSilence` before it can reach the encoder. The
+  silencing is switched on *before* the track is re-enabled, never after, and the monitor loop
+  re-asserts it every tick so the two cannot drift apart. Joining muted publishes first (already
+  silenced) and then mutes, because an unpublished track never reaches the capture chain at all.
+  The honest cost: while muted the microphone is genuinely open, so the system's mic indicator
+  stays lit. Nothing audible can leave the device, but audio is being captured on it.
 - **Mic pill status ring** (`MicStatusRing`, `VoiceReachMonitor`): anything stopping your voice
   reaching the room is reported on the **outline of the mic pill itself**, in the amber `warning`
   role — never as a banner or toast. The status belongs on the control that fixes it, and a chip
