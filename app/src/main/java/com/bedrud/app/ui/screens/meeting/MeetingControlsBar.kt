@@ -2,15 +2,20 @@ package com.bedrud.app.ui.screens.meeting
 
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.LocalIndication
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -58,6 +63,7 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
@@ -75,6 +81,7 @@ import com.bedrud.app.ui.theme.Dimens
 import com.bedrud.app.ui.theme.Elevation
 import com.bedrud.app.ui.theme.Motion
 import com.bedrud.app.ui.theme.bedrudColors
+import kotlin.math.PI
 import kotlin.math.sin
 
 /**
@@ -317,22 +324,52 @@ private fun MicPill(
         isMicEnabled -> colors.onButton
         else -> colors.onButtonMediaOff
     }
+    // Pressed state comes from two places because the pill is held in one mode and tapped in the
+    // other; the key sinks the same way for both.
+    val interactionSource = remember { MutableInteractionSource() }
+    val isTapped by interactionSource.collectIsPressedAsState()
+    var isHeld by remember { mutableStateOf(false) }
+    val isPressed = isTapped || isHeld
     val gestureModifier = if (isPushToTalk) {
         Modifier.pointerInput(Unit) {
             detectTapGestures(
                 onPress = {
+                    isHeld = true
                     onPushToTalkChange(true)
                     try {
                         awaitRelease()
                     } finally {
+                        isHeld = false
                         onPushToTalkChange(false)
                     }
                 },
             )
         }
     } else {
-        Modifier.clickable(onClick = onToggleMic)
+        Modifier.clickable(
+            interactionSource = interactionSource,
+            indication = LocalIndication.current,
+            onClick = onToggleMic,
+        )
     }
+
+    // A shadow under a transparent container would show straight through it, so the idle
+    // push-to-talk pill — which is only an outline — stays flat and leans on its border instead.
+    val raised = containerColor != Color.Transparent
+    val pillElevation by animateDpAsState(
+        targetValue = when {
+            !raised -> Elevation.level0
+            isPressed -> Elevation.micPillPressed
+            else -> Elevation.micPillResting
+        },
+        animationSpec = tween(Motion.durationShort, easing = Motion.standardEasing),
+        label = "micPillElevation",
+    )
+    val pillScale by animateFloatAsState(
+        targetValue = if (isPressed) MicPillPressedScale else 1f,
+        animationSpec = tween(Motion.durationShort, easing = Motion.standardEasing),
+        label = "micPillScale",
+    )
 
     // The pill's own outline reports anything stopping your voice reaching the room, so the
     // status sits on the control that fixes it instead of in a banner elsewhere on screen.
@@ -348,13 +385,20 @@ private fun MicPill(
     }
 
     Box(
-        modifier = Modifier.semantics {
-            statusLabel?.let { stateDescription = it }
-        },
+        modifier = Modifier
+            // Scaling the whole box keeps the status ring welded to the key it belongs to.
+            .graphicsLayer {
+                scaleX = pillScale
+                scaleY = pillScale
+            }
+            .semantics {
+                statusLabel?.let { stateDescription = it }
+            },
     ) {
         Surface(
             shape = BedrudShapeTokens.pill,
             color = containerColor,
+            shadowElevation = pillElevation,
             border = if (isPushToTalk && !transmitting) {
                 androidx.compose.foundation.BorderStroke(Dimens.borderThin, colors.divider)
             } else {
@@ -478,7 +522,15 @@ private fun MicStatusRing(status: MicPillStatus, modifier: Modifier = Modifier) 
         // A dashed stroke with one arc and one gap the length of the rest of the outline: shifting
         // the phase walks that single arc around the pill, and it follows the rounded corners for
         // free where a rotated sweep gradient would have squashed the shape.
-        val perimeter = 2f * (outline.width + outline.height)
+        //
+        // This has to be the *stroke path's* length, not the bounding box's. A pill's corners are
+        // quarter-circles, so its outline is shorter than 2(w+h) — with the box figure the dash
+        // pattern does not divide into the path and the arc jumps every time the phase wraps,
+        // which reads as a stutter at the start and end of each lap. Straight runs are the two
+        // sides minus a full corner diameter each; the four corners sum to one circle.
+        val radius = outline.height / 2f
+        val perimeter =
+            2f * (outline.width - outline.height).coerceAtLeast(0f) + TwoPi * radius
         val arc = perimeter * MicRingArcFraction
         val stroke = if (status == MicPillStatus.Reconnecting) {
             Stroke(
@@ -522,6 +574,12 @@ private const val MicRingPulseMinAlpha = 0.3f
 
 /** Share of the pill's outline the travelling arc covers. */
 private const val MicRingArcFraction = 0.28f
+
+/** How far the mic key shrinks under a press — enough to feel, too little to jostle the bar. */
+private const val MicPillPressedScale = 0.96f
+
+/** One full turn, for the pill outline's corner arcs. */
+private const val TwoPi = (2.0 * PI).toFloat()
 
 @Composable
 private fun PillContent(
