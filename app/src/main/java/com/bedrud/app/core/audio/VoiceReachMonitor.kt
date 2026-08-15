@@ -128,12 +128,13 @@ class VoiceReachMonitor(
         /**
          * Capture level that counts as talking, on [VoiceGateProcessor]'s normalized scale.
          *
-         * Measured on device once the capture format was decoded correctly: a room with someone
-         * talking in it sits around 0.25 between words and peaks near 0.84 on speech. This sits
-         * between the two, high enough that room tone never reaches it and low enough that a
-         * quiet speaker still does.
+         * Measured on device once the capture format was decoded correctly. Live, the room reads
+         * about 0.25 between words and peaks near 0.84 on speech; muted, the floor drops to a true
+         * zero and speech peaks around 0.6, because a muted capture is not being gain-ridden for
+         * transmission. The bar has to clear the live floor and still be reachable by the quieter
+         * muted signal, which leaves it here.
          */
-        const val TalkingLevel = 0.5f
+        const val TalkingLevel = 0.3f
 
         /** Talking time before a locally-known cause (muted, gate shut) is worth saying out loud. */
         const val CauseGraceMillis = 800L
