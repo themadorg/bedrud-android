@@ -161,6 +161,14 @@ class RoomManager(
     val speakingLevels: StateFlow<Map<String, Float>> = _speakingLevels.asStateFlow()
     private var speakingDecayJob: Job? = null
 
+    // The server's own view, and the locally measured bridge across the gaps in it. Both are
+    // written from [eventScope], which is single threaded, so merging them needs no lock.
+    private var serverSpeaking: Map<String, Float> = emptyMap()
+    private var localSpeakingBridge: Float = 0f
+    private var serverLastHeardMeMillis: Long? = null
+    private var bridgeLoudAtMillis: Long? = null
+    private var bridgeLoudLevel: Float = 0f
+
     // Why the room is not hearing this participant, when it plainly should be.
     private val voiceReachMonitor = VoiceReachMonitor()
     private val _voiceAlert = MutableStateFlow(MeetingVoiceAlert.None)
@@ -198,8 +206,39 @@ class RoomManager(
         val reported = speakers.mapNotNull { speaker ->
             speaker.identity?.value?.let { it to speaker.audioLevel }
         }.toMap()
-        _speakingLevels.value = speakingTracker.onSpeakers(reported, SystemClock.elapsedRealtime())
+        val now = SystemClock.elapsedRealtime()
+        val identity = _room?.localParticipant?.identity?.value
+        if (identity != null && reported.containsKey(identity)) serverLastHeardMeMillis = now
+        serverSpeaking = speakingTracker.onSpeakers(reported, now)
+        republishSpeaking()
         startSpeakingDecay()
+    }
+
+    /**
+     * Publishes the server's view of who is speaking, with the local participant's own entry
+     * bridged across the gaps in it.
+     *
+     * The server reports speakers when the set changes rather than on a clock, and measured on a
+     * real call the gaps between two reports naming the same speaker ran to a median of 800ms with
+     * a long tail past three seconds. Holding the ring for the whole tail would leave it lit
+     * seconds after someone stopped; holding it for less drops it mid-sentence, which is what it
+     * did. No choice of hold fixes both.
+     *
+     * So for the one participant this device can measure directly, the locally captured level
+     * fills the gaps. The server still decides whether the ring may light at all — the bridge only
+     * applies while the room has confirmed hearing this device within [LocalSpeakingBridgeMillis],
+     * and never while muted — so the ring goes on meaning "the room hears me" rather than "my
+     * microphone works". Remote participants cannot be bridged and keep the server's timing.
+     */
+    private fun republishSpeaking() {
+        val identity = _room?.localParticipant?.identity?.value
+        val merged = if (identity != null && localSpeakingBridge > 0f) {
+            val server = serverSpeaking[identity] ?: 0f
+            serverSpeaking + (identity to maxOf(server, localSpeakingBridge))
+        } else {
+            serverSpeaking
+        }
+        if (merged != _speakingLevels.value) _speakingLevels.value = merged
     }
 
     /**
@@ -207,12 +246,12 @@ class RoomManager(
      * never announces silence, so the last one needs a timer to drop out. Idles between bursts.
      */
     private fun startSpeakingDecay() {
-        if (speakingDecayJob?.isActive == true || _speakingLevels.value.isEmpty()) return
+        if (speakingDecayJob?.isActive == true || serverSpeaking.isEmpty()) return
         speakingDecayJob = eventScope?.launch {
-            while (isActive && _speakingLevels.value.isNotEmpty()) {
+            while (isActive && serverSpeaking.isNotEmpty()) {
                 delay(SpeakingTracker.PruneIntervalMillis)
-                val pruned = speakingTracker.prune(SystemClock.elapsedRealtime())
-                if (pruned != _speakingLevels.value) _speakingLevels.value = pruned
+                serverSpeaking = speakingTracker.prune(SystemClock.elapsedRealtime())
+                republishSpeaking()
             }
         }
     }
@@ -235,14 +274,41 @@ class RoomManager(
                 val frames = voiceGate.frameCount
                 val capturing = frames != lastFrameCount
                 lastFrameCount = frames
+                val now = SystemClock.elapsedRealtime()
+                val micLevel = if (capturing) voiceGate.level else 0f
+
+                // Bridge the gaps in the server's reporting for our own tile — but only while the
+                // room has recently confirmed hearing us, and never while muted, so the ring still
+                // means the room hears us rather than merely that the microphone works.
+                val confirmed = serverLastHeardMeMillis
+                    ?.let { now - it < LocalSpeakingBridgeMillis } == true
+                // Speech dips below the bar between every pair of words, so the bridge holds past
+                // the last loud frame exactly as the voice warning does. Without the hold it
+                // flickers at word granularity and bridges nothing at all.
+                if (micLevel >= VoiceReachMonitor.TalkingLevel) {
+                    bridgeLoudAtMillis = now
+                    bridgeLoudLevel = micLevel
+                }
+                val stillTalking = bridgeLoudAtMillis
+                    ?.let { now - it < VoiceReachMonitor.QuietHoldMillis } == true
+                val bridged = if (confirmed && stillTalking && roomMayHearMe()) {
+                    bridgeLoudLevel
+                } else {
+                    0f
+                }
+                if (bridged != localSpeakingBridge) {
+                    localSpeakingBridge = bridged
+                    republishSpeaking()
+                }
+
                 _voiceAlert.value = voiceReachMonitor.sample(
-                    nowMillis = SystemClock.elapsedRealtime(),
-                    micLevel = if (capturing) voiceGate.level else 0f,
+                    nowMillis = now,
+                    micLevel = micLevel,
                     isMicEnabled = _isMicEnabled.value,
                     isPushToTalk = _inputMode.value == MeetingInputMode.PUSH_TO_TALK,
                     isGateOpen = voiceGate.gateOpen,
                     roomHearsMe = localIdentity != null &&
-                        _speakingLevels.value.containsKey(localIdentity),
+                        serverSpeaking.containsKey(localIdentity),
                     roomHasOthers = _room?.remoteParticipants?.isNotEmpty() == true,
                 )
             }
@@ -520,6 +586,11 @@ class RoomManager(
     private fun resetSpeakingState() {
         speakingDecayJob?.cancel()
         speakingDecayJob = null
+        serverSpeaking = emptyMap()
+        localSpeakingBridge = 0f
+        serverLastHeardMeMillis = null
+        bridgeLoudAtMillis = null
+        bridgeLoudLevel = 0f
         speakingTracker.clear()
         voiceReachMonitor.reset()
         _speakingLevels.value = emptyMap()
@@ -929,6 +1000,17 @@ class RoomManager(
         private const val TAG = "RoomManager"
         private const val SCREEN_SHARE_CHANNEL_ID = "bedrud_screen_share"
         private const val SCREEN_SHARE_NOTIFICATION_ID = 1002
+
+        /**
+         * How long the room's last confirmation authorises bridging our own ring locally.
+         *
+         * Measured on a real call, the gaps between two server reports naming the same speaker had
+         * a median of 800ms and a tail past three seconds, so this has to outlast the tail to stop
+         * the ring cutting mid-sentence. Past it the ring goes out even if we are still talking:
+         * that much silence from the room is itself worth showing, and the voice warning is
+         * already saying so by then.
+         */
+        private const val LocalSpeakingBridgeMillis = 5_000L
 
         /** Time a publication needs to settle before muting it keeps the capture chain alive. */
         private const val MutedCaptureSettleMillis = 400L

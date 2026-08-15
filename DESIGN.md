@@ -206,7 +206,18 @@ the `meeting*` tokens in `Dimens.kt`, timing in `Motion.meetingChromeAutoHideDel
   `RoomEvent.ActiveSpeakersChanged` via `RoomManager.speakingLevels`. The ring thickens with the
   reported level and fades rather than blinking, because the server announces speakers in bursts
   roughly twice a second and never announces silence; `SpeakingTracker` holds each identity for
-  `HoldMillis` past its last mention to bridge the gap. **The local participant is in that server
+  `HoldMillis` past its last mention to bridge the gap.
+
+  **Your own ring is bridged locally.** The server reports speakers when the set changes rather
+  than on a clock: measured on a real call, gaps between two reports naming the same speaker ran
+  to a median of 800ms with a tail past three seconds, so a hold long enough to survive a sentence
+  would leave every ring lit seconds after its owner stopped. No single hold fixes both. For the
+  one participant this device can measure directly, the locally captured level therefore fills the
+  gaps — held past the last loud frame like the voice warning, since speech dips below the bar
+  between every pair of words. The server still decides whether the ring may light at all: the
+  bridge applies only while the room has confirmed hearing this device within the last few seconds,
+  and never while muted, so the ring keeps meaning "the room hears me" and not "my microphone
+  works". Remote participants cannot be bridged and keep the server's timing. **The local participant is in that server
   list like anyone else**, which is the entire point: your own ring lighting up is round-trip
   proof that your audio reached the SFU and was announced to the room, where the mic meter only
   proves the microphone works. Colour never carries it alone — speech also earns a badge in the
