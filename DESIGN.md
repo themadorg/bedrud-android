@@ -217,11 +217,22 @@ the `meeting*` tokens in `Dimens.kt`, timing in `Motion.meetingChromeAutoHideDel
   kept from hearing anything by two independent means: the **publication is muted**, which is what
   every other participant's mute indicator reads and what the server is told, and **every captured
   frame is zeroed** by `VoiceGateProcessor.forceSilence` before it can reach the encoder. The
-  silencing is switched on *before* the track is re-enabled, never after, and the monitor loop
-  re-asserts it every tick so the two cannot drift apart. Joining muted publishes first (already
-  silenced) and then mutes, because an unpublished track never reaches the capture chain at all.
-  The honest cost: while muted the microphone is genuinely open, so the system's mic indicator
-  stays lit. Nothing audible can leave the device, but audio is being captured on it.
+  silencing is switched on *before* the track is re-enabled, never after. Joining muted publishes
+  first (already silenced) and then mutes, because an unpublished track never reaches the capture
+  chain at all. The honest cost: while muted the microphone is genuinely open, so the system's mic
+  indicator stays lit. Nothing audible can leave the device, but audio is being captured on it.
+
+  **The guard is a question, not a flag.** `VoiceGateProcessor.roomMayHear` is asked on *every*
+  10ms frame and answered from the single source of truth — the app's mute state and LiveKit's
+  publication must **both** say the microphone is open. A flag would have to be set correctly at
+  every transition, and the one that is missed (an unmute that fails after the flag was cleared, a
+  path added later that forgets it) is a live microphone behind a muted button; a question has no
+  window to get wrong. It **fails closed** in every direction: the default denies, so a processor
+  that was never wired transmits silence rather than audio; a missing publication or absent room
+  denies; and an exception while deciding denies. The gate's own rules are checked *after* it, so
+  no sensitivity setting can re-open a muted microphone. `VoiceGateProcessorTest` pins each of
+  these, including that the level is still measured while muted — silence goes out, the voice is
+  still heard locally, which is the entire point.
 - **Mic pill status ring** (`MicStatusRing`, `VoiceReachMonitor`): anything stopping your voice
   reaching the room is reported on the **outline of the mic pill itself**, in the amber `warning`
   role — never as a banner or toast. The status belongs on the control that fixes it, and a chip
