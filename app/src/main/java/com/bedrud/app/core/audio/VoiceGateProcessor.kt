@@ -37,6 +37,16 @@ class VoiceGateProcessor : AudioProcessorInterface {
     var gateOpen: Boolean = true
         private set
 
+    /**
+     * Frames processed so far. [level] is only written when a frame arrives, so a counter that
+     * stops advancing means capture has stopped and the last level is stale — which is exactly
+     * what happens while muted, and would otherwise read as "still talking" forever.
+     */
+    @Volatile
+    var frameCount: Long = 0L
+        private set
+
+
     private var hangoverFramesLeft = 0
 
     // Always on: the meter needs every frame. Gating stays conditional on [gateEnabled], so
@@ -60,6 +70,7 @@ class VoiceGateProcessor : AudioProcessorInterface {
     override fun processAudio(numBands: Int, numFrames: Int, buffer: ByteBuffer) {
         val levelDb = rmsDbfs(buffer)
         level = normalizedLevel(levelDb)
+        frameCount++
 
         if (!gateEnabled) {
             gateOpen = true
@@ -93,6 +104,9 @@ class VoiceGateProcessor : AudioProcessorInterface {
         /** 10ms frames the gate stays open after the last frame above threshold (~300ms). */
         const val HangoverFrames = 30
 
+        /** Sample value WebRTC uses for full scale in its float frames — 16-bit range, as floats. */
+        const val FullScaleSample = 32768.0
+
         /** dBFS floor reported for an all-zero frame. */
         const val SilenceFloorDb = -120.0
 
@@ -109,14 +123,23 @@ class VoiceGateProcessor : AudioProcessorInterface {
             return ThresholdMinDb + (ThresholdMaxDb - ThresholdMinDb) * clamped
         }
 
-        /** RMS level of a little-endian 16-bit PCM buffer, in dBFS. */
+        /**
+         * RMS level of one capture frame, in dBFS.
+         *
+         * WebRTC hands this stage **32-bit float** samples, and on the scale of a 16-bit sample
+         * rather than the usual -1..1 — a full-scale sample reads ±32768, not ±1.0. Decoding the
+         * same bytes as 16-bit PCM (which is what this did) splits every float in half and reads
+         * the halves as samples, which is noise pinned near full scale whatever the microphone
+         * actually heard. That kept the meter at maximum and stopped the manual gate ever closing,
+         * because a garbage -5 dBFS clears every threshold on the slider.
+         */
         fun rmsDbfs(buffer: ByteBuffer): Double {
-            val shorts = buffer.duplicate().order(ByteOrder.LITTLE_ENDIAN).asShortBuffer()
-            val count = shorts.remaining()
+            val samples = buffer.duplicate().order(ByteOrder.LITTLE_ENDIAN).asFloatBuffer()
+            val count = samples.remaining()
             if (count == 0) return SilenceFloorDb
             var sumSquares = 0.0
             for (i in 0 until count) {
-                val sample = shorts.get(i) / Short.MAX_VALUE.toDouble()
+                val sample = samples.get(i) / FullScaleSample
                 sumSquares += sample * sample
             }
             val rms = sqrt(sumSquares / count)

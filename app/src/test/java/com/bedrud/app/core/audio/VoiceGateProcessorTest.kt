@@ -12,20 +12,22 @@ import org.junit.Test
 
 class VoiceGateProcessorTest {
 
+    // WebRTC hands this stage 32-bit floats on a 16-bit scale (full scale is ±32768), so the
+    // fixtures have to be built the same way or they test a format the processor never sees.
     private fun bufferOf(amplitude: Double, samples: Int = 480): ByteBuffer {
-        val buffer = ByteBuffer.allocate(samples * 2).order(ByteOrder.LITTLE_ENDIAN)
+        val buffer = ByteBuffer.allocate(samples * 4).order(ByteOrder.LITTLE_ENDIAN)
         for (i in 0 until samples) {
-            val value = amplitude * sin(2 * PI * i / 48.0) * Short.MAX_VALUE
-            buffer.putShort(value.toInt().toShort())
+            val value = amplitude * sin(2 * PI * i / 48.0) * VoiceGateProcessor.FullScaleSample
+            buffer.putFloat(value.toFloat())
         }
         buffer.rewind()
         return buffer
     }
 
     private fun isSilent(buffer: ByteBuffer): Boolean {
-        val shorts = buffer.duplicate().order(ByteOrder.LITTLE_ENDIAN).asShortBuffer()
-        for (i in 0 until shorts.remaining()) {
-            if (shorts.get(i) != 0.toShort()) return false
+        val samples = buffer.duplicate().order(ByteOrder.LITTLE_ENDIAN).asFloatBuffer()
+        for (i in 0 until samples.remaining()) {
+            if (samples.get(i) != 0f) return false
         }
         return true
     }
