@@ -136,16 +136,34 @@ class VoiceReachMonitor(
          */
         const val TalkingLevel = 0.3f
 
-        /** Talking time before a locally-known cause (muted, gate shut) is worth saying out loud. */
-        const val CauseGraceMillis = 800L
+        /**
+         * How long a locally-known cause (muted, gate shut) must hold before it is worth saying.
+         *
+         * Only long enough to tell a word from a cough. These causes are known on the device the
+         * instant they happen — there is nothing to wait for but confidence that you meant to
+         * speak — so the wait is short and the ring feels like it answers you.
+         */
+        const val CauseGraceMillis = 300L
 
         /** Talking time with no word from the room before the audio is treated as not arriving. */
         const val ReachGraceMillis = 2_500L
 
-        /** How long a dip below [TalkingLevel] still counts as talking — one pause between words. */
-        const val QuietHoldMillis = 700L
+        /**
+         * How long a dip below [TalkingLevel] still counts as talking.
+         *
+         * Long enough to ride the gap between two words, short enough that the ring goes out
+         * promptly when you actually stop. Ordinary speech gaps run 150-300ms.
+         */
+        const val QuietHoldMillis = 400L
 
-        /** How often the local capture level is compared against the room's view of it. */
-        const val SampleIntervalMillis = 200L
+        /**
+         * How often the local capture level is compared against the room's view of it.
+         *
+         * This is the floor on how fast the ring can react, and the work per tick is a volatile
+         * read and a handful of comparisons, so it is set by what feels immediate rather than by
+         * what is cheap. Capture frames arrive every 10ms; sampling five times slower than that
+         * is still far below the point where the delay is visible.
+         */
+        const val SampleIntervalMillis = 50L
     }
 }
