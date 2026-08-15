@@ -289,6 +289,7 @@
   <string name="meeting_contentDescription_cameraOff">Caméra désactivée</string>
   <string name="meeting_contentDescription_speaking">Parle</string>
   <string name="meeting_status_reconnecting">Reconnexion…</string>
+  <string name="meeting_status_connected">Connecté</string>
   <string name="meeting_voiceAlert_muted">Votre micro est coupé</string>
   <string name="meeting_voiceAlert_pushToTalk">Maintenez le bouton du micro pour parler</string>
   <string name="meeting_voiceAlert_gateClosed">La détection vocale ne vous capte pas</string>

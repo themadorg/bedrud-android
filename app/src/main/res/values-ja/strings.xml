@@ -289,6 +289,7 @@
   <string name="meeting_contentDescription_cameraOff">カメラオフ</string>
   <string name="meeting_contentDescription_speaking">発言中</string>
   <string name="meeting_status_reconnecting">再接続中…</string>
+  <string name="meeting_status_connected">接続しました</string>
   <string name="meeting_voiceAlert_muted">ミュート中です</string>
   <string name="meeting_voiceAlert_pushToTalk">マイクボタンを押しながら話してください</string>
   <string name="meeting_voiceAlert_gateClosed">音声検出が反応していません</string>

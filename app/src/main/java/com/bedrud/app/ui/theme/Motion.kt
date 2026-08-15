@@ -16,5 +16,8 @@ object Motion {
     /** Idle time before the in-call fullscreen chrome hides itself. */
     const val meetingChromeAutoHideDelayMs = 3500L
 
+    /** How long the top bar says "Connected" before handing the slot back to the room name. */
+    const val meetingConnectedNoticeMs = 2000L
+
     val standardEasing = FastOutSlowInEasing
 }

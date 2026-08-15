@@ -293,6 +293,7 @@
   <string name="meeting_contentDescription_cameraOff">Camera off</string>
   <string name="meeting_contentDescription_speaking">Speaking</string>
   <string name="meeting_status_reconnecting">Reconnecting…</string>
+  <string name="meeting_status_connected">Connected</string>
   <string name="meeting_voiceAlert_muted">You\'re muted</string>
   <string name="meeting_voiceAlert_pushToTalk">Hold the mic button to talk</string>
   <string name="meeting_voiceAlert_gateClosed">Voice activity isn\'t picking you up</string>

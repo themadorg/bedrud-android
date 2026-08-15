@@ -289,6 +289,7 @@
   <string name="meeting_contentDescription_cameraOff">Cámara apagada</string>
   <string name="meeting_contentDescription_speaking">Hablando</string>
   <string name="meeting_status_reconnecting">Reconectando…</string>
+  <string name="meeting_status_connected">Conectado</string>
   <string name="meeting_voiceAlert_muted">Tienes el micrófono silenciado</string>
   <string name="meeting_voiceAlert_pushToTalk">Mantén pulsado el botón del micrófono para hablar</string>
   <string name="meeting_voiceAlert_gateClosed">La actividad de voz no te detecta</string>

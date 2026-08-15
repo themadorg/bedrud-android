@@ -289,6 +289,7 @@
   <string name="meeting_contentDescription_cameraOff">الكاميرا مغلقة</string>
   <string name="meeting_contentDescription_speaking">يتحدث</string>
   <string name="meeting_status_reconnecting">جارٍ إعادة الاتصال…</string>
+  <string name="meeting_status_connected">تم الاتصال</string>
   <string name="meeting_voiceAlert_muted">الميكروفون مكتوم</string>
   <string name="meeting_voiceAlert_pushToTalk">اضغط مع الاستمرار على زر الميكروفون للتحدث</string>
   <string name="meeting_voiceAlert_gateClosed">نشاط الصوت لا يلتقط صوتك</string>

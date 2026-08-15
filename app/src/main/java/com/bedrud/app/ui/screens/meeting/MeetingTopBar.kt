@@ -1,5 +1,6 @@
 package com.bedrud.app.ui.screens.meeting
 
+import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -18,6 +19,11 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -31,6 +37,8 @@ import com.bedrud.app.R
 import com.bedrud.app.core.livekit.ConnectionState
 import com.bedrud.app.ui.components.DevOnly
 import com.bedrud.app.ui.theme.Dimens
+import com.bedrud.app.ui.theme.Motion
+import kotlinx.coroutines.delay
 
 /**
  * The in-call top bar: invite/participants entry at the start, the room name (with recording and
@@ -52,6 +60,18 @@ fun MeetingTopBar(
     modifier: Modifier = Modifier,
 ) {
     val colors = meetingChromeColors()
+
+    // Connecting otherwise ends in silence — the screen simply becomes the call, and the one
+    // thing people want confirmed is never said. The bar says it once, then hands the slot back
+    // to the room name. Fires again after a reconnect, which is when it is needed most.
+    var showConnected by remember { mutableStateOf(false) }
+    LaunchedEffect(connectionState) {
+        showConnected = connectionState == ConnectionState.CONNECTED
+        if (showConnected) {
+            delay(Motion.meetingConnectedNoticeMs)
+            showConnected = false
+        }
+    }
 
     Row(
         modifier = modifier
@@ -76,16 +96,27 @@ fun MeetingTopBar(
             horizontalArrangement = Arrangement.spacedBy(Dimens.space6, Alignment.CenterHorizontally),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(
-                text = roomName,
-                style = MaterialTheme.typography.bodySmall.copy(
-                    fontFamily = FontFamily.Monospace,
-                    textDirection = TextDirection.Ltr,
-                ),
-                color = MaterialTheme.colorScheme.onBackground,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
+            Crossfade(targetState = showConnected, label = "connectedNotice") { connected ->
+                if (connected) {
+                    Text(
+                        text = stringResource(R.string.meeting_status_connected),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                        maxLines = 1,
+                    )
+                } else {
+                    Text(
+                        text = roomName,
+                        style = MaterialTheme.typography.bodySmall.copy(
+                            fontFamily = FontFamily.Monospace,
+                            textDirection = TextDirection.Ltr,
+                        ),
+                        color = MaterialTheme.colorScheme.onBackground,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+            }
             // Recording indicator — dev-gated placeholder until the server exposes recording
             // state. TODO(#107): drive from real room recording state and drop the gate.
             DevOnly {

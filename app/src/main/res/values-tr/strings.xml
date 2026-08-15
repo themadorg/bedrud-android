@@ -289,6 +289,7 @@
   <string name="meeting_contentDescription_cameraOff">Kamera kapalı</string>
   <string name="meeting_contentDescription_speaking">Konuşuyor</string>
   <string name="meeting_status_reconnecting">Yeniden bağlanılıyor…</string>
+  <string name="meeting_status_connected">Bağlandı</string>
   <string name="meeting_voiceAlert_muted">Mikrofonunuz kapalı</string>
   <string name="meeting_voiceAlert_pushToTalk">Konuşmak için mikrofon düğmesini basılı tutun</string>
   <string name="meeting_voiceAlert_gateClosed">Ses algılama sizi almıyor</string>

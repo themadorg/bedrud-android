@@ -286,6 +286,7 @@
   <string name="meeting_contentDescription_cameraOff">دوربین خاموش است</string>
   <string name="meeting_contentDescription_speaking">در حال صحبت</string>
   <string name="meeting_status_reconnecting">در حال اتصال دوباره…</string>
+  <string name="meeting_status_connected">متصل شد</string>
   <string name="meeting_voiceAlert_muted">میکروفون شما بی‌صدا است</string>
   <string name="meeting_voiceAlert_pushToTalk">برای صحبت، دکمهٔ میکروفون را نگه دارید</string>
   <string name="meeting_voiceAlert_gateClosed">تشخیص صدا شما را نمی‌گیرد</string>
