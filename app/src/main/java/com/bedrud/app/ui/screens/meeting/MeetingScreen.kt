@@ -575,6 +575,7 @@ fun MeetingScreen(
                                         mutedIdentities = locallyMutedIdentities,
                                         pinnedIdentity = pinnedIdentity,
                                         speakingLevels = speakingLevels,
+                                        isLocalMicEnabled = isMicEnabled,
                                         onOpenParticipantActions = { identity ->
                                             participantSheetIdentity = identity
                                         },

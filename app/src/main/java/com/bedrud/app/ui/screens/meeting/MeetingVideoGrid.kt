@@ -82,6 +82,7 @@ fun MeetingVideoGrid(
     mutedIdentities: Set<String>,
     pinnedIdentity: String?,
     speakingLevels: Map<String, Float>,
+    isLocalMicEnabled: Boolean,
     onOpenParticipantActions: (String) -> Unit,
     onExpandTile: (String) -> Unit,
     onOverflowClick: () -> Unit,
@@ -108,6 +109,7 @@ fun MeetingVideoGrid(
                     mutedIdentities = mutedIdentities,
                     isPinned = participant.identity?.value == pinnedIdentity,
                     speakingLevel = speakingLevels[participant.identity?.value] ?: 0f,
+                    isLocalMicEnabled = isLocalMicEnabled,
                     onOpenParticipantActions = onOpenParticipantActions,
                     onExpand = onExpandTile,
                     modifier = slotModifier,
@@ -205,6 +207,7 @@ internal fun ParticipantTile(
     mutedIdentities: Set<String> = emptySet(),
     isPinned: Boolean = false,
     speakingLevel: Float = 0f,
+    isLocalMicEnabled: Boolean = true,
     onOpenParticipantActions: ((String) -> Unit)? = null,
     onExpand: ((String) -> Unit)? = null,
     modifier: Modifier = Modifier,
@@ -218,8 +221,16 @@ internal fun ParticipantTile(
     val cameraTrack = cameraPublication
         ?.track as? io.livekit.android.room.track.VideoTrack
     val isCameraMuted = cameraPublication?.muted == true
+    // Your own mute reads from the manager, not from the publication. Muting flips the local
+    // state instantly but the track's muted flag settles a moment later, so a publication-driven
+    // badge lags your own tap — and the badge everyone else already sees is the one you expect to
+    // see on yourself.
     val micPublication = participant.getTrackPublication(Track.Source.MICROPHONE)
-    val isMicOff = micPublication == null || micPublication.muted
+    val isMicOff = if (isLocalParticipant) {
+        !isLocalMicEnabled
+    } else {
+        micPublication == null || micPublication.muted
+    }
     val name = participant.name?.ifBlank { identity } ?: identity
 
     // Parse avatar URL from participant metadata
