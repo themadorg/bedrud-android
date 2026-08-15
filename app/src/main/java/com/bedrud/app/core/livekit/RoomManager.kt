@@ -4,13 +4,16 @@ import android.app.Application
 import android.app.NotificationManager
 import android.content.Intent
 import android.os.Build
+import android.os.SystemClock
 import android.util.Log
 import androidx.annotation.StringRes
 import androidx.core.app.NotificationCompat
 import com.bedrud.app.R
 import com.bedrud.app.core.audio.MeetingInputMode
+import com.bedrud.app.core.audio.MeetingVoiceAlert
 import com.bedrud.app.core.audio.NoiseSuppressionMode
 import com.bedrud.app.core.audio.VoiceGateProcessor
+import com.bedrud.app.core.audio.VoiceReachMonitor
 import com.bedrud.app.core.call.CallConnectionService
 import com.bedrud.app.core.meeting.chat.ChatWire
 import com.bedrud.app.core.registerNotificationChannel
@@ -35,12 +38,14 @@ import io.livekit.android.room.track.TrackPublication
 import io.livekit.android.room.track.screencapture.ScreenCaptureParams
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import org.json.JSONObject
 
@@ -146,6 +151,19 @@ class RoomManager(
     private val _voiceSensitivity = MutableStateFlow(settingsStore.getVoiceSensitivity())
     val voiceSensitivity: StateFlow<Float> = _voiceSensitivity.asStateFlow()
 
+    // Who the room currently hears, identity to level (0..1). This is the server's own view,
+    // echoed back over the signal connection and including the local participant, so a live entry
+    // for yourself is proof your audio is reaching the room rather than only reaching your meter.
+    private val speakingTracker = SpeakingTracker()
+    private val _speakingLevels = MutableStateFlow<Map<String, Float>>(emptyMap())
+    val speakingLevels: StateFlow<Map<String, Float>> = _speakingLevels.asStateFlow()
+    private var speakingDecayJob: Job? = null
+
+    // Why the room is not hearing this participant, when it plainly should be.
+    private val voiceReachMonitor = VoiceReachMonitor()
+    private val _voiceAlert = MutableStateFlow(MeetingVoiceAlert.None)
+    val voiceAlert: StateFlow<MeetingVoiceAlert> = _voiceAlert.asStateFlow()
+
     /** Live mic capture level (0..1) for the in-call meter; sampled per frame by the UI. */
     fun currentMicLevel(): Float = if (_isMicEnabled.value) voiceGate.level else 0f
 
@@ -156,6 +174,52 @@ class RoomManager(
         voiceGate.sensitivity = _voiceSensitivity.value
         voiceGate.gateEnabled =
             _inputMode.value == MeetingInputMode.VOICE_ACTIVITY && !_autoSensitivity.value
+    }
+
+    private fun onActiveSpeakers(speakers: List<Participant>) {
+        val reported = speakers.mapNotNull { speaker ->
+            speaker.identity?.value?.let { it to speaker.audioLevel }
+        }.toMap()
+        _speakingLevels.value = speakingTracker.onSpeakers(reported, SystemClock.elapsedRealtime())
+        startSpeakingDecay()
+    }
+
+    /**
+     * Keeps ticking only while someone is held as speaking: the server announces a new speaker but
+     * never announces silence, so the last one needs a timer to drop out. Idles between bursts.
+     */
+    private fun startSpeakingDecay() {
+        if (speakingDecayJob?.isActive == true || _speakingLevels.value.isEmpty()) return
+        speakingDecayJob = eventScope?.launch {
+            while (isActive && _speakingLevels.value.isNotEmpty()) {
+                delay(SpeakingTracker.PruneIntervalMillis)
+                val pruned = speakingTracker.prune(SystemClock.elapsedRealtime())
+                if (pruned != _speakingLevels.value) _speakingLevels.value = pruned
+            }
+        }
+    }
+
+    /**
+     * Watches the local capture level against the room's view of it, so a microphone that captures
+     * but never arrives is called out instead of being hidden behind a bouncing meter. Reads the
+     * gate's raw level rather than [currentMicLevel], which reports zero while muted — being muted
+     * is one of the cases worth reporting.
+     */
+    private fun startVoiceReachMonitor(localIdentity: String?) {
+        eventScope?.launch {
+            while (isActive) {
+                delay(VoiceReachMonitor.SampleIntervalMillis)
+                _voiceAlert.value = voiceReachMonitor.sample(
+                    nowMillis = SystemClock.elapsedRealtime(),
+                    micLevel = voiceGate.level,
+                    isMicEnabled = _isMicEnabled.value,
+                    isPushToTalk = _inputMode.value == MeetingInputMode.PUSH_TO_TALK,
+                    isGateOpen = voiceGate.gateOpen,
+                    roomHearsMe = localIdentity != null &&
+                        _speakingLevels.value.containsKey(localIdentity),
+                )
+            }
+        }
     }
 
     suspend fun connectIfNeeded(
@@ -251,6 +315,7 @@ class RoomManager(
                 room.events.collect { event ->
                     when (event) {
                         is RoomEvent.DataReceived -> handleDataReceived(event)
+                        is RoomEvent.ActiveSpeakersChanged -> onActiveSpeakers(event.speakers)
                         is RoomEvent.ParticipantConnected -> _participantVersion.value++
                         is RoomEvent.ParticipantDisconnected -> {
                             val disconnectedIdentity = event.participant.identity?.value
@@ -333,6 +398,7 @@ class RoomManager(
                             _participantVersion.value++
                         }
                         is RoomEvent.Disconnected -> {
+                            resetSpeakingState()
                             // "PARTICIPANT_REMOVED" is the LiveKit disconnect reason for kick
                             val kicked = event.reason.name == "PARTICIPANT_REMOVED"
                             if (kicked) _wasKicked.value = true
@@ -344,6 +410,7 @@ class RoomManager(
                 }
             }
 
+            startVoiceReachMonitor(room.localParticipant.identity?.value)
 
             Log.d(TAG, "Connected to room: ${room.name}")
         } catch (e: RoomException) {
@@ -372,7 +439,17 @@ class RoomManager(
         )
     }
 
+    private fun resetSpeakingState() {
+        speakingDecayJob?.cancel()
+        speakingDecayJob = null
+        speakingTracker.clear()
+        voiceReachMonitor.reset()
+        _speakingLevels.value = emptyMap()
+        _voiceAlert.value = MeetingVoiceAlert.None
+    }
+
     fun disconnect() {
+        resetSpeakingState()
         eventScope?.cancel()
         eventScope = null
         _room?.disconnect()
