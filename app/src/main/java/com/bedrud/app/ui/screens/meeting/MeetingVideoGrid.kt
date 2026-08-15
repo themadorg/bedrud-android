@@ -17,7 +17,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Fullscreen
 import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.MicOff
 import androidx.compose.material.icons.filled.PushPin
@@ -33,6 +32,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.CustomAccessibilityAction
+import androidx.compose.ui.semantics.customActions
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.text.style.TextOverflow
 import coil.compose.AsyncImage
@@ -63,9 +65,9 @@ private fun gridRows(count: Int): List<Int> = when (count) {
 
 /**
  * The participant grid. [tiles] is the already-ordered list to display — the local participant
- * first, then the remote participants. Counts up to [MAX_GRID_TILES] lay
- * out per the design's breakpoints (full-width rows up to 3, then two columns); anything beyond
- * collapses into a trailing "+N" overflow tile that opens the participants list.
+ * first, then the remote participants. Counts up to [MAX_GRID_TILES] lay out per the design's
+ * breakpoints (full-width rows up to 3, then two columns); anything beyond collapses into a
+ * trailing "+N" overflow tile that opens the participants list.
  *
  * [speakingLevels] is the room's own view of who it hears, keyed by identity — see
  * `RoomManager.speakingLevels`.
@@ -232,7 +234,15 @@ internal fun ParticipantTile(
         }
     }
 
-    val canOpenMenu = !isLocalParticipant && onOpenParticipantActions != null
+    // Your own tile has no participant menu — the actions on it all belong to someone else.
+    val openMenu: (() -> Unit)? = onOpenParticipantActions
+        ?.takeIf { !isLocalParticipant }
+        ?.let { open -> { open(identity) } }
+    // A double tap expands the tile; the old corner button is gone, so this is the only pointer
+    // route to fullscreen. Touch exploration cannot produce a double tap, hence the custom
+    // accessibility action alongside it.
+    val expand: (() -> Unit)? = onExpand?.let { { it(identity) } }
+    val expandLabel = stringResource(R.string.meeting_contentDescription_tileFullscreen)
 
     Box(
         modifier = modifier
@@ -240,11 +250,24 @@ internal fun ParticipantTile(
             .background(MaterialTheme.colorScheme.surfaceVariant)
             .speakingRing(speakingLevel, BedrudShapeTokens.videoTile)
             .then(
-                if (canOpenMenu) {
+                if (openMenu != null || expand != null) {
                     Modifier.combinedClickable(
                         onClick = {},
-                        onLongClick = { onOpenParticipantActions?.invoke(identity) }
+                        onDoubleClick = expand,
+                        onLongClick = openMenu,
                     )
+                } else Modifier
+            )
+            .then(
+                if (expand != null) {
+                    Modifier.semantics {
+                        customActions = listOf(
+                            CustomAccessibilityAction(expandLabel) {
+                                expand()
+                                true
+                            },
+                        )
+                    }
                 } else Modifier
             ),
         contentAlignment = Alignment.Center
@@ -334,27 +357,6 @@ internal fun ParticipantTile(
             }
         }
 
-        // Fullscreen affordance, top-end corner
-        if (onExpand != null) {
-            Surface(
-                onClick = { onExpand(identity) },
-                shape = CircleShape,
-                color = MaterialTheme.colorScheme.surface.copy(alpha = TileChipAlpha),
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .padding(Dimens.space6)
-                    .size(Dimens.meetingTileAction),
-            ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Icon(
-                        imageVector = Icons.Default.Fullscreen,
-                        contentDescription = stringResource(R.string.meeting_contentDescription_tileFullscreen),
-                        tint = MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier.size(Dimens.iconSm),
-                    )
-                }
-            }
-        }
     }
 }
 
