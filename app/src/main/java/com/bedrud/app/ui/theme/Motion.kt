@@ -19,5 +19,20 @@ object Motion {
     /** How long the top bar says "Connected" before handing the slot back to the room name. */
     const val meetingConnectedNoticeMs = 2000L
 
+    /**
+     * Speaking-ring fade. Short on purpose: it is pure delay on both ends, and bridging the gaps
+     * between server speaker reports is `SpeakingTracker`'s job, not the animation's.
+     */
+    const val meetingSpeakingRingFadeMs = 110
+
+    /** Speaking-ring thickness follows the reported level faster than the ring fades. */
+    const val meetingSpeakingRingLevelMs = 90
+
+    /** One lap of the arc travelling round the mic pill while reconnecting. */
+    const val meetingMicRingTravelMs = 1400
+
+    /** Half a pulse of the mic pill's ring for a cause you can fix yourself. */
+    const val meetingMicRingPulseMs = 700
+
     val standardEasing = FastOutSlowInEasing
 }

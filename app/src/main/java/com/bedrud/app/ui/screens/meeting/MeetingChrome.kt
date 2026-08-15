@@ -22,7 +22,16 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import com.bedrud.app.ui.theme.Dimens
+import com.bedrud.app.ui.theme.Motion
 
+/**
+ * The in-call chrome's palette.
+ *
+ * [mediaError] is the error role, not the amber warning one — it marks a camera or microphone that
+ * failed to start, which is a failure rather than a caution. The genuine warning role lives at
+ * `MaterialTheme.bedrudColors.warning` and is what the mic pill's status ring uses; naming this
+ * one "warning" put two different colours under the same word on the same screen.
+ */
 @Immutable
 data class MeetingChromeColors(
     val bar: Color,
@@ -35,8 +44,8 @@ data class MeetingChromeColors(
     val divider: Color,
     val selected: Color,
     val accent: Color,
-    val warning: Color,
-    val onWarning: Color,
+    val mediaError: Color,
+    val onMediaError: Color,
     val endCall: Color,
     val onEndCall: Color,
 )
@@ -55,8 +64,8 @@ fun meetingChromeColors(): MeetingChromeColors {
         divider = scheme.outline.copy(alpha = 0.45f),
         selected = scheme.secondary,
         accent = scheme.primary,
-        warning = scheme.error,
-        onWarning = scheme.onError,
+        mediaError = scheme.error,
+        onMediaError = scheme.onError,
         endCall = scheme.error,
         onEndCall = scheme.onError,
     )
@@ -76,13 +85,13 @@ fun Modifier.speakingRing(level: Float, shape: Shape): Modifier {
     val clamped = level.coerceIn(0f, 1f)
     val alpha by animateFloatAsState(
         targetValue = if (clamped > 0f) 1f else 0f,
-        animationSpec = tween(SpeakingRingFadeMillis),
+        animationSpec = tween(Motion.meetingSpeakingRingFadeMs, easing = Motion.standardEasing),
         label = "speakingRingAlpha",
     )
     val width by animateDpAsState(
         targetValue = Dimens.meetingSpeakingRingMin +
             (Dimens.meetingSpeakingRingMax - Dimens.meetingSpeakingRingMin) * clamped,
-        animationSpec = tween(SpeakingRingLevelMillis),
+        animationSpec = tween(Motion.meetingSpeakingRingLevelMs, easing = Motion.standardEasing),
         label = "speakingRingWidth",
     )
     return if (alpha <= 0f) {
@@ -91,16 +100,6 @@ fun Modifier.speakingRing(level: Float, shape: Shape): Modifier {
         border(width, MaterialTheme.colorScheme.primary.copy(alpha = alpha), shape)
     }
 }
-
-/**
- * Ring fade. Short, because it is pure delay on both ends — the bridging between server reports is
- * `SpeakingTracker`'s job, not the animation's, and a long fade here only makes the ring feel like
- * it is lagging the voice.
- */
-private const val SpeakingRingFadeMillis = 110
-
-/** Ring thickness follows the level faster than it fades, so it tracks the voice. */
-private const val SpeakingRingLevelMillis = 90
 
 /**
  * The in-call slider: a small round thumb on a slim track instead of M3's tall-bar thumb, shared

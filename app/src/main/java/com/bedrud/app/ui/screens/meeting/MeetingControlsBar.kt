@@ -464,12 +464,12 @@ private fun MicPill(
                     .align(Alignment.TopEnd)
                     .offset(x = Dimens.space4, y = -Dimens.space4)
                     .size(Dimens.iconXs)
-                    .background(colors.warning, CircleShape),
+                    .background(colors.mediaError, CircleShape),
                 contentAlignment = Alignment.Center,
             ) {
                 Text(
                     text = "!",
-                    color = colors.onWarning,
+                    color = colors.onMediaError,
                     style = MaterialTheme.typography.labelSmall,
                 )
             }
@@ -500,7 +500,7 @@ private fun MicStatusRing(status: MicPillStatus, modifier: Modifier = Modifier) 
         initialValue = 0f,
         targetValue = 1f,
         animationSpec = infiniteRepeatable(
-            animation = tween(MicRingTravelMillis, easing = LinearEasing),
+            animation = tween(Motion.meetingMicRingTravelMs, easing = LinearEasing),
         ),
         label = "micRingTravel",
     )
@@ -508,7 +508,7 @@ private fun MicStatusRing(status: MicPillStatus, modifier: Modifier = Modifier) 
         initialValue = MicRingPulseMinAlpha,
         targetValue = 1f,
         animationSpec = infiniteRepeatable(
-            animation = tween(MicRingPulseMillis, easing = Motion.standardEasing),
+            animation = tween(Motion.meetingMicRingPulseMs, easing = Motion.standardEasing),
             repeatMode = RepeatMode.Reverse,
         ),
         label = "micRingPulse",
@@ -562,12 +562,6 @@ private fun MeetingVoiceAlert.messageRes(): Int = when (this) {
     MeetingVoiceAlert.NotReachingRoom, MeetingVoiceAlert.None ->
         R.string.meeting_voiceAlert_notReachingRoom
 }
-
-/** One lap of the travelling arc while reconnecting. */
-private const val MicRingTravelMillis = 1400
-
-/** Half a pulse cycle for a cause you can fix yourself. */
-private const val MicRingPulseMillis = 700
 
 /** How faint the pulse gets at its dimmest — still visible, so the ring never seems to vanish. */
 private const val MicRingPulseMinAlpha = 0.3f
@@ -711,12 +705,12 @@ private fun MeetMediaButton(
                     .align(Alignment.TopEnd)
                     .offset(x = Dimens.space4, y = -Dimens.space4)
                     .size(Dimens.iconXs)
-                    .background(colors.warning, CircleShape),
+                    .background(colors.mediaError, CircleShape),
                 contentAlignment = Alignment.Center,
             ) {
                 Text(
                     text = "!",
-                    color = colors.onWarning,
+                    color = colors.onMediaError,
                     style = MaterialTheme.typography.labelSmall,
                 )
             }
