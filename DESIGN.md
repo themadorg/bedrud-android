@@ -161,13 +161,16 @@ the `meeting*` tokens in `Dimens.kt`, timing in `Motion.meetingChromeAutoHideDel
   opens the more-options sheet, mirroring how a bottom sheet is pulled up. There is no "⋯" button.
 - **Grid** (`MeetingVideoGrid`): the local participant **always** has a tile, camera on or off —
   it is where the speaking ring proves the room is receiving you, so it cannot be conditional.
-  (This reverses the original "self-tile only while the camera is on" rule from #104.) Alone in
-  the room, the invite hint sits *under* your tile rather than replacing it; if someone is
-  sharing while you are alone, the stream takes the stage and the grid stands down. Breakpoints:
+  (This reverses the original "self-tile only while the camera is on" rule from #104.) There is
+  no "no one else is here" copy: the self-tile already shows an empty room for what it is, and
+  the invite entry sits in the top bar. If someone is sharing while you are alone, the stream
+  takes the stage and the grid stands down. Breakpoints:
   1–3 tiles stack as full-width rows; 4 → 2×2; 5 → 2×2 plus one half-width centered; 6 → 2×3;
   beyond that the last slot collapses into a **"+N"** tile that opens the participants list.
   Landscape transposes rows into columns.
-- **Tiles**: name chip centered along the bottom edge, carrying mic-off / camera-off badges.
+- **Tiles**: name chip centered along the bottom edge, carrying the mic-off badge. There is no
+  camera badge — the tile already shows an avatar in place of video when the camera is off, so it
+  only restated what the tile was showing.
   **Double-tap** expands a tile to fullscreen and long-press opens the participant actions;
   there is no corner button. Since touch exploration cannot produce a double tap, the tile also
   carries a custom accessibility action for fullscreen — the gesture is never the only route.
@@ -190,13 +193,14 @@ the `meeting*` tokens in `Dimens.kt`, timing in `Motion.meetingChromeAutoHideDel
   slider's dBFS threshold (with a ~300ms hangover so syllables don't clip). Noise suppression
   (Off / Device) applies on the next join — the audio device module is built per connection.
 - **Mic meter**: the same processor always measures (gating stays conditional), publishing a
-  0..1 level that the pill renders as four bars in place of the mic glyph whenever audio is
-  actually being captured — same slot, so the bar's geometry never moves. The UI samples the
-  level per animation frame inside the draw scope rather than through a flow, so a 100 Hz audio
-  signal costs redraws, not recompositions. While the manual gate is closed the bars dim, which
-  makes the sensitivity threshold visible instead of guesswork. **The meter is local-only** — it
-  measures capture, so it happily bounces while a broken publish sends nothing. Confirmation that
-  the call works belongs to the speaking ring below, not here.
+  0..1 level rendered as four bars, and the bars dim the moment the manual gate shuts. It lives
+  **beside the sensitivity slider** in the audio settings sheet and nowhere else. It used to sit
+  in the controls-bar mic pill, but a capture meter answers "is the microphone picking me up",
+  not "can anyone hear me" — it bounces just as happily while a broken publish sends nothing, and
+  next to the speaking ring that reads as a second, contradictory answer to the same question.
+  Setting a threshold is the one job only a local meter can do, so that is the job it kept. The
+  UI samples the level per animation frame inside the draw scope rather than through a flow, so a
+  100 Hz audio signal costs redraws, not recompositions.
 - **Speaking ring** (`Modifier.speakingRing`): every participant surface — grid tile, invite-sheet
   avatar, fullscreen name chip — carries the room's own report of who it hears, from
   `RoomEvent.ActiveSpeakersChanged` via `RoomManager.speakingLevels`. The ring thickens with the
@@ -207,15 +211,21 @@ the `meeting*` tokens in `Dimens.kt`, timing in `Motion.meetingChromeAutoHideDel
   proof that your audio reached the SFU and was announced to the room, where the mic meter only
   proves the microphone works. Colour never carries it alone — speech also earns a badge in the
   name chip, in the mic-off badge's slot (a muted participant is never a speaking one).
-- **Voice alert** (`MeetingVoiceAlertChip`, `VoiceReachMonitor`): sustained local speech that the
-  room never echoes back means the audio is not arriving. The monitor compares the gate's raw
-  capture level against `speakingLevels` every `SampleIntervalMillis` and names the cause —
-  muted, push-to-talk not held, voice gate shut, or nothing reaching the room at all. Only that
-  last one is dressed as a caution, in the amber `warning` role — it is worth interrupting for,
-  but nothing here is an error or irreversible, so error red stays reserved. The rest keep the
-  plain chrome colours: they are ordinary and fixed in a tap, and shouting about them would teach
-  people to ignore the chip. The two settings-shaped causes open the audio settings sheet; the
-  others do not, because the mic button right below the chip already is the fix.
+- **Mic pill status ring** (`MicStatusRing`, `VoiceReachMonitor`): anything stopping your voice
+  reaching the room is reported on the **outline of the mic pill itself**, in the amber `warning`
+  role — never as a banner or toast. The status belongs on the control that fixes it, and a chip
+  floating above the bar was one more thing covering the call. `VoiceReachMonitor` compares the
+  gate's raw capture level against `speakingLevels` every `SampleIntervalMillis` and names the
+  cause; the reach check needs at least one remote participant, since an empty room has no reason
+  to report a speaker and no one to miss you.
+
+  Both states share the colour because they are the same news, so **motion carries the cause**: a
+  reconnect sends a single arc travelling around the outline (a dashed stroke whose phase moves,
+  which follows the pill's rounded corners where a rotated gradient would squash them), while
+  anything you can fix yourself — muted, push-to-talk not held, gate shut — pulses in place,
+  stationary because nothing is in progress. There is no "connecting" case: first connect happens
+  behind a full-screen state, before this bar exists. The wording each state would have used
+  survives as the pill's `stateDescription`, so the ring is never colour-and-motion alone.
 - **Connected moment**: connecting otherwise ends in silence — the screen simply becomes the call.
   The top bar says "Connected" in the room-name slot for `meetingConnectedNoticeMs`, then hands
   the slot back. It fires again after a reconnect, which is when it is needed most.
