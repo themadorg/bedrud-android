@@ -143,7 +143,9 @@ class RoomManager(
 
     // Input mode (voice activity / push-to-talk) with its manual voice gate. The gate object is
     // handed to LiveKit at connect and reconfigured in place afterwards.
-    private val voiceGate = VoiceGateProcessor()
+    private val voiceGate = VoiceGateProcessor().apply {
+        roomMayHear = ::roomMayHearMe
+    }
     private val _inputMode = MutableStateFlow(settingsStore.getInputMode())
     val inputMode: StateFlow<MeetingInputMode> = _inputMode.asStateFlow()
     private val _autoSensitivity = MutableStateFlow(settingsStore.getAutoSensitivity())
@@ -169,6 +171,22 @@ class RoomManager(
 
     /** False only while the manual voice gate is holding audio back. */
     fun isVoiceGateOpen(): Boolean = voiceGate.gateOpen
+
+    /**
+     * Whether outgoing audio is allowed to leave this device right now.
+     *
+     * Consulted by [VoiceGateProcessor] on every captured frame, and deliberately demanding: the
+     * app's own mute state and LiveKit's publication must *both* say the microphone is open. Since
+     * mute keeps the track running, agreement between the two is the only thing standing between a
+     * muted button and a live microphone, so disagreement — or a missing publication, or no room
+     * at all — is treated as muted.
+     */
+    private fun roomMayHearMe(): Boolean {
+        if (!_isMicEnabled.value) return false
+        val publication = _room?.localParticipant
+            ?.getTrackPublication(Track.Source.MICROPHONE) ?: return false
+        return !publication.muted
+    }
 
     private fun syncVoiceGate() {
         voiceGate.sensitivity = _voiceSensitivity.value
@@ -214,9 +232,6 @@ class RoomManager(
                 // muted — so a level whose frame counter has not moved since the last sample is a
                 // stale reading, not silence at that volume. Reporting it as-is left the warning
                 // lit forever after a mute mid-sentence.
-                // Re-assert the silence that makes a soft mute safe, so a missed transition can
-                // never leave a muted microphone feeding the room.
-                voiceGate.forceSilence = !_isMicEnabled.value
                 val frames = voiceGate.frameCount
                 val capturing = frames != lastFrameCount
                 lastFrameCount = frames
@@ -470,7 +485,10 @@ class RoomManager(
     ): Boolean {
         if (enabled) {
             val published = localParticipant.setMicrophoneEnabled(true)
-            voiceGate.forceSilence = false
+            // Only lift the override once unmuting actually worked. Clearing it regardless would
+            // leave a failed unmute showing a muted button over a transmitting microphone, since
+            // the track stays enabled across a soft mute.
+            if (published) voiceGate.forceSilence = false
             return published
         }
 

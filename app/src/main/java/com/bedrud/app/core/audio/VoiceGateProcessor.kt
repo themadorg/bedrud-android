@@ -19,13 +19,26 @@ import kotlin.math.sqrt
 class VoiceGateProcessor : AudioProcessorInterface {
 
     /**
-     * Zeroes every outgoing frame regardless of level, while still measuring what came in.
+     * Asked on every frame whether the room is currently allowed to hear this device.
      *
-     * This is what makes a soft mute safe. Muting through LiveKit disables the underlying track,
-     * which stops capture altogether and leaves nothing to measure — so a mute that still wants to
-     * notice you talking has to keep the track running, and something else has to guarantee the
-     * room hears nothing. That guarantee is here: the level is read from the incoming frame and
-     * the frame is then zeroed, so whatever reaches the encoder is digital silence.
+     * This is the guarantee that makes a soft mute safe, and it is a question rather than a flag
+     * on purpose. A flag has to be set correctly at every transition, and the one that is missed —
+     * an unmute that fails after the flag was already cleared, a path added later that forgets it
+     * — is a live microphone behind a muted button. Asking the mute state itself, on the audio
+     * thread, for every 10ms frame, means there is no window to get wrong: whatever the answer is
+     * right now is what this frame obeys.
+     *
+     * Fails closed. The default denies, so a processor that was never wired up transmits silence
+     * rather than audio, and any error deciding is treated as "not allowed".
+     */
+    @Volatile
+    var roomMayHear: () -> Boolean = { false }
+
+    /**
+     * Silences outgoing audio outright, over and above [roomMayHear].
+     *
+     * Covers the windows where the mute state is not yet the truth — publishing a track in order
+     * to mute it, where the persisted preference still says the microphone is open.
      */
     @Volatile
     var forceSilence: Boolean = false
@@ -85,7 +98,7 @@ class VoiceGateProcessor : AudioProcessorInterface {
         frameCount++
 
         // Checked before [gateEnabled] so a soft mute cannot be undone by the gate's own rules.
-        if (forceSilence) {
+        if (forceSilence || !mayTransmit()) {
             gateOpen = false
             silence(buffer)
             return
@@ -106,6 +119,13 @@ class VoiceGateProcessor : AudioProcessorInterface {
         }
         gateOpen = false
         silence(buffer)
+    }
+
+    /** Fails closed: anything other than a clear yes silences the frame. */
+    private fun mayTransmit(): Boolean = try {
+        roomMayHear()
+    } catch (e: Throwable) {
+        false
     }
 
     companion object {
