@@ -214,6 +214,9 @@ class RoomManager(
                 // muted — so a level whose frame counter has not moved since the last sample is a
                 // stale reading, not silence at that volume. Reporting it as-is left the warning
                 // lit forever after a mute mid-sentence.
+                // Re-assert the silence that makes a soft mute safe, so a missed transition can
+                // never leave a muted microphone feeding the room.
+                voiceGate.forceSilence = !_isMicEnabled.value
                 val frames = voiceGate.frameCount
                 val capturing = frames != lastFrameCount
                 lastFrameCount = frames
@@ -301,7 +304,7 @@ class RoomManager(
                 stateFlow = _isMicEnabled,
                 errorFlow = _micMediaError,
                 sync = ::syncMicrophoneState,
-                setEnabled = { room.localParticipant.setMicrophoneEnabled(it) },
+                setEnabled = { setMicrophonePublishing(room.localParticipant, it) },
                 onApplied = { CallConnectionService.updateMuteState(!it) },
                 reportEnableFailure = false,
             )
@@ -448,6 +451,46 @@ class RoomManager(
         )
     }
 
+    /**
+     * Mutes for the room while the microphone keeps running on the device.
+     *
+     * LiveKit's own mute disables the underlying track, and a disabled track stops feeding the
+     * capture chain — so with a plain mute there is nothing left to measure and no way to notice
+     * you talking into a muted microphone. The track therefore stays enabled here, and the room is
+     * kept from hearing anything by two separate means: the publication is muted, which is what
+     * every other participant's mute indicator reads, and every captured frame is zeroed by
+     * [VoiceGateProcessor.forceSilence] before it can reach the encoder.
+     *
+     * The silencing is switched on *before* the track is re-enabled, never after, and the monitor
+     * loop re-asserts it every tick so the two can never drift apart.
+     */
+    private suspend fun setMicrophonePublishing(
+        localParticipant: LocalParticipant,
+        enabled: Boolean,
+    ): Boolean {
+        if (enabled) {
+            val published = localParticipant.setMicrophoneEnabled(true)
+            voiceGate.forceSilence = false
+            return published
+        }
+
+        voiceGate.forceSilence = true
+
+        // Joining muted publishes nothing at all, and an unpublished track never reaches the
+        // capture chain — so there has to be a publication before there is anything to keep
+        // measuring. It is silenced from the moment it exists.
+        if (localParticipant.getTrackPublication(Track.Source.MICROPHONE) == null) {
+            localParticipant.setMicrophoneEnabled(true)
+            // The mute has to land on a settled publication; muting the instant after publishing
+            // tears the half-built track down again and capture stops with it.
+            delay(MutedCaptureSettleMillis)
+        }
+
+        val published = localParticipant.setMicrophoneEnabled(false)
+        localParticipant.getTrackPublication(Track.Source.MICROPHONE)?.track?.enabled = true
+        return published
+    }
+
     private fun resetSpeakingState() {
         speakingDecayJob?.cancel()
         speakingDecayJob = null
@@ -551,7 +594,7 @@ class RoomManager(
             stateFlow = _isMicEnabled,
             errorFlow = _micMediaError,
             sync = ::syncMicrophoneState,
-            setEnabled = { localParticipant.setMicrophoneEnabled(it) },
+            setEnabled = { setMicrophonePublishing(localParticipant, it) },
             onApplied = { CallConnectionService.updateMuteState(!it) },
         )
     }
@@ -579,7 +622,7 @@ class RoomManager(
             stateFlow = _isMicEnabled,
             errorFlow = _micMediaError,
             sync = ::syncMicrophoneState,
-            setEnabled = { localParticipant.setMicrophoneEnabled(it) },
+            setEnabled = { setMicrophonePublishing(localParticipant, it) },
             onApplied = { CallConnectionService.updateMuteState(!it) },
         )
     }
@@ -860,6 +903,9 @@ class RoomManager(
         private const val TAG = "RoomManager"
         private const val SCREEN_SHARE_CHANNEL_ID = "bedrud_screen_share"
         private const val SCREEN_SHARE_NOTIFICATION_ID = 1002
+
+        /** Time a publication needs to settle before muting it keeps the capture chain alive. */
+        private const val MutedCaptureSettleMillis = 400L
 
         /** Display name used when a participant has neither a name nor an identity. */
         const val UNKNOWN_PARTICIPANT_NAME = "Unknown"

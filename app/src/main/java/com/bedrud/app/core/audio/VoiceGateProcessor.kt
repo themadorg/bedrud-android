@@ -18,6 +18,18 @@ import kotlin.math.sqrt
  */
 class VoiceGateProcessor : AudioProcessorInterface {
 
+    /**
+     * Zeroes every outgoing frame regardless of level, while still measuring what came in.
+     *
+     * This is what makes a soft mute safe. Muting through LiveKit disables the underlying track,
+     * which stops capture altogether and leaves nothing to measure — so a mute that still wants to
+     * notice you talking has to keep the track running, and something else has to guarantee the
+     * room hears nothing. That guarantee is here: the level is read from the incoming frame and
+     * the frame is then zeroed, so whatever reaches the encoder is digital silence.
+     */
+    @Volatile
+    var forceSilence: Boolean = false
+
     @Volatile
     var gateEnabled: Boolean = false
 
@@ -72,6 +84,12 @@ class VoiceGateProcessor : AudioProcessorInterface {
         level = normalizedLevel(levelDb)
         frameCount++
 
+        // Checked before [gateEnabled] so a soft mute cannot be undone by the gate's own rules.
+        if (forceSilence) {
+            gateOpen = false
+            silence(buffer)
+            return
+        }
         if (!gateEnabled) {
             gateOpen = true
             return
