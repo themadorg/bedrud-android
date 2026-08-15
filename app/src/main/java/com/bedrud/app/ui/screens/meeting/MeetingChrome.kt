@@ -109,6 +109,7 @@ fun MeetingCompactSlider(
     onValueChange: (Float) -> Unit,
     label: String,
     modifier: Modifier = Modifier,
+    enabled: Boolean = true,
 ) {
     val colors = meetingChromeColors()
     val interactionSource = remember { MutableInteractionSource() }
@@ -120,6 +121,7 @@ fun MeetingCompactSlider(
     Slider(
         value = value,
         onValueChange = onValueChange,
+        enabled = enabled,
         modifier = modifier.semantics { contentDescription = label },
         colors = sliderColors,
         interactionSource = interactionSource,

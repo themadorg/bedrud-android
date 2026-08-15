@@ -30,6 +30,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import com.bedrud.app.R
@@ -39,6 +40,7 @@ import com.bedrud.app.core.livekit.CallAudioSwitch
 import com.bedrud.app.ui.components.BedrudBottomSheet
 import com.bedrud.app.ui.components.BedrudSheetActionRow
 import com.bedrud.app.ui.components.BedrudSheetTitle
+import com.bedrud.app.ui.theme.Alpha
 import com.bedrud.app.ui.theme.Dimens
 
 /**
@@ -160,55 +162,62 @@ fun MeetingAudioSettingsSheet(
             onClick = onOpenInputModePicker,
         )
 
-        if (inputMode == MeetingInputMode.VOICE_ACTIVITY) {
-            BedrudSheetActionRow(
-                icon = Icons.Default.GraphicEq,
-                title = stringResource(R.string.meeting_audio_autoSensitivity),
-                contentColor = colors.onButton,
-                trailing = {
-                    Switch(
-                        checked = autoSensitivity,
-                        onCheckedChange = onAutoSensitivityChange,
-                        colors = SwitchDefaults.colors(checkedTrackColor = colors.accent),
-                    )
-                },
-                onClick = { onAutoSensitivityChange(!autoSensitivity) },
-            )
-
-            if (!autoSensitivity) {
-                Text(
-                    text = stringResource(R.string.meeting_audio_sensitivity),
-                    style = MaterialTheme.typography.labelLarge,
-                    color = colors.onButtonVariant,
-                    modifier = Modifier.padding(horizontal = Dimens.space4, vertical = Dimens.space4),
+        // Both rows stay put whatever the mode: push-to-talk has no sensitivity to set, and auto
+        // sensitivity sets it for you, but dropping the rows in those states made the sheet jump
+        // under the finger that just toggled them. They dim in place instead.
+        val voiceActivity = inputMode == MeetingInputMode.VOICE_ACTIVITY
+        val sensitivityAdjustable = voiceActivity && !autoSensitivity
+        BedrudSheetActionRow(
+            icon = Icons.Default.GraphicEq,
+            title = stringResource(R.string.meeting_audio_autoSensitivity),
+            contentColor = colors.onButton,
+            enabled = voiceActivity,
+            trailing = {
+                Switch(
+                    checked = autoSensitivity,
+                    onCheckedChange = onAutoSensitivityChange,
+                    enabled = voiceActivity,
+                    colors = SwitchDefaults.colors(checkedTrackColor = colors.accent),
                 )
-                // The meter belongs beside the threshold it explains: the bars dim the moment
-                // the gate shuts, so the slider is set against what the microphone is actually
-                // hearing instead of by guesswork.
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = Dimens.space12),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(Dimens.space12),
-                ) {
-                    MicLevelBars(
-                        levelProvider = micLevelProvider,
-                        gateOpenProvider = voiceGateOpenProvider,
-                        color = colors.accent,
-                        modifier = Modifier.size(Dimens.iconMd),
-                    )
-                    MeetingCompactSlider(
-                        value = sensitivityValue,
-                        onValueChange = { value ->
-                            sensitivityValue = value
-                            onSensitivityChange(value)
-                        },
-                        label = stringResource(R.string.meeting_audio_sensitivity),
-                        modifier = Modifier.weight(1f),
-                    )
-                }
-            }
+            },
+            onClick = { onAutoSensitivityChange(!autoSensitivity) },
+        )
+
+        Text(
+            text = stringResource(R.string.meeting_audio_sensitivity),
+            style = MaterialTheme.typography.labelLarge,
+            color = colors.onButtonVariant,
+            modifier = Modifier
+                .alpha(if (sensitivityAdjustable) 1f else Alpha.disabled)
+                .padding(horizontal = Dimens.space4, vertical = Dimens.space4),
+        )
+        // The meter belongs beside the threshold it explains: the bars dim the moment the gate
+        // shuts, so the slider is set against what the microphone is actually hearing instead of
+        // by guesswork.
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .alpha(if (sensitivityAdjustable) 1f else Alpha.disabled)
+                .padding(horizontal = Dimens.space12),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(Dimens.space12),
+        ) {
+            MicLevelBars(
+                levelProvider = micLevelProvider,
+                gateOpenProvider = voiceGateOpenProvider,
+                color = colors.accent,
+                modifier = Modifier.size(Dimens.iconMd),
+            )
+            MeetingCompactSlider(
+                value = sensitivityValue,
+                onValueChange = { value ->
+                    sensitivityValue = value
+                    onSensitivityChange(value)
+                },
+                label = stringResource(R.string.meeting_audio_sensitivity),
+                enabled = sensitivityAdjustable,
+                modifier = Modifier.weight(1f),
+            )
         }
     }
 }
