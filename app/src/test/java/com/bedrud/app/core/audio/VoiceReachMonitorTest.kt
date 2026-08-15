@@ -159,6 +159,30 @@ class VoiceReachMonitorTest {
     }
 
     @Test
+    fun `a blip in the cause mid-sentence does not flash`() {
+        val monitor = VoiceReachMonitor()
+        // Talking happily, unmuted, for well past every grace period.
+        repeat(6) { i -> monitor.at(i * 200L) }
+
+        // One sample catches the mic mid-toggle. The cause is brand new even though the talking
+        // is not, so nothing is raised.
+        assertEquals(MeetingVoiceAlert.None, monitor.at(1_200, isMicEnabled = false))
+        assertEquals(MeetingVoiceAlert.None, monitor.at(1_400, isMicEnabled = false))
+    }
+
+    @Test
+    fun `a cause that persists while talking is still reported`() {
+        val monitor = VoiceReachMonitor()
+        repeat(6) { i -> monitor.at(i * 200L) }
+
+        monitor.at(1_200, isMicEnabled = false)
+        assertEquals(
+            MeetingVoiceAlert.Muted,
+            monitor.at(1_200 + causeGrace, isMicEnabled = false),
+        )
+    }
+
+    @Test
     fun `reset clears the confirmation from a previous call`() {
         val monitor = VoiceReachMonitor()
         monitor.at(0, roomHearsMe = true)

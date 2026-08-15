@@ -29,9 +29,10 @@ enum class MeetingVoiceAlert {
  * "we can't hear you". The room's own speaker reports close that loop: sustained local speech
  * that the room never echoes back means the audio is not arriving, whatever the meter shows.
  *
- * Every verdict needs the speech to persist, because a single loud frame is a cough, not a
- * sentence. [ReachGraceMillis] is the longer wait: it has to outlast a server report cycle plus
- * the round trip before silence from the room means anything.
+ * Every verdict needs its cause to persist, because a cause that comes and goes in an instant is
+ * a state change, not a fault — the mic flipping during an unmute tap, or the gate riding its
+ * hangover between two words. [ReachGraceMillis] is the longer wait: it has to outlast a server
+ * report cycle plus the round trip before silence from the room means anything.
  *
  * Nothing is ever reported while you are quiet. The whole point is to answer "am I talking to
  * nobody", which is only a question while you are talking, so talking is treated as lasting
@@ -45,15 +46,16 @@ class VoiceReachMonitor(
     private val quietHoldMillis: Long = QuietHoldMillis,
 ) {
 
-    private var talkingSinceMillis: Long? = null
     private var lastLoudAtMillis: Long? = null
     private var roomLastHeardMillis: Long? = null
+    private var cause: MeetingVoiceAlert = MeetingVoiceAlert.None
+    private var causeSinceMillis: Long? = null
 
     /**
      * Folds one sample of the local capture level and the room's view of it into a verdict.
      *
      * [micLevel] must go quiet honestly when capture stops — a frozen last reading would look like
-     * speech forever, which is exactly what happens on mute.
+     * speech forever.
      */
     fun sample(
         nowMillis: Long,
@@ -71,41 +73,56 @@ class VoiceReachMonitor(
         // the run never lasts long enough to judge — and would never end once it had.
         val lastLoud = lastLoudAtMillis
         val talking = lastLoud != null && nowMillis - lastLoud < quietHoldMillis
+
+        // The clock only runs while you are talking. Letting it accumulate through a silence
+        // meant the first word after a long pause arrived with the grace already served, and
+        // flashed before the server had any chance to report that word.
         if (!talking) {
-            talkingSinceMillis = null
+            cause = MeetingVoiceAlert.None
+            causeSinceMillis = null
             return MeetingVoiceAlert.None
         }
 
-        val talkingSince = talkingSinceMillis ?: nowMillis.also { talkingSinceMillis = it }
-        val talkingFor = nowMillis - talkingSince
-
-        return when {
-            !isMicEnabled && isPushToTalk -> after(talkingFor, causeGraceMillis, MeetingVoiceAlert.PushToTalkIdle)
-            !isMicEnabled -> after(talkingFor, causeGraceMillis, MeetingVoiceAlert.Muted)
-            !isGateOpen -> after(talkingFor, causeGraceMillis, MeetingVoiceAlert.GateClosed)
+        val heardRecently = roomLastHeardMillis?.let { nowMillis - it < reachGraceMillis } == true
+        val current = when {
+            !isMicEnabled && isPushToTalk -> MeetingVoiceAlert.PushToTalkIdle
+            !isMicEnabled -> MeetingVoiceAlert.Muted
+            !isGateOpen -> MeetingVoiceAlert.GateClosed
             // Alone in the room there is nobody to not hear you, and the server has no reason to
-            // report a speaker to an empty room — so silence from it proves nothing and the
-            // warning would be both false and nonsense. Local causes above still apply.
+            // report a speaker to an empty room — so silence from it proves nothing.
             !roomHasOthers -> MeetingVoiceAlert.None
-            else -> {
-                val heardRecently = roomLastHeardMillis?.let { nowMillis - it < reachGraceMillis } == true
-                if (heardRecently) {
-                    MeetingVoiceAlert.None
-                } else {
-                    after(talkingFor, reachGraceMillis, MeetingVoiceAlert.NotReachingRoom)
-                }
-            }
+            heardRecently -> MeetingVoiceAlert.None
+            else -> MeetingVoiceAlert.NotReachingRoom
         }
+
+        // The wait belongs to the cause, not to the talking. Timing it from when speech started
+        // meant that once you had been talking a while, any momentary blip — the mic state during
+        // an unmute tap, the gate riding its hangover between words — had already served the
+        // grace and flashed the ring on arrival.
+        if (current != cause) {
+            cause = current
+            causeSinceMillis = nowMillis
+        }
+        if (current == MeetingVoiceAlert.None) return MeetingVoiceAlert.None
+
+        val heldFor = causeSinceMillis?.let { nowMillis - it } ?: 0L
+        val grace = if (current == MeetingVoiceAlert.NotReachingRoom) {
+            reachGraceMillis
+        } else {
+            causeGraceMillis
+        }
+        return after(heldFor, grace, current)
     }
 
     fun reset() {
-        talkingSinceMillis = null
         lastLoudAtMillis = null
         roomLastHeardMillis = null
+        cause = MeetingVoiceAlert.None
+        causeSinceMillis = null
     }
 
-    private fun after(talkingFor: Long, graceMillis: Long, alert: MeetingVoiceAlert) =
-        if (talkingFor >= graceMillis) alert else MeetingVoiceAlert.None
+    private fun after(heldFor: Long, graceMillis: Long, alert: MeetingVoiceAlert) =
+        if (heldFor >= graceMillis) alert else MeetingVoiceAlert.None
 
     companion object {
         /**
