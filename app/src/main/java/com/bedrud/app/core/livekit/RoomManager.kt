@@ -217,6 +217,7 @@ class RoomManager(
                     isGateOpen = voiceGate.gateOpen,
                     roomHearsMe = localIdentity != null &&
                         _speakingLevels.value.containsKey(localIdentity),
+                    roomHasOthers = _room?.remoteParticipants?.isNotEmpty() == true,
                 )
             }
         }

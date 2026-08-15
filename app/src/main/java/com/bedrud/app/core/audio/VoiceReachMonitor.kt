@@ -54,6 +54,7 @@ class VoiceReachMonitor(
         isPushToTalk: Boolean,
         isGateOpen: Boolean,
         roomHearsMe: Boolean,
+        roomHasOthers: Boolean,
     ): MeetingVoiceAlert {
         if (roomHearsMe) roomLastHeardMillis = nowMillis
 
@@ -69,6 +70,10 @@ class VoiceReachMonitor(
             !isMicEnabled && isPushToTalk -> after(talkingFor, causeGraceMillis, MeetingVoiceAlert.PushToTalkIdle)
             !isMicEnabled -> after(talkingFor, causeGraceMillis, MeetingVoiceAlert.Muted)
             !isGateOpen -> after(talkingFor, causeGraceMillis, MeetingVoiceAlert.GateClosed)
+            // Alone in the room there is nobody to not hear you, and the server has no reason to
+            // report a speaker to an empty room — so silence from it proves nothing and the
+            // warning would be both false and nonsense. Local causes above still apply.
+            !roomHasOthers -> MeetingVoiceAlert.None
             else -> {
                 val heardRecently = roomLastHeardMillis?.let { nowMillis - it < reachGraceMillis } == true
                 if (heardRecently) {
@@ -90,10 +95,14 @@ class VoiceReachMonitor(
 
     companion object {
         /**
-         * Capture level that counts as talking, on [VoiceGateProcessor]'s normalized scale — about
-         * -36 dBFS, comfortably above room tone and below conversational speech.
+         * Capture level that counts as talking, on [VoiceGateProcessor]'s normalized scale.
+         *
+         * Tuned on device: at 0.4 (about -36 dBFS) room tone alone cleared the bar and raised the
+         * warning with nobody speaking, because the phone's own gain lifts ambient well above what
+         * the server's speaker detection reacts to. A warning that cries wolf gets ignored, and a
+         * missed one costs only the warning, so the bar sits where speech is unambiguous.
          */
-        const val TalkingLevel = 0.4f
+        const val TalkingLevel = 0.6f
 
         /** Talking time before a locally-known cause (muted, gate shut) is worth saying out loud. */
         const val CauseGraceMillis = 800L

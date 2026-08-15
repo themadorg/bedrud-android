@@ -17,7 +17,8 @@ class VoiceReachMonitorTest {
         isPushToTalk: Boolean = false,
         isGateOpen: Boolean = true,
         roomHearsMe: Boolean = false,
-    ) = sample(nowMillis, micLevel, isMicEnabled, isPushToTalk, isGateOpen, roomHearsMe)
+        roomHasOthers: Boolean = true,
+    ) = sample(nowMillis, micLevel, isMicEnabled, isPushToTalk, isGateOpen, roomHearsMe, roomHasOthers)
 
     @Test
     fun `silence never raises anything`() {
@@ -88,6 +89,26 @@ class VoiceReachMonitorTest {
 
         assertEquals(MeetingVoiceAlert.None, monitor.at(reachGrace))
         assertEquals(MeetingVoiceAlert.NotReachingRoom, monitor.at(2 * reachGrace))
+    }
+
+    @Test
+    fun `alone in the room, silence from the server proves nothing`() {
+        val monitor = VoiceReachMonitor()
+        monitor.at(0, roomHasOthers = false)
+
+        assertEquals(MeetingVoiceAlert.None, monitor.at(reachGrace, roomHasOthers = false))
+        assertEquals(MeetingVoiceAlert.None, monitor.at(10 * reachGrace, roomHasOthers = false))
+    }
+
+    @Test
+    fun `alone in the room, local causes are still reported`() {
+        val monitor = VoiceReachMonitor()
+        monitor.at(0, isMicEnabled = false, roomHasOthers = false)
+
+        assertEquals(
+            MeetingVoiceAlert.Muted,
+            monitor.at(causeGrace, isMicEnabled = false, roomHasOthers = false),
+        )
     }
 
     @Test
