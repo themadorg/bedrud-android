@@ -45,7 +45,12 @@ class SpeakingTracker(private val holdMillis: Long = HoldMillis) {
         /** Covers the gap between two server bursts plus a normal pause between words. */
         const val HoldMillis = 600L
 
-        /** How often the hold is re-checked while anyone is speaking. */
-        const val PruneIntervalMillis = 150L
+        /**
+         * How often the hold is re-checked while anyone is speaking.
+         *
+         * This is added to [HoldMillis] in the worst case, so it is the slack on how promptly a
+         * ring goes out. Kept short: the work is a map scan over the handful of people talking.
+         */
+        const val PruneIntervalMillis = 60L
     }
 }

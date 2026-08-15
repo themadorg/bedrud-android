@@ -92,11 +92,15 @@ fun Modifier.speakingRing(level: Float, shape: Shape): Modifier {
     }
 }
 
-/** Ring fade, long enough to bridge the gap between two server speaker reports. */
-private const val SpeakingRingFadeMillis = 220
+/**
+ * Ring fade. Short, because it is pure delay on both ends — the bridging between server reports is
+ * `SpeakingTracker`'s job, not the animation's, and a long fade here only makes the ring feel like
+ * it is lagging the voice.
+ */
+private const val SpeakingRingFadeMillis = 110
 
 /** Ring thickness follows the level faster than it fades, so it tracks the voice. */
-private const val SpeakingRingLevelMillis = 120
+private const val SpeakingRingLevelMillis = 90
 
 /**
  * The in-call slider: a small round thumb on a slim track instead of M3's tall-bar thumb, shared
