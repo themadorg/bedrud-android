@@ -293,8 +293,6 @@
   <string name="meeting_voiceAlert_pushToTalk">Удерживайте кнопку микрофона, чтобы говорить</string>
   <string name="meeting_voiceAlert_gateClosed">Голосовая активация вас не улавливает</string>
   <string name="meeting_voiceAlert_notReachingRoom">Возможно, вас не слышат</string>
-  <string name="meeting_empty_title">Здесь больше никого нет</string>
-  <string name="meeting_empty_message">Поделитесь ссылкой на комнату, чтобы кого-нибудь пригласить</string>
   <string name="meeting_participant_volume">Громкость</string>
   <string name="meeting_action_dontWatch">Не смотреть</string>
   <string name="meeting_action_watch">Смотреть</string>

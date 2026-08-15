@@ -293,8 +293,6 @@
   <string name="meeting_voiceAlert_pushToTalk">Halte die Mikrofontaste gedrückt, um zu sprechen</string>
   <string name="meeting_voiceAlert_gateClosed">Die Sprachaktivierung erkennt dich nicht</string>
   <string name="meeting_voiceAlert_notReachingRoom">Andere hören dich möglicherweise nicht</string>
-  <string name="meeting_empty_title">Sonst ist niemand hier</string>
-  <string name="meeting_empty_message">Teile den Raum-Link, um jemanden einzuladen</string>
   <string name="meeting_participant_volume">Lautstärke</string>
   <string name="meeting_action_dontWatch">Nicht ansehen</string>
   <string name="meeting_action_watch">Ansehen</string>

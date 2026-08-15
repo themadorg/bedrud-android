@@ -290,8 +290,6 @@
   <string name="meeting_voiceAlert_pushToTalk">برای صحبت، دکمهٔ میکروفون را نگه دارید</string>
   <string name="meeting_voiceAlert_gateClosed">تشخیص صدا شما را نمی‌گیرد</string>
   <string name="meeting_voiceAlert_notReachingRoom">ممکن است دیگران صدای شما را نشنوند</string>
-  <string name="meeting_empty_title">کس دیگری اینجا نیست</string>
-  <string name="meeting_empty_message">پیوند اتاق را به اشتراک بگذارید تا کسی را دعوت کنید</string>
   <string name="meeting_participant_volume">میزان صدا</string>
   <string name="meeting_action_dontWatch">تماشا نکردن</string>
   <string name="meeting_action_watch">تماشا</string>

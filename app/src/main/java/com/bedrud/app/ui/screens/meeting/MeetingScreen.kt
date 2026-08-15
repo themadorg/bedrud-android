@@ -565,10 +565,6 @@ fun MeetingScreen(
                                     )
                                 }
 
-                                // Alone, the hint sits under your own tile rather than replacing
-                                // it: the tile is what proves the call is live, the hint is what
-                                // explains why it is the only one.
-                                val showAloneHint = aloneInRoom && streamParticipants.isEmpty()
                                 if (!expandStreams) {
                                     MeetingVideoGrid(
                                         tiles = gridTiles,
@@ -591,47 +587,8 @@ fun MeetingScreen(
                                             .weight(1f)
                                             .fillMaxWidth()
                                             .padding(horizontal = Dimens.space8)
-                                            .padding(
-                                                bottom = if (showAloneHint) {
-                                                    Dimens.space8
-                                                } else {
-                                                    Dimens.meetingGridBottomSpace
-                                                },
-                                            ),
+                                            .padding(bottom = Dimens.meetingGridBottomSpace),
                                     )
-                                }
-                                if (showAloneHint) {
-                                    Column(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(horizontal = Dimens.screenPadding)
-                                            // The alert chip lands in this same band above the
-                                            // controls bar, so the hint steps up out of its way
-                                            // rather than being covered by it.
-                                            .padding(
-                                                bottom = if (voiceAlert != MeetingVoiceAlert.None) {
-                                                    Dimens.meetingGridBottomSpace +
-                                                        Dimens.meetingVoiceAlertBand
-                                                } else {
-                                                    Dimens.meetingGridBottomSpace
-                                                },
-                                            ),
-                                        horizontalAlignment = Alignment.CenterHorizontally,
-                                    ) {
-                                        Text(
-                                            text = stringResource(R.string.meeting_empty_title),
-                                            style = MaterialTheme.typography.titleMedium,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                            textAlign = TextAlign.Center,
-                                        )
-                                        Spacer(modifier = Modifier.height(Dimens.space8))
-                                        Text(
-                                            text = stringResource(R.string.meeting_empty_message),
-                                            style = MaterialTheme.typography.bodyMedium,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                            textAlign = TextAlign.Center,
-                                        )
-                                    }
                                 }
                             }
                             }

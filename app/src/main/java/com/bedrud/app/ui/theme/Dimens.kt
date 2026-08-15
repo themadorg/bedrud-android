@@ -72,7 +72,6 @@ object Dimens {
     val meetingBadgeIcon = 14.dp         // mic-off / speaking badges on the tile name chip
     val meetingSpeakingRingMin = 2.dp    // room-hears-you ring at the quietest reported level
     val meetingSpeakingRingMax = 5.dp    // ...and at the loudest
-    val meetingVoiceAlertBand = 56.dp    // band the voice-alert chip occupies above the controls bar
     val meetingIndicatorDot = 8.dp       // top-bar dots (recording, reconnecting)
     val meetingBarPaddingH = 10.dp       // controls bar inner horizontal padding
     val meetingBarPaddingV = 16.dp       // controls bar bottom inset — mirrors the drag-handle block above the row

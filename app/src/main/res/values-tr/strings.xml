@@ -293,8 +293,6 @@
   <string name="meeting_voiceAlert_pushToTalk">Konuşmak için mikrofon düğmesini basılı tutun</string>
   <string name="meeting_voiceAlert_gateClosed">Ses algılama sizi almıyor</string>
   <string name="meeting_voiceAlert_notReachingRoom">Diğerleri sizi duymuyor olabilir</string>
-  <string name="meeting_empty_title">Burada başka kimse yok</string>
-  <string name="meeting_empty_message">Birini davet etmek için oda bağlantısını paylaşın</string>
   <string name="meeting_participant_volume">Ses düzeyi</string>
   <string name="meeting_action_dontWatch">İzleme</string>
   <string name="meeting_action_watch">İzle</string>
