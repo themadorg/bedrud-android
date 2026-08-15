@@ -1,5 +1,11 @@
 package com.bedrud.app.ui.screens.meeting
 
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -45,23 +51,30 @@ import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.text.style.TextOverflow
 import com.bedrud.app.R
 import com.bedrud.app.core.audio.MeetingInputMode
+import com.bedrud.app.core.audio.MeetingVoiceAlert
+import com.bedrud.app.core.livekit.ConnectionState
 import com.bedrud.app.ui.theme.BedrudShapeTokens
 import com.bedrud.app.ui.theme.Dimens
 import com.bedrud.app.ui.theme.Elevation
+import com.bedrud.app.ui.theme.Motion
+import com.bedrud.app.ui.theme.bedrudColors
 import kotlin.math.sin
 
 /**
@@ -79,8 +92,8 @@ fun MeetingControlsBar(
     showChat: Boolean,
     unreadCount: Int,
     inputMode: MeetingInputMode = MeetingInputMode.VOICE_ACTIVITY,
-    micLevelProvider: () -> Float = { 0f },
-    voiceGateOpenProvider: () -> Boolean = { true },
+    connectionState: ConnectionState = ConnectionState.CONNECTED,
+    voiceAlert: MeetingVoiceAlert = MeetingVoiceAlert.None,
     onPushToTalkChange: (Boolean) -> Unit = {},
     onToggleMic: () -> Unit,
     onToggleCamera: () -> Unit,
@@ -131,8 +144,8 @@ fun MeetingControlsBar(
                 showChat = showChat,
                 unreadCount = unreadCount,
                 inputMode = inputMode,
-                micLevelProvider = micLevelProvider,
-                voiceGateOpenProvider = voiceGateOpenProvider,
+                connectionState = connectionState,
+                voiceAlert = voiceAlert,
                 onPushToTalkChange = onPushToTalkChange,
                 onToggleMic = onToggleMic,
                 onToggleCamera = onToggleCamera,
@@ -166,8 +179,8 @@ internal fun MeetingCallControlsRow(
     showChat: Boolean,
     unreadCount: Int,
     inputMode: MeetingInputMode,
-    micLevelProvider: () -> Float = { 0f },
-    voiceGateOpenProvider: () -> Boolean = { true },
+    connectionState: ConnectionState = ConnectionState.CONNECTED,
+    voiceAlert: MeetingVoiceAlert = MeetingVoiceAlert.None,
     onPushToTalkChange: (Boolean) -> Unit,
     onToggleMic: () -> Unit,
     onToggleCamera: () -> Unit,
@@ -215,8 +228,8 @@ internal fun MeetingCallControlsRow(
             inputMode = inputMode,
             isMicEnabled = isMicEnabled,
             hasError = micHasError,
-            micLevelProvider = micLevelProvider,
-            voiceGateOpenProvider = voiceGateOpenProvider,
+            connectionState = connectionState,
+            voiceAlert = voiceAlert,
             onToggleMic = onToggleMic,
             onPushToTalkChange = onPushToTalkChange,
         )
@@ -285,8 +298,8 @@ private fun MicPill(
     inputMode: MeetingInputMode,
     isMicEnabled: Boolean,
     hasError: Boolean,
-    micLevelProvider: () -> Float,
-    voiceGateOpenProvider: () -> Boolean,
+    connectionState: ConnectionState,
+    voiceAlert: MeetingVoiceAlert,
     onToggleMic: () -> Unit,
     onPushToTalkChange: (Boolean) -> Unit,
 ) {
@@ -321,7 +334,24 @@ private fun MicPill(
         Modifier.clickable(onClick = onToggleMic)
     }
 
-    Box {
+    // The pill's own outline reports anything stopping your voice reaching the room, so the
+    // status sits on the control that fixes it instead of in a banner elsewhere on screen.
+    val status = when {
+        connectionState == ConnectionState.RECONNECTING -> MicPillStatus.Reconnecting
+        voiceAlert != MeetingVoiceAlert.None -> MicPillStatus.VoiceBlocked
+        else -> MicPillStatus.None
+    }
+    val statusLabel = when (status) {
+        MicPillStatus.None -> null
+        MicPillStatus.Reconnecting -> stringResource(R.string.meeting_status_reconnecting)
+        MicPillStatus.VoiceBlocked -> stringResource(voiceAlert.messageRes())
+    }
+
+    Box(
+        modifier = Modifier.semantics {
+            statusLabel?.let { stateDescription = it }
+        },
+    ) {
         Surface(
             shape = BedrudShapeTokens.pill,
             color = containerColor,
@@ -362,8 +392,8 @@ private fun MicPill(
                     textRes = R.string.meeting_ptt_talking,
                     modifier = Modifier.alpha(0f),
                 )
-                // The mic glyph becomes a live meter while audio is actually being captured —
-                // same slot, so the pill's width never moves.
+                // Whether the room hears you is the tile ring's job now, so the pill only says
+                // whether the microphone is open.
                 val micOpen = transmitting || (!isPushToTalk && isMicEnabled)
                 PillContent(
                     contentColor = contentColor,
@@ -373,11 +403,15 @@ private fun MicPill(
                         isPushToTalk -> R.string.meeting_audio_mode_pushToTalk
                         else -> R.string.meeting_ptt_openMic
                     },
-                    showMeter = micOpen,
-                    micLevelProvider = micLevelProvider,
-                    voiceGateOpenProvider = voiceGateOpenProvider,
                 )
             }
+        }
+
+        if (status != MicPillStatus.None) {
+            MicStatusRing(
+                status = status,
+                modifier = Modifier.matchParentSize(),
+            )
         }
 
         if (hasError && !isPushToTalk) {
@@ -399,36 +433,114 @@ private fun MicPill(
     }
 }
 
+/** What the mic pill's outline is reporting, if anything. */
+private enum class MicPillStatus { None, Reconnecting, VoiceBlocked }
+
+/**
+ * The amber ring around the mic pill.
+ *
+ * Both states are the same colour because they are the same news — your voice is not reaching the
+ * room — so the motion is what separates the cause. A reconnect sends a single arc travelling
+ * round the outline, the shape a progress indicator makes when it does not know how long it will
+ * take. Anything you can fix yourself (muted, push-to-talk not held, the gate shut) pulses in
+ * place instead: stationary, because nothing is in progress and the fix is under your thumb.
+ *
+ * There is no "connecting" case here. The first connect happens behind a full-screen state, and
+ * this bar does not exist yet when it does.
+ */
+@Composable
+private fun MicStatusRing(status: MicPillStatus, modifier: Modifier = Modifier) {
+    val ringColor = MaterialTheme.bedrudColors.warning
+    val transition = rememberInfiniteTransition(label = "micStatusRing")
+    val travel by transition.animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(MicRingTravelMillis, easing = LinearEasing),
+        ),
+        label = "micRingTravel",
+    )
+    val pulse by transition.animateFloat(
+        initialValue = MicRingPulseMinAlpha,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(MicRingPulseMillis, easing = Motion.standardEasing),
+            repeatMode = RepeatMode.Reverse,
+        ),
+        label = "micRingPulse",
+    )
+    val strokeWidth = with(LocalDensity.current) { Dimens.borderStrong.toPx() }
+
+    Canvas(modifier = modifier) {
+        val corner = CornerRadius(size.height / 2f)
+        val inset = strokeWidth / 2f
+        val outline = Size(size.width - strokeWidth, size.height - strokeWidth)
+        // A dashed stroke with one arc and one gap the length of the rest of the outline: shifting
+        // the phase walks that single arc around the pill, and it follows the rounded corners for
+        // free where a rotated sweep gradient would have squashed the shape.
+        val perimeter = 2f * (outline.width + outline.height)
+        val arc = perimeter * MicRingArcFraction
+        val stroke = if (status == MicPillStatus.Reconnecting) {
+            Stroke(
+                width = strokeWidth,
+                pathEffect = PathEffect.dashPathEffect(
+                    floatArrayOf(arc, perimeter - arc),
+                    phase = -travel * perimeter,
+                ),
+            )
+        } else {
+            Stroke(width = strokeWidth)
+        }
+        drawRoundRect(
+            color = ringColor,
+            topLeft = Offset(inset, inset),
+            size = outline,
+            cornerRadius = corner,
+            style = stroke,
+            alpha = if (status == MicPillStatus.Reconnecting) 1f else pulse,
+        )
+    }
+}
+
+/** Maps a voice alert onto the wording the pill reports to accessibility services. */
+private fun MeetingVoiceAlert.messageRes(): Int = when (this) {
+    MeetingVoiceAlert.Muted -> R.string.meeting_voiceAlert_muted
+    MeetingVoiceAlert.PushToTalkIdle -> R.string.meeting_voiceAlert_pushToTalk
+    MeetingVoiceAlert.GateClosed -> R.string.meeting_voiceAlert_gateClosed
+    MeetingVoiceAlert.NotReachingRoom, MeetingVoiceAlert.None ->
+        R.string.meeting_voiceAlert_notReachingRoom
+}
+
+/** One lap of the travelling arc while reconnecting. */
+private const val MicRingTravelMillis = 1400
+
+/** Half a pulse cycle for a cause you can fix yourself. */
+private const val MicRingPulseMillis = 700
+
+/** How faint the pulse gets at its dimmest — still visible, so the ring never seems to vanish. */
+private const val MicRingPulseMinAlpha = 0.3f
+
+/** Share of the pill's outline the travelling arc covers. */
+private const val MicRingArcFraction = 0.28f
+
 @Composable
 private fun PillContent(
     contentColor: Color,
     icon: ImageVector,
     textRes: Int,
     modifier: Modifier = Modifier,
-    showMeter: Boolean = false,
-    micLevelProvider: () -> Float = { 0f },
-    voiceGateOpenProvider: () -> Boolean = { true },
 ) {
     Row(
         modifier = modifier,
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(Dimens.space8),
     ) {
-        if (showMeter) {
-            MicLevelBars(
-                levelProvider = micLevelProvider,
-                gateOpenProvider = voiceGateOpenProvider,
-                color = contentColor,
-                modifier = Modifier.size(Dimens.meetingBarIconMedia),
-            )
-        } else {
-            Icon(
-                imageVector = icon,
-                contentDescription = stringResource(R.string.meeting_contentDescription_toggleMic),
-                tint = contentColor,
-                modifier = Modifier.size(Dimens.meetingBarIconMedia),
-            )
-        }
+        Icon(
+            imageVector = icon,
+            contentDescription = stringResource(R.string.meeting_contentDescription_toggleMic),
+            tint = contentColor,
+            modifier = Modifier.size(Dimens.meetingBarIconMedia),
+        )
         Text(
             text = stringResource(textRes),
             style = MaterialTheme.typography.labelMedium,
@@ -446,7 +558,7 @@ private fun PillContent(
  * sensitivity threshold is visible rather than guessed.
  */
 @Composable
-private fun MicLevelBars(
+internal fun MicLevelBars(
     levelProvider: () -> Float,
     gateOpenProvider: () -> Boolean,
     color: Color,

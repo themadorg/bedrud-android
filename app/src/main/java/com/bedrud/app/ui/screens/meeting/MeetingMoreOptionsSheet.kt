@@ -21,6 +21,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import com.bedrud.app.R
 import com.bedrud.app.core.audio.MeetingInputMode
+import com.bedrud.app.core.audio.MeetingVoiceAlert
+import com.bedrud.app.core.livekit.ConnectionState
 import com.bedrud.app.ui.components.BedrudBottomSheet
 import com.bedrud.app.ui.components.BedrudSheetActionRow
 import com.bedrud.app.ui.theme.Dimens
@@ -43,8 +45,8 @@ fun MeetingMoreOptionsSheet(
     hideAllIncomingVideo: Boolean,
     isRoomSettingsAvailable: Boolean,
     inputMode: MeetingInputMode = MeetingInputMode.VOICE_ACTIVITY,
-    micLevelProvider: () -> Float = { 0f },
-    voiceGateOpenProvider: () -> Boolean = { true },
+    connectionState: ConnectionState = ConnectionState.CONNECTED,
+    voiceAlert: MeetingVoiceAlert = MeetingVoiceAlert.None,
     onPushToTalkChange: (Boolean) -> Unit = {},
     onToggleMic: () -> Unit,
     onToggleCamera: () -> Unit,
@@ -77,8 +79,8 @@ fun MeetingMoreOptionsSheet(
                 showChat = showChat,
                 unreadCount = unreadCount,
                 inputMode = inputMode,
-                micLevelProvider = micLevelProvider,
-                voiceGateOpenProvider = voiceGateOpenProvider,
+                connectionState = connectionState,
+                voiceAlert = voiceAlert,
                 onPushToTalkChange = onPushToTalkChange,
                 onToggleMic = onToggleMic,
                 onToggleCamera = onToggleCamera,

@@ -54,6 +54,8 @@ fun MeetingAudioSettingsSheet(
     inputMode: MeetingInputMode,
     autoSensitivity: Boolean,
     sensitivity: Float,
+    micLevelProvider: () -> Float = { 0f },
+    voiceGateOpenProvider: () -> Boolean = { true },
     onOpenInputModePicker: () -> Unit,
     onAutoSensitivityChange: (Boolean) -> Unit,
     onSensitivityChange: (Float) -> Unit,
@@ -180,15 +182,32 @@ fun MeetingAudioSettingsSheet(
                     color = colors.onButtonVariant,
                     modifier = Modifier.padding(horizontal = Dimens.space4, vertical = Dimens.space4),
                 )
-                VolumeSliderRow(
-                    value = sensitivityValue,
-                    label = stringResource(R.string.meeting_audio_sensitivity),
-                    iconTint = colors.onButtonVariant,
-                    onValueChange = { value ->
-                        sensitivityValue = value
-                        onSensitivityChange(value)
-                    },
-                )
+                // The meter belongs beside the threshold it explains: the bars dim the moment
+                // the gate shuts, so the slider is set against what the microphone is actually
+                // hearing instead of by guesswork.
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = Dimens.space12),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(Dimens.space12),
+                ) {
+                    MicLevelBars(
+                        levelProvider = micLevelProvider,
+                        gateOpenProvider = voiceGateOpenProvider,
+                        color = colors.accent,
+                        modifier = Modifier.size(Dimens.iconMd),
+                    )
+                    MeetingCompactSlider(
+                        value = sensitivityValue,
+                        onValueChange = { value ->
+                            sensitivityValue = value
+                            onSensitivityChange(value)
+                        },
+                        label = stringResource(R.string.meeting_audio_sensitivity),
+                        modifier = Modifier.weight(1f),
+                    )
+                }
             }
         }
     }

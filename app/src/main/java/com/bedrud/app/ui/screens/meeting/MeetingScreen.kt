@@ -695,13 +695,6 @@ fun MeetingScreen(
                             }
 
                             if (!isTileFullscreen || fullscreenChromeVisible) {
-                                MeetingVoiceAlertChip(
-                                    alert = voiceAlert,
-                                    onOpenAudioSettings = { showAudioSettingsSheet = true },
-                                    modifier = Modifier
-                                        .align(Alignment.BottomCenter)
-                                        .padding(bottom = Dimens.meetingGridBottomSpace),
-                                )
                                 MeetingControlsBar(
                                     isMicEnabled = isMicEnabled,
                                     isCameraEnabled = isCameraEnabled,
@@ -711,8 +704,8 @@ fun MeetingScreen(
                                     showChat = showChat,
                                     unreadCount = unreadCount,
                                     inputMode = inputMode,
-                                    micLevelProvider = { roomManager.currentMicLevel() },
-                                    voiceGateOpenProvider = { roomManager.isVoiceGateOpen() },
+                                    connectionState = connectionState,
+                                    voiceAlert = voiceAlert,
                                     onPushToTalkChange = { active ->
                                         scope.launch {
                                             roomManager.setPushToTalkTransmitting(active)
@@ -743,8 +736,8 @@ fun MeetingScreen(
                                     hideAllIncomingVideo = hideAllIncomingVideo,
                                     isRoomSettingsAvailable = isAdmin,
                                     inputMode = inputMode,
-                                    micLevelProvider = { roomManager.currentMicLevel() },
-                                    voiceGateOpenProvider = { roomManager.isVoiceGateOpen() },
+                                    connectionState = connectionState,
+                                    voiceAlert = voiceAlert,
                                     onPushToTalkChange = { active ->
                                         scope.launch {
                                             roomManager.setPushToTalkTransmitting(active)
@@ -874,6 +867,8 @@ fun MeetingScreen(
                                     inputMode = inputMode,
                                     autoSensitivity = autoSensitivity,
                                     sensitivity = voiceSensitivity,
+                                    micLevelProvider = { roomManager.currentMicLevel() },
+                                    voiceGateOpenProvider = { roomManager.isVoiceGateOpen() },
                                     onOpenInputModePicker = { showInputModeSheet = true },
                                     onAutoSensitivityChange = { roomManager.setAutoSensitivity(it) },
                                     onSensitivityChange = { roomManager.setVoiceSensitivity(it) },
