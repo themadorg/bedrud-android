@@ -62,8 +62,8 @@ private fun gridRows(count: Int): List<Int> = when (count) {
 }
 
 /**
- * The participant grid. [tiles] is the already-filtered list to display — the local participant
- * only while their camera is on, then the remote participants. Counts up to [MAX_GRID_TILES] lay
+ * The participant grid. [tiles] is the already-ordered list to display — the local participant
+ * first, then the remote participants. Counts up to [MAX_GRID_TILES] lay
  * out per the design's breakpoints (full-width rows up to 3, then two columns); anything beyond
  * collapses into a trailing "+N" overflow tile that opens the participants list.
  *

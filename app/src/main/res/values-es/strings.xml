@@ -294,7 +294,7 @@
   <string name="meeting_voiceAlert_gateClosed">La actividad de voz no te detecta</string>
   <string name="meeting_voiceAlert_notReachingRoom">Puede que los demás no te oigan</string>
   <string name="meeting_empty_title">No hay nadie más aquí</string>
-  <string name="meeting_empty_message">Invita a otros o enciende tu cámara para verte</string>
+  <string name="meeting_empty_message">Comparte el enlace de la sala para invitar a alguien</string>
   <string name="meeting_participant_volume">Volumen</string>
   <string name="meeting_action_dontWatch">No ver</string>
   <string name="meeting_action_watch">Ver</string>

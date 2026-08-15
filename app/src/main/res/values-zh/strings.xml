@@ -294,7 +294,7 @@
   <string name="meeting_voiceAlert_gateClosed">语音检测未识别到你</string>
   <string name="meeting_voiceAlert_notReachingRoom">其他人可能听不到你</string>
   <string name="meeting_empty_title">这里没有其他人</string>
-  <string name="meeting_empty_message">邀请其他人，或打开摄像头查看自己</string>
+  <string name="meeting_empty_message">分享房间链接邀请他人</string>
   <string name="meeting_participant_volume">音量</string>
   <string name="meeting_action_dontWatch">不再观看</string>
   <string name="meeting_action_watch">观看</string>

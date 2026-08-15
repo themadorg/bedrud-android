@@ -299,7 +299,7 @@
   <string name="meeting_voiceAlert_notReachingRoom">Others may not hear you</string>
   <string name="meeting_tile_overflow" translatable="false">+<xliff:g id="count" example="3">%1$d</xliff:g></string>
   <string name="meeting_empty_title">No one else is here</string>
-  <string name="meeting_empty_message">Invite others, or turn your camera on to see yourself</string>
+  <string name="meeting_empty_message">Share the room link to invite someone</string>
   <string name="meeting_participant_volume">Volume</string>
   <string name="meeting_action_dontWatch">Don\'t watch</string>
   <string name="meeting_action_watch">Watch</string>
