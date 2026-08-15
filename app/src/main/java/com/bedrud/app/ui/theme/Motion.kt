@@ -34,5 +34,13 @@ object Motion {
     /** Half a pulse of the mic pill's ring for a cause you can fix yourself. */
     const val meetingMicRingPulseMs = 700
 
+    /**
+     * How long the mic pill's ring takes to arrive and to leave.
+     *
+     * Longer than the speaking ring's fade: that one tracks a voice and wants to feel immediate,
+     * while this one reports a problem and should ease in and out rather than blink at you.
+     */
+    const val meetingMicRingFadeMs = 240
+
     val standardEasing = FastOutSlowInEasing
 }

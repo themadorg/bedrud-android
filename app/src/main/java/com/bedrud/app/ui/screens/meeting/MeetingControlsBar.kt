@@ -451,9 +451,21 @@ private fun MicPill(
             }
         }
 
-        if (status != MicPillStatus.None) {
+        // Fades in and out rather than appearing and vanishing. The ring is drawn while it is
+        // still fading, so the status it is showing has to outlive the status going away.
+        var fadingStatus by remember { mutableStateOf(status) }
+        LaunchedEffect(status) {
+            if (status != MicPillStatus.None) fadingStatus = status
+        }
+        val ringPresence by animateFloatAsState(
+            targetValue = if (status == MicPillStatus.None) 0f else 1f,
+            animationSpec = tween(Motion.meetingMicRingFadeMs, easing = Motion.standardEasing),
+            label = "micRingPresence",
+        )
+        if (ringPresence > 0f) {
             MicStatusRing(
-                status = status,
+                status = fadingStatus,
+                presence = ringPresence,
                 modifier = Modifier.matchParentSize(),
             )
         }
@@ -491,9 +503,15 @@ private enum class MicPillStatus { None, Reconnecting, VoiceBlocked }
  *
  * There is no "connecting" case here. The first connect happens behind a full-screen state, and
  * this bar does not exist yet when it does.
+ *
+ * [presence] scales the whole ring so it can fade on and off instead of blinking into existence.
  */
 @Composable
-private fun MicStatusRing(status: MicPillStatus, modifier: Modifier = Modifier) {
+private fun MicStatusRing(
+    status: MicPillStatus,
+    presence: Float,
+    modifier: Modifier = Modifier,
+) {
     val ringColor = MaterialTheme.bedrudColors.warning
     val transition = rememberInfiniteTransition(label = "micStatusRing")
     val travel by transition.animateFloat(
@@ -549,7 +567,7 @@ private fun MicStatusRing(status: MicPillStatus, modifier: Modifier = Modifier) 
             size = outline,
             cornerRadius = corner,
             style = stroke,
-            alpha = if (status == MicPillStatus.Reconnecting) 1f else pulse,
+            alpha = presence * if (status == MicPillStatus.Reconnecting) 1f else pulse,
         )
     }
 }
