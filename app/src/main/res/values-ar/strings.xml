@@ -287,6 +287,7 @@
   <string name="meeting_contentDescription_tileExitFullscreen">الخروج من ملء الشاشة</string>
   <string name="meeting_contentDescription_micOff">الميكروفون مغلق</string>
   <string name="meeting_contentDescription_cameraOff">الكاميرا مغلقة</string>
+  <string name="meeting_contentDescription_speaking">يتحدث</string>
   <string name="meeting_status_reconnecting">جارٍ إعادة الاتصال…</string>
   <string name="meeting_empty_title">لا يوجد أحد آخر هنا</string>
   <string name="meeting_empty_message">ادعُ الآخرين، أو شغّل الكاميرا لترى نفسك</string>

@@ -287,6 +287,7 @@
   <string name="meeting_contentDescription_tileExitFullscreen">退出全屏</string>
   <string name="meeting_contentDescription_micOff">麦克风已关闭</string>
   <string name="meeting_contentDescription_cameraOff">摄像头已关闭</string>
+  <string name="meeting_contentDescription_speaking">正在讲话</string>
   <string name="meeting_status_reconnecting">正在重新连接…</string>
   <string name="meeting_empty_title">这里没有其他人</string>
   <string name="meeting_empty_message">邀请其他人，或打开摄像头查看自己</string>

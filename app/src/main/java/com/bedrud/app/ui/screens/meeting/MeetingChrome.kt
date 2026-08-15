@@ -1,5 +1,9 @@
 package com.bedrud.app.ui.screens.meeting
 
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.border
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.height
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -8,9 +12,11 @@ import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.DpSize
@@ -55,6 +61,42 @@ fun meetingChromeColors(): MeetingChromeColors {
         onEndCall = scheme.onError,
     )
 }
+
+/**
+ * The room-hears-you ring, drawn inside [shape] on any surface that stands for a participant.
+ *
+ * [level] is that participant's entry in `RoomManager.speakingLevels` — the room's own report, not
+ * a local microphone reading — so seeing your own tile ring is confirmation that your audio is
+ * arriving, which is the whole reason it is drawn on the local tile too. The ring thickens with
+ * the reported level and fades in and out rather than blinking, because the server announces
+ * speakers in bursts and never announces silence.
+ */
+@Composable
+fun Modifier.speakingRing(level: Float, shape: Shape): Modifier {
+    val clamped = level.coerceIn(0f, 1f)
+    val alpha by animateFloatAsState(
+        targetValue = if (clamped > 0f) 1f else 0f,
+        animationSpec = tween(SpeakingRingFadeMillis),
+        label = "speakingRingAlpha",
+    )
+    val width by animateDpAsState(
+        targetValue = Dimens.meetingSpeakingRingMin +
+            (Dimens.meetingSpeakingRingMax - Dimens.meetingSpeakingRingMin) * clamped,
+        animationSpec = tween(SpeakingRingLevelMillis),
+        label = "speakingRingWidth",
+    )
+    return if (alpha <= 0f) {
+        this
+    } else {
+        border(width, MaterialTheme.colorScheme.primary.copy(alpha = alpha), shape)
+    }
+}
+
+/** Ring fade, long enough to bridge the gap between two server speaker reports. */
+private const val SpeakingRingFadeMillis = 220
+
+/** Ring thickness follows the level faster than it fades, so it tracks the voice. */
+private const val SpeakingRingLevelMillis = 120
 
 /**
  * The in-call slider: a small round thumb on a slim track instead of M3's tall-bar thumb, shared

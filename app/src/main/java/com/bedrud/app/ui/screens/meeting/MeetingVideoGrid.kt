@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Fullscreen
+import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.MicOff
 import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material.icons.filled.VideocamOff
@@ -65,6 +66,9 @@ private fun gridRows(count: Int): List<Int> = when (count) {
  * only while their camera is on, then the remote participants. Counts up to [MAX_GRID_TILES] lay
  * out per the design's breakpoints (full-width rows up to 3, then two columns); anything beyond
  * collapses into a trailing "+N" overflow tile that opens the participants list.
+ *
+ * [speakingLevels] is the room's own view of who it hears, keyed by identity — see
+ * `RoomManager.speakingLevels`.
  */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -76,6 +80,7 @@ fun MeetingVideoGrid(
     hideAllIncomingVideo: Boolean,
     mutedIdentities: Set<String>,
     pinnedIdentity: String?,
+    speakingLevels: Map<String, Float>,
     onOpenParticipantActions: (String) -> Unit,
     onExpandTile: (String) -> Unit,
     onOverflowClick: () -> Unit,
@@ -101,6 +106,7 @@ fun MeetingVideoGrid(
                     hideAllIncomingVideo = hideAllIncomingVideo,
                     mutedIdentities = mutedIdentities,
                     isPinned = participant.identity?.value == pinnedIdentity,
+                    speakingLevel = speakingLevels[participant.identity?.value] ?: 0f,
                     onOpenParticipantActions = onOpenParticipantActions,
                     onExpand = onExpandTile,
                     modifier = slotModifier,
@@ -197,6 +203,7 @@ internal fun ParticipantTile(
     hideAllIncomingVideo: Boolean = false,
     mutedIdentities: Set<String> = emptySet(),
     isPinned: Boolean = false,
+    speakingLevel: Float = 0f,
     onOpenParticipantActions: ((String) -> Unit)? = null,
     onExpand: ((String) -> Unit)? = null,
     modifier: Modifier = Modifier,
@@ -231,6 +238,7 @@ internal fun ParticipantTile(
         modifier = modifier
             .clip(BedrudShapeTokens.videoTile)
             .background(MaterialTheme.colorScheme.surfaceVariant)
+            .speakingRing(speakingLevel, BedrudShapeTokens.videoTile)
             .then(
                 if (canOpenMenu) {
                     Modifier.combinedClickable(
@@ -299,11 +307,20 @@ internal fun ParticipantTile(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
+            // Colour alone cannot carry the ring, so speech also earns a badge in the chip. It
+            // takes the mic-off badge's slot: a muted participant is never a speaking one.
             if (isMicOff) {
                 Icon(
                     imageVector = Icons.Default.MicOff,
                     contentDescription = stringResource(R.string.meeting_contentDescription_micOff),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(Dimens.meetingBadgeIcon),
+                )
+            } else if (speakingLevel > 0f) {
+                Icon(
+                    imageVector = Icons.Default.GraphicEq,
+                    contentDescription = stringResource(R.string.meeting_contentDescription_speaking),
+                    tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(Dimens.meetingBadgeIcon),
                 )
             }

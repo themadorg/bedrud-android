@@ -284,6 +284,7 @@
   <string name="meeting_contentDescription_tileExitFullscreen">خروج از تمام‌صفحه</string>
   <string name="meeting_contentDescription_micOff">میکروفون خاموش است</string>
   <string name="meeting_contentDescription_cameraOff">دوربین خاموش است</string>
+  <string name="meeting_contentDescription_speaking">در حال صحبت</string>
   <string name="meeting_status_reconnecting">در حال اتصال دوباره…</string>
   <string name="meeting_empty_title">کس دیگری اینجا نیست</string>
   <string name="meeting_empty_message">دیگران را دعوت کنید یا دوربین را روشن کنید تا خودتان را ببینید</string>

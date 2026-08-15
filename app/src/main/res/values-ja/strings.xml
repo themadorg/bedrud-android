@@ -287,6 +287,7 @@
   <string name="meeting_contentDescription_tileExitFullscreen">全画面を終了</string>
   <string name="meeting_contentDescription_micOff">マイクオフ</string>
   <string name="meeting_contentDescription_cameraOff">カメラオフ</string>
+  <string name="meeting_contentDescription_speaking">発言中</string>
   <string name="meeting_status_reconnecting">再接続中…</string>
   <string name="meeting_empty_title">他には誰もいません</string>
   <string name="meeting_empty_message">他の人を招待するか、カメラをオンにして自分を表示しましょう</string>

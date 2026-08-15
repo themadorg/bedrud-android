@@ -291,6 +291,7 @@
   <string name="meeting_contentDescription_tileExitFullscreen">Exit full screen</string>
   <string name="meeting_contentDescription_micOff">Microphone off</string>
   <string name="meeting_contentDescription_cameraOff">Camera off</string>
+  <string name="meeting_contentDescription_speaking">Speaking</string>
   <string name="meeting_status_reconnecting">Reconnecting…</string>
   <string name="meeting_tile_overflow" translatable="false">+<xliff:g id="count" example="3">%1$d</xliff:g></string>
   <string name="meeting_empty_title">No one else is here</string>

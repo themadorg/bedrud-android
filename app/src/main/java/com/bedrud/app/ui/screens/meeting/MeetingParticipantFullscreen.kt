@@ -3,6 +3,7 @@ package com.bedrud.app.ui.screens.meeting
 import android.app.Activity
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -12,6 +13,7 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.FullscreenExit
+import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -66,6 +68,7 @@ fun MeetingParticipantFullscreen(
     participantVersion: Int,
     chromeVisible: Boolean,
     isVideoLocallyDisabled: Boolean,
+    speakingLevel: Float,
     onToggleChrome: () -> Unit,
     onAutoHideChrome: () -> Unit,
     onCollapse: () -> Unit,
@@ -167,8 +170,10 @@ fun MeetingParticipantFullscreen(
         }
 
         if (chromeVisible) {
-            // Name chip, top center — mirrors the grid tile's chip position language.
-            Box(
+            // Name chip, top center — mirrors the grid tile's chip position language, speaking
+            // badge included. A ring around a screen-filling view would read as an edge artifact
+            // rather than as a state, so here the chip carries the signal on its own.
+            Row(
                 modifier = Modifier
                     .align(Alignment.TopCenter)
                     .statusBarsPadding()
@@ -178,6 +183,8 @@ fun MeetingParticipantFullscreen(
                         BedrudShapeTokens.chip,
                     )
                     .padding(horizontal = Dimens.space8, vertical = Dimens.space4),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(Dimens.space4),
             ) {
                 Text(
                     text = name,
@@ -186,6 +193,14 @@ fun MeetingParticipantFullscreen(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
+                if (speakingLevel > 0f) {
+                    Icon(
+                        imageVector = Icons.Default.GraphicEq,
+                        contentDescription = stringResource(R.string.meeting_contentDescription_speaking),
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(Dimens.meetingBadgeIcon),
+                    )
+                }
             }
 
             Surface(
@@ -199,7 +214,7 @@ fun MeetingParticipantFullscreen(
                     .size(Dimens.meetingTileAction),
             ) {
                 Row(
-                    horizontalArrangement = androidx.compose.foundation.layout.Arrangement.Center,
+                    horizontalArrangement = Arrangement.Center,
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Icon(

@@ -287,6 +287,7 @@
   <string name="meeting_contentDescription_tileExitFullscreen">Vollbild beenden</string>
   <string name="meeting_contentDescription_micOff">Mikrofon aus</string>
   <string name="meeting_contentDescription_cameraOff">Kamera aus</string>
+  <string name="meeting_contentDescription_speaking">Spricht</string>
   <string name="meeting_status_reconnecting">Verbindung wird wiederhergestellt…</string>
   <string name="meeting_empty_title">Sonst ist niemand hier</string>
   <string name="meeting_empty_message">Lade andere ein oder schalte deine Kamera ein, um dich selbst zu sehen</string>

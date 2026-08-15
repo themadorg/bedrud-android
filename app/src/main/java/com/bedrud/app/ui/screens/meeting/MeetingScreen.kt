@@ -177,6 +177,8 @@ fun MeetingScreen(
     val wasKicked by roomManager.wasKicked.collectAsState()
 
     val participantVersion by roomManager.participantVersion.collectAsState()
+    // Who the room says it hears.
+    val speakingLevels by roomManager.speakingLevels.collectAsState()
     val watchedStreamIdentity by roomManager.watchedStreamIdentity.collectAsState()
     val chatMessages by roomManager.chatMessages.collectAsState()
     var showChat by remember { mutableStateOf(false) }
@@ -593,6 +595,7 @@ fun MeetingScreen(
                                         hideAllIncomingVideo = hideAllIncomingVideo,
                                         mutedIdentities = locallyMutedIdentities,
                                         pinnedIdentity = pinnedIdentity,
+                                        speakingLevels = speakingLevels,
                                         onOpenParticipantActions = { identity ->
                                             participantSheetIdentity = identity
                                         },
@@ -644,6 +647,8 @@ fun MeetingScreen(
                                     chromeVisible = fullscreenChromeVisible,
                                     isVideoLocallyDisabled =
                                         fullscreenParticipant.identity?.value in locallyHiddenVideoIdentities,
+                                    speakingLevel =
+                                        speakingLevels[fullscreenParticipant.identity?.value] ?: 0f,
                                     onToggleChrome = { fullscreenChromeVisible = !fullscreenChromeVisible },
                                     onAutoHideChrome = { fullscreenChromeVisible = false },
                                     onCollapse = { fullscreenParticipantIdentity = null },
@@ -834,7 +839,7 @@ fun MeetingScreen(
                             }
 
                             if (showInviteSheet) {
-                                val inviteParticipants = remember(participantVersion) {
+                                val inviteParticipants = remember(participantVersion, speakingLevels) {
                                     participants.map { participant ->
                                         val identity = participant.identity?.value
                                             ?: RoomManager.UNKNOWN_PARTICIPANT_NAME
@@ -854,6 +859,7 @@ fun MeetingScreen(
                                                 }
                                             },
                                             isLocal = identity == localIdentity,
+                                            speakingLevel = speakingLevels[identity] ?: 0f,
                                         )
                                     }
                                 }
