@@ -32,20 +32,28 @@ enum class MeetingVoiceAlert {
  * Every verdict needs the speech to persist, because a single loud frame is a cough, not a
  * sentence. [ReachGraceMillis] is the longer wait: it has to outlast a server report cycle plus
  * the round trip before silence from the room means anything.
+ *
+ * Nothing is ever reported while you are quiet. The whole point is to answer "am I talking to
+ * nobody", which is only a question while you are talking, so talking is treated as lasting
+ * [QuietHoldMillis] past the last loud frame — long enough to bridge the gaps inside a sentence,
+ * short enough to end when you stop.
  */
 class VoiceReachMonitor(
     private val talkingLevel: Float = TalkingLevel,
     private val causeGraceMillis: Long = CauseGraceMillis,
     private val reachGraceMillis: Long = ReachGraceMillis,
+    private val quietHoldMillis: Long = QuietHoldMillis,
 ) {
 
     private var talkingSinceMillis: Long? = null
+    private var lastLoudAtMillis: Long? = null
     private var roomLastHeardMillis: Long? = null
 
     /**
      * Folds one sample of the local capture level and the room's view of it into a verdict.
-     * [micLevel] is the raw capture level, which keeps reading while muted — that is what lets a
-     * muted participant be told they are talking to nobody.
+     *
+     * [micLevel] must go quiet honestly when capture stops — a frozen last reading would look like
+     * speech forever, which is exactly what happens on mute.
      */
     fun sample(
         nowMillis: Long,
@@ -57,8 +65,13 @@ class VoiceReachMonitor(
         roomHasOthers: Boolean,
     ): MeetingVoiceAlert {
         if (roomHearsMe) roomLastHeardMillis = nowMillis
+        if (micLevel >= talkingLevel) lastLoudAtMillis = nowMillis
 
-        if (micLevel < talkingLevel) {
+        // Speech is loud in bursts with gaps between words, so "talking" has to survive a dip or
+        // the run never lasts long enough to judge — and would never end once it had.
+        val lastLoud = lastLoudAtMillis
+        val talking = lastLoud != null && nowMillis - lastLoud < quietHoldMillis
+        if (!talking) {
             talkingSinceMillis = null
             return MeetingVoiceAlert.None
         }
@@ -87,6 +100,7 @@ class VoiceReachMonitor(
 
     fun reset() {
         talkingSinceMillis = null
+        lastLoudAtMillis = null
         roomLastHeardMillis = null
     }
 
@@ -97,18 +111,21 @@ class VoiceReachMonitor(
         /**
          * Capture level that counts as talking, on [VoiceGateProcessor]'s normalized scale.
          *
-         * Tuned on device: at 0.4 (about -36 dBFS) room tone alone cleared the bar and raised the
-         * warning with nobody speaking, because the phone's own gain lifts ambient well above what
-         * the server's speaker detection reacts to. A warning that cries wolf gets ignored, and a
-         * missed one costs only the warning, so the bar sits where speech is unambiguous.
+         * Measured on device once the capture format was decoded correctly: a room with someone
+         * talking in it sits around 0.25 between words and peaks near 0.84 on speech. This sits
+         * between the two, high enough that room tone never reaches it and low enough that a
+         * quiet speaker still does.
          */
-        const val TalkingLevel = 0.6f
+        const val TalkingLevel = 0.5f
 
         /** Talking time before a locally-known cause (muted, gate shut) is worth saying out loud. */
         const val CauseGraceMillis = 800L
 
         /** Talking time with no word from the room before the audio is treated as not arriving. */
         const val ReachGraceMillis = 2_500L
+
+        /** How long a dip below [TalkingLevel] still counts as talking — one pause between words. */
+        const val QuietHoldMillis = 700L
 
         /** How often the local capture level is compared against the room's view of it. */
         const val SampleIntervalMillis = 200L

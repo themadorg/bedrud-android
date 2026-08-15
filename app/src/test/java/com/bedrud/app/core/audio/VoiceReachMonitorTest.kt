@@ -36,6 +36,17 @@ class VoiceReachMonitorTest {
     }
 
     @Test
+    fun `a gap between words does not restart the wait`() {
+        val monitor = VoiceReachMonitor()
+        monitor.at(0, isMicEnabled = false)
+        // Quiet for less than the hold, then loud again: the run continues rather than resetting,
+        // so a normal sentence still reaches the grace period.
+        monitor.at(causeGrace / 2, micLevel = quiet, isMicEnabled = false)
+
+        assertEquals(MeetingVoiceAlert.Muted, monitor.at(causeGrace, isMicEnabled = false))
+    }
+
+    @Test
     fun `talking while muted is called out`() {
         val monitor = VoiceReachMonitor()
         monitor.at(0, isMicEnabled = false)
@@ -108,6 +119,42 @@ class VoiceReachMonitorTest {
         assertEquals(
             MeetingVoiceAlert.Muted,
             monitor.at(causeGrace, isMicEnabled = false, roomHasOthers = false),
+        )
+    }
+
+    @Test
+    fun `the alert clears once you stop talking`() {
+        val monitor = VoiceReachMonitor()
+        monitor.at(0, isMicEnabled = false)
+        assertEquals(MeetingVoiceAlert.Muted, monitor.at(causeGrace, isMicEnabled = false))
+
+        val afterHold = causeGrace + VoiceReachMonitor.QuietHoldMillis
+        assertEquals(
+            MeetingVoiceAlert.None,
+            monitor.at(afterHold, micLevel = quiet, isMicEnabled = false),
+        )
+    }
+
+    @Test
+    fun `a gap between words does not drop the alert`() {
+        val monitor = VoiceReachMonitor()
+        monitor.at(0, isMicEnabled = false)
+        assertEquals(MeetingVoiceAlert.Muted, monitor.at(causeGrace, isMicEnabled = false))
+
+        assertEquals(
+            MeetingVoiceAlert.Muted,
+            monitor.at(causeGrace + 200, micLevel = quiet, isMicEnabled = false),
+        )
+    }
+
+    @Test
+    fun `nothing is reported while you are quiet from the start`() {
+        val monitor = VoiceReachMonitor()
+
+        assertEquals(MeetingVoiceAlert.None, monitor.at(0, micLevel = quiet, isMicEnabled = false))
+        assertEquals(
+            MeetingVoiceAlert.None,
+            monitor.at(10 * reachGrace, micLevel = quiet, isMicEnabled = false),
         )
     }
 

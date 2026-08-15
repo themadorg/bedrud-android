@@ -207,11 +207,19 @@ class RoomManager(
      */
     private fun startVoiceReachMonitor(localIdentity: String?) {
         eventScope?.launch {
+            var lastFrameCount = voiceGate.frameCount
             while (isActive) {
                 delay(VoiceReachMonitor.SampleIntervalMillis)
+                // The gate only writes its level when a frame arrives, and capture stops while
+                // muted — so a level whose frame counter has not moved since the last sample is a
+                // stale reading, not silence at that volume. Reporting it as-is left the warning
+                // lit forever after a mute mid-sentence.
+                val frames = voiceGate.frameCount
+                val capturing = frames != lastFrameCount
+                lastFrameCount = frames
                 _voiceAlert.value = voiceReachMonitor.sample(
                     nowMillis = SystemClock.elapsedRealtime(),
-                    micLevel = voiceGate.level,
+                    micLevel = if (capturing) voiceGate.level else 0f,
                     isMicEnabled = _isMicEnabled.value,
                     isPushToTalk = _inputMode.value == MeetingInputMode.PUSH_TO_TALK,
                     isGateOpen = voiceGate.gateOpen,
