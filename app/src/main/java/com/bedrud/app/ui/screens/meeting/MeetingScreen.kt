@@ -97,6 +97,7 @@ import com.bedrud.app.R
 import com.bedrud.app.core.BidiUtils
 import com.bedrud.app.core.api.RoomApi
 import com.bedrud.app.core.api.parseApiErrorMessage
+import com.bedrud.app.core.audio.MeetingVoiceAlert
 import com.bedrud.app.core.call.CallService
 import com.bedrud.app.core.chat.ChatImageUtils
 import com.bedrud.app.core.chat.ChatUpload
@@ -604,7 +605,17 @@ fun MeetingScreen(
                                         modifier = Modifier
                                             .fillMaxWidth()
                                             .padding(horizontal = Dimens.screenPadding)
-                                            .padding(bottom = Dimens.meetingGridBottomSpace),
+                                            // The alert chip lands in this same band above the
+                                            // controls bar, so the hint steps up out of its way
+                                            // rather than being covered by it.
+                                            .padding(
+                                                bottom = if (voiceAlert != MeetingVoiceAlert.None) {
+                                                    Dimens.meetingGridBottomSpace +
+                                                        Dimens.meetingVoiceAlertBand
+                                                } else {
+                                                    Dimens.meetingGridBottomSpace
+                                                },
+                                            ),
                                         horizontalAlignment = Alignment.CenterHorizontally,
                                     ) {
                                         Text(
