@@ -286,7 +286,6 @@
   <string name="meeting_contentDescription_tileFullscreen">全画面表示</string>
   <string name="meeting_contentDescription_tileExitFullscreen">全画面を終了</string>
   <string name="meeting_contentDescription_micOff">マイクオフ</string>
-  <string name="meeting_contentDescription_cameraOff">カメラオフ</string>
   <string name="meeting_contentDescription_speaking">発言中</string>
   <string name="meeting_status_reconnecting">再接続中…</string>
   <string name="meeting_status_connected">接続しました</string>

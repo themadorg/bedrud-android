@@ -20,7 +20,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.MicOff
 import androidx.compose.material.icons.filled.PushPin
-import androidx.compose.material.icons.filled.VideocamOff
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -219,7 +218,6 @@ internal fun ParticipantTile(
     val cameraTrack = cameraPublication
         ?.track as? io.livekit.android.room.track.VideoTrack
     val isCameraMuted = cameraPublication?.muted == true
-    val isCameraOff = cameraTrack == null || isCameraMuted
     val micPublication = participant.getTrackPublication(Track.Source.MICROPHONE)
     val isMicOff = micPublication == null || micPublication.muted
     val name = participant.name?.ifBlank { identity } ?: identity
@@ -347,14 +345,8 @@ internal fun ParticipantTile(
                     modifier = Modifier.size(Dimens.meetingBadgeIcon),
                 )
             }
-            if (isCameraOff) {
-                Icon(
-                    imageVector = Icons.Default.VideocamOff,
-                    contentDescription = stringResource(R.string.meeting_contentDescription_cameraOff),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.size(Dimens.meetingBadgeIcon),
-                )
-            }
+            // No camera badge: the tile already shows an avatar instead of video when the camera
+            // is off, so the badge only restated what the tile was showing.
         }
 
     }

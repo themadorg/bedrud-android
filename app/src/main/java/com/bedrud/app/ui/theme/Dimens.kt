@@ -69,7 +69,7 @@ object Dimens {
     val meetingGridBottomSpace = 128.dp  // grid clearance above the floating controls bar (incl. its drag handle)
     val meetingTileAvatar = 56.dp        // avatar circle inside a video tile
     val meetingTileAction = 32.dp        // tile corner action touch circle
-    val meetingBadgeIcon = 14.dp         // mic/camera-off badges on the tile name chip
+    val meetingBadgeIcon = 14.dp         // mic-off / speaking badges on the tile name chip
     val meetingSpeakingRingMin = 2.dp    // room-hears-you ring at the quietest reported level
     val meetingSpeakingRingMax = 5.dp    // ...and at the loudest
     val meetingVoiceAlertBand = 56.dp    // band the voice-alert chip occupies above the controls bar

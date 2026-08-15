@@ -286,7 +286,6 @@
   <string name="meeting_contentDescription_tileFullscreen">Во весь экран</string>
   <string name="meeting_contentDescription_tileExitFullscreen">Выйти из полноэкранного режима</string>
   <string name="meeting_contentDescription_micOff">Микрофон выключен</string>
-  <string name="meeting_contentDescription_cameraOff">Камера выключена</string>
   <string name="meeting_contentDescription_speaking">Говорит</string>
   <string name="meeting_status_reconnecting">Переподключение…</string>
   <string name="meeting_status_connected">Подключено</string>
