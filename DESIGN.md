@@ -222,6 +222,13 @@ the `meeting*` tokens in `Dimens.kt`, timing in `Motion.meetingChromeAutoHideDel
   chain at all. The honest cost: while muted the microphone is genuinely open, so the system's mic
   indicator stays lit. Nothing audible can leave the device, but audio is being captured on it.
 
+  The override that covers the publish window is **only** ever that: it is handed back in a
+  `finally`, and being muted is never represented by it. LiveKit's `setMicrophoneEnabled` returns
+  early whenever it already agrees with the requested state, skipping the call path that would
+  clear it — so a flag used for steady-state muting gets stranded set, and the microphone stays
+  silent behind a button that says it is open, with both indicators dead because nothing is
+  reaching the room.
+
   **The guard is a question, not a flag.** `VoiceGateProcessor.roomMayHear` is asked on *every*
   10ms frame and answered from the single source of truth — the app's mute state and LiveKit's
   publication must **both** say the microphone is open. A flag would have to be set correctly at

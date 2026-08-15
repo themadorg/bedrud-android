@@ -120,6 +120,24 @@ class VoiceGateProcessorTest {
     }
 
     @Test
+    fun `an unmuted room is heard even if the override was left set`() {
+        val processor = VoiceGateProcessor()
+        processor.roomMayHear = { true }
+        // The override is only meant to cover a publish window, and the call paths that clear it
+        // can be skipped — LiveKit returns early whenever it already agrees with the requested
+        // state. Being muted must therefore never be represented by this flag alone, or a stale
+        // one silences a microphone whose button says it is open.
+        processor.forceSilence = true
+        processor.processAudio(1, 480, bufferOf(0.9))
+
+        processor.forceSilence = false
+        val buffer = bufferOf(0.9)
+        processor.processAudio(1, 480, buffer)
+
+        assertFalse(isSilent(buffer))
+    }
+
+    @Test
     fun `threshold maps sensitivity linearly between the bounds`() {
         assertEquals(VoiceGateProcessor.ThresholdMinDb, VoiceGateProcessor.thresholdDb(0f), 0.001)
         assertEquals(VoiceGateProcessor.ThresholdMaxDb, VoiceGateProcessor.thresholdDb(1f), 0.001)

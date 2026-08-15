@@ -484,29 +484,37 @@ class RoomManager(
         enabled: Boolean,
     ): Boolean {
         if (enabled) {
-            val published = localParticipant.setMicrophoneEnabled(true)
-            // Only lift the override once unmuting actually worked. Clearing it regardless would
-            // leave a failed unmute showing a muted button over a transmitting microphone, since
-            // the track stays enabled across a soft mute.
-            if (published) voiceGate.forceSilence = false
+            // Safe to lift before the call: [roomMayHearMe] still answers no until the
+            // publication itself reports unmuted, so a failed unmute stays silent on its own.
+            voiceGate.forceSilence = false
+            return localParticipant.setMicrophoneEnabled(true)
+        }
+
+        try {
+            voiceGate.forceSilence = true
+
+            // Joining muted publishes nothing at all, and an unpublished track never reaches the
+            // capture chain — so there has to be a publication before there is anything to keep
+            // measuring. It is silenced from the moment it exists.
+            if (localParticipant.getTrackPublication(Track.Source.MICROPHONE) == null) {
+                localParticipant.setMicrophoneEnabled(true)
+                // The mute has to land on a settled publication; muting the instant after
+                // publishing tears the half-built track down again and capture stops with it.
+                delay(MutedCaptureSettleMillis)
+            }
+
+            val published = localParticipant.setMicrophoneEnabled(false)
+            localParticipant.getTrackPublication(Track.Source.MICROPHONE)?.track?.enabled = true
             return published
+        } finally {
+            // Always handed back. This only ever covers the publish window; being muted is not a
+            // state this flag is allowed to represent, because it is set from call paths and
+            // LiveKit can skip them — `setMicrophoneEnabled` returns early whenever it already
+            // agrees with the requested state, which would strand the flag set and leave a
+            // silent microphone behind an unmuted button. Steady-state muting belongs to
+            // [roomMayHearMe], which is asked per frame and cannot be stranded.
+            voiceGate.forceSilence = false
         }
-
-        voiceGate.forceSilence = true
-
-        // Joining muted publishes nothing at all, and an unpublished track never reaches the
-        // capture chain — so there has to be a publication before there is anything to keep
-        // measuring. It is silenced from the moment it exists.
-        if (localParticipant.getTrackPublication(Track.Source.MICROPHONE) == null) {
-            localParticipant.setMicrophoneEnabled(true)
-            // The mute has to land on a settled publication; muting the instant after publishing
-            // tears the half-built track down again and capture stops with it.
-            delay(MutedCaptureSettleMillis)
-        }
-
-        val published = localParticipant.setMicrophoneEnabled(false)
-        localParticipant.getTrackPublication(Track.Source.MICROPHONE)?.track?.enabled = true
-        return published
     }
 
     private fun resetSpeakingState() {
