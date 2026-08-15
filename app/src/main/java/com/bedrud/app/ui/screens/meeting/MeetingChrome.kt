@@ -97,9 +97,23 @@ fun Modifier.speakingRing(level: Float, shape: Shape): Modifier {
     return if (alpha <= 0f) {
         this
     } else {
-        border(width, MaterialTheme.colorScheme.primary.copy(alpha = alpha), shape)
+        border(
+            width,
+            MaterialTheme.colorScheme.primary.copy(alpha = alpha * SpeakingRingPeakAlpha),
+            shape,
+        )
     }
 }
+
+/**
+ * How solid the ring gets at its loudest.
+ *
+ * The in-call chrome is otherwise restrained — tonal surfaces and thin outlines — and a
+ * fully-saturated brand border around a whole tile shouts over all of it. Held short of solid, the
+ * ring still reads instantly as "this person is talking" without becoming the loudest thing on the
+ * screen.
+ */
+private const val SpeakingRingPeakAlpha = 0.7f
 
 /**
  * The in-call slider: a small round thumb on a slim track instead of M3's tall-bar thumb, shared

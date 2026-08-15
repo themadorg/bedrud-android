@@ -70,8 +70,8 @@ object Dimens {
     val meetingTileAvatar = 56.dp        // avatar circle inside a video tile
     val meetingTileAction = 32.dp        // tile corner action touch circle
     val meetingBadgeIcon = 14.dp         // mic-off / speaking badges on the tile name chip
-    val meetingSpeakingRingMin = 2.dp    // room-hears-you ring at the quietest reported level
-    val meetingSpeakingRingMax = 5.dp    // ...and at the loudest
+    val meetingSpeakingRingMin = 1.5.dp  // room-hears-you ring at the quietest reported level
+    val meetingSpeakingRingMax = 3.dp    // ...and at the loudest
     val meetingIndicatorDot = 8.dp       // top-bar dots (recording, reconnecting)
     val meetingBarPaddingH = 10.dp       // controls bar inner horizontal padding
     val meetingBarPaddingV = 16.dp       // controls bar bottom inset — mirrors the drag-handle block above the row
