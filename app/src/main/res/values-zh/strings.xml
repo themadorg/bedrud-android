@@ -112,6 +112,15 @@
   <string name="meeting_chat_uploading">上传中…</string>
   <string name="meeting_chat_placeholder">输入消息…</string>
   <string name="meeting_chat_sharedImage">分享的图片</string>
+  <string name="meeting_chat_uploadUnreadable">无法打开该图片</string>
+  <string name="meeting_chat_uploadRejected">服务器拒绝了该图片 (%1$d)</string>
+  <string name="meeting_chat_uploadUnreachable">无法连接到服务器</string>
+  <string name="meeting_chat_disabledByRoom">此房间已关闭聊天</string>
+  <string name="meeting_chat_blockedByModerator">主持人已禁止你发言</string>
+  <string name="meeting_chat_saveImage">保存图片</string>
+  <string name="meeting_chat_imageSaved">已保存到图片</string>
+  <string name="meeting_chat_imageSaveUnreachable">无法下载该图片</string>
+  <string name="meeting_chat_imageSaveUnwritable">无法保存到相册</string>
   <string name="meeting_contentDescription_toggleMic">切换麦克风</string>
   <string name="meeting_contentDescription_toggleCamera">切换摄像头</string>
   <string name="meeting_contentDescription_switchCamera">切换摄像头方向</string>

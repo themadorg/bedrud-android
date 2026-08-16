@@ -112,6 +112,15 @@
   <string name="meeting_chat_uploading">アップロード中…</string>
   <string name="meeting_chat_placeholder">メッセージを入力…</string>
   <string name="meeting_chat_sharedImage">共有画像</string>
+  <string name="meeting_chat_uploadUnreadable">その画像を開けませんでした</string>
+  <string name="meeting_chat_uploadRejected">サーバーがその画像を拒否しました (%1$d)</string>
+  <string name="meeting_chat_uploadUnreachable">サーバーに接続できませんでした</string>
+  <string name="meeting_chat_disabledByRoom">このルームではチャットが無効です</string>
+  <string name="meeting_chat_blockedByModerator">モデレーターによりチャットが制限されています</string>
+  <string name="meeting_chat_saveImage">画像を保存</string>
+  <string name="meeting_chat_imageSaved">画像に保存しました</string>
+  <string name="meeting_chat_imageSaveUnreachable">その画像をダウンロードできませんでした</string>
+  <string name="meeting_chat_imageSaveUnwritable">ギャラリーに保存できませんでした</string>
   <string name="meeting_contentDescription_toggleMic">マイクの切り替え</string>
   <string name="meeting_contentDescription_toggleCamera">カメラの切り替え</string>
   <string name="meeting_contentDescription_switchCamera">カメラを切り替え</string>

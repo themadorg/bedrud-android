@@ -110,6 +110,15 @@
   <string name="meeting_chat_uploading">در حال آپلود…</string>
   <string name="meeting_chat_placeholder">پیامی تایپ کنید…</string>
   <string name="meeting_chat_sharedImage">تصویر اشتراکی</string>
+  <string name="meeting_chat_uploadUnreadable">آن تصویر باز نشد</string>
+  <string name="meeting_chat_uploadRejected">سرور آن تصویر را نپذیرفت (%1$d)</string>
+  <string name="meeting_chat_uploadUnreachable">دسترسی به سرور ممکن نشد</string>
+  <string name="meeting_chat_disabledByRoom">گفتگو در این اتاق خاموش است</string>
+  <string name="meeting_chat_blockedByModerator">یکی از مدیران شما را از گفتگو منع کرده است</string>
+  <string name="meeting_chat_saveImage">ذخیره تصویر</string>
+  <string name="meeting_chat_imageSaved">در تصاویر ذخیره شد</string>
+  <string name="meeting_chat_imageSaveUnreachable">دانلود آن تصویر ممکن نشد</string>
+  <string name="meeting_chat_imageSaveUnwritable">ذخیره در گالری ممکن نشد</string>
   <string name="meeting_contentDescription_toggleMic">تغییر میکروفون</string>
   <string name="meeting_contentDescription_toggleCamera">روشن/خاموش کردن دوربین</string>
   <string name="meeting_contentDescription_switchCamera">تغییر دوربین</string>

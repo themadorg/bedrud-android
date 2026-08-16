@@ -112,6 +112,15 @@
   <string name="meeting_chat_uploading">Загрузка…</string>
   <string name="meeting_chat_placeholder">Напишите сообщение…</string>
   <string name="meeting_chat_sharedImage">Изображение</string>
+  <string name="meeting_chat_uploadUnreadable">Не удалось открыть это изображение</string>
+  <string name="meeting_chat_uploadRejected">Сервер отклонил это изображение (%1$d)</string>
+  <string name="meeting_chat_uploadUnreachable">Не удалось связаться с сервером</string>
+  <string name="meeting_chat_disabledByRoom">Чат отключён в этой комнате</string>
+  <string name="meeting_chat_blockedByModerator">Модератор запретил вам писать в чат</string>
+  <string name="meeting_chat_saveImage">Сохранить изображение</string>
+  <string name="meeting_chat_imageSaved">Сохранено в «Изображения»</string>
+  <string name="meeting_chat_imageSaveUnreachable">Не удалось загрузить это изображение</string>
+  <string name="meeting_chat_imageSaveUnwritable">Не удалось сохранить в галерею</string>
   <string name="meeting_contentDescription_toggleMic">Переключить микрофон</string>
   <string name="meeting_contentDescription_toggleCamera">Переключить камеру</string>
   <string name="meeting_contentDescription_switchCamera">Сменить камеру</string>
