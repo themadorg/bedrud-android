@@ -17,7 +17,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.MicOff
 import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material3.Icon
@@ -332,15 +331,8 @@ internal fun ParticipantTile(
                     modifier = Modifier.size(Dimens.meetingBadgeIcon),
                 )
             }
-            Text(
-                text = name,
-                style = MaterialTheme.typography.labelSmall.copy(textDirection = TextDirection.Content),
-                color = MaterialTheme.colorScheme.onSurface,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-            // Colour alone cannot carry the ring, so speech also earns a badge in the chip. It
-            // takes the mic-off badge's slot: a muted participant is never a speaking one.
+            // Mute leads the chip, ahead of the name it describes. The pin stays outermost: it is
+            // a state of the tile, while this is a state of the person.
             if (isMicOff) {
                 Icon(
                     imageVector = Icons.Default.MicOff,
@@ -348,13 +340,19 @@ internal fun ParticipantTile(
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.size(Dimens.meetingBadgeIcon),
                 )
-            } else if (speakingLevel > 0f) {
-                Icon(
-                    imageVector = Icons.Default.GraphicEq,
-                    contentDescription = stringResource(R.string.meeting_contentDescription_speaking),
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(Dimens.meetingBadgeIcon),
-                )
+            }
+            Text(
+                text = name,
+                style = MaterialTheme.typography.labelSmall.copy(textDirection = TextDirection.Content),
+                color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            // Colour alone cannot carry the ring, so speech also earns a badge, trailing the name.
+            // A muted participant gets none at all: they can never speak, so its calm state would
+            // only repeat what the mute badge already said.
+            if (!isMicOff) {
+                SpeakingBadge(speakingLevel)
             }
             // No camera badge: the tile already shows an avatar instead of video when the camera
             // is off, so the badge only restated what the tile was showing.
