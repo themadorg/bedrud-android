@@ -263,6 +263,10 @@ dependencies {
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.11.0")
     testImplementation("com.squareup.okhttp3:mockwebserver:5.4.0")
     testImplementation("io.mockk:mockk:1.14.11")
+    // The platform's org.json is stubbed out in local unit tests, so the chat wire format -- which
+    // is JSON end to end -- could not be round-tripped without a real implementation on the test
+    // classpath. Test-only: the app itself still uses the one built into Android.
+    testImplementation("org.json:json:20240303")
     androidTestImplementation(composeBom)
     androidTestImplementation("androidx.test.ext:junit:1.3.0")
     androidTestImplementation("androidx.compose.ui:ui-test-junit4")

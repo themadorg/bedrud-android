@@ -15,6 +15,7 @@ import com.bedrud.app.core.audio.NoiseSuppressionMode
 import com.bedrud.app.core.audio.VoiceGateProcessor
 import com.bedrud.app.core.audio.VoiceReachMonitor
 import com.bedrud.app.core.call.CallConnectionService
+import com.bedrud.app.core.meeting.chat.ChatChunkAssembler
 import com.bedrud.app.core.meeting.chat.ChatWire
 import com.bedrud.app.core.registerNotificationChannel
 import com.bedrud.app.ui.screens.settings.SettingsStore
@@ -36,6 +37,7 @@ import io.livekit.android.room.track.RemoteTrackPublication
 import io.livekit.android.room.track.Track
 import io.livekit.android.room.track.TrackPublication
 import io.livekit.android.room.track.screencapture.ScreenCaptureParams
+import java.util.UUID
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -67,7 +69,13 @@ data class ChatAttachment(
 )
 
 data class ChatMessage(
+    val id: String,
     val senderName: String,
+    /**
+     * Stable per-sender key. Display names are not: two people in a room may pick the same one,
+     * and grouping consecutive messages by name alone would merge them into one run.
+     */
+    val senderIdentity: String,
     val text: String,
     val timestamp: Long = System.currentTimeMillis(),
     val isLocal: Boolean = false,
@@ -124,6 +132,17 @@ class RoomManager(
 
     private val _chatMessages = MutableStateFlow<List<ChatMessage>>(emptyList())
     val chatMessages: StateFlow<List<ChatMessage>> = _chatMessages.asStateFlow()
+
+    /** Holds the parts of messages too long to arrive in one packet. Read only from the event loop. */
+    private val chatAssembler = ChatChunkAssembler()
+
+    private val _isChatBlocked = MutableStateFlow(false)
+
+    /**
+     * Whether a moderator has blocked this device from chatting, which can happen at any point
+     * during the call rather than only on join.
+     */
+    val isChatBlocked: StateFlow<Boolean> = _isChatBlocked.asStateFlow()
 
     private val _roomName = MutableStateFlow<String?>(null)
     val roomName: StateFlow<String?> = _roomName.asStateFlow()
@@ -362,17 +381,21 @@ class RoomManager(
 
             _connectionState.value = ConnectionState.CONNECTED
 
-            // Set avatar metadata on local participant
+            // Set avatar metadata on local participant. Merged rather than assigned: the server
+            // keeps moderation flags on this same blob, and overwriting it would clear them.
             if (!avatarUrl.isNullOrBlank()) {
                 try {
-                    val metadata = JSONObject().apply {
-                        put("avatarUrl", avatarUrl)
-                    }.toString()
-                    room.localParticipant.updateMetadata(metadata)
+                    room.localParticipant.updateMetadata(
+                        ParticipantMetadata.withAvatarUrl(
+                            room.localParticipant.metadata,
+                            avatarUrl,
+                        )
+                    )
                 } catch (e: Exception) {
                     Log.e(TAG, "Failed to set avatar metadata", e)
                 }
             }
+            refreshChatBlocked()
 
             // Restore the mic to whatever the user last set it to (unmuted by default
             // on a fresh install); camera stays off until the user turns it on. A silent
@@ -410,6 +433,12 @@ class RoomManager(
                         is RoomEvent.DataReceived -> handleDataReceived(event)
                         is RoomEvent.ActiveSpeakersChanged -> onActiveSpeakers(event.speakers)
                         is RoomEvent.ParticipantConnected -> _participantVersion.value++
+                        // Carries both the avatars other participants set and the moderation flags
+                        // the server sets, so a block lands here the moment it is applied.
+                        is RoomEvent.ParticipantMetadataChanged -> {
+                            refreshChatBlocked()
+                            _participantVersion.value++
+                        }
                         is RoomEvent.ParticipantDisconnected -> {
                             val disconnectedIdentity = event.participant.identity?.value
                             if (disconnectedIdentity != null &&
@@ -517,16 +546,25 @@ class RoomManager(
         }
     }
 
+    private fun refreshChatBlocked() {
+        _isChatBlocked.value = ParticipantMetadata.isChatBlocked(_room?.localParticipant?.metadata)
+    }
+
     private fun handleDataReceived(event: RoomEvent.DataReceived) {
-        val incoming = ChatWire.parseChat(event.data, event.topic) ?: return
+        val incoming = chatAssembler.accept(event.data, event.topic) ?: return
         val senderName = incoming.senderName.ifBlank {
             event.participant?.name
                 ?: event.participant?.identity?.value
                 ?: UNKNOWN_PARTICIPANT_NAME
         }
         _chatMessages.value += ChatMessage(
+            id = incoming.id.ifEmpty { UUID.randomUUID().toString() },
             senderName = senderName,
+            senderIdentity = incoming.senderIdentity.ifEmpty {
+                event.participant?.identity?.value.orEmpty()
+            },
             text = incoming.text,
+            timestamp = incoming.timestamp,
             isLocal = false,
             attachments = incoming.attachments,
         )
@@ -618,6 +656,8 @@ class RoomManager(
         _participantVolumes.value = emptyMap()
         _participantVersion.value = 0
         _chatMessages.value = emptyList()
+        chatAssembler.clear()
+        _isChatBlocked.value = false
         _wasKicked.value = false
         _error.value = null
         _watchedStreamIdentity.value = null
@@ -967,23 +1007,39 @@ class RoomManager(
 
     suspend fun sendChatMessage(text: String, attachments: List<ChatAttachment> = emptyList()) {
         val room = _room ?: return
+        // Checked here as well as in the UI: a block has to hold whatever managed to call this.
+        if (_isChatBlocked.value) return
         val localParticipant = room.localParticipant
         val name = localParticipant.name ?: localParticipant.identity?.value ?: UNKNOWN_PARTICIPANT_NAME
         val identity = localParticipant.identity?.value ?: ""
 
-        val sent = publishData(
-            ChatWire.CHAT_DATA_TOPIC,
+        val id = UUID.randomUUID().toString()
+        val timestamp = System.currentTimeMillis()
+        val packets = try {
             ChatWire.encodeChat(
                 senderName = name,
                 senderIdentity = identity,
                 text = text,
                 attachments = attachments,
-            ),
-        )
+                id = id,
+                timestamp = timestamp,
+            )
+        } catch (e: IllegalArgumentException) {
+            Log.e(TAG, "Failed to encode chat message", e)
+            emptyList()
+        }
+
+        // A long message goes out as a header followed by its parts, and every one of them has to
+        // land: stopping halfway leaves the other side holding a fragment it can never finish.
+        val sent = packets.isNotEmpty() &&
+            packets.all { publishData(ChatWire.CHAT_DATA_TOPIC, it) }
         if (sent) {
             _chatMessages.value += ChatMessage(
+                id = id,
                 senderName = name,
+                senderIdentity = identity,
                 text = text,
+                timestamp = timestamp,
                 isLocal = true,
                 attachments = attachments,
             )
