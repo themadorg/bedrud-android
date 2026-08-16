@@ -20,10 +20,13 @@ object Motion {
     const val meetingConnectedNoticeMs = 2000L
 
     /**
-     * Speaking-ring fade. Short on purpose: it is pure delay on both ends, and bridging the gaps
-     * between server speaker reports is `SpeakingTracker`'s job, not the animation's.
+     * How long every speaking signal takes to arrive and to settle — the tile ring's fade and the
+     * name chip's badge alike, so the two never disagree about when someone started talking.
+     *
+     * Short on purpose: it is pure delay on both ends, and bridging the gaps between server
+     * speaker reports is `SpeakingTracker`'s job, not the animation's.
      */
-    const val meetingSpeakingRingFadeMs = 110
+    const val meetingSpeakingFadeMs = 110
 
     /** Speaking-ring thickness follows the reported level faster than the ring fades. */
     const val meetingSpeakingRingLevelMs = 90

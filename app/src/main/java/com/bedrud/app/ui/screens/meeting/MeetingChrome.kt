@@ -85,7 +85,7 @@ fun Modifier.speakingRing(level: Float, shape: Shape): Modifier {
     val clamped = level.coerceIn(0f, 1f)
     val alpha by animateFloatAsState(
         targetValue = if (clamped > 0f) 1f else 0f,
-        animationSpec = tween(Motion.meetingSpeakingRingFadeMs, easing = Motion.standardEasing),
+        animationSpec = tween(Motion.meetingSpeakingFadeMs, easing = Motion.standardEasing),
         label = "speakingRingAlpha",
     )
     val width by animateDpAsState(
