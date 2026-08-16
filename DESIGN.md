@@ -168,7 +168,10 @@ the `meeting*` tokens in `Dimens.kt`, timing in `Motion.meetingChromeAutoHideDel
   1–3 tiles stack as full-width rows; 4 → 2×2; 5 → 2×2 plus one half-width centered; 6 → 2×3;
   beyond that the last slot collapses into a **"+N"** tile that opens the participants list.
   Landscape transposes rows into columns.
-- **Tiles**: name chip centered along the bottom edge, carrying the mic-off badge. There is no
+- **Tiles**: name chip centered along the bottom edge. The mic-off badge **leads** the chip and the
+  speaking badge trails it, so the two states never contend for one slot and neither can be
+  mistaken for the other at a glance. A pin badge, when present, sits outermost — it is a state of
+  the tile, while the other two are states of the person. There is no
   camera badge — the tile already shows an avatar in place of video when the camera is off, so it
   only restated what the tile was showing.
   **Double-tap** expands a tile to fullscreen and long-press opens the participant actions;
@@ -221,7 +224,19 @@ the `meeting*` tokens in `Dimens.kt`, timing in `Motion.meetingChromeAutoHideDel
   list like anyone else**, which is the entire point: your own ring lighting up is round-trip
   proof that your audio reached the SFU and was announced to the room, where the mic meter only
   proves the microphone works. Colour never carries it alone — speech also earns a badge in the
-  name chip, in the mic-off badge's slot (a muted participant is never a speaking one).
+  name chip (`SpeakingBadge`), trailing the name.
+
+  **The badge calms, it does not leave.** It is always in the chip, brightening to the accent while
+  the room hears someone and settling back to a faint outline when it stops. An icon that came and
+  went would flicker through every pause between sentences — speech is bursty, and those pauses are
+  constant — and would shove the name sideways on each one. Fading in place is the same choice the
+  ring makes for the same reason, and both run on `Motion.meetingSpeakingFadeMs` so they can never
+  disagree about when someone started talking. Only presence is shown, not loudness: the ring
+  already carries level in its thickness, and a badge this small cannot render a magnitude legibly
+  enough to be worth the motion. A **muted** participant's grid tile drops the badge entirely
+  rather than showing it calm — they can never be speaking, so its resting state would only repeat
+  what the mic-off badge beside the name already said. The fullscreen chip keeps it
+  unconditionally, having no mute badge to make it redundant.
 - **Mute is a soft mute.** Muting through LiveKit disables the underlying track, and a disabled
   track stops feeding the capture chain — so a plain mute leaves nothing to measure and no way to
   notice you talking into a muted microphone. The track therefore stays enabled and the room is
