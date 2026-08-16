@@ -6,7 +6,11 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.border
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.size
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
@@ -17,10 +21,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
+import com.bedrud.app.R
 import com.bedrud.app.ui.theme.Dimens
 import com.bedrud.app.ui.theme.Motion
 
@@ -114,6 +121,55 @@ fun Modifier.speakingRing(level: Float, shape: Shape): Modifier {
  * screen.
  */
 private const val SpeakingRingPeakAlpha = 0.7f
+
+/**
+ * The speaking badge inside a participant's name chip — [speakingRing]'s signal in a second form,
+ * because colour alone cannot carry it.
+ *
+ * It is always in the row and is never added or removed. Speech is bursty: people pause between
+ * sentences, and an icon that came and went would flicker through every one of those pauses and
+ * shove the name sideways each time. So the badge calms instead of leaving — it brightens to the
+ * accent while the room hears this person and settles back to a quiet outline when it stops
+ * hearing them, on the same [Motion.meetingSpeakingFadeMs] as the ring.
+ *
+ * [level] is that participant's entry in `RoomManager.speakingLevels`. Only its presence is used:
+ * the ring already carries loudness in its thickness, and a badge this small cannot show a
+ * magnitude legibly enough to be worth the motion.
+ */
+@Composable
+fun SpeakingBadge(level: Float, modifier: Modifier = Modifier) {
+    val isSpeaking = level.coerceIn(0f, 1f) > 0f
+    val progress by animateFloatAsState(
+        targetValue = if (isSpeaking) 1f else 0f,
+        animationSpec = tween(Motion.meetingSpeakingFadeMs, easing = Motion.standardEasing),
+        label = "speakingBadge",
+    )
+    Icon(
+        imageVector = Icons.Default.GraphicEq,
+        // Silence is the resting state, not an event: only speech is worth announcing.
+        contentDescription = if (isSpeaking) {
+            stringResource(R.string.meeting_contentDescription_speaking)
+        } else {
+            null
+        },
+        // One interpolation carries both the hue and the fade, so they can never drift apart.
+        tint = lerp(
+            MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = SpeakingBadgeCalmAlpha),
+            MaterialTheme.colorScheme.primary,
+            progress,
+        ),
+        modifier = modifier.size(Dimens.meetingBadgeIcon),
+    )
+}
+
+/**
+ * How faint the badge goes once the room stops hearing someone.
+ *
+ * Low enough to read as off at a glance across a grid of tiles, but still visible — it has to
+ * stay legible as the same control that lights up, or its return looks like something appearing
+ * rather than something waking.
+ */
+private const val SpeakingBadgeCalmAlpha = 0.35f
 
 /**
  * The in-call slider: a small round thumb on a slim track instead of M3's tall-bar thumb, shared

@@ -13,7 +13,6 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.FullscreenExit
-import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -193,14 +192,9 @@ fun MeetingParticipantFullscreen(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
-                if (speakingLevel > 0f) {
-                    Icon(
-                        imageVector = Icons.Default.GraphicEq,
-                        contentDescription = stringResource(R.string.meeting_contentDescription_speaking),
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(Dimens.meetingBadgeIcon),
-                    )
-                }
+                // Kept unconditionally, unlike the grid tile's: this chip carries no mute badge to
+                // make it redundant, so the badge is the only speaking signal on the whole view.
+                SpeakingBadge(speakingLevel)
             }
 
             Surface(
