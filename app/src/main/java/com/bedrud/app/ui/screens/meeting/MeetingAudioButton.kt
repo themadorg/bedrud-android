@@ -53,12 +53,12 @@ fun MeetingAudioButton(
                     .align(Alignment.TopEnd)
                     .offset(x = 2.dp, y = (-2).dp)
                     .size(14.dp)
-                    .background(colors.warning, CircleShape),
+                    .background(colors.mediaError, CircleShape),
                 contentAlignment = Alignment.Center,
             ) {
                 Text(
                     text = "!",
-                    color = colors.onWarning,
+                    color = colors.onMediaError,
                     style = MaterialTheme.typography.labelSmall,
                 )
             }

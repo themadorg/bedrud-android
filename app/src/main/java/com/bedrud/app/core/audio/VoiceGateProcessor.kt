@@ -18,6 +18,31 @@ import kotlin.math.sqrt
  */
 class VoiceGateProcessor : AudioProcessorInterface {
 
+    /**
+     * Asked on every frame whether the room is currently allowed to hear this device.
+     *
+     * This is the guarantee that makes a soft mute safe, and it is a question rather than a flag
+     * on purpose. A flag has to be set correctly at every transition, and the one that is missed —
+     * an unmute that fails after the flag was already cleared, a path added later that forgets it
+     * — is a live microphone behind a muted button. Asking the mute state itself, on the audio
+     * thread, for every 10ms frame, means there is no window to get wrong: whatever the answer is
+     * right now is what this frame obeys.
+     *
+     * Fails closed. The default denies, so a processor that was never wired up transmits silence
+     * rather than audio, and any error deciding is treated as "not allowed".
+     */
+    @Volatile
+    var roomMayHear: () -> Boolean = { false }
+
+    /**
+     * Silences outgoing audio outright, over and above [roomMayHear].
+     *
+     * Covers the windows where the mute state is not yet the truth — publishing a track in order
+     * to mute it, where the persisted preference still says the microphone is open.
+     */
+    @Volatile
+    var forceSilence: Boolean = false
+
     @Volatile
     var gateEnabled: Boolean = false
 
@@ -36,6 +61,16 @@ class VoiceGateProcessor : AudioProcessorInterface {
     @Volatile
     var gateOpen: Boolean = true
         private set
+
+    /**
+     * Frames processed so far. [level] is only written when a frame arrives, so a counter that
+     * stops advancing means capture has stopped and the last level is stale — which is exactly
+     * what happens while muted, and would otherwise read as "still talking" forever.
+     */
+    @Volatile
+    var frameCount: Long = 0L
+        private set
+
 
     private var hangoverFramesLeft = 0
 
@@ -60,7 +95,14 @@ class VoiceGateProcessor : AudioProcessorInterface {
     override fun processAudio(numBands: Int, numFrames: Int, buffer: ByteBuffer) {
         val levelDb = rmsDbfs(buffer)
         level = normalizedLevel(levelDb)
+        frameCount++
 
+        // Checked before [gateEnabled] so a soft mute cannot be undone by the gate's own rules.
+        if (forceSilence || !mayTransmit()) {
+            gateOpen = false
+            silence(buffer)
+            return
+        }
         if (!gateEnabled) {
             gateOpen = true
             return
@@ -79,6 +121,13 @@ class VoiceGateProcessor : AudioProcessorInterface {
         silence(buffer)
     }
 
+    /** Fails closed: anything other than a clear yes silences the frame. */
+    private fun mayTransmit(): Boolean = try {
+        roomMayHear()
+    } catch (e: Throwable) {
+        false
+    }
+
     companion object {
         private const val NAME = "bedrud-voice-gate"
 
@@ -92,6 +141,9 @@ class VoiceGateProcessor : AudioProcessorInterface {
 
         /** 10ms frames the gate stays open after the last frame above threshold (~300ms). */
         const val HangoverFrames = 30
+
+        /** Sample value WebRTC uses for full scale in its float frames — 16-bit range, as floats. */
+        const val FullScaleSample = 32768.0
 
         /** dBFS floor reported for an all-zero frame. */
         const val SilenceFloorDb = -120.0
@@ -109,14 +161,23 @@ class VoiceGateProcessor : AudioProcessorInterface {
             return ThresholdMinDb + (ThresholdMaxDb - ThresholdMinDb) * clamped
         }
 
-        /** RMS level of a little-endian 16-bit PCM buffer, in dBFS. */
+        /**
+         * RMS level of one capture frame, in dBFS.
+         *
+         * WebRTC hands this stage **32-bit float** samples, and on the scale of a 16-bit sample
+         * rather than the usual -1..1 — a full-scale sample reads ±32768, not ±1.0. Decoding the
+         * same bytes as 16-bit PCM (which is what this did) splits every float in half and reads
+         * the halves as samples, which is noise pinned near full scale whatever the microphone
+         * actually heard. That kept the meter at maximum and stopped the manual gate ever closing,
+         * because a garbage -5 dBFS clears every threshold on the slider.
+         */
         fun rmsDbfs(buffer: ByteBuffer): Double {
-            val shorts = buffer.duplicate().order(ByteOrder.LITTLE_ENDIAN).asShortBuffer()
-            val count = shorts.remaining()
+            val samples = buffer.duplicate().order(ByteOrder.LITTLE_ENDIAN).asFloatBuffer()
+            val count = samples.remaining()
             if (count == 0) return SilenceFloorDb
             var sumSquares = 0.0
             for (i in 0 until count) {
-                val sample = shorts.get(i) / Short.MAX_VALUE.toDouble()
+                val sample = samples.get(i) / FullScaleSample
                 sumSquares += sample * sample
             }
             val rms = sqrt(sumSquares / count)

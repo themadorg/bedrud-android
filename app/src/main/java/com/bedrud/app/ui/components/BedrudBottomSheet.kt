@@ -21,8 +21,10 @@ import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import com.bedrud.app.ui.theme.Alpha
 import com.bedrud.app.ui.theme.BedrudShapeTokens
 import com.bedrud.app.ui.theme.Dimens
 
@@ -101,6 +103,9 @@ fun BedrudSheetTitle(text: String, modifier: Modifier = Modifier, color: Color =
  * the emphasis instead (e.g. the error colour for a destructive choice), which also avoids relying
  * on a border: `outlineVariant` sits within a couple of RGB units of a raised surface in the dark
  * palette, so an outline here would be invisible.
+ *
+ * A row that does not apply right now takes [enabled] `false` rather than being left out — the
+ * sheet keeps its height, so toggling one setting never makes the rows under it jump.
  */
 @Composable
 fun BedrudSheetActionRow(
@@ -111,13 +116,17 @@ fun BedrudSheetActionRow(
     supportingText: String? = null,
     contentColor: Color = MaterialTheme.colorScheme.onSurface,
     supportingColor: Color = MaterialTheme.colorScheme.onSurfaceVariant,
+    enabled: Boolean = true,
     trailing: @Composable (() -> Unit)? = null,
 ) {
     Surface(
         onClick = onClick,
+        enabled = enabled,
         color = Color.Transparent,
         shape = BedrudShapeTokens.card,
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier
+            .fillMaxWidth()
+            .alpha(if (enabled) 1f else Alpha.disabled),
     ) {
         Row(
             modifier = Modifier

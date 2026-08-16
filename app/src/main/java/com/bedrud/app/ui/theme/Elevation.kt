@@ -17,4 +17,9 @@ object Elevation {
     // In-call floating controls pill — semantic pair, kept at the bar's established depth.
     val controlsBarShadow = 4.dp
     val controlsBarTonal = 2.dp
+
+    // The mic key stands proud of the bar so it reads as pressable, and sinks flush under a
+    // press — the depth change is what sells "hold me" on a control that is held.
+    val micPillResting = 3.dp
+    val micPillPressed = 0.dp
 }

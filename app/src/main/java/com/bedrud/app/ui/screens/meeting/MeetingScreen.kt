@@ -97,6 +97,7 @@ import com.bedrud.app.R
 import com.bedrud.app.core.BidiUtils
 import com.bedrud.app.core.api.RoomApi
 import com.bedrud.app.core.api.parseApiErrorMessage
+import com.bedrud.app.core.audio.MeetingVoiceAlert
 import com.bedrud.app.core.call.CallService
 import com.bedrud.app.core.chat.ChatImageUtils
 import com.bedrud.app.core.chat.ChatUpload
@@ -177,6 +178,9 @@ fun MeetingScreen(
     val wasKicked by roomManager.wasKicked.collectAsState()
 
     val participantVersion by roomManager.participantVersion.collectAsState()
+    // Who the room says it hears, and why it might not be hearing this device.
+    val speakingLevels by roomManager.speakingLevels.collectAsState()
+    val voiceAlert by roomManager.voiceAlert.collectAsState()
     val watchedStreamIdentity by roomManager.watchedStreamIdentity.collectAsState()
     val chatMessages by roomManager.chatMessages.collectAsState()
     var showChat by remember { mutableStateOf(false) }
@@ -508,19 +512,22 @@ fun MeetingScreen(
                                         it.getTrackPublication(Track.Source.SCREEN_SHARE) != null
                                     }
                                 }
-                                // Grid tiles: the local participant only while their camera is
-                                // on (there is no self-tile for an audio-only self), then the
-                                // remote participants.
-                                val gridTiles = remember(participantVersion, isCameraEnabled, pinnedIdentity) {
+                                // Grid tiles: the local participant first, then the remote ones.
+                                // The self-tile is unconditional even with the camera off — it is
+                                // where you watch your own ring light up, which is the one place
+                                // the app can tell you the room is receiving your voice.
+                                val gridTiles = remember(participantVersion, pinnedIdentity) {
                                     buildList {
-                                        if (isCameraEnabled) add(room.localParticipant)
+                                        add(room.localParticipant)
                                         addAll(room.remoteParticipants.values)
                                     }.sortedByDescending { it.identity?.value == pinnedIdentity }
                                 }
-                                // With no grid underneath, streams take the stage and share the
-                                // full height instead of staying strip-sized.
+                                // Nobody else in the grid: a stream takes the stage and shares the
+                                // full height instead of staying strip-sized, and the self-tile
+                                // stands down for it — there is no one to hear you anyway.
+                                val aloneInRoom = gridTiles.size <= 1
                                 val expandStreams =
-                                    gridTiles.isEmpty() && streamParticipants.isNotEmpty()
+                                    aloneInRoom && streamParticipants.isNotEmpty()
                                 streamParticipants.forEach { presenter ->
                                     val presenterIdentity = presenter.identity?.value
                                     MeetingStreamTile(
@@ -558,33 +565,7 @@ fun MeetingScreen(
                                     )
                                 }
 
-                                if (gridTiles.isEmpty() && streamParticipants.isEmpty()) {
-                                    // Alone with the camera off: there is no self-tile, so give
-                                    // the stage a hint instead of a blank void.
-                                    Column(
-                                        modifier = Modifier
-                                            .weight(1f)
-                                            .fillMaxWidth()
-                                            .padding(horizontal = Dimens.screenPadding)
-                                            .padding(bottom = Dimens.meetingGridBottomSpace),
-                                        verticalArrangement = Arrangement.Center,
-                                        horizontalAlignment = Alignment.CenterHorizontally,
-                                    ) {
-                                        Text(
-                                            text = stringResource(R.string.meeting_empty_title),
-                                            style = MaterialTheme.typography.titleMedium,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                            textAlign = TextAlign.Center,
-                                        )
-                                        Spacer(modifier = Modifier.height(Dimens.space8))
-                                        Text(
-                                            text = stringResource(R.string.meeting_empty_message),
-                                            style = MaterialTheme.typography.bodyMedium,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                            textAlign = TextAlign.Center,
-                                        )
-                                    }
-                                } else if (gridTiles.isNotEmpty()) {
+                                if (!expandStreams) {
                                     MeetingVideoGrid(
                                         tiles = gridTiles,
                                         room = room,
@@ -593,6 +574,8 @@ fun MeetingScreen(
                                         hideAllIncomingVideo = hideAllIncomingVideo,
                                         mutedIdentities = locallyMutedIdentities,
                                         pinnedIdentity = pinnedIdentity,
+                                        speakingLevels = speakingLevels,
+                                        isLocalMicEnabled = isMicEnabled,
                                         onOpenParticipantActions = { identity ->
                                             participantSheetIdentity = identity
                                         },
@@ -644,6 +627,8 @@ fun MeetingScreen(
                                     chromeVisible = fullscreenChromeVisible,
                                     isVideoLocallyDisabled =
                                         fullscreenParticipant.identity?.value in locallyHiddenVideoIdentities,
+                                    speakingLevel =
+                                        speakingLevels[fullscreenParticipant.identity?.value] ?: 0f,
                                     onToggleChrome = { fullscreenChromeVisible = !fullscreenChromeVisible },
                                     onAutoHideChrome = { fullscreenChromeVisible = false },
                                     onCollapse = { fullscreenParticipantIdentity = null },
@@ -720,8 +705,8 @@ fun MeetingScreen(
                                     showChat = showChat,
                                     unreadCount = unreadCount,
                                     inputMode = inputMode,
-                                    micLevelProvider = { roomManager.currentMicLevel() },
-                                    voiceGateOpenProvider = { roomManager.isVoiceGateOpen() },
+                                    connectionState = connectionState,
+                                    voiceAlert = voiceAlert,
                                     onPushToTalkChange = { active ->
                                         scope.launch {
                                             roomManager.setPushToTalkTransmitting(active)
@@ -752,8 +737,8 @@ fun MeetingScreen(
                                     hideAllIncomingVideo = hideAllIncomingVideo,
                                     isRoomSettingsAvailable = isAdmin,
                                     inputMode = inputMode,
-                                    micLevelProvider = { roomManager.currentMicLevel() },
-                                    voiceGateOpenProvider = { roomManager.isVoiceGateOpen() },
+                                    connectionState = connectionState,
+                                    voiceAlert = voiceAlert,
                                     onPushToTalkChange = { active ->
                                         scope.launch {
                                             roomManager.setPushToTalkTransmitting(active)
@@ -834,7 +819,7 @@ fun MeetingScreen(
                             }
 
                             if (showInviteSheet) {
-                                val inviteParticipants = remember(participantVersion) {
+                                val inviteParticipants = remember(participantVersion, speakingLevels) {
                                     participants.map { participant ->
                                         val identity = participant.identity?.value
                                             ?: RoomManager.UNKNOWN_PARTICIPANT_NAME
@@ -854,6 +839,7 @@ fun MeetingScreen(
                                                 }
                                             },
                                             isLocal = identity == localIdentity,
+                                            speakingLevel = speakingLevels[identity] ?: 0f,
                                         )
                                     }
                                 }
@@ -882,6 +868,8 @@ fun MeetingScreen(
                                     inputMode = inputMode,
                                     autoSensitivity = autoSensitivity,
                                     sensitivity = voiceSensitivity,
+                                    micLevelProvider = { roomManager.currentMicLevel() },
+                                    voiceGateOpenProvider = { roomManager.isVoiceGateOpen() },
                                     onOpenInputModePicker = { showInputModeSheet = true },
                                     onAutoSensitivityChange = { roomManager.setAutoSensitivity(it) },
                                     onSensitivityChange = { roomManager.setVoiceSensitivity(it) },

@@ -286,10 +286,13 @@
   <string name="meeting_contentDescription_tileFullscreen">全画面表示</string>
   <string name="meeting_contentDescription_tileExitFullscreen">全画面を終了</string>
   <string name="meeting_contentDescription_micOff">マイクオフ</string>
-  <string name="meeting_contentDescription_cameraOff">カメラオフ</string>
+  <string name="meeting_contentDescription_speaking">発言中</string>
   <string name="meeting_status_reconnecting">再接続中…</string>
-  <string name="meeting_empty_title">他には誰もいません</string>
-  <string name="meeting_empty_message">他の人を招待するか、カメラをオンにして自分を表示しましょう</string>
+  <string name="meeting_status_connected">接続しました</string>
+  <string name="meeting_voiceAlert_muted">ミュート中です</string>
+  <string name="meeting_voiceAlert_pushToTalk">マイクボタンを押しながら話してください</string>
+  <string name="meeting_voiceAlert_gateClosed">音声検出が反応していません</string>
+  <string name="meeting_voiceAlert_notReachingRoom">相手に聞こえていない可能性があります</string>
   <string name="meeting_participant_volume">音量</string>
   <string name="meeting_action_dontWatch">表示しない</string>
   <string name="meeting_action_watch">表示する</string>

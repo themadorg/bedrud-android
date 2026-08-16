@@ -286,10 +286,13 @@
   <string name="meeting_contentDescription_tileFullscreen">全屏查看</string>
   <string name="meeting_contentDescription_tileExitFullscreen">退出全屏</string>
   <string name="meeting_contentDescription_micOff">麦克风已关闭</string>
-  <string name="meeting_contentDescription_cameraOff">摄像头已关闭</string>
+  <string name="meeting_contentDescription_speaking">正在讲话</string>
   <string name="meeting_status_reconnecting">正在重新连接…</string>
-  <string name="meeting_empty_title">这里没有其他人</string>
-  <string name="meeting_empty_message">邀请其他人，或打开摄像头查看自己</string>
+  <string name="meeting_status_connected">已连接</string>
+  <string name="meeting_voiceAlert_muted">你已静音</string>
+  <string name="meeting_voiceAlert_pushToTalk">按住麦克风按钮说话</string>
+  <string name="meeting_voiceAlert_gateClosed">语音检测未识别到你</string>
+  <string name="meeting_voiceAlert_notReachingRoom">其他人可能听不到你</string>
   <string name="meeting_participant_volume">音量</string>
   <string name="meeting_action_dontWatch">不再观看</string>
   <string name="meeting_action_watch">观看</string>

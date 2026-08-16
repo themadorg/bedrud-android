@@ -17,10 +17,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Fullscreen
 import androidx.compose.material.icons.filled.MicOff
 import androidx.compose.material.icons.filled.PushPin
-import androidx.compose.material.icons.filled.VideocamOff
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -32,6 +30,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.CustomAccessibilityAction
+import androidx.compose.ui.semantics.customActions
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.text.style.TextOverflow
 import coil.compose.AsyncImage
@@ -61,10 +62,13 @@ private fun gridRows(count: Int): List<Int> = when (count) {
 }
 
 /**
- * The participant grid. [tiles] is the already-filtered list to display — the local participant
- * only while their camera is on, then the remote participants. Counts up to [MAX_GRID_TILES] lay
- * out per the design's breakpoints (full-width rows up to 3, then two columns); anything beyond
- * collapses into a trailing "+N" overflow tile that opens the participants list.
+ * The participant grid. [tiles] is the already-ordered list to display — the local participant
+ * first, then the remote participants. Counts up to [MAX_GRID_TILES] lay out per the design's
+ * breakpoints (full-width rows up to 3, then two columns); anything beyond collapses into a
+ * trailing "+N" overflow tile that opens the participants list.
+ *
+ * [speakingLevels] is the room's own view of who it hears, keyed by identity — see
+ * `RoomManager.speakingLevels`.
  */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -76,6 +80,8 @@ fun MeetingVideoGrid(
     hideAllIncomingVideo: Boolean,
     mutedIdentities: Set<String>,
     pinnedIdentity: String?,
+    speakingLevels: Map<String, Float>,
+    isLocalMicEnabled: Boolean,
     onOpenParticipantActions: (String) -> Unit,
     onExpandTile: (String) -> Unit,
     onOverflowClick: () -> Unit,
@@ -101,6 +107,8 @@ fun MeetingVideoGrid(
                     hideAllIncomingVideo = hideAllIncomingVideo,
                     mutedIdentities = mutedIdentities,
                     isPinned = participant.identity?.value == pinnedIdentity,
+                    speakingLevel = speakingLevels[participant.identity?.value] ?: 0f,
+                    isLocalMicEnabled = isLocalMicEnabled,
                     onOpenParticipantActions = onOpenParticipantActions,
                     onExpand = onExpandTile,
                     modifier = slotModifier,
@@ -197,6 +205,8 @@ internal fun ParticipantTile(
     hideAllIncomingVideo: Boolean = false,
     mutedIdentities: Set<String> = emptySet(),
     isPinned: Boolean = false,
+    speakingLevel: Float = 0f,
+    isLocalMicEnabled: Boolean = true,
     onOpenParticipantActions: ((String) -> Unit)? = null,
     onExpand: ((String) -> Unit)? = null,
     modifier: Modifier = Modifier,
@@ -210,9 +220,16 @@ internal fun ParticipantTile(
     val cameraTrack = cameraPublication
         ?.track as? io.livekit.android.room.track.VideoTrack
     val isCameraMuted = cameraPublication?.muted == true
-    val isCameraOff = cameraTrack == null || isCameraMuted
+    // Your own mute reads from the manager, not from the publication. Muting flips the local
+    // state instantly but the track's muted flag settles a moment later, so a publication-driven
+    // badge lags your own tap — and the badge everyone else already sees is the one you expect to
+    // see on yourself.
     val micPublication = participant.getTrackPublication(Track.Source.MICROPHONE)
-    val isMicOff = micPublication == null || micPublication.muted
+    val isMicOff = if (isLocalParticipant) {
+        !isLocalMicEnabled
+    } else {
+        micPublication == null || micPublication.muted
+    }
     val name = participant.name?.ifBlank { identity } ?: identity
 
     // Parse avatar URL from participant metadata
@@ -225,18 +242,40 @@ internal fun ParticipantTile(
         }
     }
 
-    val canOpenMenu = !isLocalParticipant && onOpenParticipantActions != null
+    // Your own tile has no participant menu — the actions on it all belong to someone else.
+    val openMenu: (() -> Unit)? = onOpenParticipantActions
+        ?.takeIf { !isLocalParticipant }
+        ?.let { open -> { open(identity) } }
+    // A double tap expands the tile; the old corner button is gone, so this is the only pointer
+    // route to fullscreen. Touch exploration cannot produce a double tap, hence the custom
+    // accessibility action alongside it.
+    val expand: (() -> Unit)? = onExpand?.let { { it(identity) } }
+    val expandLabel = stringResource(R.string.meeting_contentDescription_tileFullscreen)
 
     Box(
         modifier = modifier
             .clip(BedrudShapeTokens.videoTile)
             .background(MaterialTheme.colorScheme.surfaceVariant)
+            .speakingRing(speakingLevel, BedrudShapeTokens.videoTile)
             .then(
-                if (canOpenMenu) {
+                if (openMenu != null || expand != null) {
                     Modifier.combinedClickable(
                         onClick = {},
-                        onLongClick = { onOpenParticipantActions?.invoke(identity) }
+                        onDoubleClick = expand,
+                        onLongClick = openMenu,
                     )
+                } else Modifier
+            )
+            .then(
+                if (expand != null) {
+                    Modifier.semantics {
+                        customActions = listOf(
+                            CustomAccessibilityAction(expandLabel) {
+                                expand()
+                                true
+                            },
+                        )
+                    }
                 } else Modifier
             ),
         contentAlignment = Alignment.Center
@@ -292,13 +331,8 @@ internal fun ParticipantTile(
                     modifier = Modifier.size(Dimens.meetingBadgeIcon),
                 )
             }
-            Text(
-                text = name,
-                style = MaterialTheme.typography.labelSmall.copy(textDirection = TextDirection.Content),
-                color = MaterialTheme.colorScheme.onSurface,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
+            // Mute leads the chip, ahead of the name it describes. The pin stays outermost: it is
+            // a state of the tile, while this is a state of the person.
             if (isMicOff) {
                 Icon(
                     imageVector = Icons.Default.MicOff,
@@ -307,37 +341,23 @@ internal fun ParticipantTile(
                     modifier = Modifier.size(Dimens.meetingBadgeIcon),
                 )
             }
-            if (isCameraOff) {
-                Icon(
-                    imageVector = Icons.Default.VideocamOff,
-                    contentDescription = stringResource(R.string.meeting_contentDescription_cameraOff),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.size(Dimens.meetingBadgeIcon),
-                )
+            Text(
+                text = name,
+                style = MaterialTheme.typography.labelSmall.copy(textDirection = TextDirection.Content),
+                color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            // Colour alone cannot carry the ring, so speech also earns a badge, trailing the name.
+            // A muted participant gets none at all: they can never speak, so its calm state would
+            // only repeat what the mute badge already said.
+            if (!isMicOff) {
+                SpeakingBadge(speakingLevel)
             }
+            // No camera badge: the tile already shows an avatar instead of video when the camera
+            // is off, so the badge only restated what the tile was showing.
         }
 
-        // Fullscreen affordance, top-end corner
-        if (onExpand != null) {
-            Surface(
-                onClick = { onExpand(identity) },
-                shape = CircleShape,
-                color = MaterialTheme.colorScheme.surface.copy(alpha = TileChipAlpha),
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .padding(Dimens.space6)
-                    .size(Dimens.meetingTileAction),
-            ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Icon(
-                        imageVector = Icons.Default.Fullscreen,
-                        contentDescription = stringResource(R.string.meeting_contentDescription_tileFullscreen),
-                        tint = MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier.size(Dimens.iconSm),
-                    )
-                }
-            }
-        }
     }
 }
 

@@ -4,13 +4,16 @@ import android.app.Application
 import android.app.NotificationManager
 import android.content.Intent
 import android.os.Build
+import android.os.SystemClock
 import android.util.Log
 import androidx.annotation.StringRes
 import androidx.core.app.NotificationCompat
 import com.bedrud.app.R
 import com.bedrud.app.core.audio.MeetingInputMode
+import com.bedrud.app.core.audio.MeetingVoiceAlert
 import com.bedrud.app.core.audio.NoiseSuppressionMode
 import com.bedrud.app.core.audio.VoiceGateProcessor
+import com.bedrud.app.core.audio.VoiceReachMonitor
 import com.bedrud.app.core.call.CallConnectionService
 import com.bedrud.app.core.meeting.chat.ChatWire
 import com.bedrud.app.core.registerNotificationChannel
@@ -35,12 +38,14 @@ import io.livekit.android.room.track.TrackPublication
 import io.livekit.android.room.track.screencapture.ScreenCaptureParams
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import org.json.JSONObject
 
@@ -138,7 +143,9 @@ class RoomManager(
 
     // Input mode (voice activity / push-to-talk) with its manual voice gate. The gate object is
     // handed to LiveKit at connect and reconfigured in place afterwards.
-    private val voiceGate = VoiceGateProcessor()
+    private val voiceGate = VoiceGateProcessor().apply {
+        roomMayHear = ::roomMayHearMe
+    }
     private val _inputMode = MutableStateFlow(settingsStore.getInputMode())
     val inputMode: StateFlow<MeetingInputMode> = _inputMode.asStateFlow()
     private val _autoSensitivity = MutableStateFlow(settingsStore.getAutoSensitivity())
@@ -146,16 +153,166 @@ class RoomManager(
     private val _voiceSensitivity = MutableStateFlow(settingsStore.getVoiceSensitivity())
     val voiceSensitivity: StateFlow<Float> = _voiceSensitivity.asStateFlow()
 
+    // Who the room currently hears, identity to level (0..1). This is the server's own view,
+    // echoed back over the signal connection and including the local participant, so a live entry
+    // for yourself is proof your audio is reaching the room rather than only reaching your meter.
+    private val speakingTracker = SpeakingTracker()
+    private val _speakingLevels = MutableStateFlow<Map<String, Float>>(emptyMap())
+    val speakingLevels: StateFlow<Map<String, Float>> = _speakingLevels.asStateFlow()
+    private var speakingDecayJob: Job? = null
+
+    // The server's own view, and the locally measured bridge across the gaps in it. Both are
+    // written from [eventScope], which is single threaded, so merging them needs no lock.
+    private var serverSpeaking: Map<String, Float> = emptyMap()
+    private var localSpeakingBridge: Float = 0f
+    private var serverLastHeardMeMillis: Long? = null
+    private var bridgeLoudAtMillis: Long? = null
+    private var bridgeLoudLevel: Float = 0f
+
+    // Why the room is not hearing this participant, when it plainly should be.
+    private val voiceReachMonitor = VoiceReachMonitor()
+    private val _voiceAlert = MutableStateFlow(MeetingVoiceAlert.None)
+    val voiceAlert: StateFlow<MeetingVoiceAlert> = _voiceAlert.asStateFlow()
+
     /** Live mic capture level (0..1) for the in-call meter; sampled per frame by the UI. */
     fun currentMicLevel(): Float = if (_isMicEnabled.value) voiceGate.level else 0f
 
     /** False only while the manual voice gate is holding audio back. */
     fun isVoiceGateOpen(): Boolean = voiceGate.gateOpen
 
+    /**
+     * Whether outgoing audio is allowed to leave this device right now.
+     *
+     * Consulted by [VoiceGateProcessor] on every captured frame, and deliberately demanding: the
+     * app's own mute state and LiveKit's publication must *both* say the microphone is open. Since
+     * mute keeps the track running, agreement between the two is the only thing standing between a
+     * muted button and a live microphone, so disagreement — or a missing publication, or no room
+     * at all — is treated as muted.
+     */
+    private fun roomMayHearMe(): Boolean {
+        if (!_isMicEnabled.value) return false
+        val publication = _room?.localParticipant
+            ?.getTrackPublication(Track.Source.MICROPHONE) ?: return false
+        return !publication.muted
+    }
+
     private fun syncVoiceGate() {
         voiceGate.sensitivity = _voiceSensitivity.value
         voiceGate.gateEnabled =
             _inputMode.value == MeetingInputMode.VOICE_ACTIVITY && !_autoSensitivity.value
+    }
+
+    private fun onActiveSpeakers(speakers: List<Participant>) {
+        val reported = speakers.mapNotNull { speaker ->
+            speaker.identity?.value?.let { it to speaker.audioLevel }
+        }.toMap()
+        val now = SystemClock.elapsedRealtime()
+        val identity = _room?.localParticipant?.identity?.value
+        if (identity != null && reported.containsKey(identity)) serverLastHeardMeMillis = now
+        serverSpeaking = speakingTracker.onSpeakers(reported, now)
+        republishSpeaking()
+        startSpeakingDecay()
+    }
+
+    /**
+     * Publishes the server's view of who is speaking, with the local participant's own entry
+     * bridged across the gaps in it.
+     *
+     * The server reports speakers when the set changes rather than on a clock, and measured on a
+     * real call the gaps between two reports naming the same speaker ran to a median of 800ms with
+     * a long tail past three seconds. Holding the ring for the whole tail would leave it lit
+     * seconds after someone stopped; holding it for less drops it mid-sentence, which is what it
+     * did. No choice of hold fixes both.
+     *
+     * So for the one participant this device can measure directly, the locally captured level
+     * fills the gaps. The server still decides whether the ring may light at all — the bridge only
+     * applies while the room has confirmed hearing this device within [LocalSpeakingBridgeMillis],
+     * and never while muted — so the ring goes on meaning "the room hears me" rather than "my
+     * microphone works". Remote participants cannot be bridged and keep the server's timing.
+     */
+    private fun republishSpeaking() {
+        val identity = _room?.localParticipant?.identity?.value
+        val merged = if (identity != null && localSpeakingBridge > 0f) {
+            val server = serverSpeaking[identity] ?: 0f
+            serverSpeaking + (identity to maxOf(server, localSpeakingBridge))
+        } else {
+            serverSpeaking
+        }
+        if (merged != _speakingLevels.value) _speakingLevels.value = merged
+    }
+
+    /**
+     * Keeps ticking only while someone is held as speaking: the server announces a new speaker but
+     * never announces silence, so the last one needs a timer to drop out. Idles between bursts.
+     */
+    private fun startSpeakingDecay() {
+        if (speakingDecayJob?.isActive == true || serverSpeaking.isEmpty()) return
+        speakingDecayJob = eventScope?.launch {
+            while (isActive && serverSpeaking.isNotEmpty()) {
+                delay(SpeakingTracker.PruneIntervalMillis)
+                serverSpeaking = speakingTracker.prune(SystemClock.elapsedRealtime())
+                republishSpeaking()
+            }
+        }
+    }
+
+    /**
+     * Watches the local capture level against the room's view of it, so a microphone that captures
+     * but never arrives is called out instead of being hidden behind a bouncing meter. Reads the
+     * gate's raw level rather than [currentMicLevel], which reports zero while muted — being muted
+     * is one of the cases worth reporting.
+     */
+    private fun startVoiceReachMonitor(localIdentity: String?) {
+        eventScope?.launch {
+            var lastFrameCount = voiceGate.frameCount
+            while (isActive) {
+                delay(VoiceReachMonitor.SampleIntervalMillis)
+                // The gate only writes its level when a frame arrives, and capture stops while
+                // muted — so a level whose frame counter has not moved since the last sample is a
+                // stale reading, not silence at that volume. Reporting it as-is left the warning
+                // lit forever after a mute mid-sentence.
+                val frames = voiceGate.frameCount
+                val capturing = frames != lastFrameCount
+                lastFrameCount = frames
+                val now = SystemClock.elapsedRealtime()
+                val micLevel = if (capturing) voiceGate.level else 0f
+
+                // Bridge the gaps in the server's reporting for our own tile — but only while the
+                // room has recently confirmed hearing us, and never while muted, so the ring still
+                // means the room hears us rather than merely that the microphone works.
+                val confirmed = serverLastHeardMeMillis
+                    ?.let { now - it < LocalSpeakingBridgeMillis } == true
+                // Speech dips below the bar between every pair of words, so the bridge holds past
+                // the last loud frame exactly as the voice warning does. Without the hold it
+                // flickers at word granularity and bridges nothing at all.
+                if (micLevel >= VoiceReachMonitor.TalkingLevel) {
+                    bridgeLoudAtMillis = now
+                    bridgeLoudLevel = micLevel
+                }
+                val stillTalking = bridgeLoudAtMillis
+                    ?.let { now - it < VoiceReachMonitor.QuietHoldMillis } == true
+                val bridged = if (confirmed && stillTalking && roomMayHearMe()) {
+                    bridgeLoudLevel
+                } else {
+                    0f
+                }
+                if (bridged != localSpeakingBridge) {
+                    localSpeakingBridge = bridged
+                    republishSpeaking()
+                }
+
+                _voiceAlert.value = voiceReachMonitor.sample(
+                    nowMillis = now,
+                    micLevel = micLevel,
+                    isMicEnabled = _isMicEnabled.value,
+                    isPushToTalk = _inputMode.value == MeetingInputMode.PUSH_TO_TALK,
+                    isGateOpen = voiceGate.gateOpen,
+                    roomHearsMe = localIdentity != null &&
+                        serverSpeaking.containsKey(localIdentity),
+                    roomHasOthers = _room?.remoteParticipants?.isNotEmpty() == true,
+                )
+            }
+        }
     }
 
     suspend fun connectIfNeeded(
@@ -228,7 +385,7 @@ class RoomManager(
                 stateFlow = _isMicEnabled,
                 errorFlow = _micMediaError,
                 sync = ::syncMicrophoneState,
-                setEnabled = { room.localParticipant.setMicrophoneEnabled(it) },
+                setEnabled = { setMicrophonePublishing(room.localParticipant, it) },
                 onApplied = { CallConnectionService.updateMuteState(!it) },
                 reportEnableFailure = false,
             )
@@ -251,6 +408,7 @@ class RoomManager(
                 room.events.collect { event ->
                     when (event) {
                         is RoomEvent.DataReceived -> handleDataReceived(event)
+                        is RoomEvent.ActiveSpeakersChanged -> onActiveSpeakers(event.speakers)
                         is RoomEvent.ParticipantConnected -> _participantVersion.value++
                         is RoomEvent.ParticipantDisconnected -> {
                             val disconnectedIdentity = event.participant.identity?.value
@@ -333,6 +491,7 @@ class RoomManager(
                             _participantVersion.value++
                         }
                         is RoomEvent.Disconnected -> {
+                            resetSpeakingState()
                             // "PARTICIPANT_REMOVED" is the LiveKit disconnect reason for kick
                             val kicked = event.reason.name == "PARTICIPANT_REMOVED"
                             if (kicked) _wasKicked.value = true
@@ -344,6 +503,7 @@ class RoomManager(
                 }
             }
 
+            startVoiceReachMonitor(room.localParticipant.identity?.value)
 
             Log.d(TAG, "Connected to room: ${room.name}")
         } catch (e: RoomException) {
@@ -372,7 +532,73 @@ class RoomManager(
         )
     }
 
+    /**
+     * Mutes for the room while the microphone keeps running on the device.
+     *
+     * LiveKit's own mute disables the underlying track, and a disabled track stops feeding the
+     * capture chain — so with a plain mute there is nothing left to measure and no way to notice
+     * you talking into a muted microphone. The track therefore stays enabled here, and the room is
+     * kept from hearing anything by two separate means: the publication is muted, which is what
+     * every other participant's mute indicator reads, and every captured frame is zeroed by
+     * [VoiceGateProcessor.forceSilence] before it can reach the encoder.
+     *
+     * The silencing is switched on *before* the track is re-enabled, never after, and the monitor
+     * loop re-asserts it every tick so the two can never drift apart.
+     */
+    private suspend fun setMicrophonePublishing(
+        localParticipant: LocalParticipant,
+        enabled: Boolean,
+    ): Boolean {
+        if (enabled) {
+            // Safe to lift before the call: [roomMayHearMe] still answers no until the
+            // publication itself reports unmuted, so a failed unmute stays silent on its own.
+            voiceGate.forceSilence = false
+            return localParticipant.setMicrophoneEnabled(true)
+        }
+
+        try {
+            voiceGate.forceSilence = true
+
+            // Joining muted publishes nothing at all, and an unpublished track never reaches the
+            // capture chain — so there has to be a publication before there is anything to keep
+            // measuring. It is silenced from the moment it exists.
+            if (localParticipant.getTrackPublication(Track.Source.MICROPHONE) == null) {
+                localParticipant.setMicrophoneEnabled(true)
+                // The mute has to land on a settled publication; muting the instant after
+                // publishing tears the half-built track down again and capture stops with it.
+                delay(MutedCaptureSettleMillis)
+            }
+
+            val published = localParticipant.setMicrophoneEnabled(false)
+            localParticipant.getTrackPublication(Track.Source.MICROPHONE)?.track?.enabled = true
+            return published
+        } finally {
+            // Always handed back. This only ever covers the publish window; being muted is not a
+            // state this flag is allowed to represent, because it is set from call paths and
+            // LiveKit can skip them — `setMicrophoneEnabled` returns early whenever it already
+            // agrees with the requested state, which would strand the flag set and leave a
+            // silent microphone behind an unmuted button. Steady-state muting belongs to
+            // [roomMayHearMe], which is asked per frame and cannot be stranded.
+            voiceGate.forceSilence = false
+        }
+    }
+
+    private fun resetSpeakingState() {
+        speakingDecayJob?.cancel()
+        speakingDecayJob = null
+        serverSpeaking = emptyMap()
+        localSpeakingBridge = 0f
+        serverLastHeardMeMillis = null
+        bridgeLoudAtMillis = null
+        bridgeLoudLevel = 0f
+        speakingTracker.clear()
+        voiceReachMonitor.reset()
+        _speakingLevels.value = emptyMap()
+        _voiceAlert.value = MeetingVoiceAlert.None
+    }
+
     fun disconnect() {
+        resetSpeakingState()
         eventScope?.cancel()
         eventScope = null
         _room?.disconnect()
@@ -465,7 +691,7 @@ class RoomManager(
             stateFlow = _isMicEnabled,
             errorFlow = _micMediaError,
             sync = ::syncMicrophoneState,
-            setEnabled = { localParticipant.setMicrophoneEnabled(it) },
+            setEnabled = { setMicrophonePublishing(localParticipant, it) },
             onApplied = { CallConnectionService.updateMuteState(!it) },
         )
     }
@@ -493,7 +719,7 @@ class RoomManager(
             stateFlow = _isMicEnabled,
             errorFlow = _micMediaError,
             sync = ::syncMicrophoneState,
-            setEnabled = { localParticipant.setMicrophoneEnabled(it) },
+            setEnabled = { setMicrophonePublishing(localParticipant, it) },
             onApplied = { CallConnectionService.updateMuteState(!it) },
         )
     }
@@ -774,6 +1000,20 @@ class RoomManager(
         private const val TAG = "RoomManager"
         private const val SCREEN_SHARE_CHANNEL_ID = "bedrud_screen_share"
         private const val SCREEN_SHARE_NOTIFICATION_ID = 1002
+
+        /**
+         * How long the room's last confirmation authorises bridging our own ring locally.
+         *
+         * Measured on a real call, the gaps between two server reports naming the same speaker had
+         * a median of 800ms and a tail past three seconds, so this has to outlast the tail to stop
+         * the ring cutting mid-sentence. Past it the ring goes out even if we are still talking:
+         * that much silence from the room is itself worth showing, and the voice warning is
+         * already saying so by then.
+         */
+        private const val LocalSpeakingBridgeMillis = 5_000L
+
+        /** Time a publication needs to settle before muting it keeps the capture chain alive. */
+        private const val MutedCaptureSettleMillis = 400L
 
         /** Display name used when a participant has neither a name nor an identity. */
         const val UNKNOWN_PARTICIPANT_NAME = "Unknown"

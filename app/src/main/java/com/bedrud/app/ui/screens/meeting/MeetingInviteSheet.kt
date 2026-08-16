@@ -65,6 +65,8 @@ data class InviteSheetParticipant(
     val name: String,
     val avatarUrl: String?,
     val isLocal: Boolean,
+    /** The room's reported speaking level (0..1) — see `RoomManager.speakingLevels`. */
+    val speakingLevel: Float = 0f,
 )
 
 private const val TELEGRAM_PACKAGE = "org.telegram.messenger"
@@ -111,13 +113,16 @@ fun MeetingInviteSheet(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(Dimens.space4),
                 ) {
+                    // The avatar outline is the list's version of the tile ring — the same signal
+                    // in the place people look to check who is in the room.
                     if (!participant.avatarUrl.isNullOrBlank()) {
                         AsyncImage(
                             model = participant.avatarUrl,
                             contentDescription = null,
                             modifier = Modifier
                                 .size(Dimens.avatarLg)
-                                .clip(CircleShape),
+                                .clip(CircleShape)
+                                .speakingRing(participant.speakingLevel, CircleShape),
                             contentScale = ContentScale.Crop,
                         )
                     } else {
@@ -125,6 +130,7 @@ fun MeetingInviteSheet(
                             name = participant.name,
                             size = Dimens.avatarLg,
                             fallbackInitial = "",
+                            modifier = Modifier.speakingRing(participant.speakingLevel, CircleShape),
                         )
                     }
                     Text(

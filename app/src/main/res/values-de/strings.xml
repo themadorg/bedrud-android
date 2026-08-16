@@ -286,10 +286,13 @@
   <string name="meeting_contentDescription_tileFullscreen">Vollbild anzeigen</string>
   <string name="meeting_contentDescription_tileExitFullscreen">Vollbild beenden</string>
   <string name="meeting_contentDescription_micOff">Mikrofon aus</string>
-  <string name="meeting_contentDescription_cameraOff">Kamera aus</string>
+  <string name="meeting_contentDescription_speaking">Spricht</string>
   <string name="meeting_status_reconnecting">Verbindung wird wiederhergestellt…</string>
-  <string name="meeting_empty_title">Sonst ist niemand hier</string>
-  <string name="meeting_empty_message">Lade andere ein oder schalte deine Kamera ein, um dich selbst zu sehen</string>
+  <string name="meeting_status_connected">Verbunden</string>
+  <string name="meeting_voiceAlert_muted">Du bist stummgeschaltet</string>
+  <string name="meeting_voiceAlert_pushToTalk">Halte die Mikrofontaste gedrückt, um zu sprechen</string>
+  <string name="meeting_voiceAlert_gateClosed">Die Sprachaktivierung erkennt dich nicht</string>
+  <string name="meeting_voiceAlert_notReachingRoom">Andere hören dich möglicherweise nicht</string>
   <string name="meeting_participant_volume">Lautstärke</string>
   <string name="meeting_action_dontWatch">Nicht ansehen</string>
   <string name="meeting_action_watch">Ansehen</string>
