@@ -65,8 +65,22 @@ object Dimens {
     val brandMark = 72.dp
 
     // ── Meeting ──
+    /**
+     * The inset every floating surface on the call screen shares — the tile grid, the screenshare
+     * strip and the controls bar alike — so their edges line up into one column rather than
+     * stepping in and out down the screen. Equal to [meetingTileGap] on purpose: the gap between
+     * tiles and the gap to the screen edge are the same rhythm.
+     */
+    val meetingScreenMargin = 8.dp
     val meetingTileGap = 8.dp            // gap between video tiles in the grid
-    val meetingGridBottomSpace = 128.dp  // grid clearance above the floating controls bar (incl. its drag handle)
+    /**
+     * How far the tile grid stops short of the bottom, to clear the floating controls bar.
+     *
+     * The bar takes 84dp off that edge — 72dp tall (12 + 48 + 12) sitting 12dp above the safe area
+     * — so this is that plus the gap wanted between the last tile and the bar. Written as the sum
+     * rather than a round number, because it went stale twice while the bar was being resized.
+     */
+    val meetingGridBottomSpace = 96.dp
     val meetingTileAvatar = 56.dp        // avatar circle inside a video tile
     val meetingTileAction = 32.dp        // tile corner action touch circle
     val meetingBadgeIcon = 14.dp         // mic-off / speaking badges on the tile name chip
@@ -74,7 +88,10 @@ object Dimens {
     val meetingSpeakingRingMax = 3.dp    // ...and at the loudest
     val meetingIndicatorDot = 8.dp       // top-bar dots (recording, reconnecting)
     val meetingBarPaddingH = 10.dp       // controls bar inner horizontal padding
-    val meetingBarPaddingV = 16.dp       // controls bar bottom inset — mirrors the drag-handle block above the row
+    // Bottom inset of the controls bar, mirroring the drag-handle block above the row so the
+    // 48dp controls sit centred. 12 + 48 + 12 puts the bar at 72dp — the same height as the chat
+    // dock that replaces it, so the bottom edge does not jump when chat opens.
+    val meetingBarPaddingV = 12.dp
     val meetingBarItemGap = 8.dp         // gap between controls bar buttons
     val meetingMediaButtonWidth = 56.dp  // camera/mic toggles (wider, rectangular)
     val meetingMediaButtonHeight = 48.dp
@@ -85,11 +102,29 @@ object Dimens {
     val meetingBarIconLg = 24.dp
     val meetingHandleWidth = 32.dp       // controls-bar drag handle (M3 sheet handle metrics)
     val meetingHandleHeight = 4.dp
+    // The mic pill's status arc. Thinner than a normal strong border: the arc travels around the
+    // pill, and movement already draws the eye — weight on top of it only shouts over chrome that
+    // is otherwise tonal surfaces and hairlines.
+    val meetingMicRingStroke = 1.dp
     val meetingHandleSwipeThreshold = 24.dp // upward drag distance that opens the options sheet
     val meetingFullscreenAvatar = 96.dp  // avatar circle when a participant is viewed fullscreen
     val meetingMicPillMaxWidth = 136.dp  // mic pill cap (both modes): sides never squeeze at this width
     val meetingSliderThumb = 20.dp       // compact round slider thumb (in-call sliders)
     val meetingSliderTrack = 4.dp        // compact slider track height
+
+    // ── Meeting: connection-failed and kicked states ──
+    val meetingStateIcon = 72.dp             // the single large icon these full-screen states lead with
+    val meetingStatePadding = 32.dp          // gutter for their centred explanatory text
+    val meetingErrorDetailMaxHeight = 140.dp // raw server error scrolls past this rather than growing
+
+    // ── Meeting: chat ──
+    val chatListEdgeGap = 12.dp          // breathing room above the first run and below the last
+    val chatUploadIndicator = 14.dp      // inline upload spinner, sized to the label beside it
+    val chatUploadIndicatorStroke = 2.dp // ...and thinned to match, the M3 default being far heavier
+    val chatAvatar = 28.dp               // sender circle, drawn once per run of messages
+    val chatClusterGap = 12.dp           // between one person's run and the next
+    val chatBubbleGap = 2.dp             // between bubbles inside a single run
+    val chatImageMaxHeight = 240.dp      // a tall picture is cropped rather than owning the panel
 
     // ── Meeting: invite sheet ──
     val inviteGridMaxHeight = 280.dp     // participant avatar grid scrolls beyond this

@@ -37,6 +37,39 @@ object BedrudShapeTokens {
     val chip = RoundedCornerShape(BedrudRadius.sm)
     val pill = RoundedCornerShape(BedrudRadius.full)  // badges, FABs, avatars
     val sheetTop = RoundedCornerShape(topStart = BedrudRadius.xxl, topEnd = BedrudRadius.xxl)
-    val videoTile = RoundedCornerShape(BedrudRadius.md) // in-meeting video/participant tiles
+    // The tiles and the bar float on the same background and are read together, so they share a
+    // corner. They were 12dp and 28dp, and side by side the two curves plainly disagreed.
+    val videoTile = RoundedCornerShape(BedrudRadius.xxl)   // in-meeting video/participant tiles
     val controlsBar = RoundedCornerShape(BedrudRadius.xxl) // floating in-call controls pill
+    val chatImage = RoundedCornerShape(BedrudRadius.sm)    // image attached to a chat message
+
+    /**
+     * A chat bubble's corners. Everything is [BedrudRadius.lg], except the corners facing the
+     * sender's own side, which tighten to [BedrudRadius.xs] where another bubble from the same
+     * person sits against them. That tightening is what makes a run of messages read as one block
+     * rather than a stack of separate cards.
+     */
+    fun chatBubble(
+        isLocal: Boolean,
+        tuckedAbove: Boolean,
+        tuckedBelow: Boolean,
+    ): RoundedCornerShape {
+        val above = if (tuckedAbove) BedrudRadius.xs else BedrudRadius.lg
+        val below = if (tuckedBelow) BedrudRadius.xs else BedrudRadius.lg
+        return if (isLocal) {
+            RoundedCornerShape(
+                topStart = BedrudRadius.lg,
+                topEnd = above,
+                bottomEnd = below,
+                bottomStart = BedrudRadius.lg,
+            )
+        } else {
+            RoundedCornerShape(
+                topStart = above,
+                topEnd = BedrudRadius.lg,
+                bottomEnd = BedrudRadius.lg,
+                bottomStart = below,
+            )
+        }
+    }
 }
