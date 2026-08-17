@@ -237,11 +237,29 @@ the `meeting*` tokens in `Dimens.kt`, timing in `Motion.meetingChromeAutoHideDel
   overrides it and always returns to the latest.
   Messages are ordered by **when they were sent**, not when they arrived: a burst can reach the
   data channel out of order, and a conversation that reads 7, 8, 6 is wrong however it came.
-  The header is a real M3 `TopAppBar`, so instead of a permanent rule under the title it takes on
-  a raised container colour exactly while messages pass beneath it. Its own window insets are off —
-  the meeting Scaffold has already inset the panel.
-  Message text is **selectable**, scoped to one bubble: the list is reversed and recycles its items,
-  so a drag spanning messages would keep losing the end it started from. Tapping a picture opens the
+  Chat is a **sheet over the call** (`MeetingChatSheet`), not a screen in front of it. It used to fill
+  the window wearing its own `TopAppBar`, on the same background as the call, arriving with a plain
+  fade — nothing of the room was left on screen, so it read as somewhere you went rather than
+  something the call has. Now the tiles keep rendering behind the scrim, and the header is a plain
+  title-and-close row, because an app bar is the signature of a screen.
+  Three heights, arbitrated by the platform sheet: half on open, full on drag, gone on a second drag
+  down. The keyboard expands it unprompted — a half sheet under a keyboard leaves almost no
+  conversation. Fully expanded still stops short of the status bar, so a band of the call stays in view.
+  Two layout details are load-bearing. The content keeps its **full height** and the part hanging
+  below the screen is removed with bottom padding, rather than being sized to what is visible: sizing
+  it that way fed the sheet's own height back into the offset that positioned it, and the sheet
+  collapsed into a sliver. And the **drag handle is drawn inside the content**, not in the sheet's
+  handle slot, because that slot sits above the content and cannot be subtracted from it — with it in
+  place the content overflowed by exactly one handle and took the input dock off the screen with it.
+  The composer is **built as the call's controls bar** — same corner token, same container colour,
+  same hairline, same `meetingScreenMargin` — rather than as a chat widget of its own. The two sit in
+  the same place on screen and swap with each other, so they are the same object with different
+  contents. Its attach control is a paperclip: the picker is still images-only, because an image is
+  the only attachment the wire carries.
+  A **long press opens the message menu**: the eight quick reactions on one row, and Copy under
+  them. The gesture used to start selecting text inside the bubble, and both cannot own it — on a
+  phone a long press means "act on this message" everywhere else, and copying is what the selecting
+  was for. Tapping a picture opens the
   lightbox, which can **save it to `Pictures/Bedrud`** via `MediaStore` — no permission at all from
   Android 10 on, and `WRITE_EXTERNAL_STORAGE` capped at API 28 for the one older version supported.
   The lightbox says whether it worked for `Motion.lightboxOutcomeNoticeMs` and then gets out of the
@@ -252,6 +270,41 @@ the `meeting*` tokens in `Dimens.kt`, timing in `Motion.meetingChromeAutoHideDel
   retract what was already said. Enforcement is client-side by necessity: messages travel
   participant-to-participant over the LiveKit data channel, so the server can only set a
   `chatBlocked` flag on the participant's metadata and trust each client to honour it.
+- **Reactions** (`MeetingChatReactions`): one person holds **one reaction per message** — a second
+  emoji moves it, the same one again takes it back — drawn as chips under the bubble, the reader's
+  own filled the way their own messages are. The picker offers a fixed eight rather than the full
+  emoji keyboard the web has: a picker large enough to search would cover the conversation being
+  reacted to. Chips sort by count, and ties keep the order they were first reacted with, so the row
+  does not reshuffle when somebody joins a tie.
+- **Polls** (`MeetingChatPoll`, `MeetingChatPollSheet`): composed in a sheet — a question and two to
+  six answers — and drawn as the message that carried them. The tally is **on show from the first
+  vote** rather than hidden until this reader votes: everyone can see the room anyway, so hiding it
+  buys no secrecy and leaves whoever is still deciding with nothing to go on. A vote can be moved
+  but never withdrawn, because the wire has no packet that says so and a control working only on
+  this device would be a lie. Answers cannot be reordered, unlike the web's drag handles: dragging a
+  row inside a sheet that scrolls over a keyboard fights every gesture around it.
+  A poll question uses **balanced line breaking** (`LineBreak.Heading`), so a question that wraps
+  splits into even lines instead of filling the first and leaving a stub — the default put a dangling
+  "now, or" above half an empty line. Reaction chips are padded **asymmetrically** (less on the emoji
+  side than the count side): an emoji's ink starts inset inside its glyph box where a digit fills its
+  advance width, so equal padding reads lopsided.
+  Voter names come from a **cache of everyone the room has seen**, not from its current participant
+  list: a vote names an identity and nothing more, so somebody who voted and then left showed up in
+  the results as `guest-vblonfbf`, and a voter who never sent a message left no name anywhere else
+  to fall back on. The cache lives as long as the room does.
+  Both ride the chat topic as packets of their own (`reaction`, `poll_vote`) rather than as new
+  versions of the message — nobody may rewrite what somebody else said, and the message being
+  reacted to may well predate this device's join. Nothing is re-synced on join, so a reaction or a
+  vote cast before arriving is one this device never sees; the other clients have the same hole, and
+  closing it means changing the shared protocol rather than this app.
+- **More options** (`MeetingMoreOptionsSheet`): the controls row keeps **its bar** inside the sheet —
+  same corner, fill and hairline as the collapsed one. Pulled out of that container it was five loose
+  shapes on the sheet's surface (a rounded-rect camera, two circles, a wide mic pill, the hang-up)
+  with nothing holding the variety together and `button` barely separating from the sheet's own
+  container. Expanding now reveals the options *below the bar you were already looking at* rather
+  than restyling it mid-drag, so the divider under the row is gone too: the bar's own edge separates.
+  Deafen uses a **crossed headphone**, matching the badge on your own tile — deafening is about what
+  reaches your ears, where a speaker icon says something about the room.
 - **Per-tile fullscreen** (`MeetingParticipantFullscreen`): chrome (name chip, collapse button,
   controls bar) auto-hides after `meetingChromeAutoHideDelayMs` of inactivity; any tap toggles it
   back; while hidden the system bars hide too (immersive). The hardware back key collapses
