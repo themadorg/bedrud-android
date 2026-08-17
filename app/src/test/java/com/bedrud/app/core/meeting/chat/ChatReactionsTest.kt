@@ -67,4 +67,26 @@ class ChatReactionsTest {
         assertFalse(isReactionEmoji(""))
         assertFalse(isReactionEmoji("🎉".repeat(40)))
     }
+
+    @Test
+    fun `the breakdown lists everyone who chose each emoji, most-chosen first`() {
+        val reactions = mapOf("u-1" to "👍", "u-2" to "🎉", "u-3" to "👍", "u-me" to "🔥")
+
+        val sections = reactions.breakdown()
+
+        assertEquals(listOf("👍", "🎉", "🔥"), sections.map { it.emoji })
+        assertEquals(listOf("u-1", "u-3"), sections.first().identities)
+    }
+
+    @Test
+    fun `the breakdown keeps stray text out, the way the chips do`() {
+        val reactions = mapOf("u-1" to "👍", "u-2" to "not an emoji")
+
+        assertEquals(listOf("👍"), reactions.breakdown().map { it.emoji })
+    }
+
+    @Test
+    fun `no reactions is no breakdown, rather than an empty section`() {
+        assertEquals(emptyList<ReactionBreakdown>(), emptyMap<String, String>().breakdown())
+    }
 }
