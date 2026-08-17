@@ -28,22 +28,25 @@ class ChatChunkAssembler(private val maxAgeMs: Long = DefaultMaxAgeMs) {
     private val pending = LinkedHashMap<String, Pending>()
 
     /**
-     * Feeds one raw packet in. Returns a message only when this packet completed it — a header, a
-     * part that leaves gaps behind, or a payload that is not chat at all all return null.
+     * Feeds one raw packet in and hands back what the room should act on: a whole message, a
+     * reaction, or a vote. Never a chunk — a header, or a part that still leaves gaps behind,
+     * returns null, as does a payload that is not chat at all.
      */
     fun accept(
         raw: ByteArray,
         topic: String?,
         now: Long = System.currentTimeMillis(),
-    ): ChatWire.IncomingChat? {
+    ): ChatWire.Inbound? {
         prune(now)
         return when (val inbound = ChatWire.parse(raw, topic)) {
-            is ChatWire.Inbound.Complete -> inbound.chat
+            is ChatWire.Inbound.Complete -> inbound
+            is ChatWire.Inbound.Reaction -> inbound
+            is ChatWire.Inbound.PollVote -> inbound
             is ChatWire.Inbound.ChunkMeta -> {
                 begin(inbound, now)
                 null
             }
-            is ChatWire.Inbound.ChunkPart -> apply(inbound, now)
+            is ChatWire.Inbound.ChunkPart -> apply(inbound, now)?.let { ChatWire.Inbound.Complete(it) }
             null -> null
         }
     }
@@ -97,6 +100,7 @@ class ChatChunkAssembler(private val maxAgeMs: Long = DefaultMaxAgeMs) {
             meta = entry.meta,
             message = entry.joined(ChatWire.SECTION_MESSAGE),
             attachmentsJson = entry.joined(ChatWire.SECTION_ATTACHMENTS),
+            pollJson = entry.joined(ChatWire.SECTION_POLL),
         )
     }
 

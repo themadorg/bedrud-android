@@ -10,11 +10,20 @@ class ChatChunkAssemblerTest {
 
     private fun packet(json: String): ByteArray = json.toByteArray(Charsets.UTF_8)
 
-    private fun meta(id: String, messageChunks: Int, attachmentChunks: Int = 0) = packet(
+    /** The message a packet completed, or null when it completed nothing — or was not a message. */
+    private fun ChatWire.Inbound?.chat(): ChatWire.IncomingChat? =
+        (this as? ChatWire.Inbound.Complete)?.chat
+
+    private fun meta(
+        id: String,
+        messageChunks: Int,
+        attachmentChunks: Int = 0,
+        pollChunks: Int = 0,
+    ) = packet(
         """
         {"type":"chat_chunk_meta","id":"$id","timestamp":1700000000000,
          "senderName":"Sara","senderIdentity":"u-7",
-         "messageChunks":$messageChunks,"attachmentChunks":$attachmentChunks,"pollChunks":0}
+         "messageChunks":$messageChunks,"attachmentChunks":$attachmentChunks,"pollChunks":$pollChunks}
         """.trimIndent()
     )
 
@@ -22,11 +31,11 @@ class ChatChunkAssemblerTest {
         packet("""{"type":"chat_chunk","id":"$id","kind":"$section","index":$index,"part":"$part"}""")
 
     /** Feeds this app's own packets back in, which is what the other end has to be able to do. */
-    private fun assembleOwnOutput(text: String): ChatWire.IncomingChat? {
+    private fun assembleOwnOutput(text: String, poll: ChatPoll? = null): ChatWire.IncomingChat? {
         val assembler = ChatChunkAssembler()
-        return ChatWire.encodeChat("Sara", "u-7", text, emptyList())
-            .map { assembler.accept(it, topic) }
-            .lastOrNull { it != null }
+        return ChatWire.encodeChat("Sara", "u-7", text, emptyList(), poll = poll)
+            .mapNotNull { assembler.accept(it, topic).chat() }
+            .lastOrNull()
     }
 
     @Test
@@ -34,7 +43,18 @@ class ChatChunkAssemblerTest {
         val assembler = ChatChunkAssembler()
         val raw = packet("""{"type":"chat","id":"m1","senderName":"Sara","message":"hi"}""")
 
-        assertEquals("hi", assembler.accept(raw, topic)?.text)
+        assertEquals("hi", assembler.accept(raw, topic).chat()?.text)
+    }
+
+    @Test
+    fun `hands a reaction straight back, since there is nothing to assemble`() {
+        val assembler = ChatChunkAssembler()
+        val raw = packet("""{"type":"reaction","messageId":"m1","emoji":"🎉","voterIdentity":"u-7"}""")
+
+        val reaction = assembler.accept(raw, topic) as? ChatWire.Inbound.Reaction
+
+        assertEquals("m1", reaction?.messageId)
+        assertEquals("🎉", reaction?.emoji)
     }
 
     @Test
@@ -44,12 +64,26 @@ class ChatChunkAssemblerTest {
         assertNull(assembler.accept(meta("m1", messageChunks = 3), topic))
         assertNull(assembler.accept(chunk("m1", 0, "one "), topic))
         assertNull(assembler.accept(chunk("m1", 1, "two "), topic))
-        val done = assembler.accept(chunk("m1", 2, "three"), topic)
+        val done = assembler.accept(chunk("m1", 2, "three"), topic).chat()
 
         assertEquals("one two three", done?.text)
         assertEquals("Sara", done?.senderName)
         assertEquals("u-7", done?.senderIdentity)
         assertEquals(1700000000000L, done?.timestamp)
+    }
+
+    @Test
+    fun `waits for the poll parts as well as the message ones`() {
+        val assembler = ChatChunkAssembler()
+        val poll = """{\"id\":\"p-1\",\"question\":\"Lunch?\",\"options\":[{\"id\":\"o-1\",\"text\":\"Now\"},{\"id\":\"o-2\",\"text\":\"Later\"}]}"""
+
+        assembler.accept(meta("m1", messageChunks = 1, pollChunks = 1), topic)
+        assertNull(assembler.accept(chunk("m1", 0, "vote please"), topic))
+        val done = assembler.accept(chunk("m1", 0, poll, section = "poll"), topic).chat()
+
+        assertEquals("vote please", done?.text)
+        assertEquals("Lunch?", done?.poll?.question)
+        assertEquals(listOf("Now", "Later"), done?.poll?.options?.map { it.text })
     }
 
     @Test
@@ -60,7 +94,7 @@ class ChatChunkAssemblerTest {
         assertNull(assembler.accept(chunk("m1", 2, "three"), topic))
         assertNull(assembler.accept(chunk("m1", 0, "one "), topic))
 
-        assertEquals("one two three", assembler.accept(chunk("m1", 1, "two "), topic)?.text)
+        assertEquals("one two three", assembler.accept(chunk("m1", 1, "two "), topic).chat()?.text)
     }
 
     @Test
@@ -72,8 +106,8 @@ class ChatChunkAssemblerTest {
         assembler.accept(chunk("m1", 0, "first-"), topic)
         assembler.accept(chunk("m2", 0, "second-"), topic)
 
-        assertEquals("second-b", assembler.accept(chunk("m2", 1, "b"), topic)?.text)
-        assertEquals("first-a", assembler.accept(chunk("m1", 1, "a"), topic)?.text)
+        assertEquals("second-b", assembler.accept(chunk("m2", 1, "b"), topic).chat()?.text)
+        assertEquals("first-a", assembler.accept(chunk("m1", 1, "a"), topic).chat()?.text)
     }
 
     @Test
@@ -81,7 +115,7 @@ class ChatChunkAssemblerTest {
         val assembler = ChatChunkAssembler()
         assembler.accept(meta("m1", messageChunks = 1), topic)
 
-        assertEquals("only", assembler.accept(chunk("m1", 0, "only"), topic)?.text)
+        assertEquals("only", assembler.accept(chunk("m1", 0, "only"), topic).chat()?.text)
         assertNull(assembler.accept(chunk("m1", 0, "only"), topic))
     }
 
@@ -105,7 +139,7 @@ class ChatChunkAssemblerTest {
         assembler.accept(chunk("m1", 0, "one "), topic)
         assembler.accept(meta("m1", messageChunks = 2), topic)
 
-        assertEquals("one two", assembler.accept(chunk("m1", 1, "two"), topic)?.text)
+        assertEquals("one two", assembler.accept(chunk("m1", 1, "two"), topic).chat()?.text)
     }
 
     @Test
@@ -147,5 +181,12 @@ class ChatChunkAssemblerTest {
         val text = "🎉".repeat(40_000)
 
         assertEquals(text, assembleOwnOutput(text)?.text)
+    }
+
+    @Test
+    fun `rebuilds a poll that had to travel alongside a long message`() {
+        val poll = newPoll("Lunch?", listOf("Now", "Later"))!!
+
+        assertEquals(poll, assembleOwnOutput("x".repeat(150_000), poll = poll)?.poll)
     }
 }
