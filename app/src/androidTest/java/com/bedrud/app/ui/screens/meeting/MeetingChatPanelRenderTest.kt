@@ -87,6 +87,13 @@ class MeetingChatPanelRenderTest {
         )
     }
 
+    /** The fixture's own names, so a breakdown shows people rather than identities. */
+    private fun fixtureName(identity: String): String = when (identity) {
+        "u-1" -> "سارا احمدی"
+        "u-2" -> "Miriam Okonkwo"
+        else -> identity
+    }
+
     @Test
     fun chatPanel() {
         capture("chat-panel") {
@@ -102,19 +109,35 @@ class MeetingChatPanelRenderTest {
     }
 
     /**
-     * The reaction picker, opened the way a reader opens it. Long-pressing a message has to reach
-     * the menu rather than the list under it, so this is a check as much as a capture.
+     * The message menu, opened the way a reader opens it. Long-pressing a message has to reach the
+     * menu rather than the list under it, so this is a check as much as a capture — and the capture
+     * has to show all three of the pill, the bubble and the actions card, which is the whole point
+     * of the menu being two surfaces instead of one.
      */
     @Test
-    fun chatReactionPicker() {
+    fun chatMessageMenu() {
         capture(
-            "chat-reaction-picker",
+            "chat-message-menu",
             windowMarker = QuickReactions.first(),
             beforeCapture = {
                 compose.onNodeWithText(LongPressedMessage).performTouchInput { longClick() }
             },
         ) {
             Panel(sendDisabledReason = null)
+        }
+    }
+
+    /** Who reacted, behind the menu's reactions row. */
+    @Test
+    fun chatReactions() {
+        val reactions = messages().first { it.reactions.isNotEmpty() }.reactions
+        capture("chat-reactions", windowMarker = SheetMarkerReactions) {
+            ChatReactionsSheet(
+                reactions = reactions,
+                currentIdentity = "u-me",
+                resolveName = ::fixtureName,
+                onDismiss = {},
+            )
         }
     }
 
@@ -134,13 +157,7 @@ class MeetingChatPanelRenderTest {
             ChatPollResultsSheet(
                 poll = poll,
                 currentIdentity = "u-me",
-                resolveName = { identity ->
-                    when (identity) {
-                        "u-1" -> "سارا احمدی"
-                        "u-2" -> "Miriam Okonkwo"
-                        else -> identity
-                    }
-                },
+                resolveName = ::fixtureName,
                 onDismiss = {},
             )
         }
@@ -216,6 +233,9 @@ class MeetingChatPanelRenderTest {
 
         /** The composer's own title, which is how its window is told from the scrim's. */
         const val SheetMarkerNewPoll = "New poll"
+
+        /** The reactions sheet's own title, told from the scrim the same way. */
+        const val SheetMarkerReactions = "Reactions"
 
         /** The message the picker is opened on — one of the fixture's, and short enough to hit. */
         const val LongPressedMessage = "Take your time 🙂"
