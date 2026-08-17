@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.HeadsetOff
 import androidx.compose.material.icons.filled.MicOff
 import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material3.Icon
@@ -82,6 +83,7 @@ fun MeetingVideoGrid(
     pinnedIdentity: String?,
     speakingLevels: Map<String, Float>,
     isLocalMicEnabled: Boolean,
+    isLocalDeafened: Boolean = false,
     onOpenParticipantActions: (String) -> Unit,
     onExpandTile: (String) -> Unit,
     onOverflowClick: () -> Unit,
@@ -109,6 +111,7 @@ fun MeetingVideoGrid(
                     isPinned = participant.identity?.value == pinnedIdentity,
                     speakingLevel = speakingLevels[participant.identity?.value] ?: 0f,
                     isLocalMicEnabled = isLocalMicEnabled,
+                    isLocalDeafened = isLocalDeafened,
                     onOpenParticipantActions = onOpenParticipantActions,
                     onExpand = onExpandTile,
                     modifier = slotModifier,
@@ -207,6 +210,7 @@ internal fun ParticipantTile(
     isPinned: Boolean = false,
     speakingLevel: Float = 0f,
     isLocalMicEnabled: Boolean = true,
+    isLocalDeafened: Boolean = false,
     onOpenParticipantActions: ((String) -> Unit)? = null,
     onExpand: ((String) -> Unit)? = null,
     modifier: Modifier = Modifier,
@@ -328,6 +332,17 @@ internal fun ParticipantTile(
                     imageVector = Icons.Default.PushPin,
                     contentDescription = stringResource(R.string.meeting_action_pin),
                     tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(Dimens.meetingBadgeIcon),
+                )
+            }
+            // Deafened is your own state and nobody else's business — the room is not told, so the
+            // badge is only ever drawn on your own tile. It leads the mute badge: not hearing the
+            // room is the larger fact of the two.
+            if (isLocalParticipant && isLocalDeafened) {
+                Icon(
+                    imageVector = Icons.Default.HeadsetOff,
+                    contentDescription = stringResource(R.string.meeting_contentDescription_deafened),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.size(Dimens.meetingBadgeIcon),
                 )
             }
