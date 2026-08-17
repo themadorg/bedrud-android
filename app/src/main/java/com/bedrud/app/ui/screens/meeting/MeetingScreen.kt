@@ -66,6 +66,7 @@ import com.bedrud.app.ui.components.BedrudScaffoldContentInsets
 import com.bedrud.app.ui.theme.BedrudShapeTokens
 import com.bedrud.app.ui.theme.Dimens
 import com.bedrud.app.ui.theme.Motion
+import com.bedrud.app.ui.util.hostOf
 import com.bedrud.app.ui.util.setPlainText
 import com.bedrud.app.core.livekit.ConnectionState
 import com.bedrud.app.core.livekit.ParticipantMetadata
@@ -96,6 +97,10 @@ fun MeetingScreen(
     val authManager = instanceManager.authManager.collectAsState().value
     val currentUser by (authManager?.currentUser ?: kotlinx.coroutines.flow.MutableStateFlow(null)).collectAsState()
     val serverURL = instanceManager.store.activeInstance?.serverURL.orEmpty()
+    // Every server this person has added, by host. A room link on one of them opens in the app
+    // rather than the website; anything else is somebody else's page and goes to a browser.
+    val instances by instanceManager.store.instances.collectAsState()
+    val knownHosts = remember(instances) { instances.mapNotNull { hostOf(it.serverURL) }.toSet() }
     val accessToken = authManager?.getAccessToken()
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -977,6 +982,7 @@ fun MeetingScreen(
                                         isChatBlocked -> R.string.meeting_chat_blockedByModerator
                                         else -> null
                                     },
+                                    knownHosts = knownHosts,
                                 )
                             }
 

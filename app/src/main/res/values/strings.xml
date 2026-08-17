@@ -135,6 +135,7 @@
   </plurals>
   <string name="meeting_chat_reactions">Reactions</string>
   <string name="meeting_chat_shareChooser">Share message</string>
+  <string name="meeting_chat_linkUnopenable">No app can open that link</string>
   <plurals name="meeting_chat_reactionCount">
     <item quantity="one">%1$d reaction</item>
     <item quantity="other">%1$d reactions</item>

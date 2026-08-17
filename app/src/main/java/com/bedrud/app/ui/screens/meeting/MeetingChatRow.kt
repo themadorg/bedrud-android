@@ -67,6 +67,7 @@ fun MeetingChatRow(
     onVote: (String, String) -> Unit,
     onShowPollResults: (String) -> Unit,
     onShowReactions: (String) -> Unit,
+    onLinkClick: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val shape = BedrudShapeTokens.chatBubble(
@@ -123,6 +124,7 @@ fun MeetingChatRow(
                     onLongPress = { menuOpen = true },
                     onVote = onVote,
                     onShowPollResults = onShowPollResults,
+                    onLinkClick = onLinkClick,
                 )
                 ChatMessageMenu(
                     expanded = menuOpen,
@@ -167,6 +169,7 @@ private fun ChatBubble(
     onLongPress: () -> Unit,
     onVote: (String, String) -> Unit,
     onShowPollResults: (String) -> Unit,
+    onLinkClick: (String) -> Unit,
 ) {
     val message = row.message
     Column(
@@ -203,16 +206,21 @@ private fun ChatBubble(
             )
         }
         if (message.text.isNotEmpty()) {
+            val contentColor = if (row.isLocal) {
+                MaterialTheme.colorScheme.onPrimaryContainer
+            } else {
+                MaterialTheme.colorScheme.onSurface
+            }
             Text(
-                text = BidiUtils.wrap(message.text),
+                text = rememberChatMessageText(
+                    text = message.text,
+                    contentColor = contentColor,
+                    onLinkClick = onLinkClick,
+                ),
                 style = MaterialTheme.typography.bodyMedium.copy(
                     textDirection = BidiUtils.textDirection(message.text),
                 ),
-                color = if (row.isLocal) {
-                    MaterialTheme.colorScheme.onPrimaryContainer
-                } else {
-                    MaterialTheme.colorScheme.onSurface
-                },
+                color = contentColor,
                 modifier = Modifier
                     .background(
                         if (row.isLocal) {

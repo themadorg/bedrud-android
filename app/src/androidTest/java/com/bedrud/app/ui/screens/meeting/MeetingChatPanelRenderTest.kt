@@ -187,6 +187,7 @@ class MeetingChatPanelRenderTest {
             resolveName = { it },
             imageContext = null,
             sendDisabledReason = sendDisabledReason,
+            knownHosts = emptySet(),
             modifier = Modifier.fillMaxSize(),
         )
       }

@@ -133,6 +133,7 @@
   </plurals>
   <string name="meeting_chat_reactions">واکنش‌ها</string>
   <string name="meeting_chat_shareChooser">هم‌رسانی پیام</string>
+  <string name="meeting_chat_linkUnopenable">هیچ برنامه‌ای نمی‌تواند آن پیوند را باز کند</string>
   <plurals name="meeting_chat_reactionCount">
     <item quantity="one">%1$d واکنش</item>
     <item quantity="other">%1$d واکنش</item>

@@ -134,6 +134,7 @@
   </plurals>
   <string name="meeting_chat_reactions">リアクション</string>
   <string name="meeting_chat_shareChooser">メッセージを共有</string>
+  <string name="meeting_chat_linkUnopenable">そのリンクを開けるアプリがありません</string>
   <plurals name="meeting_chat_reactionCount">
     <item quantity="other">%1$d 件のリアクション</item>
   </plurals>

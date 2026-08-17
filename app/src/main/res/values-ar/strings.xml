@@ -139,6 +139,7 @@
   </plurals>
   <string name="meeting_chat_reactions">التفاعلات</string>
   <string name="meeting_chat_shareChooser">مشاركة الرسالة</string>
+  <string name="meeting_chat_linkUnopenable">لا يوجد تطبيق يمكنه فتح هذا الرابط</string>
   <plurals name="meeting_chat_reactionCount">
     <item quantity="zero">%1$d تفاعل</item>
     <item quantity="one">%1$d تفاعل</item>

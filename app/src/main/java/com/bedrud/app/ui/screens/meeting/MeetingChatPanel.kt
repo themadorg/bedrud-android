@@ -66,6 +66,7 @@ import androidx.compose.ui.unit.dp
 import com.bedrud.app.R
 import com.bedrud.app.core.BidiUtils
 import com.bedrud.app.core.api.RoomApi
+import com.bedrud.app.core.call.CallService
 import com.bedrud.app.core.chat.ChatImageUploader
 import com.bedrud.app.core.chat.ChatUploadFailure
 import com.bedrud.app.core.chat.ChatUploadResult
@@ -78,6 +79,7 @@ import com.bedrud.app.ui.components.ChatImageLightbox
 import com.bedrud.app.ui.theme.BedrudShapeTokens
 import com.bedrud.app.ui.theme.Dimens
 import com.bedrud.app.ui.theme.bedrudColors
+import com.bedrud.app.ui.util.openChatLink
 import kotlinx.coroutines.launch
 
 /**
@@ -121,6 +123,13 @@ fun MeetingChatPanel(
     resolveName: (String) -> String,
     imageContext: ChatImageContext?,
     @StringRes sendDisabledReason: Int?,
+    /**
+     * The servers this person has added, by host. A room link on one of them opens the app; anything
+     * else opens a browser. Passed in rather than looked up here because a link to somebody else's
+     * site that happens to carry an `/m/` path is not this app's to swallow, and only the caller
+     * knows which servers are actually the reader's.
+     */
+    knownHosts: Set<String>,
     modifier: Modifier = Modifier,
 ) {
     val listState = rememberLazyListState()
@@ -153,6 +162,10 @@ fun MeetingChatPanel(
 
     var isUploading by remember { mutableStateOf(false) }
     var uploadError by remember { mutableStateOf<String?>(null) }
+    // A device with no browser at all cannot open a link, and a tap that silently does nothing
+    // reads as a broken link rather than as a missing app. Shares the notice line below.
+    var linkError by remember { mutableStateOf<String?>(null) }
+    val linkUnopenable = stringResource(R.string.meeting_chat_linkUnopenable)
     var previewImageUrl by remember { mutableStateOf<String?>(null) }
     var isComposingPoll by remember { mutableStateOf(false) }
     // The message whose results are open, rather than the poll itself: votes keep arriving while
@@ -230,6 +243,22 @@ fun MeetingChatPanel(
                         onVote = onVote,
                         onShowPollResults = { resultsMessageId = it },
                         onShowReactions = { reactionsMessageId = it },
+                        onLinkClick = { url ->
+                            linkError = if (
+                                context.openChatLink(
+                                    url = url,
+                                    knownHosts = knownHosts,
+                                    // Chat only exists inside a call, so this is false today. It is
+                                    // asked rather than assumed so the room hop turns itself on the
+                                    // moment leaving a call to follow a link becomes a thing.
+                                    canJoinAnotherRoom = !CallService.isRunning,
+                                )
+                            ) {
+                                null
+                            } else {
+                                linkUnopenable
+                            }
+                        },
                     )
                 }
             }
@@ -270,7 +299,7 @@ fun MeetingChatPanel(
                 )
             }
         }
-        uploadError?.let { error ->
+        (uploadError ?: linkError)?.let { error ->
             Text(
                 text = error,
                 style = MaterialTheme.typography.labelSmall,

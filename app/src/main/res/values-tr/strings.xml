@@ -135,6 +135,7 @@
   </plurals>
   <string name="meeting_chat_reactions">Tepkiler</string>
   <string name="meeting_chat_shareChooser">Mesajı paylaş</string>
+  <string name="meeting_chat_linkUnopenable">Bu bağlantıyı açabilecek bir uygulama yok</string>
   <plurals name="meeting_chat_reactionCount">
     <item quantity="one">%1$d tepki</item>
     <item quantity="other">%1$d tepki</item>
