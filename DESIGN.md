@@ -270,7 +270,21 @@ the `meeting*` tokens in `Dimens.kt`, timing in `Motion.meetingChromeAutoHideDel
   it. Both hang off the bubble's own outer edge, which swaps sides with the layout direction.
   The gesture used to start selecting text inside the bubble, and both cannot own it — on a
   phone a long press means "act on this message" everywhere else, and copying is what the selecting
-  was for. Tapping a picture opens the
+  was for.
+  **Links in a message are tappable** (`ChatLinks`, `MeetingChatText`): underlined and slightly
+  heavier rather than tinted, because a bubble is one of two colours depending on whose message it
+  is and no single accent reads on both without fighting one of them. The link is the literal text,
+  never anchor text pointing elsewhere, so a message from a stranger cannot dress one address up as
+  another. Detection is deliberately conservative — a bare host only counts when it carries a path,
+  so `bedrud.xyz/m/standup` is a link and "see you Sept. 11" is not; the cost of missing an exotic
+  URL is a copy-paste, the cost of linkifying prose is a tappable target that is always wrong.
+  Links open in a **Custom Tab**, the way OAuth does, so closing it returns to the call.
+  A link to a room on a server the reader has added is meant to open in the app instead, and the
+  code is there — but it is gated off while a call is running, which today is whenever chat is on
+  screen. Telecom refuses to place a second call over an unholdable one, so the deep link dead-ends
+  in "Cannot place a call as there is an unholdable call". Leaving the current call to follow a
+  link is a real feature and a destructive one; until it exists a room link opens the page.
+  Tapping a picture opens the
   lightbox, which can **save it to `Pictures/Bedrud`** via `MediaStore` — no permission at all from
   Android 10 on, and `WRITE_EXTERNAL_STORAGE` capped at API 28 for the one older version supported.
   The lightbox says whether it worked for `Motion.lightboxOutcomeNoticeMs` and then gets out of the

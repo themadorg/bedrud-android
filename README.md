@@ -22,8 +22,8 @@ For the server, web app, and other platforms, see the [main Bedrud project](http
 - **Picture-in-Picture** — keep the meeting visible while using other apps
 - **Screen sharing** — several people can present at once, and watching a stream is opt-in per viewer
 - **In-meeting chat** over the LiveKit data channel — messages grouped by sender, emoji reactions
-  with a breakdown of who reacted, copying or sharing a message to any other app, polls to vote in,
-  and image sharing with any received picture savable to the gallery
+  with a breakdown of who reacted, tappable links, copying or sharing a message to any other app,
+  polls to vote in, and image sharing with any received picture savable to the gallery
 - **Push to talk & voice sensitivity** — hold-to-talk input mode, a manual voice gate for voice activity, per-person volume, and device noise suppression
 - **Admin moderation** — kick and ban controls for room hosts
 - **Flexible sign-in** — email/password, guest access, OAuth, and FIDO2 passkeys
