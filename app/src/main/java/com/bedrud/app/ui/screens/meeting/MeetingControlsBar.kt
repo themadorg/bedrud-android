@@ -412,9 +412,14 @@ private fun MicPill(
         ) {
             // Every label is laid out invisibly so the pill keeps one width across modes and
             // states — nothing in the bar may move when the mode or hold state changes.
+            // Centred, not start-aligned. The pill is as wide as its longest label ever gets, so
+            // start-aligning left "Muted" and "Speak" hard against the icon with a pill's worth of
+            // empty space trailing them — the control looked broken rather than compact. Centring
+            // costs a small horizontal shift when the label itself changes length, which is a far
+            // smaller thing to notice than a permanently lopsided pill.
             Box(
                 modifier = Modifier.padding(horizontal = Dimens.space12),
-                contentAlignment = Alignment.CenterStart,
+                contentAlignment = Alignment.Center,
             ) {
                 PillContent(
                     contentColor = Color.Transparent,
