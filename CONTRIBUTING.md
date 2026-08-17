@@ -94,6 +94,29 @@ make check
 won't build. On Windows run them from Git Bash or WSL — `make` isn't bundled with Git for
 Windows (`winget install ezwinports.make` or `scoop install make`).
 
+### Driving the app on a device
+
+A green build is not evidence the change works, so a change gets run. `make drive`
+installs the dev build, launches it and prints every label on screen; from there
+[`tools/emu`](tools/emu) walks the app by naming those labels rather than tapping
+coordinates, waiting for each one to appear:
+
+```bash
+tools/emu tap  "my-room"     30   # seconds to wait before giving up
+tools/emu tap  "Toggle Chat" 45   # long enough to cover the LiveKit connect
+tools/emu wait "Type a message"
+tools/emu shot chat-sheet         # lands in shots/, which is git-ignored
+```
+
+Chaining the steps in one shell invocation is the point: a tap costs milliseconds, while
+stopping to look at a screenshot between every step costs the rest of the afternoon. Look
+once, at the end. `tools/emu log` tails just this app's logcat when a step doesn't land,
+and `make screen` re-lists the labels when you need to find the next thing to tap.
+
+One limit worth knowing: `adb`'s `input text` is ASCII-only, and no shell-reachable
+substitute exists on current images. Persian, Arabic and emoji have to enter the app some
+other way — a second participant sending them, or a fixture in a test.
+
 Tests are JUnit 4 with MockK, OkHttp MockWebServer, and kotlinx-coroutines-test. There is
 no instrumented test directory. `InMemorySharedPreferences` in `testutil/` lets you inject
 into anything taking `SharedPreferences` without pulling in the Android framework.
