@@ -372,5 +372,6 @@
   <string name="meeting_ns_off">إيقاف</string>
   <string name="meeting_ns_device">الجهاز (مدمج)</string>
   <string name="meeting_ns_appliesNextJoin">يسري عند انضمامك التالي</string>
-  <string name="meeting_ptt_openMic">ميكروفون مفتوح</string>
+  <string name="meeting_ptt_speak">تحدث</string>
+  <string name="meeting_ptt_muted">مكتوم</string>
 </resources>

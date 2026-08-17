@@ -364,5 +364,6 @@
   <string name="meeting_ns_off">Desactivada</string>
   <string name="meeting_ns_device">Dispositivo (integrada)</string>
   <string name="meeting_ns_appliesNextJoin">Se aplica la próxima vez que te unas</string>
-  <string name="meeting_ptt_openMic">Micro abierto</string>
+  <string name="meeting_ptt_speak">Hablar</string>
+  <string name="meeting_ptt_muted">Silenciado</string>
 </resources>

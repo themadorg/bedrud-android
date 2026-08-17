@@ -364,5 +364,6 @@
   <string name="meeting_ns_off">Kapalı</string>
   <string name="meeting_ns_device">Cihaz (yerleşik)</string>
   <string name="meeting_ns_appliesNextJoin">Bir sonraki katılımda geçerli olur</string>
-  <string name="meeting_ptt_openMic">Açık mikrofon</string>
+  <string name="meeting_ptt_speak">Konuş</string>
+  <string name="meeting_ptt_muted">Kapalı</string>
 </resources>
