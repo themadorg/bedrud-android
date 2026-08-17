@@ -1,0 +1,192 @@
+#!/bin/bash
+#
+# Drive the app on a device by naming what is on screen, not by guessing pixels.
+#
+#   emu launch [url]          launch the app, or open a deep link in it
+#   emu tap    "<text>" [s]   wait for the text, then tap its centre
+#   emu press  "<text>" [s]   the same, long-pressed
+#   emu type   "<text>" "<s>" tap the field labelled <text>, then type <s> (ASCII only)
+#   emu wait   "<text>" [s]   block until the text is on screen
+#   emu back                  the back button
+#   emu dump                  every label on screen, with its bounds
+#   emu shot   <name>         screenshot to $SHOTS/<name>.png
+#   emu log    [lines]        this app's own logcat, minus the uiautomator noise
+#
+# Every command that takes text finds its target in the accessibility tree and polls
+# until it appears, so a whole journey chains in one shell invocation:
+#
+#   tools/emu launch
+#   tools/emu tap "my-room" 25
+#   tools/emu tap "Toggle Chat" 40      # waits out the LiveKit connect
+#   tools/emu shot chat-sheet
+#
+# That matters because the alternative - screenshot, look, tap, screenshot - costs a
+# round trip per step, while a tap itself costs 50ms. The whole point is to spend one
+# look at the end instead of one per step.
+#
+# Set ANDROID_SERIAL to pick between attached devices, APP to drive a different build.
+set -uo pipefail
+
+# The dev build by default: it carries the `.dev` suffix so it coexists with a real
+# install, which is the one that should be driven by a script.
+APP=${APP:-com.bedrud.app.dev}
+LAUNCHER_ACTIVITY=$APP/com.bedrud.app.MainActivity
+SHOTS=${SHOTS:-$PWD/shots}
+
+# How often to re-read the tree while waiting, and how long to wait by default. A read
+# costs about two seconds on an emulator, so polling faster than this buys nothing.
+POLL_SECONDS=0.4
+DEFAULT_TIMEOUT_SECONDS=15
+
+# How long a press has to be held to register as a long press. Android's own threshold
+# is 500ms; the margin covers a device busy enough to drop the first frames.
+LONG_PRESS_MILLIS=700
+
+DEVICE_TREE_PATH=/sdcard/emu-ui.xml
+tree_file=$(mktemp -t emu-ui)
+trap 'rm -f "$tree_file"' EXIT
+
+# Dumps the accessibility tree to the host. Both halves are quiet: uiautomator writes a
+# banner to stdout, and a dump taken mid-animation fails outright, which `await` retries.
+read_tree() {
+    adb shell uiautomator dump "$DEVICE_TREE_PATH" >/dev/null 2>&1
+    adb pull "$DEVICE_TREE_PATH" "$tree_file" >/dev/null 2>&1
+}
+
+# Prints "<x> <y>" for the node labelled with the given text, or nothing if it is absent.
+centre_of() {
+    python3 - "$tree_file" "$1" <<'PY'
+import re, sys
+
+try:
+    tree = open(sys.argv[1], encoding='utf-8').read()
+except OSError:
+    sys.exit(0)                     # no dump yet; the caller polls again
+wanted = sys.argv[2]
+
+# An exact label wins over one that merely contains the text: a screen showing both a
+# "Join" button and a room card named "Join us" must resolve "Join" to the button.
+exact = partial = None
+for node in re.findall(r'<node[^>]*>', tree):
+    text = re.search(r'text="([^"]*)"', node)
+    description = re.search(r'content-desc="([^"]*)"', node)
+    label = (text.group(1) if text else '') or (description.group(1) if description else '')
+    if not label or wanted not in label:
+        continue
+    bounds = re.search(r'bounds="\[(-?\d+),(-?\d+)\]\[(-?\d+),(-?\d+)\]"', node)
+    if not bounds:
+        continue
+    left, top, right, bottom = map(int, bounds.groups())
+    if right <= left or bottom <= top:
+        continue                    # a zero-area node is off screen, so not tappable
+    centre = ((left + right) // 2, (top + bottom) // 2)
+    if label == wanted:
+        exact = centre
+        break
+    if partial is None:
+        partial = centre
+
+hit = exact or partial
+if hit:
+    print(hit[0], hit[1])
+PY
+}
+
+# Polls until the text is on screen, then prints its centre. Fails if it never arrives,
+# so a journey stops at the step that broke instead of tapping into empty space.
+await() {
+    local wanted=$1 timeout=${2:-$DEFAULT_TIMEOUT_SECONDS} deadline centre
+    deadline=$(( $(date +%s) + timeout ))
+    while [ "$(date +%s)" -lt "$deadline" ]; do
+        read_tree
+        centre=$(centre_of "$wanted")
+        if [ -n "$centre" ]; then
+            echo "$centre"
+            return 0
+        fi
+        sleep "$POLL_SECONDS"
+    done
+    echo "emu: '$wanted' never appeared (waited ${timeout}s)" >&2
+    return 1
+}
+
+usage() { sed -n '3,13p' "$0" | sed 's/^#\{1,\} \{0,1\}//'; }
+
+case "${1:-}" in
+launch)
+    if [ -n "${2:-}" ]; then
+        adb shell am start -a android.intent.action.VIEW -d "$2" >/dev/null
+        echo "opened $2"
+    else
+        adb shell am start -n "$LAUNCHER_ACTIVITY" >/dev/null
+        echo "launched $APP"
+    fi
+    ;;
+tap)
+    centre=$(await "$2" "${3:-$DEFAULT_TIMEOUT_SECONDS}") || exit 1
+    read -r x y <<<"$centre"
+    adb shell input tap "$x" "$y"
+    echo "tapped '$2' at $x,$y"
+    ;;
+press)
+    centre=$(await "$2" "${3:-$DEFAULT_TIMEOUT_SECONDS}") || exit 1
+    read -r x y <<<"$centre"
+    adb shell input swipe "$x" "$y" "$x" "$y" "$LONG_PRESS_MILLIS"
+    echo "long-pressed '$2' at $x,$y"
+    ;;
+type)
+    centre=$(await "$2") || exit 1
+    read -r x y <<<"$centre"
+    adb shell input tap "$x" "$y"
+    # `input text` takes a single shell word, and spells a space %s. It also throws on
+    # anything outside ASCII, and there is no way around that from the shell: neither
+    # `cmd clipboard` nor `adb emu event text` is implemented on current images, and the
+    # host clipboard is not mirrored into the guest. Persian, Arabic and emoji have to
+    # arrive some other way - a remote participant sending them, or a fixture in a test.
+    adb shell input text "${3// /%s}"
+    echo "typed into '$2'"
+    ;;
+wait)
+    await "$2" "${3:-$DEFAULT_TIMEOUT_SECONDS}" >/dev/null && echo "saw '$2'"
+    ;;
+back)
+    adb shell input keyevent KEYCODE_BACK
+    echo "back"
+    ;;
+dump)
+    read_tree
+    python3 - "$tree_file" <<'PY'
+import re, sys
+
+tree = open(sys.argv[1], encoding='utf-8').read()
+for node in re.findall(r'<node[^>]*>', tree):
+    text = re.search(r'text="([^"]*)"', node)
+    description = re.search(r'content-desc="([^"]*)"', node)
+    label = (text.group(1) if text else '') or (description.group(1) if description else '')
+    if not label:
+        continue
+    bounds = re.search(r'bounds="(\[[^"]*\])"', node)
+    print(f"{label!r} {bounds.group(1) if bounds else ''}")
+PY
+    ;;
+shot)
+    [ -n "${2:-}" ] || { echo "emu: shot needs a name" >&2; exit 1; }
+    mkdir -p "$SHOTS"
+    adb exec-out screencap -p > "$SHOTS/$2.png"
+    echo "$SHOTS/$2.png"
+    ;;
+log)
+    pid=$(adb shell pidof "$APP" | tr -d '\r')
+    [ -n "$pid" ] || { echo "emu: $APP is not running" >&2; exit 1; }
+    # uiautomator narrates every skipped node at INFO, which buries everything else the
+    # moment this script has been used to get to the screen being debugged.
+    adb logcat -d --pid="$pid" 2>/dev/null \
+        | grep -v 'AccessibilityNodeInfoDumper' \
+        | tail -"${2:-40}"
+    ;;
+*)
+    usage
+    [ -z "${1:-}" ] && exit 1
+    exit 0
+    ;;
+esac
