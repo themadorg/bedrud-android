@@ -260,9 +260,20 @@ the `meeting*` tokens in `Dimens.kt`, timing in `Motion.meetingChromeAutoHideDel
   height. It used to be single-line, which scrolled the text sideways and hid the start of the
   sentence being written — the one part a writer needs in order to finish it. Five lines is a long
   message by the standards of a call, and stopping there keeps the dock from climbing over the
-  conversation being answered. The bar's vertical padding only shows once it has grown: at one line
-  the `chatDockBar` minimum is taller than the text plus that padding, so the single-line dock is
-  exactly as it was.
+  conversation being answered.
+  Attach and poll **show only while the field is empty**. They hold a fixed column on the left, and
+  once the field wraps that column is a tall empty block beside the text — while what a writer needs
+  at that moment is width, not two controls they are not using. Standing down buys back the whole
+  column, which is often a line of the message. They return the moment the field is empty again,
+  which is also when attaching a picture or opening a poll is what someone is there to do. The trade
+  is deliberate: attaching to a half-written message means clearing it first.
+  The controls **sit at the bottom** of the grown bar, beside the line being written, rather than
+  floating against the middle of a block of text. Two paddings make that work and they are not
+  interchangeable: the bar's own is `space4`, because the icons are `chatDockIcon` tall and anything
+  more pushes past the `chatDockBar` minimum and silently grows the one-line dock; the field's is
+  `space8`, which brings a single line of text up to the icons' height so bottom-aligning is
+  indistinguishable from centring while there is only one line, and which then sits under the last
+  line so the bottom-aligned icons land centred on it rather than below it.
   A **long press opens the message menu** (`MeetingChatMessageMenu`), which straddles the bubble:
   the quick reactions as a pill above it, what can be done with the message — **who reacted**, Copy
   and Share — as a card below, and the message itself readable between them. One box containing
