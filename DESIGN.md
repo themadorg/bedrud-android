@@ -256,8 +256,19 @@ the `meeting*` tokens in `Dimens.kt`, timing in `Motion.meetingChromeAutoHideDel
   the same place on screen and swap with each other, so they are the same object with different
   contents. Its attach control is a paperclip: the picker is still images-only, because an image is
   the only attachment the wire carries.
-  A **long press opens the message menu**: the eight quick reactions on one row, and Copy under
-  them. The gesture used to start selecting text inside the bubble, and both cannot own it — on a
+  A **long press opens the message menu** (`MeetingChatMessageMenu`), which straddles the bubble:
+  the quick reactions as a pill above it, what can be done with the message — **who reacted**, Copy
+  and Share — as a card below, and the message itself readable between them. One box containing
+  both used to cover the very thing the menu was about. Both surfaces are sized to their contents
+  rather than to the panel: stretched wide they read as bands across the conversation, and the far
+  end of a full-width row is out of thumb reach. Copy and Share act on the words, so a message
+  carrying only a picture offers neither. The bubble does **not** move to make room — lifting it clear the way the
+  messengers do needs the whole conversation dimmed behind an overlay, and a menu that jumps the
+  list on long press is worse than one that opens quietly where the message already is. Where
+  there is no room below, which is every time for the newest message, **both surfaces flip above**
+  the bubble rather than sliding up over it; the card records where it landed so the pill can clear
+  it. Both hang off the bubble's own outer edge, which swaps sides with the layout direction.
+  The gesture used to start selecting text inside the bubble, and both cannot own it — on a
   phone a long press means "act on this message" everywhere else, and copying is what the selecting
   was for. Tapping a picture opens the
   lightbox, which can **save it to `Pictures/Bedrud`** via `MediaStore` — no permission at all from
@@ -274,8 +285,14 @@ the `meeting*` tokens in `Dimens.kt`, timing in `Motion.meetingChromeAutoHideDel
   emoji moves it, the same one again takes it back — drawn as chips under the bubble, the reader's
   own filled the way their own messages are. The picker offers a fixed eight rather than the full
   emoji keyboard the web has: a picker large enough to search would cover the conversation being
-  reacted to. Chips sort by count, and ties keep the order they were first reacted with, so the row
-  does not reshuffle when somebody joins a tie.
+  reacted to. The pill is **narrower than the eight it holds and scrolls horizontally** — five and
+  a half targets wide, so the sixth is half-showing and says there is more behind the edge without
+  an arrow to announce it. It caps without stretching, so a set that does fit keeps its own width
+  and never scrolls.
+  Chips sort by count, and ties keep the order they were first reacted with, so the row
+  does not reshuffle when somebody joins a tie. The message menu offers **who reacted** once there
+  are any, opening a breakdown grouped by emoji in the order the chips already showed — the
+  question a reader has is "who liked this", not "what did each person pick".
 - **Polls** (`MeetingChatPoll`, `MeetingChatPollSheet`): composed in a sheet — a question and two to
   six answers — and drawn as the message that carried them. The tally is **on show from the first
   vote** rather than hidden until this reader votes: everyone can see the room anyway, so hiding it
