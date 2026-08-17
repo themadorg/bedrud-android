@@ -1,8 +1,10 @@
 package com.bedrud.app.ui.screens.meeting
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -11,15 +13,24 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.selection.SelectionContainer
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.ContentCopy
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextDirection
 import com.bedrud.app.R
@@ -30,6 +41,8 @@ import com.bedrud.app.ui.components.ChatImage
 import com.bedrud.app.ui.components.InitialsAvatar
 import com.bedrud.app.ui.theme.BedrudShapeTokens
 import com.bedrud.app.ui.theme.Dimens
+import com.bedrud.app.ui.util.setPlainText
+import kotlinx.coroutines.launch
 
 /**
  * One message, drawn as part of its sender's run.
@@ -45,9 +58,14 @@ import com.bedrud.app.ui.theme.Dimens
 @Composable
 fun MeetingChatRow(
     row: ChatRow,
+    currentIdentity: String,
+    canParticipate: Boolean,
     serverURL: String,
     accessToken: String?,
     onImageClick: (String) -> Unit,
+    onToggleReaction: (String, String) -> Unit,
+    onVote: (String, String) -> Unit,
+    onShowPollResults: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val shape = BedrudShapeTokens.chatBubble(
@@ -55,6 +73,8 @@ fun MeetingChatRow(
         tuckedAbove = !row.startsRun,
         tuckedBelow = !row.endsRun,
     )
+    var menuOpen by remember { mutableStateOf(false) }
+
     Row(
         modifier = modifier
             .fillMaxWidth()
@@ -88,24 +108,102 @@ fun MeetingChatRow(
                     modifier = Modifier.padding(bottom = Dimens.space2),
                 )
             }
-            ChatBubble(
-                row = row,
-                shape = shape,
-                serverURL = serverURL,
-                accessToken = accessToken,
-                onImageClick = onImageClick,
+            // The menu is anchored inside this box so it opens against the bubble it belongs to,
+            // wherever that bubble has scrolled to.
+            Box {
+                ChatBubble(
+                    row = row,
+                    shape = shape,
+                    currentIdentity = currentIdentity,
+                    canVote = canParticipate,
+                    serverURL = serverURL,
+                    accessToken = accessToken,
+                    onImageClick = onImageClick,
+                    onLongPress = { menuOpen = true },
+                    onVote = onVote,
+                    onShowPollResults = onShowPollResults,
+                )
+                ChatMessageMenu(
+                    expanded = menuOpen,
+                    text = row.message.text,
+                    canReact = canParticipate,
+                    onDismiss = { menuOpen = false },
+                    onReact = { emoji -> onToggleReaction(row.message.id, emoji) },
+                )
+            }
+            // The chips stay on show whether or not this reader may react: they are part of what
+            // was said, and a block takes away the reply, not the record.
+            ChatReactionRow(
+                reactions = row.message.reactions,
+                currentIdentity = currentIdentity,
+                onToggle = if (canParticipate) {
+                    { emoji -> onToggleReaction(row.message.id, emoji) }
+                } else {
+                    null
+                },
             )
         }
     }
 }
 
+/**
+ * What a long press on a message offers: the quick reactions, and copying the text.
+ *
+ * A long press used to start selecting text inside the bubble. Both cannot own the gesture, and on
+ * a phone the message menu is what a long press means everywhere else — so selection became this
+ * menu's copy action, which is what the selecting was for.
+ */
+@Composable
+private fun ChatMessageMenu(
+    expanded: Boolean,
+    text: String,
+    canReact: Boolean,
+    onDismiss: () -> Unit,
+    onReact: (String) -> Unit,
+) {
+    val clipboard = LocalClipboard.current
+    val scope = rememberCoroutineScope()
+    val clipLabel = stringResource(R.string.app_name)
+
+    ChatReactionPicker(
+        expanded = expanded,
+        // Blocked from chatting is blocked from reacting — the room would drop the packet anyway,
+        // and offering the row would be a control that quietly does nothing.
+        showReactions = canReact,
+        onDismiss = onDismiss,
+        onPick = onReact,
+        // A message with only a picture in it has nothing to copy, so the row of reactions is the
+        // whole menu.
+        extraItems = if (text.isEmpty()) {
+            null
+        } else {
+            {
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.common_action_copy)) },
+                    leadingIcon = { Icon(Icons.Rounded.ContentCopy, contentDescription = null) },
+                    onClick = {
+                        scope.launch { clipboard.setPlainText(clipLabel, text) }
+                        onDismiss()
+                    },
+                )
+            }
+        },
+    )
+}
+
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun ChatBubble(
     row: ChatRow,
     shape: RoundedCornerShape,
+    currentIdentity: String,
+    canVote: Boolean,
     serverURL: String,
     accessToken: String?,
     onImageClick: (String) -> Unit,
+    onLongPress: () -> Unit,
+    onVote: (String, String) -> Unit,
+    onShowPollResults: (String) -> Unit,
 ) {
     val message = row.message
     Column(
@@ -121,40 +219,56 @@ private fun ChatBubble(
                     accessToken = accessToken,
                     shape = shape,
                     onClick = { onImageClick(attachment.url) },
+                    onLongPress = onLongPress,
                 )
             }
+        message.poll?.let { poll ->
+            ChatPollBubble(
+                poll = poll,
+                currentIdentity = currentIdentity,
+                shape = shape,
+                onVote = if (canVote) {
+                    { optionId -> onVote(message.id, optionId) }
+                } else {
+                    null
+                },
+                onShowResults = { onShowPollResults(message.id) },
+                modifier = Modifier.combinedClickable(
+                    onClick = {},
+                    onLongClick = onLongPress,
+                ),
+            )
+        }
         if (message.text.isNotEmpty()) {
-            // Selection is scoped to the one bubble rather than wrapping the whole list: the list is
-            // reversed and recycles its items, so a drag that ran between messages would keep
-            // losing the end it started from.
-            SelectionContainer {
-                Text(
-                    text = BidiUtils.wrap(message.text),
-                    style = MaterialTheme.typography.bodyMedium.copy(
-                        textDirection = BidiUtils.textDirection(message.text),
-                    ),
-                    color = if (row.isLocal) {
-                        MaterialTheme.colorScheme.onPrimaryContainer
-                    } else {
-                        MaterialTheme.colorScheme.onSurface
-                    },
-                    modifier = Modifier
-                        .background(
-                            if (row.isLocal) {
-                                MaterialTheme.colorScheme.primaryContainer
-                            } else {
-                                MaterialTheme.colorScheme.surfaceContainerHigh
-                            },
-                            shape,
-                        )
-                        .padding(horizontal = Dimens.space12, vertical = Dimens.space8),
-                )
-            }
+            Text(
+                text = BidiUtils.wrap(message.text),
+                style = MaterialTheme.typography.bodyMedium.copy(
+                    textDirection = BidiUtils.textDirection(message.text),
+                ),
+                color = if (row.isLocal) {
+                    MaterialTheme.colorScheme.onPrimaryContainer
+                } else {
+                    MaterialTheme.colorScheme.onSurface
+                },
+                modifier = Modifier
+                    .background(
+                        if (row.isLocal) {
+                            MaterialTheme.colorScheme.primaryContainer
+                        } else {
+                            MaterialTheme.colorScheme.surfaceContainerHigh
+                        },
+                        shape,
+                    )
+                    .clip(shape)
+                    .combinedClickable(onClick = {}, onLongClick = onLongPress)
+                    .padding(horizontal = Dimens.space12, vertical = Dimens.space8),
+            )
         }
     }
 }
 
 /** A picture in a message, capped so a tall photo cannot push the conversation off screen. */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun ChatMessageImage(
     url: String,
@@ -162,6 +276,7 @@ private fun ChatMessageImage(
     accessToken: String?,
     shape: RoundedCornerShape,
     onClick: () -> Unit,
+    onLongPress: () -> Unit,
 ) {
     ChatImage(
         url = url,
@@ -172,7 +287,7 @@ private fun ChatMessageImage(
             .fillMaxWidth(ChatImageWidthFraction)
             .heightIn(max = Dimens.chatImageMaxHeight)
             .clip(shape)
-            .clickable(onClick = onClick),
+            .combinedClickable(onClick = onClick, onLongClick = onLongPress),
         contentScale = ContentScale.Crop,
     )
 }
