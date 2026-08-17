@@ -338,7 +338,14 @@ fun MeetingChatPanel(
                         .clip(BedrudShapeTokens.controlsBar)
                         .background(chrome.bar)
                         .border(Dimens.borderThin, chrome.divider, BedrudShapeTokens.controlsBar)
-                        .padding(horizontal = Dimens.meetingBarPaddingH),
+                        // Vertical padding matters only once the field wraps: at one line the bar's
+                        // minimum height is taller than the text plus this, so the single-line look
+                        // is unchanged, while a grown bar keeps its text off its own edges instead
+                        // of ending flush against the border.
+                        .padding(
+                            horizontal = Dimens.meetingBarPaddingH,
+                            vertical = Dimens.space8,
+                        ),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     if (imageContext != null) {
@@ -366,7 +373,12 @@ fun MeetingChatPanel(
                     BasicTextField(
                         value = input,
                         onValueChange = onInputChange,
-                        singleLine = true,
+                        // Wraps and grows the bar with it. Single-line scrolled the text sideways
+                        // instead, which hides the start of the sentence being written — the one
+                        // part a writer needs to see to finish it. Capped so a long message cannot
+                        // push the conversation it is replying to off the top of the panel; past
+                        // the cap the field scrolls within its own height.
+                        maxLines = ChatDockMaxLines,
                         textStyle = MaterialTheme.typography.bodyMedium.copy(
                             color = MaterialTheme.colorScheme.onSurface,
                             textDirection = BidiUtils.textDirection(input),
@@ -512,6 +524,15 @@ private fun ChatSendDisabledNotice(@StringRes reason: Int) {
         )
     }
 }
+
+/**
+ * How tall the composer may grow before it scrolls inside itself.
+ *
+ * Five lines is a long message by the standards of a call — enough to write a thought out without
+ * the dock climbing over the conversation it is answering, which is the thing the writer is looking
+ * at while they type.
+ */
+private const val ChatDockMaxLines = 5
 
 /** The scroll-to-latest button sits on the message list, not above it — so it casts no shadow. */
 private val FlatFabElevation

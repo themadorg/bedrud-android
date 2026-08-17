@@ -256,6 +256,13 @@ the `meeting*` tokens in `Dimens.kt`, timing in `Motion.meetingChromeAutoHideDel
   the same place on screen and swap with each other, so they are the same object with different
   contents. Its attach control is a paperclip: the picker is still images-only, because an image is
   the only attachment the wire carries.
+  The field **wraps and grows the bar with it**, up to five lines, then scrolls inside its own
+  height. It used to be single-line, which scrolled the text sideways and hid the start of the
+  sentence being written — the one part a writer needs in order to finish it. Five lines is a long
+  message by the standards of a call, and stopping there keeps the dock from climbing over the
+  conversation being answered. The bar's vertical padding only shows once it has grown: at one line
+  the `chatDockBar` minimum is taller than the text plus that padding, so the single-line dock is
+  exactly as it was.
   A **long press opens the message menu** (`MeetingChatMessageMenu`), which straddles the bubble:
   the quick reactions as a pill above it, what can be done with the message — **who reacted**, Copy
   and Share — as a card below, and the message itself readable between them. One box containing
