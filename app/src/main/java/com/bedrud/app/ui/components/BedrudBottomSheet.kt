@@ -38,9 +38,11 @@ import com.bedrud.app.ui.theme.Dimens
  * lift a sheet off the background, and it is opaque over video just the same, so there is no case
  * where a darker container buys anything.
  *
- * The Material defaults are kept on purpose: the M3 drag handle rather than a hand-drawn bar (it
- * carries the accessibility semantics and touch target a bare `Box` does not), and
- * [BedrudShapeTokens.sheetTop], which is already M3's 28dp `extraLarge` top corners, just named.
+ * The handle is [BedrudSheetHandle], shared with the call's controls bar and the chat sheet, rather
+ * than M3's own. The Material one pressed as a rounded rectangle splashing across its whole touch
+ * area, and announced itself as "Drag Handle" — a label Android shows on long press, naming the
+ * widget instead of saying what it does. The shape token stays: [BedrudShapeTokens.sheetTop] is
+ * already M3's 28dp `extraLarge` top corners, just named.
  *
  * The sheet state is deliberately **not** a parameter either. Exposing it would put an
  * experimental Material type in the signature, forcing `@OptIn` onto every screen that shows a
@@ -62,7 +64,7 @@ fun BedrudBottomSheet(
         sheetState = sheetState,
         shape = BedrudShapeTokens.sheetTop,
         containerColor = BottomSheetDefaults.ContainerColor,
-        dragHandle = { BottomSheetDefaults.DragHandle() },
+        dragHandle = { BedrudSheetHandle() },
     ) {
         Column(
             modifier = Modifier
