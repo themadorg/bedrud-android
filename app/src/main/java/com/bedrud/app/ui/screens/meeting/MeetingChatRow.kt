@@ -66,6 +66,7 @@ fun MeetingChatRow(
     onToggleReaction: (String, String) -> Unit,
     onVote: (String, String) -> Unit,
     onShowPollResults: (String) -> Unit,
+    onShowReactions: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val shape = BedrudShapeTokens.chatBubble(
@@ -126,9 +127,15 @@ fun MeetingChatRow(
                 ChatMessageMenu(
                     expanded = menuOpen,
                     text = row.message.text,
+                    // Blocked from chatting is blocked from reacting — the room would drop the
+                    // packet anyway, and offering the pill would be a control that quietly does
+                    // nothing.
                     canReact = canParticipate,
+                    isLocal = row.isLocal,
+                    reactions = row.message.reactions,
                     onDismiss = { menuOpen = false },
                     onReact = { emoji -> onToggleReaction(row.message.id, emoji) },
+                    onShowReactions = { onShowReactions(row.message.id) },
                 )
             }
             // The chips stay on show whether or not this reader may react: they are part of what
@@ -146,50 +153,6 @@ fun MeetingChatRow(
     }
 }
 
-/**
- * What a long press on a message offers: the quick reactions, and copying the text.
- *
- * A long press used to start selecting text inside the bubble. Both cannot own the gesture, and on
- * a phone the message menu is what a long press means everywhere else — so selection became this
- * menu's copy action, which is what the selecting was for.
- */
-@Composable
-private fun ChatMessageMenu(
-    expanded: Boolean,
-    text: String,
-    canReact: Boolean,
-    onDismiss: () -> Unit,
-    onReact: (String) -> Unit,
-) {
-    val clipboard = LocalClipboard.current
-    val scope = rememberCoroutineScope()
-    val clipLabel = stringResource(R.string.app_name)
-
-    ChatReactionPicker(
-        expanded = expanded,
-        // Blocked from chatting is blocked from reacting — the room would drop the packet anyway,
-        // and offering the row would be a control that quietly does nothing.
-        showReactions = canReact,
-        onDismiss = onDismiss,
-        onPick = onReact,
-        // A message with only a picture in it has nothing to copy, so the row of reactions is the
-        // whole menu.
-        extraItems = if (text.isEmpty()) {
-            null
-        } else {
-            {
-                DropdownMenuItem(
-                    text = { Text(stringResource(R.string.common_action_copy)) },
-                    leadingIcon = { Icon(Icons.Rounded.ContentCopy, contentDescription = null) },
-                    onClick = {
-                        scope.launch { clipboard.setPlainText(clipLabel, text) }
-                        onDismiss()
-                    },
-                )
-            }
-        },
-    )
-}
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable

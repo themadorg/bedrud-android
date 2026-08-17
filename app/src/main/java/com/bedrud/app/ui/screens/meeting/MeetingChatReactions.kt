@@ -3,69 +3,92 @@ package com.bedrud.app.ui.screens.meeting
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.wrapContentSize
-import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.style.TextDirection
 import com.bedrud.app.R
+import com.bedrud.app.core.BidiUtils
 import com.bedrud.app.core.meeting.chat.ChatReactions
-import com.bedrud.app.core.meeting.chat.QuickReactions
+import com.bedrud.app.core.meeting.chat.breakdown
 import com.bedrud.app.core.meeting.chat.grouped
+import com.bedrud.app.ui.components.BedrudBottomSheet
+import com.bedrud.app.ui.components.BedrudSheetTitle
 import com.bedrud.app.ui.theme.BedrudShapeTokens
 import com.bedrud.app.ui.theme.Dimens
 
 /**
- * The quick reactions, offered where the message is rather than in a panel of its own.
+ * Who reacted with what, opened from the message's own menu.
  *
- * A fixed set of eight, shared with the other clients, instead of the full emoji picker the web has:
- * a picker large enough to search would cover the conversation it is reacting to, and the eight
- * cover what a call actually needs — agreement, laughter, surprise, applause.
+ * Grouped by emoji rather than listed by person: the question a reader has is "who liked this",
+ * and one line per reaction answers it in the order the chips under the bubble already showed.
  */
 @Composable
-fun ChatReactionPicker(
-    expanded: Boolean,
+fun ChatReactionsSheet(
+    reactions: ChatReactions,
+    currentIdentity: String,
+    resolveName: (String) -> String,
     onDismiss: () -> Unit,
-    onPick: (String) -> Unit,
-    showReactions: Boolean = true,
-    extraItems: (@Composable ColumnScope.() -> Unit)? = null,
 ) {
-    DropdownMenu(expanded = expanded, onDismissRequest = onDismiss) {
-        if (showReactions) {
-            Row(modifier = Modifier.padding(horizontal = Dimens.space4)) {
-                QuickReactions.forEach { emoji ->
+    val youLabel = stringResource(R.string.meeting_label_you)
+
+    BedrudBottomSheet(onDismiss = onDismiss) {
+        BedrudSheetTitle(text = stringResource(R.string.meeting_chat_reactions))
+
+        reactions.breakdown().forEach { section ->
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = Dimens.space12),
+                verticalAlignment = Alignment.Top,
+                horizontalArrangement = Arrangement.spacedBy(Dimens.space12),
+            ) {
+                Text(text = section.emoji, style = MaterialTheme.typography.titleMedium)
+                Column {
                     Text(
-                        text = emoji,
-                        style = MaterialTheme.typography.titleMedium,
-                        modifier = Modifier
-                            .clip(BedrudShapeTokens.pill)
-                            .clickable {
-                                onPick(emoji)
-                                onDismiss()
-                            }
-                            .size(Dimens.chatReactionTarget)
-                            .wrapContentSize(Alignment.Center),
+                        text = pluralStringResource(
+                            R.plurals.meeting_chat_reactionCount,
+                            section.identities.size,
+                            section.identities.size,
+                        ),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Text(
+                        // Each name is isolated before the commas go in: a Persian name beside an
+                        // English one otherwise drags the separator to the wrong end of it.
+                        text = section.identities.joinToString(ReactorSeparator) { identity ->
+                            BidiUtils.wrap(
+                                if (identity == currentIdentity) youLabel else resolveName(identity)
+                            )
+                        },
+                        style = MaterialTheme.typography.bodyMedium.copy(
+                            textDirection = TextDirection.Content,
+                        ),
                     )
                 }
             }
         }
-        extraItems?.invoke(this)
     }
 }
+
+/** What goes between two names in the breakdown. Matches the poll results sheet. */
+private const val ReactorSeparator = ", "
 
 /**
  * The reactions already on a message, one chip per emoji.

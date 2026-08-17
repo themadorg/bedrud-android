@@ -158,6 +158,7 @@ fun MeetingChatPanel(
     // The message whose results are open, rather than the poll itself: votes keep arriving while
     // the sheet is up, and holding the poll would freeze the numbers at the moment it opened.
     var resultsMessageId by remember { mutableStateOf<String?>(null) }
+    var reactionsMessageId by remember { mutableStateOf<String?>(null) }
 
     val unreadableMessage = stringResource(R.string.meeting_chat_uploadUnreadable)
     val unreachableMessage = stringResource(R.string.meeting_chat_uploadUnreachable)
@@ -228,6 +229,7 @@ fun MeetingChatPanel(
                         onToggleReaction = onToggleReaction,
                         onVote = onVote,
                         onShowPollResults = { resultsMessageId = it },
+                        onShowReactions = { reactionsMessageId = it },
                     )
                 }
             }
@@ -405,6 +407,20 @@ fun MeetingChatPanel(
             currentIdentity = currentIdentity,
             resolveName = resolveName,
             onDismiss = { resultsMessageId = null },
+        )
+    }
+
+    // Read back the same way, so a reaction arriving while the sheet is open lands in it, and the
+    // sheet closes on its own once the last reaction is taken back.
+    val openReactions = reactionsMessageId
+        ?.let { id -> messages.firstOrNull { it.id == id }?.reactions }
+        ?.takeIf { it.isNotEmpty() }
+    if (openReactions != null) {
+        ChatReactionsSheet(
+            reactions = openReactions,
+            currentIdentity = currentIdentity,
+            resolveName = resolveName,
+            onDismiss = { reactionsMessageId = null },
         )
     }
 }

@@ -135,6 +135,14 @@
     <item quantity="many">%1$d голосов</item>
     <item quantity="other">%1$d голоса</item>
   </plurals>
+  <string name="meeting_chat_reactions">Реакции</string>
+  <string name="meeting_chat_shareChooser">Поделиться сообщением</string>
+  <plurals name="meeting_chat_reactionCount">
+    <item quantity="one">%1$d реакция</item>
+    <item quantity="few">%1$d реакции</item>
+    <item quantity="many">%1$d реакций</item>
+    <item quantity="other">%1$d реакции</item>
+  </plurals>
   <string name="meeting_chat_imageSaved">Сохранено в «Изображения»</string>
   <string name="meeting_chat_imageSaveUnreachable">Не удалось загрузить это изображение</string>
   <string name="meeting_chat_imageSaveUnwritable">Не удалось сохранить в галерею</string>
@@ -181,6 +189,7 @@
   <string name="admin_token_status_used">Использован</string>
   <string name="admin_token_status_noEmail">Нет эл. почты</string>
   <string name="common_action_copy">Копировать</string>
+  <string name="common_action_share">Поделиться</string>
   <string name="settings_title">Настройки</string>
   <string name="settings_section_appearance">Внешний вид</string>
   <string name="settings_label_theme">Тема</string>

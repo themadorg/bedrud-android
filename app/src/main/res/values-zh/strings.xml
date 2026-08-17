@@ -132,6 +132,11 @@
   <plurals name="meeting_chat_poll_voteCount">
     <item quantity="other">%1$d 票</item>
   </plurals>
+  <string name="meeting_chat_reactions">回应</string>
+  <string name="meeting_chat_shareChooser">分享消息</string>
+  <plurals name="meeting_chat_reactionCount">
+    <item quantity="other">%1$d 个回应</item>
+  </plurals>
   <string name="meeting_chat_imageSaved">已保存到图片</string>
   <string name="meeting_chat_imageSaveUnreachable">无法下载该图片</string>
   <string name="meeting_chat_imageSaveUnwritable">无法保存到相册</string>
@@ -178,6 +183,7 @@
   <string name="admin_token_status_used">已使用</string>
   <string name="admin_token_status_noEmail">无邮箱</string>
   <string name="common_action_copy">复制</string>
+  <string name="common_action_share">分享</string>
   <string name="settings_title">设置</string>
   <string name="settings_section_appearance">外观</string>
   <string name="settings_label_theme">主题</string>

@@ -133,6 +133,12 @@
     <item quantity="one">%1$d Stimme</item>
     <item quantity="other">%1$d Stimmen</item>
   </plurals>
+  <string name="meeting_chat_reactions">Reaktionen</string>
+  <string name="meeting_chat_shareChooser">Nachricht teilen</string>
+  <plurals name="meeting_chat_reactionCount">
+    <item quantity="one">%1$d Reaktion</item>
+    <item quantity="other">%1$d Reaktionen</item>
+  </plurals>
   <string name="meeting_chat_imageSaved">In Bilder gespeichert</string>
   <string name="meeting_chat_imageSaveUnreachable">Das Bild konnte nicht geladen werden</string>
   <string name="meeting_chat_imageSaveUnwritable">Speichern in der Galerie fehlgeschlagen</string>
@@ -179,6 +185,7 @@
   <string name="admin_token_status_used">Verwendet</string>
   <string name="admin_token_status_noEmail">Keine E-Mail</string>
   <string name="common_action_copy">Kopieren</string>
+  <string name="common_action_share">Teilen</string>
   <string name="settings_title">Einstellungen</string>
   <string name="settings_section_appearance">Darstellung</string>
   <string name="settings_label_theme">Design</string>
