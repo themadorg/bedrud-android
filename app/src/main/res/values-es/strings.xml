@@ -118,6 +118,21 @@
   <string name="meeting_chat_disabledByRoom">El chat está desactivado en esta sala</string>
   <string name="meeting_chat_blockedByModerator">Un moderador te ha bloqueado el chat</string>
   <string name="meeting_chat_saveImage">Guardar imagen</string>
+  <string name="meeting_contentDescription_react">Reaccionar a este mensaje</string>
+  <string name="meeting_chat_poll_new">Nueva encuesta</string>
+  <string name="meeting_chat_poll_question">Pregunta</string>
+  <string name="meeting_chat_poll_questionPlaceholder">¿Qué estamos decidiendo?</string>
+  <string name="meeting_chat_poll_option">Respuesta %1$d</string>
+  <string name="meeting_chat_poll_addOption">Añadir respuesta</string>
+  <string name="meeting_chat_poll_removeOption">Quitar respuesta</string>
+  <string name="meeting_chat_poll_send">Enviar encuesta</string>
+  <string name="meeting_chat_poll_viewResults">Ver resultados</string>
+  <string name="meeting_chat_poll_results">Resultados</string>
+  <string name="meeting_chat_poll_noVotes">Aún no hay votos</string>
+  <plurals name="meeting_chat_poll_voteCount">
+    <item quantity="one">%1$d voto</item>
+    <item quantity="other">%1$d votos</item>
+  </plurals>
   <string name="meeting_chat_imageSaved">Guardada en Imágenes</string>
   <string name="meeting_chat_imageSaveUnreachable">No se pudo descargar esa imagen</string>
   <string name="meeting_chat_imageSaveUnwritable">No se pudo guardar en la galería</string>
@@ -283,6 +298,8 @@
   <string name="meeting_error_screenShareUnavailable">La pantalla compartida no está disponible</string>
   <string name="meeting_error_screenShareStopFailed">No se pudo detener la pantalla compartida</string>
   <string name="meeting_error_messageSendFailed">No se pudo enviar tu mensaje</string>
+  <string name="meeting_error_reactionFailed">No se pudo enviar tu reacción</string>
+  <string name="meeting_error_voteFailed">No se pudo enviar tu voto</string>
   <string name="meeting_error_kickFailed">No se pudo expulsar al participante</string>
   <string name="meeting_error_banFailed">No se pudo bloquear al participante</string>
   <string name="dashboard_error_createRoomFailed">No se pudo crear la sala</string>
@@ -295,6 +312,7 @@
   <string name="meeting_contentDescription_tileFullscreen">Ver en pantalla completa</string>
   <string name="meeting_contentDescription_tileExitFullscreen">Salir de pantalla completa</string>
   <string name="meeting_contentDescription_micOff">Micrófono apagado</string>
+  <string name="meeting_contentDescription_deafened">Sin audio</string>
   <string name="meeting_contentDescription_speaking">Hablando</string>
   <string name="meeting_status_reconnecting">Reconectando…</string>
   <string name="meeting_status_connected">Conectado</string>

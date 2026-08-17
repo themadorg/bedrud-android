@@ -118,6 +118,20 @@
   <string name="meeting_chat_disabledByRoom">此房间已关闭聊天</string>
   <string name="meeting_chat_blockedByModerator">主持人已禁止你发言</string>
   <string name="meeting_chat_saveImage">保存图片</string>
+  <string name="meeting_contentDescription_react">回应这条消息</string>
+  <string name="meeting_chat_poll_new">新建投票</string>
+  <string name="meeting_chat_poll_question">问题</string>
+  <string name="meeting_chat_poll_questionPlaceholder">我们要决定什么？</string>
+  <string name="meeting_chat_poll_option">选项 %1$d</string>
+  <string name="meeting_chat_poll_addOption">添加选项</string>
+  <string name="meeting_chat_poll_removeOption">删除选项</string>
+  <string name="meeting_chat_poll_send">发送投票</string>
+  <string name="meeting_chat_poll_viewResults">查看结果</string>
+  <string name="meeting_chat_poll_results">结果</string>
+  <string name="meeting_chat_poll_noVotes">还没有投票</string>
+  <plurals name="meeting_chat_poll_voteCount">
+    <item quantity="other">%1$d 票</item>
+  </plurals>
   <string name="meeting_chat_imageSaved">已保存到图片</string>
   <string name="meeting_chat_imageSaveUnreachable">无法下载该图片</string>
   <string name="meeting_chat_imageSaveUnwritable">无法保存到相册</string>
@@ -283,6 +297,8 @@
   <string name="meeting_error_screenShareUnavailable">屏幕共享不可用</string>
   <string name="meeting_error_screenShareStopFailed">无法停止屏幕共享</string>
   <string name="meeting_error_messageSendFailed">无法发送您的消息</string>
+  <string name="meeting_error_reactionFailed">无法发送您的回应</string>
+  <string name="meeting_error_voteFailed">无法发送您的投票</string>
   <string name="meeting_error_kickFailed">无法移除参与者</string>
   <string name="meeting_error_banFailed">无法封禁参与者</string>
   <string name="dashboard_error_createRoomFailed">无法创建房间</string>
@@ -295,6 +311,7 @@
   <string name="meeting_contentDescription_tileFullscreen">全屏查看</string>
   <string name="meeting_contentDescription_tileExitFullscreen">退出全屏</string>
   <string name="meeting_contentDescription_micOff">麦克风已关闭</string>
+  <string name="meeting_contentDescription_deafened">已静音收听</string>
   <string name="meeting_contentDescription_speaking">正在讲话</string>
   <string name="meeting_status_reconnecting">正在重新连接…</string>
   <string name="meeting_status_connected">已连接</string>

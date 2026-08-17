@@ -118,6 +118,25 @@
   <string name="meeting_chat_disabledByRoom">الدردشة معطّلة في هذه الغرفة</string>
   <string name="meeting_chat_blockedByModerator">منعك أحد المشرفين من الدردشة</string>
   <string name="meeting_chat_saveImage">حفظ الصورة</string>
+  <string name="meeting_contentDescription_react">التفاعل مع هذه الرسالة</string>
+  <string name="meeting_chat_poll_new">استطلاع جديد</string>
+  <string name="meeting_chat_poll_question">السؤال</string>
+  <string name="meeting_chat_poll_questionPlaceholder">ما الذي نقرره؟</string>
+  <string name="meeting_chat_poll_option">الإجابة %1$d</string>
+  <string name="meeting_chat_poll_addOption">إضافة إجابة</string>
+  <string name="meeting_chat_poll_removeOption">إزالة الإجابة</string>
+  <string name="meeting_chat_poll_send">إرسال الاستطلاع</string>
+  <string name="meeting_chat_poll_viewResults">عرض النتائج</string>
+  <string name="meeting_chat_poll_results">النتائج</string>
+  <string name="meeting_chat_poll_noVotes">لا توجد أصوات بعد</string>
+  <plurals name="meeting_chat_poll_voteCount">
+    <item quantity="zero">%1$d صوت</item>
+    <item quantity="one">%1$d صوت</item>
+    <item quantity="two">%1$d صوتان</item>
+    <item quantity="few">%1$d أصوات</item>
+    <item quantity="many">%1$d صوتًا</item>
+    <item quantity="other">%1$d صوت</item>
+  </plurals>
   <string name="meeting_chat_imageSaved">تم الحفظ في الصور</string>
   <string name="meeting_chat_imageSaveUnreachable">تعذّر تنزيل تلك الصورة</string>
   <string name="meeting_chat_imageSaveUnwritable">تعذّر الحفظ في معرض الصور</string>
@@ -283,6 +302,8 @@
   <string name="meeting_error_screenShareUnavailable">مشاركة الشاشة غير متاحة</string>
   <string name="meeting_error_screenShareStopFailed">تعذّر إيقاف مشاركة الشاشة</string>
   <string name="meeting_error_messageSendFailed">تعذّر إرسال رسالتك</string>
+  <string name="meeting_error_reactionFailed">تعذّر إرسال تفاعلك</string>
+  <string name="meeting_error_voteFailed">تعذّر إرسال صوتك</string>
   <string name="meeting_error_kickFailed">تعذّرت إزالة المشارك</string>
   <string name="meeting_error_banFailed">تعذّر حظر المشارك</string>
   <string name="dashboard_error_createRoomFailed">تعذّر إنشاء الغرفة</string>
@@ -295,6 +316,7 @@
   <string name="meeting_contentDescription_tileFullscreen">عرض ملء الشاشة</string>
   <string name="meeting_contentDescription_tileExitFullscreen">الخروج من ملء الشاشة</string>
   <string name="meeting_contentDescription_micOff">الميكروفون مغلق</string>
+  <string name="meeting_contentDescription_deafened">الصوت مكتوم</string>
   <string name="meeting_contentDescription_speaking">يتحدث</string>
   <string name="meeting_status_reconnecting">جارٍ إعادة الاتصال…</string>
   <string name="meeting_status_connected">تم الاتصال</string>

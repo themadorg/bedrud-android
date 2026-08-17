@@ -118,6 +118,21 @@
   <string name="meeting_chat_disabledByRoom">Bu odada sohbet kapalı</string>
   <string name="meeting_chat_blockedByModerator">Bir moderatör sohbet etmenizi engelledi</string>
   <string name="meeting_chat_saveImage">Görseli kaydet</string>
+  <string name="meeting_contentDescription_react">Bu mesaja tepki ver</string>
+  <string name="meeting_chat_poll_new">Yeni anket</string>
+  <string name="meeting_chat_poll_question">Soru</string>
+  <string name="meeting_chat_poll_questionPlaceholder">Neye karar veriyoruz?</string>
+  <string name="meeting_chat_poll_option">Yanıt %1$d</string>
+  <string name="meeting_chat_poll_addOption">Yanıt ekle</string>
+  <string name="meeting_chat_poll_removeOption">Yanıtı kaldır</string>
+  <string name="meeting_chat_poll_send">Anketi gönder</string>
+  <string name="meeting_chat_poll_viewResults">Sonuçları gör</string>
+  <string name="meeting_chat_poll_results">Sonuçlar</string>
+  <string name="meeting_chat_poll_noVotes">Henüz oy yok</string>
+  <plurals name="meeting_chat_poll_voteCount">
+    <item quantity="one">%1$d oy</item>
+    <item quantity="other">%1$d oy</item>
+  </plurals>
   <string name="meeting_chat_imageSaved">Resimler\'e kaydedildi</string>
   <string name="meeting_chat_imageSaveUnreachable">Bu görsel indirilemedi</string>
   <string name="meeting_chat_imageSaveUnwritable">Galeriye kaydedilemedi</string>
@@ -283,6 +298,8 @@
   <string name="meeting_error_screenShareUnavailable">Ekran paylaşımı kullanılamıyor</string>
   <string name="meeting_error_screenShareStopFailed">Ekran paylaşımı durdurulamadı</string>
   <string name="meeting_error_messageSendFailed">Mesajınız gönderilemedi</string>
+  <string name="meeting_error_reactionFailed">Tepkiniz gönderilemedi</string>
+  <string name="meeting_error_voteFailed">Oyunuz gönderilemedi</string>
   <string name="meeting_error_kickFailed">Katılımcı çıkarılamadı</string>
   <string name="meeting_error_banFailed">Katılımcı engellenemedi</string>
   <string name="dashboard_error_createRoomFailed">Oda oluşturulamadı</string>
@@ -295,6 +312,7 @@
   <string name="meeting_contentDescription_tileFullscreen">Tam ekran görüntüle</string>
   <string name="meeting_contentDescription_tileExitFullscreen">Tam ekrandan çık</string>
   <string name="meeting_contentDescription_micOff">Mikrofon kapalı</string>
+  <string name="meeting_contentDescription_deafened">Sesler kapalı</string>
   <string name="meeting_contentDescription_speaking">Konuşuyor</string>
   <string name="meeting_status_reconnecting">Yeniden bağlanılıyor…</string>
   <string name="meeting_status_connected">Bağlandı</string>

@@ -118,6 +118,23 @@
   <string name="meeting_chat_disabledByRoom">Чат отключён в этой комнате</string>
   <string name="meeting_chat_blockedByModerator">Модератор запретил вам писать в чат</string>
   <string name="meeting_chat_saveImage">Сохранить изображение</string>
+  <string name="meeting_contentDescription_react">Отреагировать на сообщение</string>
+  <string name="meeting_chat_poll_new">Новый опрос</string>
+  <string name="meeting_chat_poll_question">Вопрос</string>
+  <string name="meeting_chat_poll_questionPlaceholder">Что решаем?</string>
+  <string name="meeting_chat_poll_option">Вариант %1$d</string>
+  <string name="meeting_chat_poll_addOption">Добавить вариант</string>
+  <string name="meeting_chat_poll_removeOption">Удалить вариант</string>
+  <string name="meeting_chat_poll_send">Отправить опрос</string>
+  <string name="meeting_chat_poll_viewResults">Посмотреть результаты</string>
+  <string name="meeting_chat_poll_results">Результаты</string>
+  <string name="meeting_chat_poll_noVotes">Пока нет голосов</string>
+  <plurals name="meeting_chat_poll_voteCount">
+    <item quantity="one">%1$d голос</item>
+    <item quantity="few">%1$d голоса</item>
+    <item quantity="many">%1$d голосов</item>
+    <item quantity="other">%1$d голоса</item>
+  </plurals>
   <string name="meeting_chat_imageSaved">Сохранено в «Изображения»</string>
   <string name="meeting_chat_imageSaveUnreachable">Не удалось загрузить это изображение</string>
   <string name="meeting_chat_imageSaveUnwritable">Не удалось сохранить в галерею</string>
@@ -283,6 +300,8 @@
   <string name="meeting_error_screenShareUnavailable">Демонстрация экрана недоступна</string>
   <string name="meeting_error_screenShareStopFailed">Не удалось остановить демонстрацию экрана</string>
   <string name="meeting_error_messageSendFailed">Не удалось отправить сообщение</string>
+  <string name="meeting_error_reactionFailed">Не удалось отправить реакцию</string>
+  <string name="meeting_error_voteFailed">Не удалось отправить голос</string>
   <string name="meeting_error_kickFailed">Не удалось удалить участника</string>
   <string name="meeting_error_banFailed">Не удалось заблокировать участника</string>
   <string name="dashboard_error_createRoomFailed">Не удалось создать комнату</string>
@@ -295,6 +314,7 @@
   <string name="meeting_contentDescription_tileFullscreen">Во весь экран</string>
   <string name="meeting_contentDescription_tileExitFullscreen">Выйти из полноэкранного режима</string>
   <string name="meeting_contentDescription_micOff">Микрофон выключен</string>
+  <string name="meeting_contentDescription_deafened">Звук выключен</string>
   <string name="meeting_contentDescription_speaking">Говорит</string>
   <string name="meeting_status_reconnecting">Переподключение…</string>
   <string name="meeting_status_connected">Подключено</string>

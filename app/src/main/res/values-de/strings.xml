@@ -118,6 +118,21 @@
   <string name="meeting_chat_disabledByRoom">Der Chat ist in diesem Raum deaktiviert</string>
   <string name="meeting_chat_blockedByModerator">Ein Moderator hat dich vom Chat ausgeschlossen</string>
   <string name="meeting_chat_saveImage">Bild speichern</string>
+  <string name="meeting_contentDescription_react">Auf diese Nachricht reagieren</string>
+  <string name="meeting_chat_poll_new">Neue Umfrage</string>
+  <string name="meeting_chat_poll_question">Frage</string>
+  <string name="meeting_chat_poll_questionPlaceholder">Worüber entscheiden wir?</string>
+  <string name="meeting_chat_poll_option">Antwort %1$d</string>
+  <string name="meeting_chat_poll_addOption">Antwort hinzufügen</string>
+  <string name="meeting_chat_poll_removeOption">Antwort entfernen</string>
+  <string name="meeting_chat_poll_send">Umfrage senden</string>
+  <string name="meeting_chat_poll_viewResults">Ergebnisse ansehen</string>
+  <string name="meeting_chat_poll_results">Ergebnisse</string>
+  <string name="meeting_chat_poll_noVotes">Noch keine Stimmen</string>
+  <plurals name="meeting_chat_poll_voteCount">
+    <item quantity="one">%1$d Stimme</item>
+    <item quantity="other">%1$d Stimmen</item>
+  </plurals>
   <string name="meeting_chat_imageSaved">In Bilder gespeichert</string>
   <string name="meeting_chat_imageSaveUnreachable">Das Bild konnte nicht geladen werden</string>
   <string name="meeting_chat_imageSaveUnwritable">Speichern in der Galerie fehlgeschlagen</string>
@@ -283,6 +298,8 @@
   <string name="meeting_error_screenShareUnavailable">Bildschirmfreigabe ist nicht verfügbar</string>
   <string name="meeting_error_screenShareStopFailed">Bildschirmfreigabe konnte nicht beendet werden</string>
   <string name="meeting_error_messageSendFailed">Deine Nachricht konnte nicht gesendet werden</string>
+  <string name="meeting_error_reactionFailed">Deine Reaktion konnte nicht gesendet werden</string>
+  <string name="meeting_error_voteFailed">Deine Stimme konnte nicht gesendet werden</string>
   <string name="meeting_error_kickFailed">Teilnehmer konnte nicht entfernt werden</string>
   <string name="meeting_error_banFailed">Teilnehmer konnte nicht gesperrt werden</string>
   <string name="dashboard_error_createRoomFailed">Raum konnte nicht erstellt werden</string>
@@ -295,6 +312,7 @@
   <string name="meeting_contentDescription_tileFullscreen">Vollbild anzeigen</string>
   <string name="meeting_contentDescription_tileExitFullscreen">Vollbild beenden</string>
   <string name="meeting_contentDescription_micOff">Mikrofon aus</string>
+  <string name="meeting_contentDescription_deafened">Ton aus</string>
   <string name="meeting_contentDescription_speaking">Spricht</string>
   <string name="meeting_status_reconnecting">Verbindung wird wiederhergestellt…</string>
   <string name="meeting_status_connected">Verbunden</string>

@@ -118,6 +118,21 @@
   <string name="meeting_chat_disabledByRoom">Chat is turned off for this room</string>
   <string name="meeting_chat_blockedByModerator">A moderator has blocked you from chatting</string>
   <string name="meeting_chat_saveImage">Save image</string>
+  <string name="meeting_contentDescription_react">React to this message</string>
+  <string name="meeting_chat_poll_new">New poll</string>
+  <string name="meeting_chat_poll_question">Question</string>
+  <string name="meeting_chat_poll_questionPlaceholder">What are we deciding?</string>
+  <string name="meeting_chat_poll_option">Answer %1$d</string>
+  <string name="meeting_chat_poll_addOption">Add answer</string>
+  <string name="meeting_chat_poll_removeOption">Remove answer</string>
+  <string name="meeting_chat_poll_send">Send poll</string>
+  <string name="meeting_chat_poll_viewResults">View results</string>
+  <string name="meeting_chat_poll_results">Results</string>
+  <string name="meeting_chat_poll_noVotes">No votes yet</string>
+  <plurals name="meeting_chat_poll_voteCount">
+    <item quantity="one">%1$d vote</item>
+    <item quantity="other">%1$d votes</item>
+  </plurals>
   <string name="meeting_chat_imageSaved">Saved to Pictures</string>
   <string name="meeting_chat_imageSaveUnreachable">Could not download that image</string>
   <string name="meeting_chat_imageSaveUnwritable">Could not save to your gallery</string>
@@ -285,6 +300,8 @@
   <string name="meeting_error_screenShareUnavailable">Screen sharing isn\'t available</string>
   <string name="meeting_error_screenShareStopFailed">Couldn\'t stop screen sharing</string>
   <string name="meeting_error_messageSendFailed">Couldn\'t send your message</string>
+  <string name="meeting_error_reactionFailed">Couldn\'t send your reaction</string>
+  <string name="meeting_error_voteFailed">Couldn\'t send your vote</string>
   <string name="meeting_error_kickFailed">Failed to remove participant</string>
   <string name="meeting_error_banFailed">Failed to ban participant</string>
 
@@ -299,6 +316,7 @@
   <string name="meeting_contentDescription_tileFullscreen">View full screen</string>
   <string name="meeting_contentDescription_tileExitFullscreen">Exit full screen</string>
   <string name="meeting_contentDescription_micOff">Microphone off</string>
+  <string name="meeting_contentDescription_deafened">Deafened</string>
   <string name="meeting_contentDescription_speaking">Speaking</string>
   <string name="meeting_status_reconnecting">Reconnecting…</string>
   <string name="meeting_status_connected">Connected</string>

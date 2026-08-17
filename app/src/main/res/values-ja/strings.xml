@@ -118,6 +118,20 @@
   <string name="meeting_chat_disabledByRoom">このルームではチャットが無効です</string>
   <string name="meeting_chat_blockedByModerator">モデレーターによりチャットが制限されています</string>
   <string name="meeting_chat_saveImage">画像を保存</string>
+  <string name="meeting_contentDescription_react">このメッセージにリアクション</string>
+  <string name="meeting_chat_poll_new">新しい投票</string>
+  <string name="meeting_chat_poll_question">質問</string>
+  <string name="meeting_chat_poll_questionPlaceholder">何を決めますか？</string>
+  <string name="meeting_chat_poll_option">選択肢 %1$d</string>
+  <string name="meeting_chat_poll_addOption">選択肢を追加</string>
+  <string name="meeting_chat_poll_removeOption">選択肢を削除</string>
+  <string name="meeting_chat_poll_send">投票を送信</string>
+  <string name="meeting_chat_poll_viewResults">結果を見る</string>
+  <string name="meeting_chat_poll_results">結果</string>
+  <string name="meeting_chat_poll_noVotes">まだ投票はありません</string>
+  <plurals name="meeting_chat_poll_voteCount">
+    <item quantity="other">%1$d 票</item>
+  </plurals>
   <string name="meeting_chat_imageSaved">画像に保存しました</string>
   <string name="meeting_chat_imageSaveUnreachable">その画像をダウンロードできませんでした</string>
   <string name="meeting_chat_imageSaveUnwritable">ギャラリーに保存できませんでした</string>
@@ -283,6 +297,8 @@
   <string name="meeting_error_screenShareUnavailable">画面共有は利用できません</string>
   <string name="meeting_error_screenShareStopFailed">画面共有を停止できませんでした</string>
   <string name="meeting_error_messageSendFailed">メッセージを送信できませんでした</string>
+  <string name="meeting_error_reactionFailed">リアクションを送信できませんでした</string>
+  <string name="meeting_error_voteFailed">投票を送信できませんでした</string>
   <string name="meeting_error_kickFailed">参加者を削除できませんでした</string>
   <string name="meeting_error_banFailed">参加者をブロックできませんでした</string>
   <string name="dashboard_error_createRoomFailed">ルームを作成できませんでした</string>
@@ -295,6 +311,7 @@
   <string name="meeting_contentDescription_tileFullscreen">全画面表示</string>
   <string name="meeting_contentDescription_tileExitFullscreen">全画面を終了</string>
   <string name="meeting_contentDescription_micOff">マイクオフ</string>
+  <string name="meeting_contentDescription_deafened">音声オフ</string>
   <string name="meeting_contentDescription_speaking">発言中</string>
   <string name="meeting_status_reconnecting">再接続中…</string>
   <string name="meeting_status_connected">接続しました</string>
