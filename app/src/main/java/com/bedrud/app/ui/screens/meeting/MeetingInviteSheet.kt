@@ -55,6 +55,8 @@ import com.bedrud.app.ui.components.BedrudBottomSheet
 import com.bedrud.app.ui.components.InitialsAvatar
 import com.bedrud.app.ui.theme.BedrudShapeTokens
 import com.bedrud.app.ui.theme.Dimens
+import com.bedrud.app.ui.util.PlainTextMimeType
+import com.bedrud.app.ui.util.sharePlainText
 import com.google.zxing.BarcodeFormat
 import com.journeyapps.barcodescanner.BarcodeEncoder
 import kotlinx.coroutines.launch
@@ -189,9 +191,7 @@ fun MeetingInviteSheet(
                 icon = Icons.Default.Share,
                 label = stringResource(R.string.meeting_invite_sendInvite),
                 onClick = {
-                    context.startActivity(
-                        Intent.createChooser(plainShareIntent(roomLink), chooserTitle)
-                    )
+                    context.sharePlainText(roomLink, chooserTitle)
                 },
             )
             InviteTarget(
@@ -310,12 +310,6 @@ private fun InviteTarget(
     }
 }
 
-private fun plainShareIntent(roomLink: String): Intent =
-    Intent(Intent.ACTION_SEND).apply {
-        type = "text/plain"
-        putExtra(Intent.EXTRA_TEXT, roomLink)
-    }
-
 /**
  * Send the link to a specific app ([packageName]), the email composer ([email]), or fail over to
  * [onNotInstalled] when the target can't handle it.
@@ -333,7 +327,11 @@ private fun shareTo(
             putExtra(Intent.EXTRA_TEXT, roomLink)
         }
     } else {
-        plainShareIntent(roomLink).apply { setPackage(packageName) }
+        Intent(Intent.ACTION_SEND).apply {
+            type = PlainTextMimeType
+            putExtra(Intent.EXTRA_TEXT, roomLink)
+            setPackage(packageName)
+        }
     }
     try {
         context.startActivity(intent)
