@@ -9,10 +9,11 @@ import org.json.JSONObject
  * Encodes and decodes the chat data-channel payloads, so every wire format lives in one typed
  * object instead of inline JSON in `RoomManager`.
  *
- * The channel carries more than plain messages. Other clients publish reactions and polls on this
- * same topic, and split anything past [SafePayloadBytes] into a header packet plus a run of parts.
- * A payload therefore has to be recognised by its own `type` field — trusting the topic alone is
- * what used to turn every reaction, poll and chunk into a chat message with no text in it.
+ * The channel carries more than plain messages. Reactions and poll votes travel on this same topic
+ * as packets of their own, and anything past [SafePayloadBytes] is split into a header packet plus
+ * a run of parts. A payload therefore has to be recognised by its own `type` field — trusting the
+ * topic alone is what used to turn every reaction, poll and chunk into a chat message with no text
+ * in it.
  *
  * Reassembling the split payloads is [ChatChunkAssembler]'s job; this object only decides what a
  * single packet is and how to build one.
@@ -35,6 +36,8 @@ object ChatWire {
     private const val TYPE_CHAT = "chat"
     private const val TYPE_CHUNK_META = "chat_chunk_meta"
     private const val TYPE_CHUNK = "chat_chunk"
+    private const val TYPE_REACTION = "reaction"
+    private const val TYPE_POLL_VOTE = "poll_vote"
 
     // Which part of a split payload a chunk belongs to.
     internal const val SECTION_MESSAGE = "message"
@@ -52,12 +55,30 @@ object ChatWire {
         val timestamp: Long,
         val text: String,
         val attachments: List<ChatAttachment>,
+        val poll: ChatPoll? = null,
     )
 
     /** What a single packet turned out to be. */
     sealed interface Inbound {
         /** A whole message that arrived in one packet. */
         data class Complete(val chat: IncomingChat) : Inbound
+
+        /**
+         * Someone's reaction to a message, which may equally be them taking it back — the packet
+         * says only what was tapped, and [ChatReactions.toggled] decides which of the two it meant.
+         */
+        data class Reaction(
+            val messageId: String,
+            val voterIdentity: String,
+            val emoji: String,
+        ) : Inbound
+
+        /** Someone's vote in a poll, replacing whatever they voted for before. */
+        data class PollVote(
+            val messageId: String,
+            val voterIdentity: String,
+            val optionId: String,
+        ) : Inbound
 
         /** The header of a split payload, announcing how many parts each section was cut into. */
         data class ChunkMeta(
@@ -89,19 +110,21 @@ object ChatWire {
         senderIdentity: String,
         text: String,
         attachments: List<ChatAttachment>,
+        poll: ChatPoll? = null,
         id: String = UUID.randomUUID().toString(),
         timestamp: Long = System.currentTimeMillis(),
     ): List<ByteArray> {
         val attachmentsJson = encodeAttachments(attachments)
-        val single = chatPacket(id, senderName, senderIdentity, timestamp, text, attachmentsJson)
+        val pollJson = poll?.let { encodePoll(it).toString() }.orEmpty()
+        val single =
+            chatPacket(id, senderName, senderIdentity, timestamp, text, attachmentsJson, pollJson)
         if (single.size <= SafePayloadBytes) return listOf(single)
 
         val messageParts = splitByEncodedSize(text) { chunkPacket(id, SECTION_MESSAGE, 0, it) }
         val attachmentParts =
             splitByEncodedSize(attachmentsJson) { chunkPacket(id, SECTION_ATTACHMENTS, 0, it) }
+        val pollParts = splitByEncodedSize(pollJson) { chunkPacket(id, SECTION_POLL, 0, it) }
 
-        // Polls are never sent from here, so their section is always empty. It still has to be
-        // announced: the assembler waits on all three counts before it calls a message complete.
         val meta = metaPacket(
             id = id,
             senderName = senderName,
@@ -109,6 +132,7 @@ object ChatWire {
             timestamp = timestamp,
             messageChunks = messageParts.size,
             attachmentChunks = attachmentParts.size,
+            pollChunks = pollParts.size,
         )
         require(meta.size <= SafePayloadBytes) { "Chat header exceeds the data channel limit" }
 
@@ -120,13 +144,38 @@ object ChatWire {
             attachmentParts.forEachIndexed { index, part ->
                 add(chunkPacket(id, SECTION_ATTACHMENTS, index, part))
             }
+            pollParts.forEachIndexed { index, part ->
+                add(chunkPacket(id, SECTION_POLL, index, part))
+            }
         }
     }
 
     /**
+     * One person's reaction to a message. Small enough that it never needs splitting, and sent on
+     * its own rather than as a new version of the message: the message may well predate this
+     * device, and nobody may rewrite what somebody else said.
+     */
+    fun encodeReaction(messageId: String, voterIdentity: String, emoji: String): ByteArray =
+        JSONObject().apply {
+            put("type", TYPE_REACTION)
+            put("messageId", messageId)
+            put("voterIdentity", voterIdentity)
+            put("emoji", emoji)
+        }.toByteArray()
+
+    /** One person's vote, carrying the option they chose rather than the tally they arrived at. */
+    fun encodePollVote(messageId: String, voterIdentity: String, optionId: String): ByteArray =
+        JSONObject().apply {
+            put("type", TYPE_POLL_VOTE)
+            put("messageId", messageId)
+            put("voterIdentity", voterIdentity)
+            put("optionId", optionId)
+        }.toByteArray()
+
+    /**
      * Reads one raw packet. Null when it is not part of the chat protocol, or when it is a message
-     * this app has nothing to draw for — a poll from a client that has them, say. Dropping those
-     * beats listing a sender's name above an empty space.
+     * this app has nothing to draw for — one with no text, no picture and no poll in it. Dropping
+     * those beats listing a sender's name above an empty space.
      */
     fun parse(raw: ByteArray, topic: String?): Inbound? {
         val json = try {
@@ -143,6 +192,8 @@ object ChatWire {
             TYPE_CHAT -> parseComplete(json)
             TYPE_CHUNK_META -> parseChunkMeta(json)
             TYPE_CHUNK -> parseChunkPart(json)
+            TYPE_REACTION -> parseReaction(json)
+            TYPE_POLL_VOTE -> parsePollVote(json)
             else -> null
         }
     }
@@ -155,6 +206,7 @@ object ChatWire {
         meta: Inbound.ChunkMeta,
         message: String,
         attachmentsJson: String,
+        pollJson: String,
     ): IncomingChat? {
         val attachments = parseAttachments(
             try {
@@ -163,7 +215,14 @@ object ChatWire {
                 null
             }
         )
-        if (message.isEmpty() && attachments.isEmpty()) return null
+        val poll = parsePoll(
+            try {
+                if (pollJson.isEmpty()) null else JSONObject(pollJson)
+            } catch (_: Exception) {
+                null
+            }
+        )
+        if (message.isEmpty() && attachments.isEmpty() && poll == null) return null
         return IncomingChat(
             id = meta.id,
             senderName = meta.senderName,
@@ -171,13 +230,15 @@ object ChatWire {
             timestamp = meta.timestamp,
             text = message,
             attachments = attachments,
+            poll = poll,
         )
     }
 
     private fun parseComplete(json: JSONObject): Inbound? {
         val text = json.optString("message", "")
         val attachments = parseAttachments(json.optJSONArray("attachments"))
-        if (text.isEmpty() && attachments.isEmpty()) return null
+        val poll = parsePoll(json.optJSONObject("poll"))
+        if (text.isEmpty() && attachments.isEmpty() && poll == null) return null
         return Inbound.Complete(
             IncomingChat(
                 id = json.optString("id", ""),
@@ -186,7 +247,31 @@ object ChatWire {
                 timestamp = json.optTimestamp(),
                 text = text,
                 attachments = attachments,
+                poll = poll,
             )
+        )
+    }
+
+    private fun parseReaction(json: JSONObject): Inbound? {
+        val messageId = json.optString("messageId", "")
+        val voterIdentity = json.optString("voterIdentity", "")
+        val emoji = json.optString("emoji", "")
+        if (messageId.isEmpty() || voterIdentity.isEmpty()) return null
+        // Checked here rather than at the chip row, so whatever a remote client considers an emoji
+        // cannot reach the UI as a line of text wearing a chip.
+        if (!isReactionEmoji(emoji)) return null
+        return Inbound.Reaction(messageId = messageId, voterIdentity = voterIdentity, emoji = emoji)
+    }
+
+    private fun parsePollVote(json: JSONObject): Inbound? {
+        val messageId = json.optString("messageId", "")
+        val voterIdentity = json.optString("voterIdentity", "")
+        val optionId = json.optString("optionId", "")
+        if (messageId.isEmpty() || voterIdentity.isEmpty() || optionId.isEmpty()) return null
+        return Inbound.PollVote(
+            messageId = messageId,
+            voterIdentity = voterIdentity,
+            optionId = optionId,
         )
     }
 
@@ -271,6 +356,7 @@ object ChatWire {
         timestamp: Long,
         text: String,
         attachmentsJson: String,
+        pollJson: String,
     ): ByteArray =
         JSONObject().apply {
             put("type", TYPE_CHAT)
@@ -280,6 +366,7 @@ object ChatWire {
             put("senderName", senderName)
             put("senderIdentity", senderIdentity)
             if (attachmentsJson.isNotEmpty()) put("attachments", JSONArray(attachmentsJson))
+            if (pollJson.isNotEmpty()) put("poll", JSONObject(pollJson))
         }.toByteArray()
 
     private fun metaPacket(
@@ -289,6 +376,7 @@ object ChatWire {
         timestamp: Long,
         messageChunks: Int,
         attachmentChunks: Int,
+        pollChunks: Int,
     ): ByteArray =
         JSONObject().apply {
             put("type", TYPE_CHUNK_META)
@@ -298,7 +386,7 @@ object ChatWire {
             put("senderIdentity", senderIdentity)
             put("messageChunks", messageChunks)
             put("attachmentChunks", attachmentChunks)
-            put("pollChunks", 0)
+            put("pollChunks", pollChunks)
         }.toByteArray()
 
     private fun chunkPacket(id: String, section: String, index: Int, part: String): ByteArray =
@@ -335,6 +423,57 @@ object ChatWire {
             )
         }
         return attachments
+    }
+
+    private fun encodePoll(poll: ChatPoll): JSONObject =
+        JSONObject().apply {
+            put("id", poll.id)
+            put("question", poll.question)
+            put("options", JSONArray().apply {
+                poll.options.forEach { option ->
+                    put(JSONObject().apply {
+                        put("id", option.id)
+                        put("text", option.text)
+                    })
+                }
+            })
+            // Always written, even when empty: a poll arriving without the field would read as
+            // malformed to a client that expects the tally to be part of the poll.
+            put("votes", JSONObject().apply { poll.votes.forEach { (voter, optionId) -> put(voter, optionId) } })
+        }
+
+    /**
+     * Reads a poll, or null when what arrived could not be drawn as one — no question, or fewer
+     * than [MinPollOptions] answers to choose between. Votes for options the poll does not list are
+     * dropped rather than kept as a tally nobody can see the target of.
+     */
+    private fun parsePoll(json: JSONObject?): ChatPoll? {
+        json ?: return null
+        val id = json.optString("id", "")
+        val question = json.optString("question", "")
+        if (id.isEmpty() || question.isEmpty()) return null
+
+        val optionsArray = json.optJSONArray("options") ?: return null
+        val options = mutableListOf<ChatPollOption>()
+        for (i in 0 until optionsArray.length()) {
+            val row = optionsArray.optJSONObject(i) ?: continue
+            val optionId = row.optString("id", "")
+            val text = row.optString("text", "")
+            if (optionId.isNotEmpty() && text.isNotEmpty()) {
+                options.add(ChatPollOption(id = optionId, text = text))
+            }
+        }
+        if (options.size < MinPollOptions) return null
+
+        val votes = mutableMapOf<String, String>()
+        json.optJSONObject("votes")?.let { voteJson ->
+            voteJson.keys().forEach { voter ->
+                val optionId = voteJson.optString(voter, "")
+                if (options.any { it.id == optionId }) votes[voter] = optionId
+            }
+        }
+
+        return ChatPoll(id = id, question = question, options = options, votes = votes)
     }
 
     private fun ChatAttachment.toJson(): JSONObject =

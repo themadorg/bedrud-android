@@ -5,42 +5,44 @@ import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.StringRes
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.ime
+import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.union
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.relocation.BringIntoViewRequester
 import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.Send
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Image
-import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.automirrored.rounded.Send
+import androidx.compose.material.icons.outlined.AttachFile
+import androidx.compose.material.icons.outlined.Poll
+import androidx.compose.material.icons.rounded.KeyboardArrowDown
+import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SmallFloatingActionButton
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.material3.TopAppBarScrollBehavior
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
@@ -53,8 +55,10 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.focus.onFocusEvent
-import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
@@ -67,6 +71,7 @@ import com.bedrud.app.core.chat.ChatUploadFailure
 import com.bedrud.app.core.chat.ChatUploadResult
 import com.bedrud.app.core.livekit.ChatAttachment
 import com.bedrud.app.core.livekit.ChatMessage
+import com.bedrud.app.core.meeting.chat.ChatPoll
 import com.bedrud.app.core.meeting.chat.clustered
 import com.bedrud.app.core.meeting.chat.rows
 import com.bedrud.app.ui.components.ChatImageLightbox
@@ -95,6 +100,9 @@ data class ChatImageContext(
  * Attachments are a two-step send — the image goes to the server first, and only the URL it comes
  * back with travels to the other participants — so [onSendAttachment] is separate from [onSend].
  *
+ * Reactions and votes are separate again — [onToggleReaction] and [onVote] name a message that may
+ * be anybody's, where [onSendPoll] adds one of this reader's own.
+ *
  * [sendDisabledReason] closes the dock and says why, while leaving the conversation readable:
  * turning chat off, or blocking one person, should not take away what has already been said.
  */
@@ -103,18 +111,19 @@ data class ChatImageContext(
 fun MeetingChatPanel(
     messages: List<ChatMessage>,
     input: String,
+    currentIdentity: String,
     onInputChange: (String) -> Unit,
     onSend: () -> Unit,
     onSendAttachment: (String, ChatAttachment) -> Unit,
-    onClose: () -> Unit,
+    onSendPoll: (ChatPoll) -> Unit,
+    onToggleReaction: (String, String) -> Unit,
+    onVote: (String, String) -> Unit,
+    resolveName: (String) -> String,
     imageContext: ChatImageContext?,
     @StringRes sendDisabledReason: Int?,
     modifier: Modifier = Modifier,
 ) {
     val listState = rememberLazyListState()
-    // Pinned rather than collapsing: the header stays put while the conversation moves under it,
-    // and only its container colour reacts.
-    val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
     val bringIntoViewRequester = remember { BringIntoViewRequester() }
@@ -145,6 +154,10 @@ fun MeetingChatPanel(
     var isUploading by remember { mutableStateOf(false) }
     var uploadError by remember { mutableStateOf<String?>(null) }
     var previewImageUrl by remember { mutableStateOf<String?>(null) }
+    var isComposingPoll by remember { mutableStateOf(false) }
+    // The message whose results are open, rather than the poll itself: votes keep arriving while
+    // the sheet is up, and holding the poll would freeze the numbers at the moment it opened.
+    var resultsMessageId by remember { mutableStateOf<String?>(null) }
 
     val unreadableMessage = stringResource(R.string.meeting_chat_uploadUnreadable)
     val unreachableMessage = stringResource(R.string.meeting_chat_uploadUnreachable)
@@ -189,12 +202,7 @@ fun MeetingChatPanel(
         }
     }
 
-    Column(
-        modifier = modifier
-            .background(MaterialTheme.colorScheme.surface)
-            .nestedScroll(scrollBehavior.nestedScrollConnection)
-    ) {
-        ChatPanelHeader(onClose = onClose, scrollBehavior = scrollBehavior)
+    Column(modifier = modifier) {
 
         Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
             LazyColumn(
@@ -212,9 +220,14 @@ fun MeetingChatPanel(
                 items(rows, key = { it.message.id }) { row ->
                     MeetingChatRow(
                         row = row,
+                        currentIdentity = currentIdentity,
+                        canParticipate = sendDisabledReason == null,
                         serverURL = imageContext?.serverURL.orEmpty(),
                         accessToken = imageContext?.accessToken,
                         onImageClick = { previewImageUrl = it },
+                        onToggleReaction = onToggleReaction,
+                        onVote = onVote,
+                        onShowPollResults = { resultsMessageId = it },
                     )
                 }
             }
@@ -231,7 +244,7 @@ fun MeetingChatPanel(
                     elevation = FlatFabElevation,
                 ) {
                     Icon(
-                        Icons.Default.KeyboardArrowDown,
+                        Icons.Rounded.KeyboardArrowDown,
                         contentDescription = stringResource(R.string.meeting_contentDescription_scrollToBottom),
                         tint = MaterialTheme.colorScheme.onPrimaryContainer,
                     )
@@ -264,15 +277,15 @@ fun MeetingChatPanel(
             )
         }
 
-        // Only the keyboard. The meeting Scaffold has already inset this panel past the navigation
-        // bar, so padding for that again just lifts the dock off the bottom of the screen — which
-        // is what the removed 72dp controls-bar reservation was doing too.
+        // Whichever is taller, the keyboard or the gesture bar — never both stacked. The panel used
+        // to sit inside the meeting Scaffold, which had already inset it past the navigation bar; in
+        // a sheet window it has to do that itself, and without this the gesture bar drew across the
+        // composer.
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(MaterialTheme.colorScheme.surface)
-                .imePadding()
-                .padding(horizontal = Dimens.space8, vertical = Dimens.space8),
+                .windowInsetsPadding(WindowInsets.ime.union(WindowInsets.navigationBars))
+                .padding(horizontal = Dimens.meetingScreenMargin, vertical = Dimens.space8),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = if (sendDisabledReason == null) {
                 Arrangement.Start
@@ -283,55 +296,83 @@ fun MeetingChatPanel(
             if (sendDisabledReason != null) {
                 ChatSendDisabledNotice(reason = sendDisabledReason)
             } else {
-                if (imageContext != null) {
-                    IconButton(
-                        onClick = {
-                            imagePicker.launch(
-                                PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
-                            )
-                        },
-                        enabled = !isUploading,
-                    ) {
-                        Icon(
-                            Icons.Default.Image,
+                // Built as the call's controls bar, not as a chat widget: same corner, same
+                // container, same hairline, same screen margin. Chat is part of the call, and the
+                // two bars sit in the same place on screen — they should be the same object.
+                val chrome = meetingChromeColors()
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(min = Dimens.chatDockBar)
+                        .clip(BedrudShapeTokens.controlsBar)
+                        .background(chrome.bar)
+                        .border(Dimens.borderThin, chrome.divider, BedrudShapeTokens.controlsBar)
+                        .padding(horizontal = Dimens.meetingBarPaddingH),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    if (imageContext != null) {
+                        DockIcon(
+                            icon = Icons.Outlined.AttachFile,
                             contentDescription = stringResource(R.string.meeting_contentDescription_attachImage),
-                            tint = if (isUploading) {
-                                MaterialTheme.colorScheme.outline
-                            } else {
-                                MaterialTheme.colorScheme.onSurfaceVariant
+                            enabled = !isUploading,
+                            onClick = {
+                                imagePicker.launch(
+                                    PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                                )
                             },
                         )
                     }
-                }
-                OutlinedTextField(
-                    value = input,
-                    onValueChange = onInputChange,
-                    placeholder = { Text(stringResource(R.string.meeting_chat_placeholder)) },
-                    singleLine = true,
-                    modifier = Modifier
-                        .weight(1f)
-                        .bringIntoViewRequester(bringIntoViewRequester)
-                        .onFocusEvent { focusState ->
-                            if (focusState.isFocused) {
-                                scope.launch { bringIntoViewRequester.bringIntoView() }
+                    DockIcon(
+                        icon = Icons.Outlined.Poll,
+                        contentDescription = stringResource(R.string.meeting_chat_poll_new),
+                        enabled = !isUploading,
+                        onClick = { isComposingPoll = true },
+                    )
+
+                    // A bare text field rather than an `OutlinedTextField`: that one carries a focus
+                    // outline drawn *inside* the bar it already sits in, and a 56dp minimum height
+                    // that made the dock taller than the messages it belongs under.
+                    BasicTextField(
+                        value = input,
+                        onValueChange = onInputChange,
+                        singleLine = true,
+                        textStyle = MaterialTheme.typography.bodyMedium.copy(
+                            color = MaterialTheme.colorScheme.onSurface,
+                            textDirection = BidiUtils.textDirection(input),
+                        ),
+                        cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+                        modifier = Modifier
+                            .weight(1f)
+                            .padding(horizontal = Dimens.space4)
+                            .bringIntoViewRequester(bringIntoViewRequester)
+                            .onFocusEvent { focusState ->
+                                if (focusState.isFocused) {
+                                    scope.launch { bringIntoViewRequester.bringIntoView() }
+                                }
+                            },
+                        decorationBox = { field ->
+                            if (input.isEmpty()) {
+                                Text(
+                                    text = stringResource(R.string.meeting_chat_placeholder),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
                             }
+                            field()
                         },
-                    shape = BedrudShapeTokens.pill,
-                    textStyle = MaterialTheme.typography.bodyMedium.copy(
-                        textDirection = BidiUtils.textDirection(input),
-                    ),
-                )
-                Spacer(modifier = Modifier.width(Dimens.space4))
-                val canSend = input.isNotBlank() && !isUploading
-                IconButton(onClick = onSend, enabled = canSend) {
-                    Icon(
-                        Icons.AutoMirrored.Filled.Send,
+                    )
+
+                    val canSend = input.isNotBlank() && !isUploading
+                    DockIcon(
+                        icon = Icons.AutoMirrored.Rounded.Send,
                         contentDescription = stringResource(R.string.meeting_contentDescription_send),
+                        enabled = canSend,
                         tint = if (canSend) {
                             MaterialTheme.colorScheme.primary
                         } else {
                             MaterialTheme.colorScheme.onSurfaceVariant
                         },
+                        onClick = onSend,
                     )
                 }
             }
@@ -344,42 +385,56 @@ fun MeetingChatPanel(
         accessToken = imageContext?.accessToken,
         onClose = { previewImageUrl = null },
     )
+
+    if (isComposingPoll) {
+        MeetingChatPollSheet(
+            onDismiss = { isComposingPoll = false },
+            onCreate = { poll ->
+                isComposingPoll = false
+                onSendPoll(poll)
+            },
+        )
+    }
+
+    // Read back out of the list every time, so a vote arriving while the sheet is open moves the
+    // numbers under it. The sheet closes on its own if the message it was showing goes away.
+    val results = resultsMessageId?.let { id -> messages.firstOrNull { it.id == id }?.poll }
+    if (results != null) {
+        ChatPollResultsSheet(
+            poll = results,
+            currentIdentity = currentIdentity,
+            resolveName = resolveName,
+            onDismiss = { resultsMessageId = null },
+        )
+    }
 }
 
 /**
- * The panel's header, as a real Material 3 top app bar.
+ * One control in the composer bar.
  *
- * Which buys the standard height and title treatment, and the scrolled state: instead of a rule
- * drawn under the title at all times, the bar takes on a raised container colour exactly while
- * messages are passing beneath it, and sits flush with the panel when they are not.
- *
- * Its own window insets are switched off — the meeting Scaffold has already inset this panel, and
- * applying the status bar a second time would push the title below where the call's own top bar
- * puts the room name.
+ * Sized to the bar instead of to `IconButton`'s 48dp default — three of those in a 44dp bar left the
+ * icons crowding each other while the row had to grow to fit them.
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun ChatPanelHeader(
-    onClose: () -> Unit,
-    scrollBehavior: TopAppBarScrollBehavior,
+private fun DockIcon(
+    icon: ImageVector,
+    contentDescription: String,
+    enabled: Boolean,
+    onClick: () -> Unit,
+    tint: Color = MaterialTheme.colorScheme.onSurfaceVariant,
 ) {
-    TopAppBar(
-        title = { Text(text = stringResource(R.string.meeting_panel_chat)) },
-        actions = {
-            IconButton(onClick = onClose) {
-                Icon(
-                    Icons.Default.Close,
-                    contentDescription = stringResource(R.string.meeting_contentDescription_closeChat),
-                )
-            }
-        },
-        windowInsets = WindowInsets(0),
-        colors = TopAppBarDefaults.topAppBarColors(
-            containerColor = MaterialTheme.colorScheme.surface,
-            scrolledContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-        ),
-        scrollBehavior = scrollBehavior,
-    )
+    IconButton(
+        onClick = onClick,
+        enabled = enabled,
+        modifier = Modifier.size(Dimens.chatDockIcon),
+    ) {
+        Icon(
+            icon,
+            contentDescription = contentDescription,
+            tint = if (enabled) tint else MaterialTheme.colorScheme.outline,
+            modifier = Modifier.size(Dimens.iconMd),
+        )
+    }
 }
 
 /**
@@ -399,7 +454,7 @@ private fun ChatSendDisabledNotice(@StringRes reason: Int) {
         horizontalArrangement = Arrangement.spacedBy(Dimens.space6),
     ) {
         Icon(
-            Icons.Default.Lock,
+            Icons.Rounded.Lock,
             contentDescription = null,
             tint = MaterialTheme.bedrudColors.onWarningContainer,
             modifier = Modifier.size(Dimens.iconXs),

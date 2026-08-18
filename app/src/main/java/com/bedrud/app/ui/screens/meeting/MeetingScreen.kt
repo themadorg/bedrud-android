@@ -147,6 +147,7 @@ fun MeetingScreen(
     val wasKicked by roomManager.wasKicked.collectAsState()
 
     val participantVersion by roomManager.participantVersion.collectAsState()
+    val participantNames by roomManager.participantNames.collectAsState()
     // Who the room says it hears, and why it might not be hearing this device.
     val speakingLevels by roomManager.speakingLevels.collectAsState()
     val voiceAlert by roomManager.voiceAlert.collectAsState()
@@ -154,6 +155,9 @@ fun MeetingScreen(
     val chatMessages by roomManager.chatMessages.collectAsState()
     val isChatBlocked by roomManager.isChatBlocked.collectAsState()
     var showChat by remember { mutableStateOf(false) }
+    // Whether the sheet is *on its way* to being on screen, which is what the controls bar's chat
+    // button follows. `showChat` only says whether it is still composed.
+    var chatSheetVisible by remember { mutableStateOf(false) }
     var showInviteSheet by remember { mutableStateOf(false) }
     var chatInput by remember { mutableStateOf("") }
 
@@ -469,7 +473,8 @@ fun MeetingScreen(
                                 .padding(padding)
                         ) {
                             val isTileFullscreen = fullscreenParticipantIdentity != null
-                            if (!showChat && !isTileFullscreen) {
+                            // The call stays composed while chat is open — the sheet sits over it.
+                            if (!isTileFullscreen) {
                             Column(
                                 modifier = Modifier
                                     .fillMaxSize()
@@ -558,6 +563,7 @@ fun MeetingScreen(
                                         pinnedIdentity = pinnedIdentity,
                                         speakingLevels = speakingLevels,
                                         isLocalMicEnabled = isMicEnabled,
+                                        isLocalDeafened = isDeafened,
                                         onOpenParticipantActions = { identity ->
                                             participantSheetIdentity = identity
                                         },
@@ -688,7 +694,7 @@ fun MeetingScreen(
                                     micHasError = micMediaError,
                                     cameraHasError = cameraMediaError,
                                     isScreenShareEnabled = isScreenShareEnabled,
-                                    showChat = showChat,
+                                    showChat = chatSheetVisible,
                                     unreadCount = unreadCount,
                                     inputMode = inputMode,
                                     connectionState = connectionState,
@@ -910,16 +916,13 @@ fun MeetingScreen(
                                 )
                             }
 
-                            AnimatedVisibility(
-                                visible = showChat,
-                                enter = fadeIn(),
-                                exit = fadeOut(),
-                                modifier = Modifier.fillMaxSize()
-                            ) {
-                                MeetingChatPanel(
-                                    modifier = Modifier.fillMaxSize(),
+                            // A sheet over the call, not a page in front of it: the grid keeps
+                            // rendering behind the scrim while chat is open.
+                            if (showChat) {
+                                MeetingChatSheet(
                                     messages = chatMessages,
                                     input = chatInput,
+                                    currentIdentity = localIdentity.orEmpty(),
                                     onInputChange = { chatInput = it },
                                     onSend = {
                                         if (chatInput.isNotBlank()) {
@@ -934,7 +937,29 @@ fun MeetingScreen(
                                             roomManager.sendChatMessage(text, listOf(attachment))
                                         }
                                     },
+                                    onSendPoll = { poll ->
+                                        scope.launch { roomManager.sendChatMessage("", poll = poll) }
+                                    },
+                                    onToggleReaction = { messageId, emoji ->
+                                        scope.launch { roomManager.reactToMessage(messageId, emoji) }
+                                    },
+                                    onVote = { messageId, optionId ->
+                                        scope.launch { roomManager.voteInPoll(messageId, optionId) }
+                                    },
+                                    // Whoever is still here is named from the room itself; anyone who
+                                    // has left is named from what the room remembered while they were
+                                    // in it. Only an identity this device never saw at all falls back
+                                    // to itself — a vote from before it joined, say.
+                                    resolveName = { identity ->
+                                        participants
+                                            .firstOrNull { it.identity?.value == identity }
+                                            ?.name
+                                            ?.takeIf { it.isNotBlank() }
+                                            ?: participantNames[identity]
+                                            ?: identity
+                                    },
                                     onClose = { showChat = false },
+                                    onVisibleChange = { chatSheetVisible = it },
                                     imageContext = roomInfo?.id?.let { roomId ->
                                         ChatImageContext(
                                             roomId = roomId,

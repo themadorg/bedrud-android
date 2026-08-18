@@ -16,7 +16,12 @@ import com.bedrud.app.core.audio.VoiceGateProcessor
 import com.bedrud.app.core.audio.VoiceReachMonitor
 import com.bedrud.app.core.call.CallConnectionService
 import com.bedrud.app.core.meeting.chat.ChatChunkAssembler
+import com.bedrud.app.core.meeting.chat.ChatPoll
+import com.bedrud.app.core.meeting.chat.ChatReactions
 import com.bedrud.app.core.meeting.chat.ChatWire
+import com.bedrud.app.core.meeting.chat.isReactionEmoji
+import com.bedrud.app.core.meeting.chat.toggled
+import com.bedrud.app.core.meeting.chat.withVote
 import com.bedrud.app.core.registerNotificationChannel
 import com.bedrud.app.ui.screens.settings.SettingsStore
 import io.livekit.android.AudioOptions
@@ -80,6 +85,13 @@ data class ChatMessage(
     val timestamp: Long = System.currentTimeMillis(),
     val isLocal: Boolean = false,
     val attachments: List<ChatAttachment> = emptyList(),
+    /** Set only on the message that opened a poll; every vote since is folded into it. */
+    val poll: ChatPoll? = null,
+    /**
+     * Who reacted, and with what. Reactions arrive as packets of their own long after the message
+     * did, so they live on this copy of it rather than in what the sender originally published.
+     */
+    val reactions: ChatReactions = emptyMap(),
 )
 
 class RoomManager(
@@ -129,6 +141,10 @@ class RoomManager(
     // Incremented on every participant change to trigger recomposition
     private val _participantVersion = MutableStateFlow(0)
     val participantVersion: StateFlow<Int> = _participantVersion.asStateFlow()
+
+    /** Names of everyone seen in this room, by identity — including those who have since left. */
+    private val _participantNames = MutableStateFlow<Map<String, String>>(emptyMap())
+    val participantNames: StateFlow<Map<String, String>> = _participantNames.asStateFlow()
 
     private val _chatMessages = MutableStateFlow<List<ChatMessage>>(emptyList())
     val chatMessages: StateFlow<List<ChatMessage>> = _chatMessages.asStateFlow()
@@ -422,6 +438,7 @@ class RoomManager(
             }
 
             // Notify initial participant state
+            room.remoteParticipants.values.forEach { rememberName(it) }
             _participantVersion.value++
 
             // Listen for room events
@@ -432,7 +449,10 @@ class RoomManager(
                     when (event) {
                         is RoomEvent.DataReceived -> handleDataReceived(event)
                         is RoomEvent.ActiveSpeakersChanged -> onActiveSpeakers(event.speakers)
-                        is RoomEvent.ParticipantConnected -> _participantVersion.value++
+                        is RoomEvent.ParticipantConnected -> {
+                            rememberName(event.participant)
+                            _participantVersion.value++
+                        }
                         // Carries both the avatars other participants set and the moderation flags
                         // the server sets, so a block lands here the moment it is applied.
                         is RoomEvent.ParticipantMetadataChanged -> {
@@ -546,28 +566,89 @@ class RoomManager(
         }
     }
 
+    /**
+     * Files away what somebody in this room is called, keyed by the identity the wire uses.
+     *
+     * A poll vote and a reaction name a voter and nothing else, and the room's participant list only
+     * holds whoever is still in it — so a person who voted and then left showed up in the results as
+     * `guest-vblonfbf`. Someone who voted without ever sending a message left no name anywhere else
+     * to fall back on. Kept for as long as the room lasts, and cleared with it.
+     */
+    private fun rememberName(participant: Participant) {
+        val identity = participant.identity?.value ?: return
+        val name = participant.name?.takeIf { it.isNotBlank() } ?: return
+        _participantNames.value = _participantNames.value + (identity to name)
+    }
+
     private fun refreshChatBlocked() {
         _isChatBlocked.value = ParticipantMetadata.isChatBlocked(_room?.localParticipant?.metadata)
     }
 
     private fun handleDataReceived(event: RoomEvent.DataReceived) {
-        val incoming = chatAssembler.accept(event.data, event.topic) ?: return
+        when (val inbound = chatAssembler.accept(event.data, event.topic)) {
+            is ChatWire.Inbound.Complete -> appendRemoteMessage(inbound.chat, event)
+            is ChatWire.Inbound.Reaction ->
+                applyReaction(inbound.messageId, inbound.voterIdentity, inbound.emoji)
+            is ChatWire.Inbound.PollVote ->
+                applyPollVote(inbound.messageId, inbound.voterIdentity, inbound.optionId)
+            // A header or a part on its own says nothing yet, and neither does a payload that was
+            // never chat: the assembler has already decided there is nothing to show.
+            else -> Unit
+        }
+    }
+
+    private fun appendRemoteMessage(incoming: ChatWire.IncomingChat, event: RoomEvent.DataReceived) {
         val senderName = incoming.senderName.ifBlank {
             event.participant?.name
                 ?: event.participant?.identity?.value
                 ?: UNKNOWN_PARTICIPANT_NAME
         }
+        // A message names its sender, which is one more name the results sheet can use later.
+        val senderIdentity = incoming.senderIdentity.ifEmpty {
+            event.participant?.identity?.value.orEmpty()
+        }
+        if (senderIdentity.isNotEmpty() && senderName != UNKNOWN_PARTICIPANT_NAME) {
+            _participantNames.value = _participantNames.value + (senderIdentity to senderName)
+        }
         _chatMessages.value += ChatMessage(
             id = incoming.id.ifEmpty { UUID.randomUUID().toString() },
             senderName = senderName,
-            senderIdentity = incoming.senderIdentity.ifEmpty {
-                event.participant?.identity?.value.orEmpty()
-            },
+            senderIdentity = senderIdentity,
             text = incoming.text,
             timestamp = incoming.timestamp,
             isLocal = false,
             attachments = incoming.attachments,
+            poll = incoming.poll,
         )
+    }
+
+    /**
+     * Folds one reaction into the message it belongs to.
+     *
+     * A reaction to something this device never received is dropped, not remembered: the message
+     * may predate the join, and holding votes for a message that will never arrive is a leak with
+     * nothing to show for it.
+     */
+    private fun applyReaction(messageId: String, voterIdentity: String, emoji: String) {
+        _chatMessages.value = _chatMessages.value.map { message ->
+            if (message.id != messageId) {
+                message
+            } else {
+                message.copy(reactions = message.reactions.toggled(voterIdentity, emoji))
+            }
+        }
+    }
+
+    /** Folds one vote into its poll. A vote for a message that carries no poll changes nothing. */
+    private fun applyPollVote(messageId: String, voterIdentity: String, optionId: String) {
+        _chatMessages.value = _chatMessages.value.map { message ->
+            val poll = message.poll
+            if (message.id != messageId || poll == null) {
+                message
+            } else {
+                message.copy(poll = poll.withVote(voterIdentity, optionId))
+            }
+        }
     }
 
     /**
@@ -655,6 +736,7 @@ class RoomManager(
         _locallyMutedIdentities.value = emptySet()
         _participantVolumes.value = emptyMap()
         _participantVersion.value = 0
+        _participantNames.value = emptyMap()
         _chatMessages.value = emptyList()
         chatAssembler.clear()
         _isChatBlocked.value = false
@@ -1005,7 +1087,11 @@ class RoomManager(
             .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
             .build()
 
-    suspend fun sendChatMessage(text: String, attachments: List<ChatAttachment> = emptyList()) {
+    suspend fun sendChatMessage(
+        text: String,
+        attachments: List<ChatAttachment> = emptyList(),
+        poll: ChatPoll? = null,
+    ) {
         val room = _room ?: return
         // Checked here as well as in the UI: a block has to hold whatever managed to call this.
         if (_isChatBlocked.value) return
@@ -1021,6 +1107,7 @@ class RoomManager(
                 senderIdentity = identity,
                 text = text,
                 attachments = attachments,
+                poll = poll,
                 id = id,
                 timestamp = timestamp,
             )
@@ -1042,11 +1129,64 @@ class RoomManager(
                 timestamp = timestamp,
                 isLocal = true,
                 attachments = attachments,
+                poll = poll,
             )
         } else {
             _error.value = application.getString(R.string.meeting_error_messageSendFailed)
         }
     }
+
+    /**
+     * Reacts to a message, or takes back the reaction already there — one tap means both, and which
+     * one it turns out to be is settled the same way on every client that hears it.
+     *
+     * Sent before it is shown, unlike the local echo of a message: a chip that only this device can
+     * see is worse than a tap that visibly did nothing, because there is no send button to blame.
+     */
+    suspend fun reactToMessage(messageId: String, emoji: String) {
+        if (_isChatBlocked.value) return
+        val identity = localIdentity
+        if (identity.isEmpty() || !isReactionEmoji(emoji)) return
+
+        val sent = publishData(
+            ChatWire.CHAT_DATA_TOPIC,
+            ChatWire.encodeReaction(messageId = messageId, voterIdentity = identity, emoji = emoji),
+        )
+        if (sent) {
+            applyReaction(messageId, identity, emoji)
+        } else {
+            _error.value = application.getString(R.string.meeting_error_reactionFailed)
+        }
+    }
+
+    /** Casts or changes this device's vote in a poll. Votes cannot be taken back, only moved. */
+    suspend fun voteInPoll(messageId: String, optionId: String) {
+        if (_isChatBlocked.value) return
+        val identity = localIdentity
+        if (identity.isEmpty()) return
+
+        val sent = publishData(
+            ChatWire.CHAT_DATA_TOPIC,
+            ChatWire.encodePollVote(
+                messageId = messageId,
+                voterIdentity = identity,
+                optionId = optionId,
+            ),
+        )
+        if (sent) {
+            applyPollVote(messageId, identity, optionId)
+        } else {
+            _error.value = application.getString(R.string.meeting_error_voteFailed)
+        }
+    }
+
+    /**
+     * Who this device is to the rest of the room. Empty until it has joined one.
+     *
+     * The panel needs it to tell its own reactions and votes from everybody else's — the wire names
+     * a voter, never "you".
+     */
+    val localIdentity: String get() = _room?.localParticipant?.identity?.value.orEmpty()
 
     fun getLocalParticipant(): LocalParticipant? {
         return _room?.localParticipant

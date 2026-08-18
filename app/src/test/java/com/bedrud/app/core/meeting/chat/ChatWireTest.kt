@@ -40,24 +40,92 @@ class ChatWireTest {
     }
 
     @Test
-    fun `ignores a reaction on the chat topic`() {
-        // Reactions ride the same topic. Treating them as messages is what used to leave a sender's
-        // name in the list with nothing under it.
+    fun `reads a reaction as a packet of its own`() {
+        // Reactions ride the same topic as messages. Reading one as a message is what used to leave
+        // a sender's name in the list with nothing under it.
         val raw = packet("""{"type":"reaction","messageId":"m1","emoji":"👍","voterIdentity":"u-7"}""")
+
+        val reaction = ChatWire.parse(raw, ChatWire.CHAT_DATA_TOPIC) as? ChatWire.Inbound.Reaction
+
+        assertEquals("m1", reaction?.messageId)
+        assertEquals("u-7", reaction?.voterIdentity)
+        assertEquals("👍", reaction?.emoji)
+    }
+
+    @Test
+    fun `ignores a reaction carrying something that is not an emoji`() {
+        val raw = packet("""{"type":"reaction","messageId":"m1","emoji":"drop tables","voterIdentity":"u-7"}""")
 
         assertNull(ChatWire.parse(raw, ChatWire.CHAT_DATA_TOPIC))
     }
 
     @Test
-    fun `ignores a poll, which has no text to draw`() {
+    fun `reads a poll vote`() {
+        val raw = packet("""{"type":"poll_vote","messageId":"m1","optionId":"o-2","voterIdentity":"u-7"}""")
+
+        val vote = ChatWire.parse(raw, ChatWire.CHAT_DATA_TOPIC) as? ChatWire.Inbound.PollVote
+
+        assertEquals("m1", vote?.messageId)
+        assertEquals("u-7", vote?.voterIdentity)
+        assertEquals("o-2", vote?.optionId)
+    }
+
+    @Test
+    fun `reads a poll carried by a message that has no text`() {
         val raw = packet(
             """
             {"type":"chat","id":"m2","timestamp":1,"senderName":"Sara","senderIdentity":"u-7",
-             "message":"","attachments":[],"poll":{"question":"Lunch?","options":["a","b"]}}
+             "message":"","attachments":[],
+             "poll":{"id":"p-1","question":"Lunch?",
+                     "options":[{"id":"o-1","text":"Now"},{"id":"o-2","text":"Later"}],
+                     "votes":{"u-9":"o-2"}}}
+            """.trimIndent()
+        )
+
+        val poll = completeOrNull(raw)?.poll
+
+        assertEquals("Lunch?", poll?.question)
+        assertEquals(listOf("Now", "Later"), poll?.options?.map { it.text })
+        assertEquals(mapOf("u-9" to "o-2"), poll?.votes)
+    }
+
+    @Test
+    fun `drops votes for options the poll does not offer`() {
+        val raw = packet(
+            """
+            {"type":"chat","id":"m2","timestamp":1,"senderName":"Sara","senderIdentity":"u-7",
+             "message":"","poll":{"id":"p-1","question":"Lunch?",
+                     "options":[{"id":"o-1","text":"Now"},{"id":"o-2","text":"Later"}],
+                     "votes":{"u-9":"o-2","u-8":"o-404"}}}
+            """.trimIndent()
+        )
+
+        assertEquals(mapOf("u-9" to "o-2"), completeOrNull(raw)?.poll?.votes)
+    }
+
+    @Test
+    fun `ignores a poll with nothing to choose between`() {
+        // One answer is not a question, and a message with neither text nor picture nor poll has
+        // nothing to draw at all.
+        val raw = packet(
+            """
+            {"type":"chat","id":"m2","timestamp":1,"senderName":"Sara","senderIdentity":"u-7",
+             "message":"","poll":{"id":"p-1","question":"Lunch?",
+                     "options":[{"id":"o-1","text":"Now"}]}}
             """.trimIndent()
         )
 
         assertNull(ChatWire.parse(raw, ChatWire.CHAT_DATA_TOPIC))
+    }
+
+    @Test
+    fun `round-trips a poll it built itself`() {
+        val poll = newPoll("Lunch?", listOf("Now", "Later"))!!
+
+        val packets = ChatWire.encodeChat("Sara", "u-7", "", emptyList(), poll = poll)
+
+        assertEquals(1, packets.size)
+        assertEquals(poll, completeOrNull(packets.single())?.poll)
     }
 
     @Test

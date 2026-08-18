@@ -125,6 +125,19 @@ object Dimens {
     val chatClusterGap = 12.dp           // between one person's run and the next
     val chatBubbleGap = 2.dp             // between bubbles inside a single run
     val chatImageMaxHeight = 240.dp      // a tall picture is cropped rather than owning the panel
+    val chatReactionTarget = 40.dp       // one emoji in the picker, sized for a thumb rather than for the glyph
+    // A reaction chip's height is set, not left to the emoji: an emoji glyph fills its line box, so
+    // padding alone left its ink about a pixel from the edge and the chip read as cramped. Kept
+    // clearly under a bubble's own height — a badge hanging off a message, not a second message.
+    val chatReactionChip = 24.dp
+    val chatReactionChipMinWidth = 40.dp // so a single emoji is a pill rather than a circle
+    // The composer is one raised bar inset from the panel's edges, not a band across the bottom, and
+    // it is deliberately shorter than a Material text field: a call's chat dock competes with the
+    // conversation above it, where a form field is the main event on its screen.
+    val chatDockBar = 44.dp
+    val chatDockIcon = 36.dp             // icon targets inside that bar, sized to it rather than to the 48dp default
+    val chatPollWidth = 220.dp           // a poll sets its own width, so its bars are comparable between messages
+    val chatPollOption = 36.dp           // one answer row, tall enough to tap without reading as a button
 
     // ── Meeting: invite sheet ──
     val inviteGridMaxHeight = 280.dp     // participant avatar grid scrolls beyond this

@@ -118,6 +118,21 @@
   <string name="meeting_chat_disabledByRoom">La discussion est désactivée dans ce salon</string>
   <string name="meeting_chat_blockedByModerator">Un modérateur vous a empêché de discuter</string>
   <string name="meeting_chat_saveImage">Enregistrer l\'image</string>
+  <string name="meeting_contentDescription_react">Réagir à ce message</string>
+  <string name="meeting_chat_poll_new">Nouveau sondage</string>
+  <string name="meeting_chat_poll_question">Question</string>
+  <string name="meeting_chat_poll_questionPlaceholder">Que décidons-nous ?</string>
+  <string name="meeting_chat_poll_option">Réponse %1$d</string>
+  <string name="meeting_chat_poll_addOption">Ajouter une réponse</string>
+  <string name="meeting_chat_poll_removeOption">Supprimer la réponse</string>
+  <string name="meeting_chat_poll_send">Envoyer le sondage</string>
+  <string name="meeting_chat_poll_viewResults">Voir les résultats</string>
+  <string name="meeting_chat_poll_results">Résultats</string>
+  <string name="meeting_chat_poll_noVotes">Aucun vote pour l\'instant</string>
+  <plurals name="meeting_chat_poll_voteCount">
+    <item quantity="one">%1$d vote</item>
+    <item quantity="other">%1$d votes</item>
+  </plurals>
   <string name="meeting_chat_imageSaved">Enregistrée dans Images</string>
   <string name="meeting_chat_imageSaveUnreachable">Impossible de télécharger cette image</string>
   <string name="meeting_chat_imageSaveUnwritable">Impossible d\'enregistrer dans la galerie</string>
@@ -283,6 +298,8 @@
   <string name="meeting_error_screenShareUnavailable">Le partage d\'écran n\'est pas disponible</string>
   <string name="meeting_error_screenShareStopFailed">Impossible d\'arrêter le partage d\'écran</string>
   <string name="meeting_error_messageSendFailed">Impossible d\'envoyer votre message</string>
+  <string name="meeting_error_reactionFailed">Impossible d\'envoyer votre réaction</string>
+  <string name="meeting_error_voteFailed">Impossible d\'envoyer votre vote</string>
   <string name="meeting_error_kickFailed">Impossible de retirer le participant</string>
   <string name="meeting_error_banFailed">Impossible de bannir le participant</string>
   <string name="dashboard_error_createRoomFailed">Impossible de créer le salon</string>
@@ -295,6 +312,7 @@
   <string name="meeting_contentDescription_tileFullscreen">Afficher en plein écran</string>
   <string name="meeting_contentDescription_tileExitFullscreen">Quitter le plein écran</string>
   <string name="meeting_contentDescription_micOff">Micro coupé</string>
+  <string name="meeting_contentDescription_deafened">Son coupé</string>
   <string name="meeting_contentDescription_speaking">Parle</string>
   <string name="meeting_status_reconnecting">Reconnexion…</string>
   <string name="meeting_status_connected">Connecté</string>
