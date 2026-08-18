@@ -46,7 +46,7 @@ TAG_GLOB := [0-9]*.[0-9]*.[0-9]*
 
 .DEFAULT_GOAL := help
 .PHONY: help doctor build build-dev build-release install install-dev run \
-        uninstall uninstall-dev logcat lint test check clean version \
+        drive screen shot uninstall uninstall-dev logcat lint test check clean version \
         tag-patch tag-minor tag-major tag-push release-beta release-stable \
         release-status bump dispatch
 
@@ -61,6 +61,7 @@ help: ## Show this help
 	@echo "  Variables"
 	@echo "    SERVER=<host>      default server host baked into a build"
 	@echo "    TAG=<version>      tag the release-* targets act on"
+	@echo "    NAME=<name>        filename make shot writes under shots/"
 	@echo ""
 
 # On Windows, Android Studio writes sdk.dir escaped Java-properties style
@@ -126,6 +127,19 @@ install-dev: ## Build + install the dev app (side by side with the real one)
 
 run: install ## Install the debug app and launch it
 	adb shell am start -n $(MAIN_ACTIVITY)
+
+# The three below wrap tools/emu, which drives the app by naming what is on screen
+# rather than by tapping coordinates - see its own header for the full command set.
+drive: install-dev ## Install the dev app, launch it, and list what is on screen
+	@tools/emu launch
+	@tools/emu dump
+
+screen: ## List every label on screen, so the next step can be named rather than guessed
+	@tools/emu dump
+
+shot: ## Screenshot the device to shots/<NAME>.png
+	@[ -n "$(NAME)" ] || { echo "Usage: make shot NAME=<name>"; exit 1; }
+	@tools/emu shot $(NAME)
 
 uninstall: ## Remove the debug/release app from the device
 	adb uninstall $(APP_ID)

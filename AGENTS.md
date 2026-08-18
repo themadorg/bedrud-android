@@ -133,7 +133,7 @@ specific to bedrud, and corrects two rules this file previously stated out of da
 | **Default branch** | `master`. The repo **squash-merges**, so `git branch --merged` never detects a merged feature branch — its tip SHA differs from what landed. Detect via `[origin/<name>: gone]` in `git branch -vv`, or a merged PR whose `headRefName` matches. |
 | **Design system** | Newest Material 3 incl. Expressive. Tokens in `ui/theme/`; rose `#E11D48` primary + teal `#14B8A6` tertiary on warm neutrals, full light+dark role set mapped in `Theme.kt`, `dynamicColor` off. |
 | **Locales** | 9 — ar, de, es, fa, fr, ja, ru, tr, zh. Lint treats `MissingTranslation` as an error and fails CI, so English-only is never enough. |
-| **Run target** | `dev` channel on the wired device (`applicationIdSuffix = ".dev"`, so it coexists with a stable install). Drive via adb: `screencap`, `input tap`, `dumpsys`, `logcat`. |
+| **Run target** | `dev` channel on the wired device (`applicationIdSuffix = ".dev"`, so it coexists with a stable install). Drive it with [`tools/emu`](tools/emu), which names screen elements instead of tapping coordinates — `make drive` installs, launches and lists what is on screen. |
 | **Issues** | `[TASK]:` / `[BUG]:` titles, `- [ ]` checklist bodies, labels `roadmap` and `tech-debt` (both already exist — reuse, don't recreate). Every PR carries `Closes #N` so its issue auto-closes on merge. |
 
 ### Overrides

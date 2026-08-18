@@ -47,6 +47,11 @@ out/
 .claude/
 .grok/
 
+# --- Device captures ----------------------------------------------------------
+# Where `make shot` and `tools/emu shot` land. Working images from driving the app,
+# not artefacts: anything a PR needs goes on the pr-assets branch instead.
+shots/
+
 # --- OS -----------------------------------------------------------------------
 .DS_Store
 Thumbs.db
