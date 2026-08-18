@@ -61,11 +61,13 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.focus.onFocusEvent
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.LineHeightStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.bedrud.app.R
 import com.bedrud.app.core.BidiUtils
 import com.bedrud.app.core.api.RoomApi
+import com.bedrud.app.core.call.CallService
 import com.bedrud.app.core.chat.ChatImageUploader
 import com.bedrud.app.core.chat.ChatUploadFailure
 import com.bedrud.app.core.chat.ChatUploadResult
@@ -78,6 +80,7 @@ import com.bedrud.app.ui.components.ChatImageLightbox
 import com.bedrud.app.ui.theme.BedrudShapeTokens
 import com.bedrud.app.ui.theme.Dimens
 import com.bedrud.app.ui.theme.bedrudColors
+import com.bedrud.app.ui.util.openChatLink
 import kotlinx.coroutines.launch
 
 /**
@@ -121,6 +124,13 @@ fun MeetingChatPanel(
     resolveName: (String) -> String,
     imageContext: ChatImageContext?,
     @StringRes sendDisabledReason: Int?,
+    /**
+     * The servers this person has added, by host. A room link on one of them opens the app; anything
+     * else opens a browser. Passed in rather than looked up here because a link to somebody else's
+     * site that happens to carry an `/m/` path is not this app's to swallow, and only the caller
+     * knows which servers are actually the reader's.
+     */
+    knownHosts: Set<String>,
     modifier: Modifier = Modifier,
 ) {
     val listState = rememberLazyListState()
@@ -153,11 +163,23 @@ fun MeetingChatPanel(
 
     var isUploading by remember { mutableStateOf(false) }
     var uploadError by remember { mutableStateOf<String?>(null) }
+    // A device with no browser at all cannot open a link, and a tap that silently does nothing
+    // reads as a broken link rather than as a missing app. Shares the notice line below.
+    var linkError by remember { mutableStateOf<String?>(null) }
+    val linkUnopenable = stringResource(R.string.meeting_chat_linkUnopenable)
     var previewImageUrl by remember { mutableStateOf<String?>(null) }
     var isComposingPoll by remember { mutableStateOf(false) }
+    // Attach and poll show only on an empty field. They hold a fixed column on the left, and once
+    // the field wraps that column is a tall empty block beside the text -- while what a writer needs
+    // at that moment is width, not two controls they are not using. Standing down while there are
+    // words to send buys back the whole column, which is often a line of the message. They come back
+    // the moment the field is empty again, which is also when attaching a picture or opening a poll
+    // is what someone is actually there to do.
+    val showDockControls = input.isEmpty()
     // The message whose results are open, rather than the poll itself: votes keep arriving while
     // the sheet is up, and holding the poll would freeze the numbers at the moment it opened.
     var resultsMessageId by remember { mutableStateOf<String?>(null) }
+    var reactionsMessageId by remember { mutableStateOf<String?>(null) }
 
     val unreadableMessage = stringResource(R.string.meeting_chat_uploadUnreadable)
     val unreachableMessage = stringResource(R.string.meeting_chat_uploadUnreachable)
@@ -228,6 +250,23 @@ fun MeetingChatPanel(
                         onToggleReaction = onToggleReaction,
                         onVote = onVote,
                         onShowPollResults = { resultsMessageId = it },
+                        onShowReactions = { reactionsMessageId = it },
+                        onLinkClick = { url ->
+                            linkError = if (
+                                context.openChatLink(
+                                    url = url,
+                                    knownHosts = knownHosts,
+                                    // Chat only exists inside a call, so this is false today. It is
+                                    // asked rather than assumed so the room hop turns itself on the
+                                    // moment leaving a call to follow a link becomes a thing.
+                                    canJoinAnotherRoom = !CallService.isRunning,
+                                )
+                            ) {
+                                null
+                            } else {
+                                linkUnopenable
+                            }
+                        },
                     )
                 }
             }
@@ -268,7 +307,7 @@ fun MeetingChatPanel(
                 )
             }
         }
-        uploadError?.let { error ->
+        (uploadError ?: linkError)?.let { error ->
             Text(
                 text = error,
                 style = MaterialTheme.typography.labelSmall,
@@ -307,27 +346,40 @@ fun MeetingChatPanel(
                         .clip(BedrudShapeTokens.controlsBar)
                         .background(chrome.bar)
                         .border(Dimens.borderThin, chrome.divider, BedrudShapeTokens.controlsBar)
-                        .padding(horizontal = Dimens.meetingBarPaddingH),
-                    verticalAlignment = Alignment.CenterVertically,
+                        // Four, not eight: the icons are `chatDockIcon` tall, so eight each side put
+                        // the bar over its own `chatDockBar` minimum and quietly grew the
+                        // single-line dock from 44dp to 52dp. At four the icons plus this padding
+                        // come to exactly the minimum, so one line measures what it always did.
+                        .padding(
+                            horizontal = Dimens.meetingBarPaddingH,
+                            vertical = Dimens.space4,
+                        ),
+                    // Bottom, so a grown field keeps its controls beside the line being written
+                    // rather than floating them against the middle of a block of text. The field's
+                    // own padding below makes this identical to centring while there is only one
+                    // line, which is the common case and the one that must not change.
+                    verticalAlignment = Alignment.Bottom,
                 ) {
-                    if (imageContext != null) {
+                    if (showDockControls) {
+                        if (imageContext != null) {
+                            DockIcon(
+                                icon = Icons.Outlined.AttachFile,
+                                contentDescription = stringResource(R.string.meeting_contentDescription_attachImage),
+                                enabled = !isUploading,
+                                onClick = {
+                                    imagePicker.launch(
+                                        PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                                    )
+                                },
+                            )
+                        }
                         DockIcon(
-                            icon = Icons.Outlined.AttachFile,
-                            contentDescription = stringResource(R.string.meeting_contentDescription_attachImage),
+                            icon = Icons.Outlined.Poll,
+                            contentDescription = stringResource(R.string.meeting_chat_poll_new),
                             enabled = !isUploading,
-                            onClick = {
-                                imagePicker.launch(
-                                    PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
-                                )
-                            },
+                            onClick = { isComposingPoll = true },
                         )
                     }
-                    DockIcon(
-                        icon = Icons.Outlined.Poll,
-                        contentDescription = stringResource(R.string.meeting_chat_poll_new),
-                        enabled = !isUploading,
-                        onClick = { isComposingPoll = true },
-                    )
 
                     // A bare text field rather than an `OutlinedTextField`: that one carries a focus
                     // outline drawn *inside* the bar it already sits in, and a 56dp minimum height
@@ -335,30 +387,50 @@ fun MeetingChatPanel(
                     BasicTextField(
                         value = input,
                         onValueChange = onInputChange,
-                        singleLine = true,
+                        // Wraps and grows the bar with it. Single-line scrolled the text sideways
+                        // instead, which hides the start of the sentence being written — the one
+                        // part a writer needs to see to finish it. Capped so a long message cannot
+                        // push the conversation it is replying to off the top of the panel; past
+                        // the cap the field scrolls within its own height.
+                        maxLines = ChatDockMaxLines,
                         textStyle = MaterialTheme.typography.bodyMedium.copy(
                             color = MaterialTheme.colorScheme.onSurface,
                             textDirection = BidiUtils.textDirection(input),
+                            lineHeightStyle = CenteredLineHeight,
                         ),
                         cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
                         modifier = Modifier
                             .weight(1f)
-                            .padding(horizontal = Dimens.space4)
+                            // The vertical half is what lets the row bottom-align without the
+                            // single-line dock going lopsided: it brings one line of text up to the
+                            // icons' own height, so their bottoms already agree. Once the field
+                            // wraps, the same padding sits under the last line, and the icons —
+                            // bottom-aligned to the field — land centred on that line rather than
+                            // below it.
+                            .padding(horizontal = Dimens.space4, vertical = Dimens.space8)
                             .bringIntoViewRequester(bringIntoViewRequester)
                             .onFocusEvent { focusState ->
                                 if (focusState.isFocused) {
                                     scope.launch { bringIntoViewRequester.bringIntoView() }
                                 }
                             },
+                        // The placeholder and the field are stacked in a box that aligns them,
+                        // rather than emitted as bare siblings: left to the slot's own placement
+                        // the two sat on slightly different lines, and the hint read about a
+                        // pixel lower than the text that replaces it.
                         decorationBox = { field ->
-                            if (input.isEmpty()) {
-                                Text(
-                                    text = stringResource(R.string.meeting_chat_placeholder),
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                )
+                            Box(contentAlignment = Alignment.CenterStart) {
+                                if (input.isEmpty()) {
+                                    Text(
+                                        text = stringResource(R.string.meeting_chat_placeholder),
+                                        style = MaterialTheme.typography.bodyMedium.copy(
+                                            lineHeightStyle = CenteredLineHeight,
+                                        ),
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                }
+                                field()
                             }
-                            field()
                         },
                     )
 
@@ -405,6 +477,20 @@ fun MeetingChatPanel(
             currentIdentity = currentIdentity,
             resolveName = resolveName,
             onDismiss = { resultsMessageId = null },
+        )
+    }
+
+    // Read back the same way, so a reaction arriving while the sheet is open lands in it, and the
+    // sheet closes on its own once the last reaction is taken back.
+    val openReactions = reactionsMessageId
+        ?.let { id -> messages.firstOrNull { it.id == id }?.reactions }
+        ?.takeIf { it.isNotEmpty() }
+    if (openReactions != null) {
+        ChatReactionsSheet(
+            reactions = openReactions,
+            currentIdentity = currentIdentity,
+            resolveName = resolveName,
+            onDismiss = { reactionsMessageId = null },
         )
     }
 }
@@ -467,6 +553,32 @@ private fun ChatSendDisabledNotice(@StringRes reason: Int) {
         )
     }
 }
+
+/**
+ * Splits a line's spare leading evenly above and below its ink.
+ *
+ * A font's line box is taller than the letters in it, and Compose's default shares that slack out in
+ * proportion to the font's own ascent and descent — which for a Latin face means most of it lands
+ * above, since the ascent reserves room for accents the text rarely uses. Centring a line box that
+ * way leaves the letters sitting visibly low: measured 2-3dp below the composer's icons, which were
+ * dead centre. Splitting the slack evenly puts the ink where the eye expects it.
+ */
+private val CenteredLineHeight = LineHeightStyle(
+    alignment = LineHeightStyle.Alignment.Center,
+    // Trim.Both is the tempting one and it is wrong here: trimming shrinks the field's measured
+    // height, and a bottom-aligned row then pins the shorter box lower, putting the ink back where
+    // it started. Measured 3.05dp low with it, 1.14dp without.
+    trim = LineHeightStyle.Trim.None,
+)
+
+/**
+ * How tall the composer may grow before it scrolls inside itself.
+ *
+ * Five lines is a long message by the standards of a call — enough to write a thought out without
+ * the dock climbing over the conversation it is answering, which is the thing the writer is looking
+ * at while they type.
+ */
+private const val ChatDockMaxLines = 5
 
 /** The scroll-to-latest button sits on the message list, not above it — so it casts no shadow. */
 private val FlatFabElevation

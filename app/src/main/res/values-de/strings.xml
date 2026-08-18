@@ -133,6 +133,13 @@
     <item quantity="one">%1$d Stimme</item>
     <item quantity="other">%1$d Stimmen</item>
   </plurals>
+  <string name="meeting_chat_reactions">Reaktionen</string>
+  <string name="meeting_chat_shareChooser">Nachricht teilen</string>
+  <string name="meeting_chat_linkUnopenable">Keine App kann diesen Link öffnen</string>
+  <plurals name="meeting_chat_reactionCount">
+    <item quantity="one">%1$d Reaktion</item>
+    <item quantity="other">%1$d Reaktionen</item>
+  </plurals>
   <string name="meeting_chat_imageSaved">In Bilder gespeichert</string>
   <string name="meeting_chat_imageSaveUnreachable">Das Bild konnte nicht geladen werden</string>
   <string name="meeting_chat_imageSaveUnwritable">Speichern in der Galerie fehlgeschlagen</string>
@@ -179,6 +186,7 @@
   <string name="admin_token_status_used">Verwendet</string>
   <string name="admin_token_status_noEmail">Keine E-Mail</string>
   <string name="common_action_copy">Kopieren</string>
+  <string name="common_action_share">Teilen</string>
   <string name="settings_title">Einstellungen</string>
   <string name="settings_section_appearance">Darstellung</string>
   <string name="settings_label_theme">Design</string>
@@ -356,5 +364,6 @@
   <string name="meeting_ns_off">Aus</string>
   <string name="meeting_ns_device">Gerät (integriert)</string>
   <string name="meeting_ns_appliesNextJoin">Gilt ab dem nächsten Beitritt</string>
-  <string name="meeting_ptt_openMic">Offenes Mikro</string>
+  <string name="meeting_ptt_speak">Sprechen</string>
+  <string name="meeting_ptt_muted">Stumm</string>
 </resources>

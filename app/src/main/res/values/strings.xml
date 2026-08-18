@@ -133,6 +133,13 @@
     <item quantity="one">%1$d vote</item>
     <item quantity="other">%1$d votes</item>
   </plurals>
+  <string name="meeting_chat_reactions">Reactions</string>
+  <string name="meeting_chat_shareChooser">Share message</string>
+  <string name="meeting_chat_linkUnopenable">No app can open that link</string>
+  <plurals name="meeting_chat_reactionCount">
+    <item quantity="one">%1$d reaction</item>
+    <item quantity="other">%1$d reactions</item>
+  </plurals>
   <string name="meeting_chat_imageSaved">Saved to Pictures</string>
   <string name="meeting_chat_imageSaveUnreachable">Could not download that image</string>
   <string name="meeting_chat_imageSaveUnwritable">Could not save to your gallery</string>
@@ -183,6 +190,7 @@
   <string name="admin_token_status_used">Used</string>
   <string name="admin_token_status_noEmail">No email</string>
   <string name="common_action_copy">Copy</string>
+  <string name="common_action_share">Share</string>
   <string name="settings_title">Settings</string>
   <string name="settings_section_appearance">Appearance</string>
   <string name="settings_label_theme">Theme</string>
@@ -363,5 +371,6 @@
   <string name="meeting_ns_off">Off</string>
   <string name="meeting_ns_device">Device (built-in)</string>
   <string name="meeting_ns_appliesNextJoin">Takes effect the next time you join</string>
-  <string name="meeting_ptt_openMic">Open Mic</string>
+  <string name="meeting_ptt_speak">Speak</string>
+  <string name="meeting_ptt_muted">Muted</string>
 </resources>

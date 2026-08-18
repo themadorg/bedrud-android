@@ -137,6 +137,17 @@
     <item quantity="many">%1$d صوتًا</item>
     <item quantity="other">%1$d صوت</item>
   </plurals>
+  <string name="meeting_chat_reactions">التفاعلات</string>
+  <string name="meeting_chat_shareChooser">مشاركة الرسالة</string>
+  <string name="meeting_chat_linkUnopenable">لا يوجد تطبيق يمكنه فتح هذا الرابط</string>
+  <plurals name="meeting_chat_reactionCount">
+    <item quantity="zero">%1$d تفاعل</item>
+    <item quantity="one">%1$d تفاعل</item>
+    <item quantity="two">%1$d تفاعلان</item>
+    <item quantity="few">%1$d تفاعلات</item>
+    <item quantity="many">%1$d تفاعلًا</item>
+    <item quantity="other">%1$d تفاعل</item>
+  </plurals>
   <string name="meeting_chat_imageSaved">تم الحفظ في الصور</string>
   <string name="meeting_chat_imageSaveUnreachable">تعذّر تنزيل تلك الصورة</string>
   <string name="meeting_chat_imageSaveUnwritable">تعذّر الحفظ في معرض الصور</string>
@@ -183,6 +194,7 @@
   <string name="admin_token_status_used">مستخدم</string>
   <string name="admin_token_status_noEmail">لا يوجد بريد إلكتروني</string>
   <string name="common_action_copy">نسخ</string>
+  <string name="common_action_share">مشاركة</string>
   <string name="settings_title">الإعدادات</string>
   <string name="settings_section_appearance">المظهر</string>
   <string name="settings_label_theme">السمة</string>
@@ -360,5 +372,6 @@
   <string name="meeting_ns_off">إيقاف</string>
   <string name="meeting_ns_device">الجهاز (مدمج)</string>
   <string name="meeting_ns_appliesNextJoin">يسري عند انضمامك التالي</string>
-  <string name="meeting_ptt_openMic">ميكروفون مفتوح</string>
+  <string name="meeting_ptt_speak">تحدث</string>
+  <string name="meeting_ptt_muted">مكتوم</string>
 </resources>

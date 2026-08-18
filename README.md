@@ -21,7 +21,8 @@ For the server, web app, and other platforms, see the [main Bedrud project](http
 - **Meetings as real calls** — joining starts a self-managed telecom call, so meetings get proper audio routing, a call notification with mute/hangup, and survive backgrounding
 - **Picture-in-Picture** — keep the meeting visible while using other apps
 - **Screen sharing** — several people can present at once, and watching a stream is opt-in per viewer
-- **In-meeting chat** over the LiveKit data channel — messages grouped by sender, emoji reactions,
+- **In-meeting chat** over the LiveKit data channel — messages grouped by sender, emoji reactions
+  with a breakdown of who reacted, tappable links, copying or sharing a message to any other app,
   polls to vote in, and image sharing with any received picture savable to the gallery
 - **Push to talk & voice sensitivity** — hold-to-talk input mode, a manual voice gate for voice activity, per-person volume, and device noise suppression
 - **Admin moderation** — kick and ban controls for room hosts

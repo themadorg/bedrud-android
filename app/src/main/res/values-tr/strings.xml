@@ -133,6 +133,13 @@
     <item quantity="one">%1$d oy</item>
     <item quantity="other">%1$d oy</item>
   </plurals>
+  <string name="meeting_chat_reactions">Tepkiler</string>
+  <string name="meeting_chat_shareChooser">Mesajı paylaş</string>
+  <string name="meeting_chat_linkUnopenable">Bu bağlantıyı açabilecek bir uygulama yok</string>
+  <plurals name="meeting_chat_reactionCount">
+    <item quantity="one">%1$d tepki</item>
+    <item quantity="other">%1$d tepki</item>
+  </plurals>
   <string name="meeting_chat_imageSaved">Resimler\'e kaydedildi</string>
   <string name="meeting_chat_imageSaveUnreachable">Bu görsel indirilemedi</string>
   <string name="meeting_chat_imageSaveUnwritable">Galeriye kaydedilemedi</string>
@@ -179,6 +186,7 @@
   <string name="admin_token_status_used">Kullanıldı</string>
   <string name="admin_token_status_noEmail">E-posta yok</string>
   <string name="common_action_copy">Kopyala</string>
+  <string name="common_action_share">Paylaş</string>
   <string name="settings_title">Ayarlar</string>
   <string name="settings_section_appearance">Görünüm</string>
   <string name="settings_label_theme">Tema</string>
@@ -356,5 +364,6 @@
   <string name="meeting_ns_off">Kapalı</string>
   <string name="meeting_ns_device">Cihaz (yerleşik)</string>
   <string name="meeting_ns_appliesNextJoin">Bir sonraki katılımda geçerli olur</string>
-  <string name="meeting_ptt_openMic">Açık mikrofon</string>
+  <string name="meeting_ptt_speak">Konuş</string>
+  <string name="meeting_ptt_muted">Kapalı</string>
 </resources>

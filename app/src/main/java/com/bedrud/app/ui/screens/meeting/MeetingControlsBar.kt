@@ -294,7 +294,7 @@ private fun DragHandle(
 
 /**
  * The mic slot, one pill for both input modes so the bar's rhythm never changes:
- * voice activity renders filled ("Open Mic", media-off fill while muted, tap toggles), and
+ * voice activity renders filled ("Speak", "Muted" and a media-off fill while muted, tap toggles), and
  * push-to-talk renders outlined ("Push to Talk") until held, when it fills active ("Talking…").
  */
 @Composable
@@ -412,14 +412,25 @@ private fun MicPill(
         ) {
             // Every label is laid out invisibly so the pill keeps one width across modes and
             // states — nothing in the bar may move when the mode or hold state changes.
+            // Centred, not start-aligned. The pill is as wide as its longest label ever gets, so
+            // start-aligning left "Muted" and "Speak" hard against the icon with a pill's worth of
+            // empty space trailing them — the control looked broken rather than compact. Centring
+            // costs a small horizontal shift when the label itself changes length, which is a far
+            // smaller thing to notice than a permanently lopsided pill.
             Box(
                 modifier = Modifier.padding(horizontal = Dimens.space12),
-                contentAlignment = Alignment.CenterStart,
+                contentAlignment = Alignment.Center,
             ) {
                 PillContent(
                     contentColor = Color.Transparent,
                     icon = Icons.Default.Mic,
-                    textRes = R.string.meeting_ptt_openMic,
+                    textRes = R.string.meeting_ptt_speak,
+                    modifier = Modifier.alpha(0f),
+                )
+                PillContent(
+                    contentColor = Color.Transparent,
+                    icon = Icons.Default.Mic,
+                    textRes = R.string.meeting_ptt_muted,
                     modifier = Modifier.alpha(0f),
                 )
                 PillContent(
@@ -440,10 +451,15 @@ private fun MicPill(
                 PillContent(
                     contentColor = contentColor,
                     icon = if (micOpen) Icons.Default.Mic else Icons.Default.MicOff,
+                    // The label said "Open Mic" whether or not the mic was open: muted, it showed a
+                    // crossed-out microphone next to the words for the opposite state, and the icon
+                    // was the only thing telling the truth. Push to talk keeps naming its mode --
+                    // not holding the key is not the same as being muted.
                     textRes = when {
                         transmitting -> R.string.meeting_ptt_talking
                         isPushToTalk -> R.string.meeting_audio_mode_pushToTalk
-                        else -> R.string.meeting_ptt_openMic
+                        isMicEnabled -> R.string.meeting_ptt_speak
+                        else -> R.string.meeting_ptt_muted
                     },
                 )
             }

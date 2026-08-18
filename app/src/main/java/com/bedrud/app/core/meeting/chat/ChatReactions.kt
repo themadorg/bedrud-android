@@ -71,6 +71,27 @@ fun ChatReactions.grouped(currentIdentity: String): List<GroupedReaction> {
     return counts.values.sortedByDescending { it.count }
 }
 
+/** One section of the breakdown: an emoji, and everyone who chose it. */
+data class ReactionBreakdown(
+    val emoji: String,
+    val identities: List<String>,
+)
+
+/**
+ * Who reacted with what, most-chosen first — the same order as the chips under the bubble, so the
+ * breakdown reads as those chips opened up rather than as a second, differently sorted list.
+ */
+fun ChatReactions.breakdown(): List<ReactionBreakdown> {
+    if (isEmpty()) return emptyList()
+    val byEmoji = LinkedHashMap<String, MutableList<String>>()
+    forEach { (identity, emoji) ->
+        if (!isReactionEmoji(emoji)) return@forEach
+        byEmoji.getOrPut(emoji) { mutableListOf() }.add(identity)
+    }
+    return byEmoji.map { (emoji, identities) -> ReactionBreakdown(emoji, identities) }
+        .sortedByDescending { it.identities.size }
+}
+
 /** Longest reaction accepted. A flag with modifiers is still a fraction of this. */
 private const val MaxReactionLength = 32
 

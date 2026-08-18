@@ -69,6 +69,7 @@ fun MeetingChatSheet(
     onClose: () -> Unit,
     imageContext: ChatImageContext?,
     @StringRes sendDisabledReason: Int?,
+    knownHosts: Set<String>,
     onVisibleChange: (Boolean) -> Unit = {},
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = false)
@@ -154,6 +155,7 @@ fun MeetingChatSheet(
                     resolveName = resolveName,
                     imageContext = imageContext,
                     sendDisabledReason = sendDisabledReason,
+                    knownHosts = knownHosts,
                     modifier = Modifier.weight(1f),
                 )
             }

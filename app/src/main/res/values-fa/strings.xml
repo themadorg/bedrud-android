@@ -131,6 +131,13 @@
     <item quantity="one">%1$d رأی</item>
     <item quantity="other">%1$d رأی</item>
   </plurals>
+  <string name="meeting_chat_reactions">واکنش‌ها</string>
+  <string name="meeting_chat_shareChooser">هم‌رسانی پیام</string>
+  <string name="meeting_chat_linkUnopenable">هیچ برنامه‌ای نمی‌تواند آن پیوند را باز کند</string>
+  <plurals name="meeting_chat_reactionCount">
+    <item quantity="one">%1$d واکنش</item>
+    <item quantity="other">%1$d واکنش</item>
+  </plurals>
   <string name="meeting_chat_imageSaved">در تصاویر ذخیره شد</string>
   <string name="meeting_chat_imageSaveUnreachable">دانلود آن تصویر ممکن نشد</string>
   <string name="meeting_chat_imageSaveUnwritable">ذخیره در گالری ممکن نشد</string>
@@ -176,6 +183,7 @@
   <string name="admin_token_status_used">استفاده شده</string>
   <string name="admin_token_status_noEmail">بدون ایمیل</string>
   <string name="common_action_copy">کپی</string>
+  <string name="common_action_share">هم‌رسانی</string>
   <string name="settings_title">تنظیمات</string>
   <string name="settings_section_appearance">ظاهر</string>
   <string name="settings_label_theme">تم</string>
@@ -353,5 +361,6 @@
   <string name="meeting_ns_off">خاموش</string>
   <string name="meeting_ns_device">دستگاه (داخلی)</string>
   <string name="meeting_ns_appliesNextJoin">از پیوستن بعدی اعمال می‌شود</string>
-  <string name="meeting_ptt_openMic">میکروفون باز</string>
+  <string name="meeting_ptt_speak">صحبت</string>
+  <string name="meeting_ptt_muted">بی‌صدا</string>
 </resources>

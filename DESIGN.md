@@ -256,10 +256,53 @@ the `meeting*` tokens in `Dimens.kt`, timing in `Motion.meetingChromeAutoHideDel
   the same place on screen and swap with each other, so they are the same object with different
   contents. Its attach control is a paperclip: the picker is still images-only, because an image is
   the only attachment the wire carries.
-  A **long press opens the message menu**: the eight quick reactions on one row, and Copy under
-  them. The gesture used to start selecting text inside the bubble, and both cannot own it — on a
+  The field **wraps and grows the bar with it**, up to five lines, then scrolls inside its own
+  height. It used to be single-line, which scrolled the text sideways and hid the start of the
+  sentence being written — the one part a writer needs in order to finish it. Five lines is a long
+  message by the standards of a call, and stopping there keeps the dock from climbing over the
+  conversation being answered.
+  Attach and poll **show only while the field is empty**. They hold a fixed column on the left, and
+  once the field wraps that column is a tall empty block beside the text — while what a writer needs
+  at that moment is width, not two controls they are not using. Standing down buys back the whole
+  column, which is often a line of the message. They return the moment the field is empty again,
+  which is also when attaching a picture or opening a poll is what someone is there to do. The trade
+  is deliberate: attaching to a half-written message means clearing it first.
+  The controls **sit at the bottom** of the grown bar, beside the line being written, rather than
+  floating against the middle of a block of text. Two paddings make that work and they are not
+  interchangeable: the bar's own is `space4`, because the icons are `chatDockIcon` tall and anything
+  more pushes past the `chatDockBar` minimum and silently grows the one-line dock; the field's is
+  `space8`, which brings a single line of text up to the icons' height so bottom-aligning is
+  indistinguishable from centring while there is only one line, and which then sits under the last
+  line so the bottom-aligned icons land centred on it rather than below it.
+  A **long press opens the message menu** (`MeetingChatMessageMenu`), which straddles the bubble:
+  the quick reactions as a pill above it, what can be done with the message — **who reacted**, Copy
+  and Share — as a card below, and the message itself readable between them. One box containing
+  both used to cover the very thing the menu was about. Both surfaces are sized to their contents
+  rather than to the panel: stretched wide they read as bands across the conversation, and the far
+  end of a full-width row is out of thumb reach. Copy and Share act on the words, so a message
+  carrying only a picture offers neither. The bubble does **not** move to make room — lifting it clear the way the
+  messengers do needs the whole conversation dimmed behind an overlay, and a menu that jumps the
+  list on long press is worse than one that opens quietly where the message already is. Where
+  there is no room below, which is every time for the newest message, **both surfaces flip above**
+  the bubble rather than sliding up over it; the card records where it landed so the pill can clear
+  it. Both hang off the bubble's own outer edge, which swaps sides with the layout direction.
+  The gesture used to start selecting text inside the bubble, and both cannot own it — on a
   phone a long press means "act on this message" everywhere else, and copying is what the selecting
-  was for. Tapping a picture opens the
+  was for.
+  **Links in a message are tappable** (`ChatLinks`, `MeetingChatText`): underlined and slightly
+  heavier rather than tinted, because a bubble is one of two colours depending on whose message it
+  is and no single accent reads on both without fighting one of them. The link is the literal text,
+  never anchor text pointing elsewhere, so a message from a stranger cannot dress one address up as
+  another. Detection is deliberately conservative — a bare host only counts when it carries a path,
+  so `bedrud.xyz/m/standup` is a link and "see you Sept. 11" is not; the cost of missing an exotic
+  URL is a copy-paste, the cost of linkifying prose is a tappable target that is always wrong.
+  Links open in a **Custom Tab**, the way OAuth does, so closing it returns to the call.
+  A link to a room on a server the reader has added is meant to open in the app instead, and the
+  code is there — but it is gated off while a call is running, which today is whenever chat is on
+  screen. Telecom refuses to place a second call over an unholdable one, so the deep link dead-ends
+  in "Cannot place a call as there is an unholdable call". Leaving the current call to follow a
+  link is a real feature and a destructive one; until it exists a room link opens the page.
+  Tapping a picture opens the
   lightbox, which can **save it to `Pictures/Bedrud`** via `MediaStore` — no permission at all from
   Android 10 on, and `WRITE_EXTERNAL_STORAGE` capped at API 28 for the one older version supported.
   The lightbox says whether it worked for `Motion.lightboxOutcomeNoticeMs` and then gets out of the
@@ -272,10 +315,22 @@ the `meeting*` tokens in `Dimens.kt`, timing in `Motion.meetingChromeAutoHideDel
   `chatBlocked` flag on the participant's metadata and trust each client to honour it.
 - **Reactions** (`MeetingChatReactions`): one person holds **one reaction per message** — a second
   emoji moves it, the same one again takes it back — drawn as chips under the bubble, the reader's
-  own filled the way their own messages are. The picker offers a fixed eight rather than the full
+  own filled the way their own messages are. A chip is deliberately **about half the height of the
+  bubble it hangs off** (20dp against a one-line bubble's 38dp) so it reads as an annotation rather
+  than a second message. That is smaller than the usual minimum tap target, taken knowingly: it is
+  the size chat apps have settled on, and the picker behind a long-press is the recovery path when
+  a tap misses. Its box is set by the height token alone — a colour emoji's line box runs taller
+  than the label style it is drawn with, so vertical padding on the chip would silently override
+  the token. The picker offers a fixed eight rather than the full
   emoji keyboard the web has: a picker large enough to search would cover the conversation being
-  reacted to. Chips sort by count, and ties keep the order they were first reacted with, so the row
-  does not reshuffle when somebody joins a tie.
+  reacted to. The pill is **narrower than the eight it holds and scrolls horizontally** — five and
+  a half targets wide, so the sixth is half-showing and says there is more behind the edge without
+  an arrow to announce it. It caps without stretching, so a set that does fit keeps its own width
+  and never scrolls.
+  Chips sort by count, and ties keep the order they were first reacted with, so the row
+  does not reshuffle when somebody joins a tie. The message menu offers **who reacted** once there
+  are any, opening a breakdown grouped by emoji in the order the chips already showed — the
+  question a reader has is "who liked this", not "what did each person pick".
 - **Polls** (`MeetingChatPoll`, `MeetingChatPollSheet`): composed in a sheet — a question and two to
   six answers — and drawn as the message that carried them. The tally is **on show from the first
   vote** rather than hidden until this reader votes: everyone can see the room anyway, so hiding it

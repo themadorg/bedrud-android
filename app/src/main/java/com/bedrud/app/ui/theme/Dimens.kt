@@ -126,11 +126,36 @@ object Dimens {
     val chatBubbleGap = 2.dp             // between bubbles inside a single run
     val chatImageMaxHeight = 240.dp      // a tall picture is cropped rather than owning the panel
     val chatReactionTarget = 40.dp       // one emoji in the picker, sized for a thumb rather than for the glyph
+    // The pill is deliberately narrower than the eight reactions it holds, and scrolls: a row
+    // stretched across the panel reads as a band over the conversation rather than as something
+    // floating against one message, and the far end of it is out of thumb reach anyway. Five and a
+    // half targets plus the row's own padding, so the sixth is half-showing and says there is more
+    // behind the edge without needing an arrow to announce it.
+    val chatReactionPickerMaxWidth = 228.dp
+    // What the popup leaves free at each side, so a narrow window shrinks the pill rather than
+    // pushing it off screen — a small phone in split screen has less to give than the cap asks for.
+    val chatReactionPickerInset = 32.dp
+    // The long-press menu straddles the bubble: this is the air between each surface and the message
+    // between them, enough to read as two separate cards rather than one interrupted.
+    val chatMenuGap = 8.dp
+    // A card, not a banner: without a cap the rows stretch to the panel's full width, and "Copy"
+    // alone across the screen reads as a section header rather than as something to tap. Sized to
+    // the longest label it holds rather than to the panel, which keeps it beside the message it
+    // belongs to instead of over the whole conversation. The floor stops a single row collapsing
+    // into a lozenge.
+    val chatMenuMinWidth = 150.dp
+    val chatMenuMaxWidth = 200.dp
+    val chatMenuIcon = 20.dp             // trailing symbol, kept under the label's cap height
     // A reaction chip's height is set, not left to the emoji: an emoji glyph fills its line box, so
     // padding alone left its ink about a pixel from the edge and the chip read as cramped. Kept
     // clearly under a bubble's own height — a badge hanging off a message, not a second message.
-    val chatReactionChip = 24.dp
-    val chatReactionChipMinWidth = 40.dp // so a single emoji is a pill rather than a circle
+    // 20dp against a one-line bubble's 38dp: measured at 24dp the chip carried only 12.6dp of ink
+    // and read as a second bubble rather than an annotation. Small for a tap target, deliberately —
+    // it matches what chat apps ship, and the picker behind a long-press is the recovery path.
+    val chatReactionChip = 20.dp
+    // So a single emoji is a pill rather than a circle. Only just wider than tall: at 40dp an 11.4dp
+    // emoji floated in 14.5dp of padding a side, which is what made the chip read heavy.
+    val chatReactionChipMinWidth = 32.dp
     // The composer is one raised bar inset from the panel's edges, not a band across the bottom, and
     // it is deliberately shorter than a Material text field: a call's chat dock competes with the
     // conversation above it, where a form field is the main event on its screen.
