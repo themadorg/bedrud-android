@@ -84,6 +84,7 @@ fun MeetingVideoGrid(
     speakingLevels: Map<String, Float>,
     isLocalMicEnabled: Boolean,
     isLocalDeafened: Boolean = false,
+    deafenedIdentities: Set<String> = emptySet(),
     onOpenParticipantActions: (String) -> Unit,
     onExpandTile: (String) -> Unit,
     onOverflowClick: () -> Unit,
@@ -112,6 +113,7 @@ fun MeetingVideoGrid(
                     speakingLevel = speakingLevels[participant.identity?.value] ?: 0f,
                     isLocalMicEnabled = isLocalMicEnabled,
                     isLocalDeafened = isLocalDeafened,
+                    deafenedIdentities = deafenedIdentities,
                     onOpenParticipantActions = onOpenParticipantActions,
                     onExpand = onExpandTile,
                     modifier = slotModifier,
@@ -211,6 +213,7 @@ internal fun ParticipantTile(
     speakingLevel: Float = 0f,
     isLocalMicEnabled: Boolean = true,
     isLocalDeafened: Boolean = false,
+    deafenedIdentities: Set<String> = emptySet(),
     onOpenParticipantActions: ((String) -> Unit)? = null,
     onExpand: ((String) -> Unit)? = null,
     modifier: Modifier = Modifier,
@@ -335,10 +338,13 @@ internal fun ParticipantTile(
                     modifier = Modifier.size(Dimens.meetingBadgeIcon),
                 )
             }
-            // Deafened is your own state and nobody else's business — the room is not told, so the
-            // badge is only ever drawn on your own tile. It leads the mute badge: not hearing the
-            // room is the larger fact of the two.
-            if (isLocalParticipant && isLocalDeafened) {
+            // Deafened is announced to the room, so it is drawn on whoever is deafened rather than
+            // only on your own tile. Your own reads from the manager for the same reason mute does
+            // — it flips on your tap, without waiting for the announcement to come back. It leads
+            // the mute badge: not hearing the room is the larger fact of the two.
+            val isDeafened =
+                if (isLocalParticipant) isLocalDeafened else identity in deafenedIdentities
+            if (isDeafened) {
                 Icon(
                     imageVector = Icons.Default.HeadsetOff,
                     contentDescription = stringResource(R.string.meeting_contentDescription_deafened),

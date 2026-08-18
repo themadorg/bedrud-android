@@ -21,6 +21,7 @@ import androidx.compose.material.icons.filled.VideocamOff
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -65,6 +66,7 @@ fun MeetingParticipantSheet(
     isVideoLocallyDisabled: Boolean,
     onToggleVideoDisabled: () -> Unit,
     isPinned: Boolean,
+    isDeafened: Boolean,
     onTogglePin: () -> Unit,
     onFullscreen: () -> Unit,
     onDismiss: () -> Unit,
@@ -96,6 +98,29 @@ fun MeetingParticipantSheet(
 
     BedrudBottomSheet(onDismiss = onDismiss) {
         BedrudSheetTitle(text = name, color = colors.onButton)
+        // Worth saying here as well as on the tile: this is the sheet you open to change how you
+        // hear somebody, and turning their volume up achieves nothing while they cannot hear you.
+        if (isDeafened) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = Dimens.space12, vertical = Dimens.space4),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(Dimens.space8),
+            ) {
+                Icon(
+                    imageVector = Icons.Default.HeadsetOff,
+                    contentDescription = null,
+                    tint = colors.onButtonVariant,
+                    modifier = Modifier.size(Dimens.iconSm),
+                )
+                Text(
+                    text = stringResource(R.string.meeting_participant_deafened),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = colors.onButtonVariant,
+                )
+            }
+        }
         HorizontalDivider(color = colors.divider)
 
         // Playback volume, local to this viewer

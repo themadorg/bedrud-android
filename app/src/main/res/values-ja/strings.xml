@@ -327,6 +327,7 @@
   <string name="meeting_voiceAlert_gateClosed">音声検出が反応していません</string>
   <string name="meeting_voiceAlert_notReachingRoom">相手に聞こえていない可能性があります</string>
   <string name="meeting_participant_volume">音量</string>
+  <string name="meeting_participant_deafened">ルームの音声が聞こえていません</string>
   <string name="meeting_action_dontWatch">表示しない</string>
   <string name="meeting_action_watch">表示する</string>
   <string name="meeting_action_pin">ピン留め</string>

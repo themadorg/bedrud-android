@@ -334,6 +334,7 @@
   <string name="meeting_voiceAlert_notReachingRoom">Others may not hear you</string>
   <string name="meeting_tile_overflow" translatable="false">+<xliff:g id="count" example="3">%1$d</xliff:g></string>
   <string name="meeting_participant_volume">Volume</string>
+  <string name="meeting_participant_deafened">Can’t hear the room</string>
   <string name="meeting_action_dontWatch">Don\'t watch</string>
   <string name="meeting_action_watch">Watch</string>
   <string name="meeting_action_pin">Pin</string>

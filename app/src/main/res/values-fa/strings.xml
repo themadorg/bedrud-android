@@ -326,6 +326,7 @@
   <string name="meeting_voiceAlert_gateClosed">تشخیص صدا شما را نمی‌گیرد</string>
   <string name="meeting_voiceAlert_notReachingRoom">ممکن است دیگران صدای شما را نشنوند</string>
   <string name="meeting_participant_volume">میزان صدا</string>
+  <string name="meeting_participant_deafened">صدای اتاق را نمی‌شنود</string>
   <string name="meeting_action_dontWatch">تماشا نکردن</string>
   <string name="meeting_action_watch">تماشا</string>
   <string name="meeting_action_pin">سنجاق</string>

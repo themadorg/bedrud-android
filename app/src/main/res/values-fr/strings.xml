@@ -329,6 +329,7 @@
   <string name="meeting_voiceAlert_gateClosed">La détection vocale ne vous capte pas</string>
   <string name="meeting_voiceAlert_notReachingRoom">Les autres ne vous entendent peut-être pas</string>
   <string name="meeting_participant_volume">Volume</string>
+  <string name="meeting_participant_deafened">N’entend pas la salle</string>
   <string name="meeting_action_dontWatch">Ne pas regarder</string>
   <string name="meeting_action_watch">Regarder</string>
   <string name="meeting_action_pin">Épingler</string>
