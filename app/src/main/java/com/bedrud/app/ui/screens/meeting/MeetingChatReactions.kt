@@ -135,14 +135,16 @@ fun ChatReactionRow(
                         if (onToggle == null) base else base.clickable { onToggle(chip.emoji) }
                     }
                     .semantics { contentDescription = description }
-                    // Asymmetric on purpose: an emoji's ink starts inset inside its glyph box while a
-                    // digit almost fills its advance width, so equal padding leaves the emoji side
-                    // looking loose and the count side tight. Trimmed to read even.
+                    // Horizontal only, and asymmetric. Horizontal only because a colour emoji's
+                    // line box runs taller than the 16sp label line it is styled with, so vertical
+                    // padding stacks on top of that and the height token stops governing — measured
+                    // 22.5dp against a 20dp token. The min-height already reserves what the glyph
+                    // needs. Asymmetric because an emoji's ink starts inset inside its glyph box
+                    // while a digit almost fills its advance width, so equal padding leaves the
+                    // emoji side looking loose and the count side tight.
                     .padding(
                         start = Dimens.space6,
                         end = if (chip.count > 1) Dimens.space8 else Dimens.space6,
-                        top = Dimens.space2,
-                        bottom = Dimens.space2,
                     ),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(

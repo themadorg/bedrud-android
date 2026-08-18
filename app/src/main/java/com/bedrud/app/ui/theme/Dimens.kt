@@ -149,8 +149,13 @@ object Dimens {
     // A reaction chip's height is set, not left to the emoji: an emoji glyph fills its line box, so
     // padding alone left its ink about a pixel from the edge and the chip read as cramped. Kept
     // clearly under a bubble's own height — a badge hanging off a message, not a second message.
-    val chatReactionChip = 24.dp
-    val chatReactionChipMinWidth = 40.dp // so a single emoji is a pill rather than a circle
+    // 20dp against a one-line bubble's 38dp: measured at 24dp the chip carried only 12.6dp of ink
+    // and read as a second bubble rather than an annotation. Small for a tap target, deliberately —
+    // it matches what chat apps ship, and the picker behind a long-press is the recovery path.
+    val chatReactionChip = 20.dp
+    // So a single emoji is a pill rather than a circle. Only just wider than tall: at 40dp an 11.4dp
+    // emoji floated in 14.5dp of padding a side, which is what made the chip read heavy.
+    val chatReactionChipMinWidth = 32.dp
     // The composer is one raised bar inset from the panel's edges, not a band across the bottom, and
     // it is deliberately shorter than a Material text field: a call's chat dock competes with the
     // conversation above it, where a form field is the main event on its screen.
