@@ -13,6 +13,7 @@ import org.json.JSONObject
 object ParticipantMetadata {
     private const val KEY_AVATAR_URL = "avatarUrl"
     private const val KEY_CHAT_BLOCKED = "chatBlocked"
+    private const val KEY_DEAFENED = "deafened"
 
     fun avatarUrl(metadata: String?): String? =
         parse(metadata)?.optString(KEY_AVATAR_URL)?.takeIf { it.isNotBlank() }
@@ -26,9 +27,24 @@ object ParticipantMetadata {
     fun isChatBlocked(metadata: String?): Boolean =
         parse(metadata)?.optBoolean(KEY_CHAT_BLOCKED, false) == true
 
+    /**
+     * Whether this participant has silenced the room for themselves.
+     *
+     * Kept here as well as on the presence channel because the two reach different people: the
+     * message is only heard by those already in the room, while this is what somebody joining
+     * afterwards reads. Without it, a person who deafened before you arrived looks like they are
+     * listening.
+     */
+    fun isDeafened(metadata: String?): Boolean =
+        parse(metadata)?.optBoolean(KEY_DEAFENED, false) == true
+
     /** Returns [metadata] with the avatar set, leaving every other field as it was. */
     fun withAvatarUrl(metadata: String?, avatarUrl: String): String =
         (parse(metadata) ?: JSONObject()).put(KEY_AVATAR_URL, avatarUrl).toString()
+
+    /** Returns [metadata] with the deafened flag set, leaving every other field as it was. */
+    fun withDeafened(metadata: String?, deafened: Boolean): String =
+        (parse(metadata) ?: JSONObject()).put(KEY_DEAFENED, deafened).toString()
 
     private fun parse(metadata: String?): JSONObject? {
         if (metadata.isNullOrBlank()) return null

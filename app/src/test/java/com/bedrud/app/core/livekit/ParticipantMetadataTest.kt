@@ -68,4 +68,41 @@ class ParticipantMetadataTest {
 
         assertEquals("https://example.test/new.png", ParticipantMetadata.avatarUrl(merged))
     }
+    @Test
+    fun `reads the deafened flag`() {
+        assertTrue(ParticipantMetadata.isDeafened("""{"deafened":true}"""))
+        assertFalse(ParticipantMetadata.isDeafened("""{"deafened":false}"""))
+    }
+
+    @Test
+    fun `treats a missing or unreadable deafened flag as hearing`() {
+        assertFalse(ParticipantMetadata.isDeafened(null))
+        assertFalse(ParticipantMetadata.isDeafened(""))
+        assertFalse(ParticipantMetadata.isDeafened("{}"))
+        assertFalse(ParticipantMetadata.isDeafened("not json"))
+    }
+
+    @Test
+    fun `setting deafened leaves every other field alone`() {
+        // The server keeps moderation flags on this same blob; assigning over it would clear them.
+        val merged = ParticipantMetadata.withDeafened(
+            """{"avatarUrl":"https://example.test/a.png","chatBlocked":true}""",
+            true,
+        )
+        val json = JSONObject(merged)
+
+        assertTrue(json.getBoolean("deafened"))
+        assertEquals("https://example.test/a.png", json.getString("avatarUrl"))
+        assertTrue(json.getBoolean("chatBlocked"))
+    }
+
+    @Test
+    fun `undeafening writes the flag rather than dropping it`() {
+        // A missing field reads as hearing, but an explicit false is what tells a client that has
+        // already seen the true to change its mind.
+        val json = JSONObject(ParticipantMetadata.withDeafened("""{"deafened":true}""", false))
+
+        assertTrue(json.has("deafened"))
+        assertFalse(json.getBoolean("deafened"))
+    }
 }
