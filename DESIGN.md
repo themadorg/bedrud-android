@@ -484,6 +484,40 @@ the `meeting*` tokens in `Dimens.kt`, timing in `Motion.meetingChromeAutoHideDel
   and still compiles so the flag turns it back on. There is no side panel anymore — the
   participants list lives in the invite sheet.
 
+## Sound (`core/audio/MeetingTone.kt`)
+
+A meeting answers three events with a tone. They are **synthesized, not sampled** — the spec below
+*is* the asset, transcribed from the web client's `meeting-sounds.ts` so both clients answer the
+same event the same way, and neither repo carries an audio file to keep in sync.
+
+| Event | Tone |
+|---|---|
+| Someone joined | 660 Hz for 120 ms, then 880 Hz for 150 ms starting at 100 ms — two notes rising |
+| Someone left | one note gliding 660 → 440 Hz over 180 ms, silent by 200 ms |
+| A message arrived | 1200 Hz for 70 ms, then 1500 Hz for 60 ms starting at 55 ms — a soft pop |
+
+Peak amplitude is 0.09 of full scale (0.07 for the message pop), and every partial fades out over
+its last 60 ms. These play *over* live voices, so a tone that competes with the room is a defect.
+Each partial also rises over its first 3 ms, which the web client does not do: an instant attack on
+16-bit PCM is an audible tick, where the browser's oscillator merely clicks.
+
+`MeetingSounds` plays them as `USAGE_VOICE_COMMUNICATION` / `CONTENT_TYPE_SONIFICATION`, so a tone
+follows the call — same earpiece, speaker or headset `CallAudioSwitch` chose, at the in-call volume
+already set for the voices. Routing them as media would put a chime in the earpiece the moment
+someone moved the call to speaker.
+
+**A tone is deliberately withheld when:**
+
+- **Deafened.** Deafen means silence, and it means all of it.
+- **Within 1.5 s of connecting or reconnecting.** A reconnect replays the room's population as
+  fresh arrivals, which would otherwise chime once per person already present.
+- **The chat sheet is open.** A message landing in front of the reader announces itself — the same
+  line the unread badge is drawn on.
+- **Less than 500 ms since the last message pop.** A burst of messages is one event to the person
+  hearing it, not six.
+
+There is no user setting for any of this, matching web. Deafen is the off switch.
+
 ## Dev-only affordances
 
 Where UI exists but its backend/business logic doesn't yet, build the UI and mark it with a **dev-only**

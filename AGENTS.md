@@ -44,6 +44,7 @@ app/src/main/java/com/bedrud/app/
 │   ├── instance/               Multi-instance: InstanceStore → InstanceManager
 │   ├── auth/                   AuthManager (encrypted prefs), PasskeyManager, OAuthLoginHandler
 │   ├── api/                    Retrofit interfaces: AuthApi, RoomApi, AdminApi + ApiClientFactory
+│   ├── audio/                  Voice gate, reach monitor, and the meeting notification tones
 │   ├── livekit/RoomManager.kt  LiveKit room lifecycle, media toggles, chat
 │   ├── livekit/ParticipantMetadata.kt  Shared metadata blob: app writes the avatar, server writes moderation flags
 │   ├── meeting/chat/           Chat wire format (ChatWire), >60KB reassembly (ChatChunkAssembler), clustering
