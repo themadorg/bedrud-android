@@ -333,6 +333,7 @@
   <string name="meeting_voiceAlert_gateClosed">Голосовая активация вас не улавливает</string>
   <string name="meeting_voiceAlert_notReachingRoom">Возможно, вас не слышат</string>
   <string name="meeting_participant_volume">Громкость</string>
+  <string name="meeting_participant_deafened">Не слышит комнату</string>
   <string name="meeting_action_dontWatch">Не смотреть</string>
   <string name="meeting_action_watch">Смотреть</string>
   <string name="meeting_action_pin">Закрепить</string>

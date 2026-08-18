@@ -47,6 +47,7 @@ app/src/main/java/com/bedrud/app/
 │   ├── livekit/RoomManager.kt  LiveKit room lifecycle, media toggles, chat
 │   ├── livekit/ParticipantMetadata.kt  Shared metadata blob: app writes the avatar, server writes moderation flags
 │   ├── meeting/chat/           Chat wire format (ChatWire), >60KB reassembly (ChatChunkAssembler), clustering
+│   ├── meeting/presence/       Presence wire format (PresenceWire) — deafen state
 │   ├── chat/                   Image upload for chat attachments (ChatImageUploader) + URL helpers
 │   ├── pip/PipState.kt         PiP state holder
 │   └── call/                   CallService + CallConnectionService (telecom integration)
@@ -103,6 +104,15 @@ clients — `core/meeting/chat/ChatWire.kt` is the only place that speaks it.
   than rendered.
 - The server-side counterpart is upload-only: `POST room/:roomId/chat/upload` (multipart) with the
   file served back from `GET /uploads/chat/*`. Only the resulting URL travels over the channel.
+
+The `presence` topic carries what somebody is *doing* rather than what they said, spoken by
+`core/meeting/presence/PresenceWire.kt`. So far that is **deafen state** (`deafen_state`), and it
+is announced **twice**: as this message, and as a `deafened` field on the participant's own
+metadata. Neither is redundant — the message is immediate but only reaches people already in the
+room, while the metadata is what somebody joining later reads. A client that writes one must write
+the other, and a client that reads must merge both: metadata answers for everyone who has said
+nothing since you arrived, and a live announcement overrides it. Writing metadata needs a
+permission the token may not grant, so the presence message is the half that always lands.
 
 ## Key Conventions
 

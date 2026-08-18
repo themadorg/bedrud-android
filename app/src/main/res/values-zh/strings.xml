@@ -327,6 +327,7 @@
   <string name="meeting_voiceAlert_gateClosed">语音检测未识别到你</string>
   <string name="meeting_voiceAlert_notReachingRoom">其他人可能听不到你</string>
   <string name="meeting_participant_volume">音量</string>
+  <string name="meeting_participant_deafened">听不到房间的声音</string>
   <string name="meeting_action_dontWatch">不再观看</string>
   <string name="meeting_action_watch">观看</string>
   <string name="meeting_action_pin">固定</string>

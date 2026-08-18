@@ -329,6 +329,7 @@
   <string name="meeting_voiceAlert_gateClosed">Ses algılama sizi almıyor</string>
   <string name="meeting_voiceAlert_notReachingRoom">Diğerleri sizi duymuyor olabilir</string>
   <string name="meeting_participant_volume">Ses düzeyi</string>
+  <string name="meeting_participant_deafened">Odayı duymuyor</string>
   <string name="meeting_action_dontWatch">İzleme</string>
   <string name="meeting_action_watch">İzle</string>
   <string name="meeting_action_pin">Sabitle</string>

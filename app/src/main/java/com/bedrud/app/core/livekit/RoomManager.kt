@@ -19,6 +19,7 @@ import com.bedrud.app.core.meeting.chat.ChatChunkAssembler
 import com.bedrud.app.core.meeting.chat.ChatPoll
 import com.bedrud.app.core.meeting.chat.ChatReactions
 import com.bedrud.app.core.meeting.chat.ChatWire
+import com.bedrud.app.core.meeting.presence.PresenceWire
 import com.bedrud.app.core.meeting.chat.isReactionEmoji
 import com.bedrud.app.core.meeting.chat.toggled
 import com.bedrud.app.core.meeting.chat.withVote
@@ -128,6 +129,13 @@ class RoomManager(
     private val _isDeafened = MutableStateFlow(settingsStore.getDeafened())
     val isDeafened: StateFlow<Boolean> = _isDeafened.asStateFlow()
     private var micMutedBeforeDeafen = false
+
+    // Who has silenced the room for themselves. Unlike a local mute this is the participant's own
+    // state, announced by them, so it is the same set on every client.
+    private val _deafenedIdentities = MutableStateFlow<Set<String>>(emptySet())
+    val deafenedIdentities: StateFlow<Set<String>> = _deafenedIdentities.asStateFlow()
+    private var deafenedByMetadata: Set<String> = emptySet()
+    private var deafenedByAnnouncement: Map<String, Boolean> = emptyMap()
 
     // Identities this viewer has locally muted (does not affect what other participants hear)
     private val _locallyMutedIdentities = MutableStateFlow<Set<String>>(emptySet())
@@ -412,6 +420,10 @@ class RoomManager(
                 }
             }
             refreshChatBlocked()
+            // Whoever deafened before this device arrived only exists in metadata, and the room
+            // has not been told about this device at all yet.
+            refreshDeafenedFromMetadata()
+            advertiseDeafened(_isDeafened.value)
 
             // Restore the mic to whatever the user last set it to (unmuted by default
             // on a fresh install); camera stays off until the user turns it on. A silent
@@ -457,6 +469,7 @@ class RoomManager(
                         // the server sets, so a block lands here the moment it is applied.
                         is RoomEvent.ParticipantMetadataChanged -> {
                             refreshChatBlocked()
+                            refreshDeafenedFromMetadata()
                             _participantVersion.value++
                         }
                         is RoomEvent.ParticipantDisconnected -> {
@@ -465,6 +478,12 @@ class RoomManager(
                                 _watchedStreamIdentity.value == disconnectedIdentity
                             ) {
                                 _watchedStreamIdentity.value = null
+                            }
+                            // Their announcement dies with them; keeping it would badge the next
+                            // person to arrive on the same identity.
+                            if (disconnectedIdentity != null) {
+                                deafenedByAnnouncement = deafenedByAnnouncement - disconnectedIdentity
+                                refreshDeafenedFromMetadata()
                             }
                             _participantVersion.value++
                         }
@@ -580,11 +599,75 @@ class RoomManager(
         _participantNames.value = _participantNames.value + (identity to name)
     }
 
+    /**
+     * Re-reads every remote participant's deafened flag from their metadata.
+     *
+     * Metadata is the durable half of the announcement: it is what somebody who joins later reads,
+     * and the only source for a person who deafened before this device arrived.
+     */
+    private fun refreshDeafenedFromMetadata() {
+        val room = _room ?: return
+        deafenedByMetadata = room.remoteParticipants.values
+            .filter { ParticipantMetadata.isDeafened(it.metadata) }
+            .mapNotNull { it.identity?.value }
+            .toSet()
+        republishDeafened()
+    }
+
+    private fun applyDeafenState(state: PresenceWire.DeafenState) {
+        deafenedByAnnouncement = deafenedByAnnouncement + (state.identity to state.deafened)
+        republishDeafened()
+    }
+
+    /**
+     * Merges the two sources rather than letting either replace the other.
+     *
+     * Writing metadata needs a permission the token may not grant — a guest can be refused it —
+     * so a participant may only ever be heard from over the presence channel. Rebuilding the set
+     * from metadata alone would drop those people every time anybody's metadata changed. A live
+     * announcement is the more recent word either way, so it decides, and metadata answers for
+     * everyone who has not said anything since this device joined.
+     */
+    private fun republishDeafened() {
+        val merged = deafenedByMetadata.toMutableSet()
+        deafenedByAnnouncement.forEach { (identity, deafened) ->
+            if (deafened) merged.add(identity) else merged.remove(identity)
+        }
+        if (merged != _deafenedIdentities.value) _deafenedIdentities.value = merged
+    }
+
+    /**
+     * Tells the room whether this device can hear it, on both channels the protocol uses.
+     *
+     * The web client publishes and reads the same two, so a deafened person is marked whichever
+     * client anyone is watching from. Failing to announce is not worth interrupting a call over —
+     * the cost is a missing badge on other people's screens, not a broken call.
+     */
+    private suspend fun advertiseDeafened(deafened: Boolean) {
+        val localParticipant = _room?.localParticipant ?: return
+        try {
+            localParticipant.updateMetadata(
+                ParticipantMetadata.withDeafened(localParticipant.metadata, deafened)
+            )
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to publish deafened metadata", e)
+        }
+        val identity = localParticipant.identity?.value ?: return
+        publishData(
+            PresenceWire.PRESENCE_DATA_TOPIC,
+            PresenceWire.encodeDeafenState(identity, deafened),
+        )
+    }
+
     private fun refreshChatBlocked() {
         _isChatBlocked.value = ParticipantMetadata.isChatBlocked(_room?.localParticipant?.metadata)
     }
 
     private fun handleDataReceived(event: RoomEvent.DataReceived) {
+        PresenceWire.parseDeafenState(event.data, event.topic)?.let {
+            applyDeafenState(it)
+            return
+        }
         when (val inbound = chatAssembler.accept(event.data, event.topic)) {
             is ChatWire.Inbound.Complete -> appendRemoteMessage(inbound.chat, event)
             is ChatWire.Inbound.Reaction ->
@@ -734,6 +817,9 @@ class RoomManager(
         _isDeafened.value = settingsStore.getDeafened()
         micMutedBeforeDeafen = false
         _locallyMutedIdentities.value = emptySet()
+        _deafenedIdentities.value = emptySet()
+        deafenedByMetadata = emptySet()
+        deafenedByAnnouncement = emptyMap()
         _participantVolumes.value = emptyMap()
         _participantVersion.value = 0
         _participantNames.value = emptyMap()
@@ -874,6 +960,7 @@ class RoomManager(
     suspend fun toggleDeafen() {
         val deafening = !_isDeafened.value
         settingsStore.setDeafened(deafening)
+        advertiseDeafened(deafening)
         if (deafening) {
             micMutedBeforeDeafen = !_isMicEnabled.value
             _isDeafened.value = true

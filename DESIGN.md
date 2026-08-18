@@ -358,8 +358,16 @@ the `meeting*` tokens in `Dimens.kt`, timing in `Motion.meetingChromeAutoHideDel
   with nothing holding the variety together and `button` barely separating from the sheet's own
   container. Expanding now reveals the options *below the bar you were already looking at* rather
   than restyling it mid-drag, so the divider under the row is gone too: the bar's own edge separates.
-  Deafen uses a **crossed headphone**, matching the badge on your own tile — deafening is about what
+  Deafen uses a **crossed headphone**, matching the badge on the tiles — deafening is about what
   reaches your ears, where a speaker icon says something about the room.
+- **Deafened badge**: drawn on **whoever is deafened**, not only on your own tile. Deafen is part
+  of the room's shared presence — every client announces it and reads it back — so a person who
+  cannot hear the room looks the same to everyone watching. Your own reads from the manager rather
+  than from the announcement, for the same reason your mute badge does: it has to flip on your tap
+  without waiting for a round trip. The badge leads the mute badge, because not hearing the room is
+  the larger fact of the two, and it repeats in `MeetingParticipantSheet` — that is the sheet you
+  open to change how you hear somebody, and their volume slider achieves nothing while they cannot
+  hear you.
 - **Per-tile fullscreen** (`MeetingParticipantFullscreen`): chrome (name chip, collapse button,
   controls bar) auto-hides after `meetingChromeAutoHideDelayMs` of inactivity; any tap toggles it
   back; while hidden the system bars hide too (immersive). The hardware back key collapses

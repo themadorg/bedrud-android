@@ -148,6 +148,7 @@ fun MeetingScreen(
     val cameraMediaError by roomManager.cameraMediaError.collectAsState()
     val isScreenShareEnabled by roomManager.isScreenShareEnabled.collectAsState()
     val isDeafened by roomManager.isDeafened.collectAsState()
+    val deafenedIdentities by roomManager.deafenedIdentities.collectAsState()
     val error by roomManager.error.collectAsState()
     val wasKicked by roomManager.wasKicked.collectAsState()
 
@@ -569,6 +570,7 @@ fun MeetingScreen(
                                         speakingLevels = speakingLevels,
                                         isLocalMicEnabled = isMicEnabled,
                                         isLocalDeafened = isDeafened,
+                                        deafenedIdentities = deafenedIdentities,
                                         onOpenParticipantActions = { identity ->
                                             participantSheetIdentity = identity
                                         },
@@ -785,6 +787,7 @@ fun MeetingScreen(
                                             onToggleVideoDisabled(sheetIdentity)
                                         },
                                         isPinned = pinnedIdentity == sheetIdentity,
+                                        isDeafened = sheetIdentity in deafenedIdentities,
                                         onTogglePin = {
                                             pinnedIdentity =
                                                 if (pinnedIdentity == sheetIdentity) null
