@@ -128,13 +128,10 @@ fun BedrudTheme(
         else -> LightColorScheme
     }
 
+    // Only the layout direction follows the interface language. The typeface does not: one family
+    // covers both scripts, so text renders the same whichever language the interface is in.
     val isRtl = language.resolveIsRtl()
     val layoutDirection = if (isRtl) LayoutDirection.Rtl else LayoutDirection.Ltr
-    val typography = when {
-        language.usesShabnam() -> ShabnamTypography
-        isRtl -> VazirmatnTypography
-        else -> BedrudTypography
-    }
 
     val extendedColors = if (darkTheme) DarkExtendedColors else LightExtendedColors
 
@@ -144,7 +141,7 @@ fun BedrudTheme(
     ) {
         MaterialTheme(
             colorScheme = colorScheme,
-            typography = typography,
+            typography = BedrudTypography,
             shapes = BedrudShapes,
             content = content
         )

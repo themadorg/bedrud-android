@@ -53,8 +53,38 @@ via `BedrudTheme(dynamicColor = true)`.
 
 ## Typography (`Type.kt`)
 
-Material 3 type scale. `FontFamily.SansSerif` (system) for LTR; **Vazirmatn** / **Shabnam** for RTL
-(Arabic, Persian), selected automatically in `BedrudTheme` from the active `AppLanguage`.
+Material 3 type scale on **Vazirmatn, applied unconditionally** — the typeface is never selected
+from the interface language. It covers the Latin and Arabic scripts, which is every locale the app
+ships except Russian, Japanese and Chinese; those fall to the platform's fallback chain (see the
+end of this section, tracked in #118).
+
+The font used to be picked from `AppLanguage`: Persian got Shabnam, other RTL languages got
+Vazirmatn, everyone else got `FontFamily.SansSerif`. That confuses the language someone *reads*
+with the script they *type*. Persian display names, room names and chat messages arrive in an
+English interface constantly, and the platform sans has no Arabic-script glyphs, so those names
+fell through to the system fallback — on Samsung, `SECNaskhArabic` in its `elegant` variant, a
+high-contrast calligraphic book face rendering inside an 11sp tile chip beside Roboto.
+
+Vazirmatn covers both scripts, so the choice disappears. Its Latin glyphs **are** Roboto, merged in
+by the font's own build script, so Latin text is unchanged wherever the platform sans already
+resolved to Roboto. It is a variable font, and the four weights are real instances of the `wght`
+axis rather than four files — which is also what Shabnam could not do: it was static, discontinued
+upstream, and registered under four weights that all loaded the same Regular face, so Persian UI
+had no weight hierarchy at all.
+
+**The boundary.** Vazirmatn carries no Cyrillic, Greek or CJK, so Russian, Japanese and Chinese
+resolve through the platform's fallback chain. That is not a regression — those three resolved the
+same way before Vazirmatn became the base font — but it does mean the app draws a different
+typeface for them than for everyone else, and on a device whose owner has themed the system font
+it will not even be the same one twice. Verified rendering cleanly on a Samsung SM-S928B in all
+three; the open question is only whether to bundle a companion face. Tracked in #118.
+
+**Rejected: keeping the platform sans for Latin.** `Typeface.CustomFallbackBuilder` (API 29+) can
+leave the system font drawing Latin and hand Vazirmatn only the Arabic-script runs, which would
+respect an owner's themed system font. It was turned down because it reintroduces the thing this
+change removed — text whose typeface depends on where it happens to be rendered — and because a
+design system that pins spacing, shape, elevation and colour has no reason to leave the typeface
+to the OEM. Revisit only if themed-font users complain.
 
 ## Shape (`Shape.kt`)
 
@@ -311,8 +341,9 @@ Both are gated by `BuildConfig.DEV_HINTS` (`true` on debug + `dev`, `false` on r
 
 User-facing strings live in `res/values/strings.xml` (+ locale variants: ar, de, es, fa, fr, ja, ru, tr,
 zh) — **not** inline in composables. Every string must be translated in all locale files: the project's
-lint fails CI on `MissingTranslation`, so shipping English-only is not an option. RTL is fully supported
-(layout direction + Vazirmatn/Shabnam fonts via `LocaleHelper`).
+lint fails CI on `MissingTranslation`, so shipping English-only is not an option. RTL is fully supported:
+`LocaleHelper` and `BedrudTheme` set the layout direction from the active `AppLanguage`, while the
+typeface does not vary by locale at all — see [Typography](#typography-typekt).
 
 ## Self-hosting / rebranding
 
