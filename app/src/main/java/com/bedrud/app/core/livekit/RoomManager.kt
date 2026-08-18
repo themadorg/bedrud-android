@@ -10,6 +10,8 @@ import androidx.annotation.StringRes
 import androidx.core.app.NotificationCompat
 import com.bedrud.app.R
 import com.bedrud.app.core.audio.MeetingInputMode
+import com.bedrud.app.core.audio.MeetingSound
+import com.bedrud.app.core.audio.MeetingSounds
 import com.bedrud.app.core.audio.MeetingVoiceAlert
 import com.bedrud.app.core.audio.NoiseSuppressionMode
 import com.bedrud.app.core.audio.VoiceGateProcessor
@@ -212,6 +214,14 @@ class RoomManager(
     private var bridgeLoudAtMillis: Long? = null
     private var bridgeLoudLevel: Float = 0f
 
+    // Notification tones for the call, played on the call's own audio route. Every field here is
+    // touched from [eventScope] and from the meeting UI, both of which run on the main thread, so
+    // none of them needs guarding.
+    private val meetingSounds = MeetingSounds()
+    private var soundsAudibleFromMillis = Long.MAX_VALUE
+    private var isChatVisible = false
+    private var lastMessageSoundAtMillis = 0L
+
     // Why the room is not hearing this participant, when it plainly should be.
     private val voiceReachMonitor = VoiceReachMonitor()
     private val _voiceAlert = MutableStateFlow(MeetingVoiceAlert.None)
@@ -237,6 +247,47 @@ class RoomManager(
         val publication = _room?.localParticipant
             ?.getTrackPublication(Track.Source.MICROPHONE) ?: return false
         return !publication.muted
+    }
+
+    /**
+     * Plays a notification tone, unless the moment makes it unwelcome.
+     *
+     * Deafened means the user asked for silence and meant all of it. The quiet window covers
+     * connecting and reconnecting: a reconnect replays the room's population as fresh arrivals,
+     * which without it chimes once per person already present.
+     */
+    private fun playMeetingSound(sound: MeetingSound) {
+        if (_isDeafened.value) return
+        if (SystemClock.elapsedRealtime() < soundsAudibleFromMillis) return
+        meetingSounds.play(sound)
+    }
+
+    /**
+     * Announces an arriving message, at most once every [MessageSoundIntervalMillis].
+     *
+     * A burst of messages is one event to the person hearing it, not six, and six pops on top of
+     * each other is noise rather than notification.
+     */
+    private fun playMessageSound() {
+        val now = SystemClock.elapsedRealtime()
+        if (now - lastMessageSoundAtMillis < MessageSoundIntervalMillis) return
+        lastMessageSoundAtMillis = now
+        playMeetingSound(MeetingSound.Message)
+    }
+
+    /**
+     * Tells the room whether the chat is on screen.
+     *
+     * A message that lands in front of the reader announces itself; the pop is for the ones they
+     * would otherwise miss, which is the same line the unread badge is drawn on.
+     */
+    fun setChatVisible(visible: Boolean) {
+        isChatVisible = visible
+    }
+
+    /** Starts the quiet window that keeps a (re)connect from announcing everyone already there. */
+    private fun holdMeetingSounds() {
+        soundsAudibleFromMillis = SystemClock.elapsedRealtime() + SoundSettleMillis
     }
 
     private fun syncVoiceGate() {
@@ -451,6 +502,7 @@ class RoomManager(
 
             // Notify initial participant state
             room.remoteParticipants.values.forEach { rememberName(it) }
+            holdMeetingSounds()
             _participantVersion.value++
 
             // Listen for room events
@@ -463,6 +515,7 @@ class RoomManager(
                         is RoomEvent.ActiveSpeakersChanged -> onActiveSpeakers(event.speakers)
                         is RoomEvent.ParticipantConnected -> {
                             rememberName(event.participant)
+                            playMeetingSound(MeetingSound.Join)
                             _participantVersion.value++
                         }
                         // Carries both the avatars other participants set and the moderation flags
@@ -473,6 +526,7 @@ class RoomManager(
                             _participantVersion.value++
                         }
                         is RoomEvent.ParticipantDisconnected -> {
+                            playMeetingSound(MeetingSound.Leave)
                             val disconnectedIdentity = event.participant.identity?.value
                             if (disconnectedIdentity != null &&
                                 _watchedStreamIdentity.value == disconnectedIdentity
@@ -556,6 +610,7 @@ class RoomManager(
                         }
                         is RoomEvent.Reconnected -> {
                             _connectionState.value = ConnectionState.CONNECTED
+                            holdMeetingSounds()
                             _participantVersion.value++
                         }
                         is RoomEvent.Disconnected -> {
@@ -703,6 +758,7 @@ class RoomManager(
             attachments = incoming.attachments,
             poll = incoming.poll,
         )
+        if (!isChatVisible) playMessageSound()
     }
 
     /**
@@ -801,6 +857,10 @@ class RoomManager(
 
     fun disconnect() {
         resetSpeakingState()
+        meetingSounds.stopAll()
+        soundsAudibleFromMillis = Long.MAX_VALUE
+        isChatVisible = false
+        lastMessageSoundAtMillis = 0L
         eventScope?.cancel()
         eventScope = null
         _room?.disconnect()
@@ -1294,6 +1354,22 @@ class RoomManager(
          * already saying so by then.
          */
         private const val LocalSpeakingBridgeMillis = 5_000L
+
+        /**
+         * How long after connecting or reconnecting notification tones stay silent.
+         *
+         * Long enough for the room's existing population to land — a reconnect delivers them as
+         * arrivals — and short enough that someone walking in right behind you is still announced.
+         */
+        private const val SoundSettleMillis = 1_500L
+
+        /**
+         * Shortest gap between two message pops.
+         *
+         * Set by how long the pop itself takes to land and clear rather than by how fast messages
+         * can arrive — anything closer overlaps the previous one and reads as a rattle.
+         */
+        private const val MessageSoundIntervalMillis = 500L
 
         /** Time a publication needs to settle before muting it keeps the capture chain alive. */
         private const val MutedCaptureSettleMillis = 400L
