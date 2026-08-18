@@ -315,7 +315,13 @@ the `meeting*` tokens in `Dimens.kt`, timing in `Motion.meetingChromeAutoHideDel
   `chatBlocked` flag on the participant's metadata and trust each client to honour it.
 - **Reactions** (`MeetingChatReactions`): one person holds **one reaction per message** — a second
   emoji moves it, the same one again takes it back — drawn as chips under the bubble, the reader's
-  own filled the way their own messages are. The picker offers a fixed eight rather than the full
+  own filled the way their own messages are. A chip is deliberately **about half the height of the
+  bubble it hangs off** (20dp against a one-line bubble's 38dp) so it reads as an annotation rather
+  than a second message. That is smaller than the usual minimum tap target, taken knowingly: it is
+  the size chat apps have settled on, and the picker behind a long-press is the recovery path when
+  a tap misses. Its box is set by the height token alone — a colour emoji's line box runs taller
+  than the label style it is drawn with, so vertical padding on the chip would silently override
+  the token. The picker offers a fixed eight rather than the full
   emoji keyboard the web has: a picker large enough to search would cover the conversation being
   reacted to. The pill is **narrower than the eight it holds and scrolls horizontally** — five and
   a half targets wide, so the sixth is half-showing and says there is more behind the edge without
