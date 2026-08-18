@@ -112,6 +112,15 @@
   <string name="meeting_chat_uploading">Yükleniyor…</string>
   <string name="meeting_chat_placeholder">Bir mesaj yazın…</string>
   <string name="meeting_chat_sharedImage">Paylaşılan görsel</string>
+  <string name="meeting_chat_uploadUnreadable">Bu görsel açılamadı</string>
+  <string name="meeting_chat_uploadRejected">Sunucu bu görseli reddetti (%1$d)</string>
+  <string name="meeting_chat_uploadUnreachable">Sunucuya ulaşılamadı</string>
+  <string name="meeting_chat_disabledByRoom">Bu odada sohbet kapalı</string>
+  <string name="meeting_chat_blockedByModerator">Bir moderatör sohbet etmenizi engelledi</string>
+  <string name="meeting_chat_saveImage">Görseli kaydet</string>
+  <string name="meeting_chat_imageSaved">Resimler\'e kaydedildi</string>
+  <string name="meeting_chat_imageSaveUnreachable">Bu görsel indirilemedi</string>
+  <string name="meeting_chat_imageSaveUnwritable">Galeriye kaydedilemedi</string>
   <string name="meeting_contentDescription_toggleMic">Mikrofonu Aç/Kapat</string>
   <string name="meeting_contentDescription_toggleCamera">Kamerayı Aç/Kapat</string>
   <string name="meeting_contentDescription_switchCamera">Kamerayı Değiştir</string>

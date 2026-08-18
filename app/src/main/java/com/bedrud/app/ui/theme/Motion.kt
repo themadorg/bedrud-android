@@ -20,6 +20,12 @@ object Motion {
     const val meetingConnectedNoticeMs = 2000L
 
     /**
+     * How long the lightbox says whether a picture was saved before handing the screen back to the
+     * picture, which is the only reason anyone opened it.
+     */
+    const val lightboxOutcomeNoticeMs = 2500L
+
+    /**
      * How long every speaking signal takes to arrive and to settle — the tile ring's fade and the
      * name chip's badge alike, so the two never disagree about when someone started talking.
      *

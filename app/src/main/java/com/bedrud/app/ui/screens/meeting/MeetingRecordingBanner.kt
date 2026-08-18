@@ -17,6 +17,19 @@ import com.bedrud.app.ui.theme.BedrudShapeTokens
 import com.bedrud.app.ui.theme.Dimens
 import com.bedrud.app.R
 
+/**
+ * Whether the recording indicator and its banner are drawn at all.
+ *
+ * Off, because nothing in this app can be recording: the server has no egress client and its
+ * recording routes are not registered, so there is no state for the dot to reflect. A recording
+ * light is a privacy signal, and one that is always lit — above a banner stating that every camera,
+ * screen share and message is being captured — is worse than no signal, because it teaches people
+ * to disregard the real one.
+ *
+ * The UI is kept and still compiles so that #107 turns this back on rather than rebuilding it.
+ */
+const val RecordingIndicatorEnabled = false
+
 /** Placeholder elapsed time until the server exposes recording state. TODO(#107) */
 const val RecordingElapsedPlaceholder = "00:10"
 

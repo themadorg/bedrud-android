@@ -8,58 +8,32 @@ import android.media.projection.MediaProjectionManager
 import android.os.Build
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.ime
-import androidx.compose.foundation.layout.imePadding
-import androidx.compose.foundation.layout.navigationBarsPadding
-import androidx.compose.foundation.relocation.BringIntoViewRequester
-import androidx.compose.foundation.relocation.bringIntoViewRequester
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Badge
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ContentCopy
-import androidx.compose.material.icons.filled.Image
-import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.FloatingActionButton
-import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SmallFloatingActionButton
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
@@ -67,7 +41,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -77,57 +50,37 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.onFocusEvent
-import androidx.compose.ui.zIndex
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextDirection
-import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
-import coil.compose.AsyncImage
 import com.bedrud.app.R
-import com.bedrud.app.core.BidiUtils
-import com.bedrud.app.core.api.RoomApi
 import com.bedrud.app.core.api.parseApiErrorMessage
-import com.bedrud.app.core.audio.MeetingVoiceAlert
 import com.bedrud.app.core.call.CallService
-import com.bedrud.app.core.chat.ChatImageUtils
-import com.bedrud.app.core.chat.ChatUpload
 import com.bedrud.app.core.deeplink.BedrudURLParser
 import com.bedrud.app.core.instance.InstanceManager
 import com.bedrud.app.ui.components.BedrudScaffoldContentInsets
-import com.bedrud.app.ui.components.ChatImageLightbox
-import com.bedrud.app.ui.components.ConfirmDialog
+import com.bedrud.app.ui.theme.BedrudShapeTokens
 import com.bedrud.app.ui.theme.Dimens
+import com.bedrud.app.ui.theme.Motion
 import com.bedrud.app.ui.util.setPlainText
-import com.bedrud.app.core.livekit.ChatMessage
 import com.bedrud.app.core.livekit.ConnectionState
+import com.bedrud.app.core.livekit.ParticipantMetadata
 import com.bedrud.app.core.livekit.RoomManager
 import com.bedrud.app.core.meeting.VideoAspect
-import com.bedrud.app.core.meeting.chat.ChatWire
 import com.bedrud.app.core.pip.PipStateHolder
 import com.bedrud.app.ui.screens.settings.SettingsStore
 import com.bedrud.app.models.JoinRoomRequest
 import com.bedrud.app.models.JoinRoomResponse
-import io.livekit.android.compose.ui.ScaleType
 import io.livekit.android.compose.ui.VideoTrackView
 import io.livekit.android.room.Room
-import io.livekit.android.room.participant.Participant
 import io.livekit.android.room.track.Track
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import okhttp3.MediaType.Companion.toMediaTypeOrNull
-import okhttp3.MultipartBody
-import okhttp3.RequestBody.Companion.toRequestBody
-import org.json.JSONObject
 import org.koin.compose.koinInject
 
 @Composable
@@ -158,6 +111,22 @@ fun MeetingScreen(
 
     val connectionState by roomManager.connectionState.collectAsState()
 
+    // Connecting otherwise ends in silence — the screen simply becomes the call, and the one thing
+    // people want confirmed is never said. It is announced once per connection, and again after a
+    // reconnect, which is when it is needed most.
+    //
+    // Held here rather than in the bar itself: the bar is removed from composition while the chat
+    // panel or a fullscreen tile is open, so anything remembered inside it would start again from
+    // nothing each time one closed, and announce a connection made long ago.
+    var showConnectedNotice by remember { mutableStateOf(false) }
+    LaunchedEffect(connectionState) {
+        showConnectedNotice = connectionState == ConnectionState.CONNECTED
+        if (showConnectedNotice) {
+            delay(Motion.meetingConnectedNoticeMs)
+            showConnectedNotice = false
+        }
+    }
+
     // Arm auto-PiP only while the call is actually connected. MainActivity.onUserLeaveHint reads
     // this flag, and the camera/mic permission dialog fires onUserLeaveHint on some devices
     // (One UI, notably) — flagging from composition start sent the join flow into PiP while the
@@ -183,6 +152,7 @@ fun MeetingScreen(
     val voiceAlert by roomManager.voiceAlert.collectAsState()
     val watchedStreamIdentity by roomManager.watchedStreamIdentity.collectAsState()
     val chatMessages by roomManager.chatMessages.collectAsState()
+    val isChatBlocked by roomManager.isChatBlocked.collectAsState()
     var showChat by remember { mutableStateOf(false) }
     var showInviteSheet by remember { mutableStateOf(false) }
     var chatInput by remember { mutableStateOf("") }
@@ -220,10 +190,21 @@ fun MeetingScreen(
     val autoSensitivity by roomManager.autoSensitivity.collectAsState()
     val voiceSensitivity by roomManager.voiceSensitivity.collectAsState()
 
-    // Unread chat count while panel is closed
+    // How much of the conversation has been seen. Kept current for as long as the panel is open,
+    // not only at the moment it opens — otherwise everything said while it was open, including
+    // this device's own messages, turns unread again the instant the panel closes. It also follows
+    // the list back down when a room is left and the messages are cleared, so a stale high-water
+    // mark cannot swallow the next room's first arrivals.
     var lastReadCount by rememberSaveable { mutableIntStateOf(0) }
-    val unreadCount = if (showChat) 0 else (chatMessages.size - lastReadCount).coerceAtLeast(0)
-    LaunchedEffect(showChat) { if (showChat) lastReadCount = chatMessages.size }
+    LaunchedEffect(showChat, chatMessages.size) {
+        if (showChat || chatMessages.size < lastReadCount) lastReadCount = chatMessages.size
+    }
+    // Only what someone else said is news: a message you sent yourself never wants your attention.
+    val unreadCount = if (showChat) {
+        0
+    } else {
+        chatMessages.drop(lastReadCount).count { !it.isLocal }
+    }
 
     // Leave/end dialog
     var showLeaveDialog by remember { mutableStateOf(false) }
@@ -394,7 +375,7 @@ fun MeetingScreen(
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         CircularProgressIndicator()
-                        Spacer(modifier = Modifier.height(16.dp))
+                        Spacer(modifier = Modifier.height(Dimens.space16))
                         Text(
                             text = if (connectionState == ConnectionState.CONNECTING)
                                 stringResource(R.string.meeting_status_connecting, roomName)
@@ -497,6 +478,7 @@ fun MeetingScreen(
                                 MeetingTopBar(
                                     roomName = roomName,
                                     connectionState = connectionState,
+                                    showConnectedNotice = showConnectedNotice,
                                     isCameraEnabled = isCameraEnabled,
                                     onInvite = { showInviteSheet = true },
                                     onSwitchCamera = { roomManager.switchCamera() },
@@ -553,12 +535,12 @@ fun MeetingScreen(
                                             Modifier
                                                 .weight(1f)
                                                 .fillMaxWidth()
-                                                .padding(horizontal = Dimens.space8)
+                                                .padding(horizontal = Dimens.meetingScreenMargin)
                                                 .padding(bottom = Dimens.meetingGridBottomSpace)
                                         } else {
                                             Modifier
                                                 .fillMaxWidth()
-                                                .padding(horizontal = Dimens.space8)
+                                                .padding(horizontal = Dimens.meetingScreenMargin)
                                                 .padding(bottom = Dimens.space8)
                                                 .aspectRatio(VideoAspect.RATIO)
                                         },
@@ -587,21 +569,25 @@ fun MeetingScreen(
                                         modifier = Modifier
                                             .weight(1f)
                                             .fillMaxWidth()
-                                            .padding(horizontal = Dimens.space8)
+                                            .padding(horizontal = Dimens.meetingScreenMargin)
                                             .padding(bottom = Dimens.meetingGridBottomSpace),
                                     )
                                 }
                             }
                             }
 
-                            if (showRecordingBanner && !isTileFullscreen && !showChat) {
+                            // Nothing can open this while the indicator is off, but the guard is
+                            // stated here too so the banner cannot be reached by a new route.
+                            if (RecordingIndicatorEnabled &&
+                                showRecordingBanner && !isTileFullscreen && !showChat
+                            ) {
                                 MeetingRecordingBanner(
                                     elapsedLabel = RecordingElapsedPlaceholder,
                                     onAcknowledge = { showRecordingBanner = false },
                                     modifier = Modifier
                                         .align(Alignment.TopCenter)
                                         .padding(top = Dimens.space56)
-                                        .padding(horizontal = Dimens.space8),
+                                        .padding(horizontal = Dimens.meetingScreenMargin),
                                 )
                             }
 
@@ -826,18 +812,7 @@ fun MeetingScreen(
                                         InviteSheetParticipant(
                                             identity = identity,
                                             name = participant.name?.ifBlank { identity } ?: identity,
-                                            avatarUrl = participant.metadata?.let { meta ->
-                                                try {
-                                                    val obj = JSONObject(meta)
-                                                    if (obj.has("avatarUrl")) {
-                                                        obj.getString("avatarUrl")
-                                                    } else {
-                                                        null
-                                                    }
-                                                } catch (_: Exception) {
-                                                    null
-                                                }
-                                            },
+                                            avatarUrl = ParticipantMetadata.avatarUrl(participant.metadata),
                                             isLocal = identity == localIdentity,
                                             speakingLevel = speakingLevels[identity] ?: 0f,
                                         )
@@ -941,11 +916,11 @@ fun MeetingScreen(
                                 exit = fadeOut(),
                                 modifier = Modifier.fillMaxSize()
                             ) {
-                                ChatPanel(
+                                MeetingChatPanel(
                                     modifier = Modifier.fillMaxSize(),
                                     messages = chatMessages,
-                                    chatInput = chatInput,
-                                    onChatInputChange = { chatInput = it },
+                                    input = chatInput,
+                                    onInputChange = { chatInput = it },
                                     onSend = {
                                         if (chatInput.isNotBlank()) {
                                             scope.launch {
@@ -954,15 +929,28 @@ fun MeetingScreen(
                                             }
                                         }
                                     },
-                                    onClose = { showChat = false },
-                                    roomId = roomInfo?.id,
-                                    roomApi = roomApi,
-                                    serverURL = serverURL,
-                                    accessToken = accessToken,
-                                    onSendWithAttachment = { text, attachment ->
+                                    onSendAttachment = { text, attachment ->
                                         scope.launch {
                                             roomManager.sendChatMessage(text, listOf(attachment))
                                         }
+                                    },
+                                    onClose = { showChat = false },
+                                    imageContext = roomInfo?.id?.let { roomId ->
+                                        ChatImageContext(
+                                            roomId = roomId,
+                                            roomApi = roomApi,
+                                            serverURL = serverURL,
+                                            accessToken = accessToken,
+                                        )
+                                    },
+                                    // The room's own setting comes first: it explains the closed
+                                    // dock for everyone present, where a block explains it for one
+                                    // person. Either way the conversation stays readable.
+                                    sendDisabledReason = when {
+                                        roomInfo?.settings?.allowChat == false ->
+                                            R.string.meeting_chat_disabledByRoom
+                                        isChatBlocked -> R.string.meeting_chat_blockedByModerator
+                                        else -> null
                                     },
                                 )
                             }
@@ -985,7 +973,7 @@ fun MeetingScreen(
                             style = MaterialTheme.typography.headlineSmall,
                             color = MaterialTheme.colorScheme.error
                         )
-                        Spacer(modifier = Modifier.height(8.dp))
+                        Spacer(modifier = Modifier.height(Dimens.space8))
                         // Connection failures span many causes (TLS, network, server, auth), so
                         // rather than map each to its own message we show one general line and
                         // surface the raw error verbatim below it -- scroll-capped and copyable,
@@ -995,18 +983,18 @@ fun MeetingScreen(
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             textAlign = TextAlign.Center,
-                            modifier = Modifier.padding(horizontal = 32.dp)
+                            modifier = Modifier.padding(horizontal = Dimens.meetingStatePadding)
                         )
                         val connectionError = error
                         if (!connectionError.isNullOrBlank()) {
-                            Spacer(modifier = Modifier.height(16.dp))
+                            Spacer(modifier = Modifier.height(Dimens.space16))
                             val errorCopiedMessage = stringResource(R.string.meeting_toast_errorCopied)
                             val copyDescription = stringResource(R.string.common_action_copy)
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(horizontal = 24.dp)
-                                    .clip(RoundedCornerShape(8.dp))
+                                    .padding(horizontal = Dimens.space24)
+                                    .clip(BedrudShapeTokens.chip)
                                     .background(MaterialTheme.colorScheme.surfaceVariant),
                                 verticalAlignment = Alignment.Top,
                             ) {
@@ -1018,9 +1006,9 @@ fun MeetingScreen(
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     modifier = Modifier
                                         .weight(1f)
-                                        .heightIn(max = 140.dp)
+                                        .heightIn(max = Dimens.meetingErrorDetailMaxHeight)
                                         .verticalScroll(rememberScrollState())
-                                        .padding(start = 12.dp, top = 12.dp, bottom = 12.dp),
+                                        .padding(start = Dimens.space12, top = Dimens.space12, bottom = Dimens.space12),
                                 )
                                 // Copy action lives on the box itself, pinned to its top-right.
                                 IconButton(
@@ -1034,13 +1022,13 @@ fun MeetingScreen(
                                     Icon(
                                         Icons.Default.ContentCopy,
                                         contentDescription = copyDescription,
-                                        modifier = Modifier.size(18.dp),
+                                        modifier = Modifier.size(Dimens.iconSm),
                                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                     )
                                 }
                             }
                         }
-                        Spacer(modifier = Modifier.height(24.dp))
+                        Spacer(modifier = Modifier.height(Dimens.space24))
                         androidx.compose.material3.FilledTonalButton(
                             // The service normally self-stops the instant the connection fails
                             // (see CallService); this is a guarded safety net for any case where
@@ -1059,36 +1047,6 @@ fun MeetingScreen(
     }
 }
 
-@Composable
-private fun PanelHeader(
-    title: String,
-    onClose: () -> Unit,
-    closeContentDescription: String,
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 12.dp, vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween,
-    ) {
-        Text(
-            text = title,
-            style = MaterialTheme.typography.titleMedium,
-            color = MaterialTheme.colorScheme.onSurface,
-        )
-        IconButton(onClick = onClose) {
-            Icon(
-                Icons.Default.Close,
-                contentDescription = closeContentDescription,
-            )
-        }
-    }
-    androidx.compose.material3.HorizontalDivider()
-}
-
-// ── Participants Panel ─────────────────────────────────────────────────────────
-
 // ── Kicked screen ─────────────────────────────────────────────────────────────
 
 @Composable
@@ -1103,350 +1061,26 @@ private fun KickedScreen(onBack: () -> Unit) {
             Icon(
                 Icons.Default.Badge,
                 contentDescription = null,
-                modifier = Modifier.size(72.dp),
+                modifier = Modifier.size(Dimens.meetingStateIcon),
                 tint = MaterialTheme.colorScheme.error
             )
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(Dimens.space16))
             Text(
                 text = stringResource(R.string.meeting_state_kickedTitle),
                 style = MaterialTheme.typography.headlineSmall,
                 color = MaterialTheme.colorScheme.onBackground
             )
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(Dimens.space8))
             Text(
                 text = stringResource(R.string.meeting_state_kickedMessage),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center,
-                modifier = Modifier.padding(horizontal = 32.dp)
+                modifier = Modifier.padding(horizontal = Dimens.meetingStatePadding)
             )
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(Dimens.space24))
             androidx.compose.material3.FilledTonalButton(onClick = onBack) {
                 Text(stringResource(R.string.meeting_button_backToDashboard))
-            }
-        }
-    }
-}
-
-@Composable
-private fun ChatPanel(
-    modifier: Modifier = Modifier.fillMaxSize(),
-    messages: List<ChatMessage>,
-    chatInput: String,
-    onChatInputChange: (String) -> Unit,
-    onSend: () -> Unit,
-    onClose: () -> Unit,
-    roomId: String? = null,
-    roomApi: RoomApi? = null,
-    serverURL: String = "",
-    accessToken: String? = null,
-    onSendWithAttachment: ((String, com.bedrud.app.core.livekit.ChatAttachment) -> Unit)? = null,
-) {
-    val listState = rememberLazyListState()
-    val scope = rememberCoroutineScope()
-    val context = LocalContext.current
-    val isKeyboardVisible = WindowInsets.ime.getBottom(LocalDensity.current) > 0
-    val bringIntoViewRequester = remember { BringIntoViewRequester() }
-    val flatFabElevation = FloatingActionButtonDefaults.elevation(
-        defaultElevation = 0.dp,
-        pressedElevation = 0.dp,
-        focusedElevation = 0.dp,
-        hoveredElevation = 0.dp
-    )
-
-    // Detect whether user has scrolled away from the bottom
-    val isAtBottom by remember {
-        derivedStateOf {
-            val lastVisible = listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
-            lastVisible >= messages.size - 2
-        }
-    }
-
-    // Auto-scroll to bottom only when following
-    LaunchedEffect(messages.size) {
-        if (messages.isNotEmpty() && isAtBottom) {
-            listState.animateScrollToItem(messages.size - 1)
-        }
-    }
-
-    var isUploading by remember { mutableStateOf(false) }
-    var uploadError by remember { mutableStateOf<String?>(null) }
-    var previewImageUrl by remember { mutableStateOf<String?>(null) }
-
-    val imagePicker = rememberLauncherForActivityResult(
-        ActivityResultContracts.PickVisualMedia()
-    ) { uri ->
-        if (uri == null || roomId == null || roomApi == null) return@rememberLauncherForActivityResult
-        scope.launch {
-            isUploading = true
-            uploadError = null
-            try {
-                val stream = context.contentResolver.openInputStream(uri)
-                    ?: throw Exception("Cannot open image")
-                val bytes = stream.readBytes()
-                stream.close()
-                val mimeType = context.contentResolver.getType(uri) ?: ChatUpload.DEFAULT_MIME
-                val ext = ChatUpload.extensionForMime(mimeType)
-                val requestBody = bytes.toRequestBody(mimeType.toMediaTypeOrNull())
-                val part = MultipartBody.Part.createFormData(
-                    ChatUpload.MULTIPART_FILE_FIELD,
-                    ChatUpload.fileName(ext),
-                    requestBody,
-                )
-                val response = roomApi.uploadChatImage(roomId, part)
-                if (response.isSuccessful) {
-                    val result = response.body()!!
-                    val attachment = com.bedrud.app.core.livekit.ChatAttachment(
-                        kind = ChatWire.ATTACHMENT_KIND_IMAGE,
-                        url = result.url,
-                        mime = result.mime,
-                        w = result.width,
-                        h = result.height,
-                        size = result.size,
-                    )
-                    onSendWithAttachment?.invoke(chatInput.trim(), attachment)
-                    onChatInputChange("")
-                } else {
-                    uploadError = "Upload failed (${response.code()})"
-                }
-            } catch (e: Exception) {
-                uploadError = e.message ?: "Upload failed"
-            } finally {
-                isUploading = false
-            }
-        }
-    }
-
-    Column(
-        modifier = modifier
-            .background(MaterialTheme.colorScheme.surface)
-    ) {
-        PanelHeader(
-            title = stringResource(R.string.meeting_panel_chat),
-            onClose = onClose,
-            closeContentDescription = stringResource(R.string.meeting_contentDescription_closeChat),
-        )
-
-        // Messages list + scroll-to-bottom button
-        Box(
-            modifier = Modifier
-                .weight(1f)
-                .fillMaxWidth()
-        ) {
-            LazyColumn(
-                state = listState,
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(horizontal = 12.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                items(messages) { message ->
-                    ChatBubble(
-                        message = message,
-                        serverURL = serverURL,
-                        accessToken = accessToken,
-                        onImageClick = { previewImageUrl = it },
-                    )
-                }
-            }
-
-            // Scroll-to-bottom FAB when user scrolled up
-            if (!isAtBottom) {
-                SmallFloatingActionButton(
-                    onClick = {
-                        scope.launch {
-                            if (messages.isNotEmpty()) listState.animateScrollToItem(messages.size - 1)
-                        }
-                    },
-                    modifier = Modifier
-                        .align(Alignment.BottomEnd)
-                        .padding(8.dp),
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    elevation = flatFabElevation
-                ) {
-                    Icon(
-                        Icons.Default.KeyboardArrowDown,
-                        contentDescription = stringResource(R.string.meeting_contentDescription_scrollToBottom),
-                        tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                    )
-                }
-            }
-        }
-
-        // Upload status
-        if (isUploading) {
-            Row(
-                modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
-            ) {
-                CircularProgressIndicator(modifier = Modifier.size(14.dp), strokeWidth = 2.dp)
-                Text(text = stringResource(R.string.meeting_chat_uploading), style = MaterialTheme.typography.labelSmall)
-            }
-        }
-        uploadError?.let { err ->
-            Text(
-                text = err,
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.error,
-                modifier = Modifier.padding(horizontal = 12.dp, vertical = 2.dp)
-            )
-        }
-
-        // Input dock — imePadding lifts above keyboard; extra bottom inset clears controls bar when closed
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(MaterialTheme.colorScheme.surface)
-                .imePadding()
-                .padding(horizontal = 8.dp, vertical = 8.dp)
-                .then(
-                    if (!isKeyboardVisible) {
-                        Modifier.padding(bottom = 72.dp)
-                    } else {
-                        Modifier
-                    },
-                ),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            // Image picker button
-            if (roomApi != null && roomId != null) {
-                IconButton(
-                    onClick = {
-                        imagePicker.launch(
-                            PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
-                        )
-                    },
-                    enabled = !isUploading,
-                ) {
-                    Icon(
-                        Icons.Default.Image,
-                        contentDescription = stringResource(R.string.meeting_contentDescription_attachImage),
-                        tint = if (!isUploading) MaterialTheme.colorScheme.onSurfaceVariant
-                               else MaterialTheme.colorScheme.outline,
-                    )
-                }
-            }
-            OutlinedTextField(
-                value = chatInput,
-                onValueChange = onChatInputChange,
-                placeholder = { Text(stringResource(R.string.meeting_chat_placeholder)) },
-                singleLine = true,
-                modifier = Modifier
-                    .weight(1f)
-                    .bringIntoViewRequester(bringIntoViewRequester)
-                    .onFocusEvent { focusState ->
-                        if (focusState.isFocused) {
-                            scope.launch { bringIntoViewRequester.bringIntoView() }
-                        }
-                    },
-                shape = RoundedCornerShape(24.dp),
-                textStyle = MaterialTheme.typography.bodyMedium.copy(
-                    textDirection = BidiUtils.textDirection(chatInput),
-                ),
-            )
-            Spacer(modifier = Modifier.width(4.dp))
-            IconButton(
-                onClick = onSend,
-                enabled = chatInput.isNotBlank() && !isUploading
-            ) {
-                Icon(
-                    Icons.AutoMirrored.Filled.Send,
-                    contentDescription = stringResource(R.string.meeting_contentDescription_send),
-                    tint = if (chatInput.isNotBlank() && !isUploading)
-                        MaterialTheme.colorScheme.primary
-                    else MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        }
-    }
-
-    ChatImageLightbox(
-        url = previewImageUrl,
-        serverURL = serverURL,
-        accessToken = accessToken,
-        onClose = { previewImageUrl = null },
-    )
-}
-
-@Composable
-private fun ChatBubble(
-    message: ChatMessage,
-    serverURL: String,
-    accessToken: String?,
-    onImageClick: (String) -> Unit,
-) {
-    val context = LocalContext.current
-    Column(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalAlignment = if (message.isLocal) Alignment.End else Alignment.Start
-    ) {
-        Text(
-            text = message.senderName,
-            style = MaterialTheme.typography.labelSmall.copy(textDirection = TextDirection.Content),
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-        Spacer(modifier = Modifier.height(2.dp))
-        Column(
-            horizontalAlignment = if (message.isLocal) Alignment.End else Alignment.Start
-        ) {
-            // Image attachments
-            message.attachments.filter { it.kind == ChatWire.ATTACHMENT_KIND_IMAGE }.forEach { att ->
-                val isDataUri = att.url.startsWith("data:")
-                if (isDataUri) {
-                    // Decode base64 data URI to bitmap in-memory
-                    val bitmap = remember(att.url) {
-                        runCatching {
-                            val b64 = att.url.substringAfter(",")
-                            val bytes = android.util.Base64.decode(b64, android.util.Base64.DEFAULT)
-                            android.graphics.BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
-                                ?.asImageBitmap()
-                        }.getOrNull()
-                    }
-                    if (bitmap != null) {
-                        Image(
-                            bitmap = bitmap,
-                            contentDescription = stringResource(R.string.meeting_chat_sharedImage),
-                            modifier = Modifier
-                                .fillMaxWidth(0.8f)
-                                .clip(RoundedCornerShape(10.dp))
-                                .clickable { onImageClick(att.url) },
-                            contentScale = ContentScale.FillWidth,
-                        )
-                    }
-                } else {
-                    AsyncImage(
-                        model = ChatImageUtils.imageRequest(context, serverURL, att.url, accessToken),
-                        contentDescription = stringResource(R.string.meeting_contentDescription_viewImage),
-                        modifier = Modifier
-                            .fillMaxWidth(0.8f)
-                            .clip(RoundedCornerShape(10.dp))
-                            .clickable { onImageClick(att.url) },
-                        contentScale = ContentScale.FillWidth,
-                    )
-                }
-                Spacer(modifier = Modifier.height(4.dp))
-            }
-            // Text content
-            if (message.text.isNotEmpty()) {
-                Box(
-                    modifier = Modifier
-                        .background(
-                            if (message.isLocal) MaterialTheme.colorScheme.primaryContainer
-                            else MaterialTheme.colorScheme.surfaceVariant,
-                            RoundedCornerShape(12.dp)
-                        )
-                        .padding(horizontal = 12.dp, vertical = 8.dp)
-                ) {
-                    Text(
-                        text = BidiUtils.wrap(message.text),
-                        style = MaterialTheme.typography.bodyMedium.copy(
-                            textDirection = BidiUtils.textDirection(message.text),
-                        ),
-                        color = if (message.isLocal) MaterialTheme.colorScheme.onPrimaryContainer
-                        else MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
             }
         }
     }

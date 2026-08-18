@@ -45,6 +45,9 @@ app/src/main/java/com/bedrud/app/
 │   ├── auth/                   AuthManager (encrypted prefs), PasskeyManager, OAuthLoginHandler
 │   ├── api/                    Retrofit interfaces: AuthApi, RoomApi, AdminApi + ApiClientFactory
 │   ├── livekit/RoomManager.kt  LiveKit room lifecycle, media toggles, chat
+│   ├── livekit/ParticipantMetadata.kt  Shared metadata blob: app writes the avatar, server writes moderation flags
+│   ├── meeting/chat/           Chat wire format (ChatWire), >60KB reassembly (ChatChunkAssembler), clustering
+│   ├── chat/                   Image upload for chat attachments (ChatImageUploader) + URL helpers
 │   ├── pip/PipState.kt         PiP state holder
 │   └── call/                   CallService + CallConnectionService (telecom integration)
 ├── models/                     Data classes (Gson-serialized)
@@ -82,6 +85,24 @@ Retrofit + OkHttp + Gson (not kotlinx-serialization for HTTP). `kotlin-serializa
 - `AuthInterceptor` — attaches `Authorization: Bearer <token>` to every request
 - `TokenAuthenticator` — handles 401 by refreshing token synchronously (creates separate Retrofit to avoid recursion), retries once, forces logout on failure
 - Base URL format: `https://host/api/` (trailing slash appended by `ApiClientFactory`)
+
+### Meeting data channel
+
+Chat messages never reach the server. They go participant-to-participant over the LiveKit data
+channel on the `chat` topic, so the wire format is a contract shared with the web and desktop
+clients — `core/meeting/chat/ChatWire.kt` is the only place that speaks it.
+
+- A payload is recognised by its **own `type` field**, never by the topic alone. Reactions
+  (`reaction`) and polls ride the same topic, and neither is implemented here; treating them as
+  messages is what used to put a sender's name in the list with nothing under it.
+- A message that would exceed **60,000 bytes** (against the channel's hard 65,535) is split by the
+  sender into a `chat_chunk_meta` header plus `chat_chunk` parts per section, reassembled by
+  `ChatChunkAssembler` and given up on after 120s of silence. The split is binary-searched on the
+  *encoded packet*, and never lands between the halves of a surrogate pair.
+- Payloads carrying nothing this client can draw — a poll, an empty message — are dropped rather
+  than rendered.
+- The server-side counterpart is upload-only: `POST room/:roomId/chat/upload` (multipart) with the
+  file served back from `GET /uploads/chat/*`. Only the resulting URL travels over the channel.
 
 ## Key Conventions
 

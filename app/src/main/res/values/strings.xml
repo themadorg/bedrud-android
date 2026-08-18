@@ -112,6 +112,15 @@
   <string name="meeting_chat_uploading">Uploading…</string>
   <string name="meeting_chat_placeholder">Type a message…</string>
   <string name="meeting_chat_sharedImage">Shared image</string>
+  <string name="meeting_chat_uploadUnreadable">Could not open that image</string>
+  <string name="meeting_chat_uploadRejected">The server refused that image (%1$d)</string>
+  <string name="meeting_chat_uploadUnreachable">Could not reach the server</string>
+  <string name="meeting_chat_disabledByRoom">Chat is turned off for this room</string>
+  <string name="meeting_chat_blockedByModerator">A moderator has blocked you from chatting</string>
+  <string name="meeting_chat_saveImage">Save image</string>
+  <string name="meeting_chat_imageSaved">Saved to Pictures</string>
+  <string name="meeting_chat_imageSaveUnreachable">Could not download that image</string>
+  <string name="meeting_chat_imageSaveUnwritable">Could not save to your gallery</string>
   <string name="meeting_contentDescription_toggleMic">Toggle Microphone</string>
   <string name="meeting_contentDescription_toggleCamera">Toggle Camera</string>
   <string name="meeting_contentDescription_switchCamera">Switch Camera</string>

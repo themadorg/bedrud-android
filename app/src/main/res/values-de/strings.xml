@@ -112,6 +112,15 @@
   <string name="meeting_chat_uploading">Hochladen…</string>
   <string name="meeting_chat_placeholder">Nachricht eingeben…</string>
   <string name="meeting_chat_sharedImage">Geteiltes Bild</string>
+  <string name="meeting_chat_uploadUnreadable">Das Bild konnte nicht geöffnet werden</string>
+  <string name="meeting_chat_uploadRejected">Der Server hat das Bild abgelehnt (%1$d)</string>
+  <string name="meeting_chat_uploadUnreachable">Der Server ist nicht erreichbar</string>
+  <string name="meeting_chat_disabledByRoom">Der Chat ist in diesem Raum deaktiviert</string>
+  <string name="meeting_chat_blockedByModerator">Ein Moderator hat dich vom Chat ausgeschlossen</string>
+  <string name="meeting_chat_saveImage">Bild speichern</string>
+  <string name="meeting_chat_imageSaved">In Bilder gespeichert</string>
+  <string name="meeting_chat_imageSaveUnreachable">Das Bild konnte nicht geladen werden</string>
+  <string name="meeting_chat_imageSaveUnwritable">Speichern in der Galerie fehlgeschlagen</string>
   <string name="meeting_contentDescription_toggleMic">Mikrofon umschalten</string>
   <string name="meeting_contentDescription_toggleCamera">Kamera umschalten</string>
   <string name="meeting_contentDescription_switchCamera">Kamera wechseln</string>

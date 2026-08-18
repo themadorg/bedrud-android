@@ -19,10 +19,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -37,8 +34,6 @@ import com.bedrud.app.R
 import com.bedrud.app.core.livekit.ConnectionState
 import com.bedrud.app.ui.components.DevOnly
 import com.bedrud.app.ui.theme.Dimens
-import com.bedrud.app.ui.theme.Motion
-import kotlinx.coroutines.delay
 
 /**
  * The in-call top bar: invite/participants entry at the start, the room name (with recording and
@@ -52,6 +47,14 @@ import kotlinx.coroutines.delay
 fun MeetingTopBar(
     roomName: String,
     connectionState: ConnectionState,
+    /**
+     * Whether to say "connected" in place of the room name for a moment.
+     *
+     * Decided by the caller, not here: this bar is taken out of composition whenever the chat panel
+     * or a fullscreen tile is open, and state remembered inside it would start again from nothing
+     * on the way back — announcing a connection that was established minutes ago.
+     */
+    showConnectedNotice: Boolean,
     isCameraEnabled: Boolean,
     onInvite: () -> Unit,
     onSwitchCamera: () -> Unit,
@@ -60,18 +63,6 @@ fun MeetingTopBar(
     modifier: Modifier = Modifier,
 ) {
     val colors = meetingChromeColors()
-
-    // Connecting otherwise ends in silence — the screen simply becomes the call, and the one
-    // thing people want confirmed is never said. The bar says it once, then hands the slot back
-    // to the room name. Fires again after a reconnect, which is when it is needed most.
-    var showConnected by remember { mutableStateOf(false) }
-    LaunchedEffect(connectionState) {
-        showConnected = connectionState == ConnectionState.CONNECTED
-        if (showConnected) {
-            delay(Motion.meetingConnectedNoticeMs)
-            showConnected = false
-        }
-    }
 
     Row(
         modifier = modifier
@@ -96,7 +87,7 @@ fun MeetingTopBar(
             horizontalArrangement = Arrangement.spacedBy(Dimens.space6, Alignment.CenterHorizontally),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Crossfade(targetState = showConnected, label = "connectedNotice") { connected ->
+            Crossfade(targetState = showConnectedNotice, label = "connectedNotice") { connected ->
                 if (connected) {
                     Text(
                         text = stringResource(R.string.meeting_status_connected),
@@ -117,10 +108,12 @@ fun MeetingTopBar(
                     )
                 }
             }
-            // Recording indicator — dev-gated placeholder until the server exposes recording
-            // state. TODO(#107): drive from real room recording state and drop the gate.
-            DevOnly {
-                RecordingDot(onClick = onRecordingClick)
+            // Recording indicator — off entirely while there is nothing to indicate, and dev-gated
+            // besides. TODO(#107): drive from real room recording state and drop both gates.
+            if (RecordingIndicatorEnabled) {
+                DevOnly {
+                    RecordingDot(onClick = onRecordingClick)
+                }
             }
             if (connectionState == ConnectionState.RECONNECTING) {
                 ReconnectingDot()

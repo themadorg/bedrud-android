@@ -89,7 +89,10 @@ to the OEM. Revisit only if themed-font users complain.
 ## Shape (`Shape.kt`)
 
 Rounded, Material-3-native. Scale: `xs 4 · sm 8 · md 12 · lg 16 · xl 20 · xxl 28 · full`. Semantic tokens:
-`field = md`, `button = md`, `card = lg`, `chip = sm`, `pill = full`, `sheetTop = xxl (top corners)`.
+`field = md`, `button = md`, `card = lg`, `chip = sm`, `pill = full`, `sheetTop = xxl (top corners)`,
+`videoTile = xxl`, `controlsBar = xxl` — the last two deliberately equal, since the call screen
+floats both on one background and a tile curving at a different rate from the bar beneath it reads
+as two unrelated systems rather than one.
 
 ## Spacing & sizing (`Dimens.kt`)
 
@@ -182,10 +185,13 @@ The in-call screen has its own chrome standard (palette via `meetingChromeColors
 the `meeting*` tokens in `Dimens.kt`, timing in `Motion.meetingChromeAutoHideDelayMs`):
 
 - **Top bar** (`MeetingTopBar`): invite/participants entry at the start; the room name centered,
-  with the recording dot (dev-gated until the server exposes recording state) and a reconnecting
-  dot when applicable; camera flip (**only while the local camera is live**) and audio output at
+  with a reconnecting dot when applicable; camera flip (**only while the local camera is live**) and audio output at
   the end. The center block is weight-balanced so the title never shifts as trailing actions
-  appear.
+  appear. Connecting is confirmed once — the name slot says "Connected" for
+  `Motion.meetingConnectedNoticeMs` and then hands itself back — and that timer lives in
+  `MeetingScreen`, not in the bar: the bar is removed from composition whenever the chat panel or
+  a fullscreen tile is open, so state held inside it would restart on the way back and announce a
+  connection made long ago.
 - **Controls bar** (`MeetingControlsBar`): a floating pill — camera, screen share, mic, chat,
   hang-up — with a **drag handle** on top. Tapping the handle or swiping up anywhere on the bar
   opens the more-options sheet, mirroring how a bottom sheet is pulled up. There is no "⋯" button.
@@ -213,6 +219,39 @@ the `meeting*` tokens in `Dimens.kt`, timing in `Motion.meetingChromeAutoHideDel
   placeholder with a watch button, your own share offers stop, and long-pressing the watched
   stream opens `MeetingStreamSheet` (dev-hinted volume until share audio exists (#105), leave
   stream — neutral, not red: leaving is reversible).
+- **Chat** (`MeetingChatPanel`, `MeetingChatRow`): consecutive messages from one person, sent
+  within `ChatClusterGapMs` of each other, are drawn as a single run — one name and one avatar at
+  the top, then a bubble per message with the corners facing the sender's own side tightened so
+  the run reads as one block. Senders are told apart by **identity, not display name**: two people
+  may pick the same name. The local side gets neither name nor avatar, being already on the
+  reader's own side of the panel. There are **no timestamps** on screen — the send time is kept
+  only to order the conversation and to decide where a run breaks — and **no empty state**: an
+  empty panel over an open call is self-explanatory. Remote avatars take a stable colour hashed
+  from identity across the theme's own accent roles, so a busy room stays scannable without a
+  palette of its own.
+  The list is **reversed**, one item per message rather than one per run: the conversation then
+  hangs from the bottom edge without being scrolled there, a long run can still be recycled, and
+  arriving messages leave the reader's position alone. Whether to stay at the newest is settled
+  when a scroll comes to rest, never while a message is landing — otherwise each arrival reads as
+  "the reader has scrolled away" and strands the view a message further back. Your own send
+  overrides it and always returns to the latest.
+  Messages are ordered by **when they were sent**, not when they arrived: a burst can reach the
+  data channel out of order, and a conversation that reads 7, 8, 6 is wrong however it came.
+  The header is a real M3 `TopAppBar`, so instead of a permanent rule under the title it takes on
+  a raised container colour exactly while messages pass beneath it. Its own window insets are off —
+  the meeting Scaffold has already inset the panel.
+  Message text is **selectable**, scoped to one bubble: the list is reversed and recycles its items,
+  so a drag spanning messages would keep losing the end it started from. Tapping a picture opens the
+  lightbox, which can **save it to `Pictures/Bedrud`** via `MediaStore` — no permission at all from
+  Android 10 on, and `WRITE_EXTERNAL_STORAGE` capped at API 28 for the one older version supported.
+  The lightbox says whether it worked for `Motion.lightboxOutcomeNoticeMs` and then gets out of the
+  way, rather than raising a snackbar the dialog would cover.
+  When chat is off for the room, or a moderator has blocked this person, the input dock is
+  replaced by a **warning-coloured** notice saying which — never the error colour, since nothing
+  has gone wrong — and the conversation stays readable: restricting who may speak should not
+  retract what was already said. Enforcement is client-side by necessity: messages travel
+  participant-to-participant over the LiveKit data channel, so the server can only set a
+  `chatBlocked` flag on the participant's metadata and trust each client to honour it.
 - **Per-tile fullscreen** (`MeetingParticipantFullscreen`): chrome (name chip, collapse button,
   controls bar) auto-hides after `meetingChromeAutoHideDelayMs` of inactivity; any tap toggles it
   back; while hidden the system bars hide too (immersive). The hardware back key collapses
@@ -322,9 +361,12 @@ the `meeting*` tokens in `Dimens.kt`, timing in `Motion.meetingChromeAutoHideDel
   bar's handle opens `MeetingMoreOptionsSheet`, which mirrors the five call controls along its
   top and lists deafen, hide-all-cameras (viewer-side data saver), audio settings, the
   dev-hinted noise suppression (#106), invite, and admin room settings. The output picker uses
-  trailing radios. `MeetingRecordingBanner` (dev-gated, #107) drops below the top bar from the
-  recording dot. There is no side panel anymore — the participants list lives in the invite
-  sheet.
+  trailing radios. `MeetingRecordingBanner` and the dot that opened it are **switched off** behind
+  `RecordingIndicatorEnabled` (#107): the server has no egress client and registers no recording
+  routes, so nothing in the app can be recording, and a permanently lit privacy light above a
+  banner claiming every camera and message is captured is worse than none at all. The UI is kept
+  and still compiles so the flag turns it back on. There is no side panel anymore — the
+  participants list lives in the invite sheet.
 
 ## Dev-only affordances
 

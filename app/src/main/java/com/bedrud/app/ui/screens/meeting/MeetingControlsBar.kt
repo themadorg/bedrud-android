@@ -23,7 +23,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -117,9 +116,8 @@ fun MeetingControlsBar(
 
     Surface(
         modifier = modifier
-            .padding(horizontal = Dimens.space16)
+            .padding(horizontal = Dimens.meetingScreenMargin)
             .fillMaxWidth()
-            .navigationBarsPadding()
             .pointerInput(Unit) {
                 var dragTotal = 0f
                 detectVerticalDragGestures(
@@ -281,7 +279,7 @@ private fun DragHandle(
             .clip(BedrudShapeTokens.pill)
             .clickable(onClick = onClick)
             .padding(horizontal = Dimens.space16)
-            .padding(top = Dimens.space6, bottom = Dimens.space6)
+            .padding(top = Dimens.space4, bottom = Dimens.space4)
             .semantics { contentDescription = description },
         contentAlignment = Alignment.Center,
     ) {
@@ -531,7 +529,7 @@ private fun MicStatusRing(
         ),
         label = "micRingPulse",
     )
-    val strokeWidth = with(LocalDensity.current) { Dimens.borderStrong.toPx() }
+    val strokeWidth = with(LocalDensity.current) { Dimens.meetingMicRingStroke.toPx() }
 
     Canvas(modifier = modifier) {
         val corner = CornerRadius(size.height / 2f)

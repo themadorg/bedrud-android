@@ -112,6 +112,15 @@
   <string name="meeting_chat_uploading">جارٍ الرفع…</string>
   <string name="meeting_chat_placeholder">اكتب رسالة…</string>
   <string name="meeting_chat_sharedImage">صورة مشتركة</string>
+  <string name="meeting_chat_uploadUnreadable">تعذّر فتح تلك الصورة</string>
+  <string name="meeting_chat_uploadRejected">رفض الخادم تلك الصورة (%1$d)</string>
+  <string name="meeting_chat_uploadUnreachable">تعذّر الوصول إلى الخادم</string>
+  <string name="meeting_chat_disabledByRoom">الدردشة معطّلة في هذه الغرفة</string>
+  <string name="meeting_chat_blockedByModerator">منعك أحد المشرفين من الدردشة</string>
+  <string name="meeting_chat_saveImage">حفظ الصورة</string>
+  <string name="meeting_chat_imageSaved">تم الحفظ في الصور</string>
+  <string name="meeting_chat_imageSaveUnreachable">تعذّر تنزيل تلك الصورة</string>
+  <string name="meeting_chat_imageSaveUnwritable">تعذّر الحفظ في معرض الصور</string>
   <string name="meeting_contentDescription_toggleMic">تبديل الميكروفون</string>
   <string name="meeting_contentDescription_toggleCamera">تبديل الكاميرا</string>
   <string name="meeting_contentDescription_switchCamera">تبديل الكاميرا</string>
