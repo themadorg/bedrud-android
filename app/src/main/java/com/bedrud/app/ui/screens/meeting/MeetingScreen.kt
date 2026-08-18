@@ -209,6 +209,9 @@ fun MeetingScreen(
     LaunchedEffect(showChat, chatMessages.size) {
         if (showChat || chatMessages.size < lastReadCount) lastReadCount = chatMessages.size
     }
+    // A message that arrives with the panel open needs no sound, for the same reason it adds
+    // nothing to the badge below.
+    LaunchedEffect(showChat) { roomManager.setChatVisible(showChat) }
     // Only what someone else said is news: a message you sent yourself never wants your attention.
     val unreadCount = if (showChat) {
         0

@@ -214,10 +214,13 @@ class RoomManager(
     private var bridgeLoudAtMillis: Long? = null
     private var bridgeLoudLevel: Float = 0f
 
-    // Notification tones for the call, played on the call's own audio route. The quiet window is
-    // written and read from [eventScope], which is single threaded, so it needs no guarding.
+    // Notification tones for the call, played on the call's own audio route. Every field here is
+    // touched from [eventScope] and from the meeting UI, both of which run on the main thread, so
+    // none of them needs guarding.
     private val meetingSounds = MeetingSounds()
     private var soundsAudibleFromMillis = Long.MAX_VALUE
+    private var isChatVisible = false
+    private var lastMessageSoundAtMillis = 0L
 
     // Why the room is not hearing this participant, when it plainly should be.
     private val voiceReachMonitor = VoiceReachMonitor()
@@ -257,6 +260,29 @@ class RoomManager(
         if (_isDeafened.value) return
         if (SystemClock.elapsedRealtime() < soundsAudibleFromMillis) return
         meetingSounds.play(sound)
+    }
+
+    /**
+     * Announces an arriving message, at most once every [MessageSoundIntervalMillis].
+     *
+     * A burst of messages is one event to the person hearing it, not six, and six pops on top of
+     * each other is noise rather than notification.
+     */
+    private fun playMessageSound() {
+        val now = SystemClock.elapsedRealtime()
+        if (now - lastMessageSoundAtMillis < MessageSoundIntervalMillis) return
+        lastMessageSoundAtMillis = now
+        playMeetingSound(MeetingSound.Message)
+    }
+
+    /**
+     * Tells the room whether the chat is on screen.
+     *
+     * A message that lands in front of the reader announces itself; the pop is for the ones they
+     * would otherwise miss, which is the same line the unread badge is drawn on.
+     */
+    fun setChatVisible(visible: Boolean) {
+        isChatVisible = visible
     }
 
     /** Starts the quiet window that keeps a (re)connect from announcing everyone already there. */
@@ -732,6 +758,7 @@ class RoomManager(
             attachments = incoming.attachments,
             poll = incoming.poll,
         )
+        if (!isChatVisible) playMessageSound()
     }
 
     /**
@@ -832,6 +859,8 @@ class RoomManager(
         resetSpeakingState()
         meetingSounds.stopAll()
         soundsAudibleFromMillis = Long.MAX_VALUE
+        isChatVisible = false
+        lastMessageSoundAtMillis = 0L
         eventScope?.cancel()
         eventScope = null
         _room?.disconnect()
@@ -1333,6 +1362,14 @@ class RoomManager(
          * arrivals — and short enough that someone walking in right behind you is still announced.
          */
         private const val SoundSettleMillis = 1_500L
+
+        /**
+         * Shortest gap between two message pops.
+         *
+         * Set by how long the pop itself takes to land and clear rather than by how fast messages
+         * can arrive — anything closer overlaps the previous one and reads as a rattle.
+         */
+        private const val MessageSoundIntervalMillis = 500L
 
         /** Time a publication needs to settle before muting it keeps the capture chain alive. */
         private const val MutedCaptureSettleMillis = 400L
