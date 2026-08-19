@@ -118,6 +118,7 @@ import com.bedrud.app.models.RoomSettings
 import com.bedrud.app.models.UpdateRoomSettingsRequest
 import com.bedrud.app.models.User
 import com.bedrud.app.models.UserRoomResponse
+import com.bedrud.app.ui.components.InitialsAvatar
 import com.bedrud.app.ui.components.BedrudButton
 import com.bedrud.app.ui.components.BedrudButtonVariant
 import com.bedrud.app.ui.components.BedrudCompactTopBar
@@ -862,8 +863,6 @@ private fun ProfileAvatarButton(user: User?, onClick: () -> Unit) {
         Box(
             modifier = Modifier
                 .size(Dimens.avatarLg)
-                .clip(BedrudShapeTokens.pill)
-                .background(MaterialTheme.colorScheme.primary)
                 .semantics { contentDescription = desc },
             contentAlignment = Alignment.Center,
         ) {
@@ -877,10 +876,14 @@ private fun ProfileAvatarButton(user: User?, onClick: () -> Unit) {
                     contentScale = ContentScale.Crop,
                 )
             } else {
-                Text(
-                    text = (user?.name?.take(1) ?: "?").uppercase(),
-                    style = MaterialTheme.typography.titleLarge,
-                    color = MaterialTheme.colorScheme.onPrimary,
+                // The one initials avatar rather than a second copy of it: this drew its own circle
+                // and its own letter, so it did not inherit the centring the shared one does.
+                InitialsAvatar(
+                    name = user?.name,
+                    size = Dimens.avatarLg,
+                    textStyle = MaterialTheme.typography.titleLarge,
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary,
                 )
             }
         }

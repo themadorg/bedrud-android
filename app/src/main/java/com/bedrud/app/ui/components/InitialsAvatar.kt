@@ -2,6 +2,7 @@ package com.bedrud.app.ui.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
@@ -14,6 +15,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.bedrud.app.ui.theme.rememberInkCenteringOffset
 
 /**
  * A colored circle showing the first letter of [name], uppercased — the app's initials avatar,
@@ -33,6 +35,7 @@ fun InitialsAvatar(
     contentColor: Color = Color.White,
     fallbackInitial: String = "?",
 ) {
+    val initial = (name?.takeIf { it.isNotBlank() } ?: fallbackInitial).take(1).uppercase()
     Box(
         modifier = modifier
             .size(size)
@@ -41,9 +44,13 @@ fun InitialsAvatar(
         contentAlignment = Alignment.Center
     ) {
         Text(
-            text = (name?.takeIf { it.isNotBlank() } ?: fallbackInitial).take(1).uppercase(),
+            text = initial,
             style = textStyle,
-            color = contentColor
+            color = contentColor,
+            // A circle has no edges to align to, so the letter has to carry its own centring. The
+            // box Compose centres is the font's, and this app's font sizes that box for Arabic
+            // marks and Persian tails that a Latin capital never uses.
+            modifier = Modifier.offset(y = rememberInkCenteringOffset(initial, textStyle)),
         )
     }
 }
