@@ -84,95 +84,9 @@ import kotlin.math.PI
 import kotlin.math.sin
 
 /**
- * The floating in-call controls pill: camera, screen share, mic, chat and hang-up, with a drag
- * handle on top. Tapping the handle — or swiping up anywhere on the bar — opens the more-options
- * sheet, mirroring how a bottom sheet is pulled up. The sheet itself is owned by the caller.
- */
-@Composable
-fun MeetingControlsBar(
-    isMicEnabled: Boolean,
-    isCameraEnabled: Boolean,
-    micHasError: Boolean = false,
-    cameraHasError: Boolean = false,
-    isScreenShareEnabled: Boolean,
-    showChat: Boolean,
-    unreadCount: Int,
-    inputMode: MeetingInputMode = MeetingInputMode.VOICE_ACTIVITY,
-    connectionState: ConnectionState = ConnectionState.CONNECTED,
-    voiceAlert: MeetingVoiceAlert = MeetingVoiceAlert.None,
-    onPushToTalkChange: (Boolean) -> Unit = {},
-    onToggleMic: () -> Unit,
-    onToggleCamera: () -> Unit,
-    onToggleScreenShare: () -> Unit,
-    onToggleChat: () -> Unit,
-    onOpenMoreOptions: () -> Unit,
-    onEndCall: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    val colors = meetingChromeColors()
-    val swipeThresholdPx = with(LocalDensity.current) {
-        Dimens.meetingHandleSwipeThreshold.toPx()
-    }
-
-    Surface(
-        modifier = modifier
-            .padding(horizontal = Dimens.meetingScreenMargin)
-            .fillMaxWidth()
-            .pointerInput(Unit) {
-                var dragTotal = 0f
-                detectVerticalDragGestures(
-                    onDragStart = { dragTotal = 0f },
-                    onVerticalDrag = { _, dragAmount -> dragTotal += dragAmount },
-                    onDragEnd = {
-                        if (dragTotal < -swipeThresholdPx) onOpenMoreOptions()
-                    },
-                )
-            },
-        shape = BedrudShapeTokens.controlsBar,
-        color = colors.bar,
-        shadowElevation = Elevation.controlsBarShadow,
-        tonalElevation = Elevation.controlsBarTonal,
-        border = androidx.compose.foundation.BorderStroke(Dimens.borderThin, colors.divider),
-    ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            DragHandle(
-                color = colors.onButtonVariant.copy(alpha = DragHandleAlpha),
-                onClick = onOpenMoreOptions,
-            )
-
-            MeetingCallControlsRow(
-                isMicEnabled = isMicEnabled,
-                isCameraEnabled = isCameraEnabled,
-                micHasError = micHasError,
-                cameraHasError = cameraHasError,
-                isScreenShareEnabled = isScreenShareEnabled,
-                showChat = showChat,
-                unreadCount = unreadCount,
-                inputMode = inputMode,
-                connectionState = connectionState,
-                voiceAlert = voiceAlert,
-                onPushToTalkChange = onPushToTalkChange,
-                onToggleMic = onToggleMic,
-                onToggleCamera = onToggleCamera,
-                onToggleScreenShare = onToggleScreenShare,
-                onToggleChat = onToggleChat,
-                onEndCall = onEndCall,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(
-                        start = Dimens.meetingBarPaddingH,
-                        end = Dimens.meetingBarPaddingH,
-                        bottom = Dimens.meetingBarPaddingV,
-                    ),
-            )
-        }
-    }
-}
-
-/**
- * The five call controls, shared verbatim by the floating bar and the more-options sheet so both
- * places render the exact same buttons — sizes, off-state fills, badge, and the push-to-talk
- * pill included.
+ * The five call controls: the row that sits at the foot of [MeetingControlsPanel], collapsed or
+ * expanded. It is a composable of its own so the panel's two states share one definition of the
+ * buttons — sizes, off-state fills, badge, and the push-to-talk pill included.
  */
 @Composable
 internal fun MeetingCallControlsRow(
@@ -267,7 +181,7 @@ internal fun MeetingCallControlsRow(
  * larger clickable area so it is also a tap target, with the more-options semantics.
  */
 @Composable
-private fun DragHandle(
+internal fun MeetingPanelHandle(
     color: Color,
     onClick: () -> Unit,
 ) {
@@ -287,7 +201,7 @@ private fun DragHandle(
             modifier = Modifier
                 .width(Dimens.meetingHandleWidth)
                 .height(Dimens.meetingHandleHeight)
-                .background(color, CircleShape),
+                .background(color.copy(alpha = DragHandleAlpha), CircleShape),
         )
     }
 }
