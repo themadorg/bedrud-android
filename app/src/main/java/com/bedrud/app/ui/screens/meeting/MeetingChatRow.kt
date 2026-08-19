@@ -150,6 +150,7 @@ fun MeetingChatRow(
                 } else {
                     null
                 },
+                contentColor = MaterialTheme.colorScheme.onSurface,
             )
         }
     }

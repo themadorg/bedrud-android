@@ -16,6 +16,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
@@ -91,6 +92,14 @@ fun ChatReactionsSheet(
 private const val ReactorSeparator = ", "
 
 /**
+ * How much of the surrounding text colour a reaction the reader has not joined keeps.
+ *
+ * Low enough that the reader's own chips still read as the filled ones and the wash never competes
+ * with the message it sits under, high enough to hold a visible edge in both themes.
+ */
+private const val UnreactedChipAlpha = 0.16f
+
+/**
  * The reactions already on a message, one chip per emoji.
  *
  * Wraps rather than scrolls: a message with more reactions than fit on a line is unusual enough
@@ -103,6 +112,12 @@ fun ChatReactionRow(
     currentIdentity: String,
     /** Null when this reader may not react — the chips still show, they just do not answer back. */
     onToggle: ((String) -> Unit)?,
+    /**
+     * What the surface behind these chips writes its text in. A reaction the reader has not joined
+     * is a wash of it, which is what keeps the chip legible wherever it is put: whatever the surface
+     * underneath is coloured, its own text colour is by definition readable against it.
+     */
+    contentColor: Color,
     modifier: Modifier = Modifier,
 ) {
     val chips = reactions.grouped(currentIdentity)
@@ -122,13 +137,14 @@ fun ChatReactionRow(
                     // pill radius on a square is a circle — which read as an avatar, not a chip.
                     .widthIn(min = Dimens.chatReactionChipMinWidth)
                     .clip(BedrudShapeTokens.pill)
-                    // The reader's own reaction is filled the way their own messages are, so one
-                    // glance answers "did I react to this" without counting.
+                    // Solid accent for the reader's own reaction, a wash of the surrounding text
+                    // colour for everyone else's, so one glance answers "did I react to this"
+                    // without counting.
                     .background(
                         if (chip.mine) {
-                            MaterialTheme.colorScheme.primaryContainer
+                            MaterialTheme.colorScheme.primary
                         } else {
-                            MaterialTheme.colorScheme.surfaceContainerHigh
+                            contentColor.copy(alpha = UnreactedChipAlpha)
                         }
                     )
                     .let { base ->
@@ -160,9 +176,9 @@ fun ChatReactionRow(
                         text = chip.count.toString(),
                         style = MaterialTheme.typography.labelSmall,
                         color = if (chip.mine) {
-                            MaterialTheme.colorScheme.onPrimaryContainer
+                            MaterialTheme.colorScheme.onPrimary
                         } else {
-                            MaterialTheme.colorScheme.onSurfaceVariant
+                            contentColor
                         },
                     )
                 }
