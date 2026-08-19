@@ -192,9 +192,24 @@ the `meeting*` tokens in `Dimens.kt`, timing in `Motion.meetingChromeAutoHideDel
   `MeetingScreen`, not in the bar: the bar is removed from composition whenever the chat panel or
   a fullscreen tile is open, so state held inside it would restart on the way back and announce a
   connection made long ago.
-- **Controls bar** (`MeetingControlsBar`): a floating pill — camera, screen share, mic, chat,
-  hang-up — with a **drag handle** on top. Tapping the handle or swiping up anywhere on the bar
-  opens the more-options sheet, mirroring how a bottom sheet is pulled up. There is no "⋯" button.
+- **Controls panel** (`MeetingControlsPanel`): a floating pill — camera, screen share, mic, chat,
+  hang-up — with a **drag handle** on top. Tapping the handle, or swiping up anywhere on it, grows
+  the pill into the room options; the handle, the scrim, Back and a swipe down all put it away.
+  There is no "⋯" button.
+
+  **The one place in the app that is not a `BedrudBottomSheet`**, deliberately. As a sheet, the
+  options arrived as a *second* surface carrying its own copy of the controls, sliding up over the
+  real bar and settling higher: the same five buttons existed twice at two elevations, the row your
+  thumb rested on jumped, and at the end of the dismissal both were briefly on screen at once.
+  Here there is one surface, anchored to the bottom, so the options unfold **above** the controls
+  and the controls never move — the pill just becomes taller. That anchoring is why the panel reads
+  bottom-up: the row you were already touching stays its floor.
+
+  It also owns its motion, which a sheet could not. `ModalBottomSheet` hides on Material's
+  `FastEffects` — measured on a real device at 117 ms, starting at full velocity with no ease-in,
+  against a 250 ms eased open — so it left twice as fast as it arrived and felt yanked away.
+  `MotionScheme` is `internal` in material3 1.4.0, so the timing cannot be themed; the panel uses
+  `Motion.meetingOptionsExpandMs` / `meetingOptionsCollapseMs` instead, both eased at both ends.
 - **Grid** (`MeetingVideoGrid`): the local participant **always** has a tile, camera on or off —
   it is where the speaking ring proves the room is receiving you, so it cannot be conditional.
   (This reverses the original "self-tile only while the camera is on" rule from #104.) There is
@@ -352,14 +367,13 @@ the `meeting*` tokens in `Dimens.kt`, timing in `Motion.meetingChromeAutoHideDel
   reacted to may well predate this device's join. Nothing is re-synced on join, so a reaction or a
   vote cast before arriving is one this device never sees; the other clients have the same hole, and
   closing it means changing the shared protocol rather than this app.
-- **More options** (`MeetingMoreOptionsSheet`): the controls row keeps **its bar** inside the sheet —
-  same corner, fill and hairline as the collapsed one. Pulled out of that container it was five loose
-  shapes on the sheet's surface (a rounded-rect camera, two circles, a wide mic pill, the hang-up)
-  with nothing holding the variety together and `button` barely separating from the sheet's own
-  container. Expanding now reveals the options *below the bar you were already looking at* rather
-  than restyling it mid-drag, so the divider under the row is gone too: the bar's own edge separates.
-  Deafen uses a **crossed headphone**, matching the badge on the tiles — deafening is about what
-  reaches your ears, where a speaker icon says something about the room.
+- **More options** (`MeetingControlsPanel`): not a sheet at all — the controls bar itself grows to
+  hold them, so there is no second copy of the row to style and nothing to restyle mid-drag. The
+  options sit above the controls, which stay exactly where they were. Rows and controls share the
+  one surface with spacing between them rather than a rule: a divider inside a container this small
+  would cut the bar in half rather than group anything. See **Controls panel** under Meeting chrome for why this one screen
+  leaves the sheet standard. Deafen uses a **crossed headphone**, matching the badge on the tiles —
+  deafening is about what reaches your ears, where a speaker icon says something about the room.
 - **Deafened badge**: drawn on **whoever is deafened**, not only on your own tile. Deafen is part
   of the room's shared presence — every client announces it and reads it back — so a person who
   cannot hear the room looks the same to everyone watching. Your own reads from the manager rather
@@ -474,9 +488,9 @@ the `meeting*` tokens in `Dimens.kt`, timing in `Motion.meetingChromeAutoHideDel
   room deafen / chat mute, #108). The top-bar invite entry, the "+N" tile and the more-options
   "Invite a friend" row all open `MeetingInviteSheet` (participant avatar grid, share targets —
   system share, copy, inline QR, email, Telegram, WhatsApp — and the raw link). The controls
-  bar's handle opens `MeetingMoreOptionsSheet`, which mirrors the five call controls along its
-  top and lists deafen, hide-all-cameras (viewer-side data saver), audio settings, the
-  dev-hinted noise suppression (#106), invite, and admin room settings. The output picker uses
+  bar's handle expands it into `MeetingControlsPanel`, which keeps the five call controls at its
+  foot and lists deafen, hide-all-cameras (viewer-side data saver), audio settings, the
+  dev-hinted noise suppression (#106), invite, and admin room settings above them. The output picker uses
   trailing radios. `MeetingRecordingBanner` and the dot that opened it are **switched off** behind
   `RecordingIndicatorEnabled` (#107): the server has no egress client and registers no recording
   routes, so nothing in the app can be recording, and a permanently lit privacy light above a
