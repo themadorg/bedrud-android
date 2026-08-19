@@ -16,6 +16,19 @@ object Motion {
     /** Idle time before the in-call fullscreen chrome hides itself. */
     const val meetingChromeAutoHideDelayMs = 3500L
 
+    /**
+     * How long the controls bar takes to grow into the options panel, and to fall back.
+     *
+     * Owned here rather than taken from the platform sheet this replaced: `ModalBottomSheet` hides
+     * on Material's `FastEffects`, which starts at full speed with no ease-in and was gone in
+     * 117 ms — measured against a 250 ms eased open, so the panel left twice as fast as it
+     * arrived and read as being yanked away. These two are close enough to feel like one gesture
+     * reversed, with the collapse a little quicker because a panel on its way out should not keep
+     * the call waiting.
+     */
+    const val meetingOptionsExpandMs = 320
+    const val meetingOptionsCollapseMs = 260
+
     /** How long the top bar says "Connected" before handing the slot back to the room name. */
     const val meetingConnectedNoticeMs = 2000L
 
