@@ -19,6 +19,8 @@ For the server, web app, and other platforms, see the [main Bedrud project](http
 - **Connect to multiple servers** — add several Bedrud instances and switch between them; each keeps its own login
 - **Add a server by QR** — scan a Bedrud server's QR code to fill in its URL instead of typing it
 - **Meetings as real calls** — joining starts a self-managed telecom call, so meetings get proper audio routing, a call notification with mute/hangup, and survive backgrounding
+- **Screen off at your ear** — with the call on the earpiece, covering the proximity sensor blanks
+  the screen and ignores touches, so a cheek cannot press anything
 - **Picture-in-Picture** — keep the meeting visible while using other apps
 - **Screen sharing** — several people can present at once, and watching a stream is opt-in per viewer
 - **In-meeting chat** over the LiveKit data channel — messages grouped by sender, emoji reactions
