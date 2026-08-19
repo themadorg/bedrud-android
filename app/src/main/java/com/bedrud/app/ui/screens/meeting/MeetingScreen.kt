@@ -518,6 +518,16 @@ fun MeetingScreen(
                                         addAll(room.remoteParticipants.values)
                                     }.sortedByDescending { it.identity?.value == pinnedIdentity }
                                 }
+                                // The grid draws from resolved values rather than from the room's
+                                // own objects: those mutate in place, and a tile handed the same
+                                // unchanged participant is skipped — which is how a camera could
+                                // come on without the tile ever noticing.
+                                val gridTileStates = rememberParticipantTileStates(
+                                    participants = gridTiles,
+                                    participantVersion = participantVersion,
+                                    localIdentity = localIdentity,
+                                    isLocalMicEnabled = isMicEnabled,
+                                )
                                 // Nobody else in the grid: a stream takes the stage and shares the
                                 // full height instead of staying strip-sized, and the self-tile
                                 // stands down for it — there is no one to hear you anyway.
@@ -563,15 +573,13 @@ fun MeetingScreen(
 
                                 if (!expandStreams) {
                                     MeetingVideoGrid(
-                                        tiles = gridTiles,
+                                        tiles = gridTileStates,
                                         room = room,
                                         localIdentity = localIdentity,
                                         disabledVideoIdentities = locallyHiddenVideoIdentities,
                                         hideAllIncomingVideo = hideAllIncomingVideo,
-                                        mutedIdentities = locallyMutedIdentities,
                                         pinnedIdentity = pinnedIdentity,
                                         speakingLevels = speakingLevels,
-                                        isLocalMicEnabled = isMicEnabled,
                                         isLocalDeafened = isDeafened,
                                         deafenedIdentities = deafenedIdentities,
                                         onOpenParticipantActions = { identity ->
