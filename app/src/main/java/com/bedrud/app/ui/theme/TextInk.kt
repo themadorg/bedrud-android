@@ -8,6 +8,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFontFamilyResolver
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontSynthesis
@@ -51,18 +52,24 @@ import androidx.compose.ui.unit.dp
  */
 @Composable
 fun rememberInkCenteringOffset(text: String, style: TextStyle): Dp {
+    val measurer = rememberTextMeasurer()
     val paint = rememberFontPaint(style)
     val density = LocalDensity.current
-    return remember(paint, text, density) {
+    return remember(measurer, paint, text, style, density) {
         if (text.isEmpty()) return@remember 0.dp
         val ink = Rect().also { paint.getTextBounds(text, 0, text.length, it) }
         if (ink.isEmpty) return@remember 0.dp
-        val metrics = paint.fontMetrics
-        // Both are measured from the baseline and both run negative upwards, so the difference is
-        // simply how far the letters sit above where the box is centred.
-        val boxCenter = (metrics.ascent + metrics.descent) / 2f
-        val inkCenter = (ink.top + ink.bottom) / 2f
-        with(density) { (boxCenter - inkCenter).toDp() }
+        // The box has to come from the layout rather than from the typeface, because a line takes
+        // its height from every font that ends up on it. Vazirmatn carries no Cyrillic, Greek or
+        // CJK, so those arrive from the platform's fallback — and where that fallback is the taller
+        // of the two, as Noto Sans CJK is, it is the fallback that sets the box. Asking the
+        // typeface alone put an ideograph 6px low in a 147px circle.
+        val layout = measurer.measure(text, style)
+        val boxHeight = layout.size.height.toFloat()
+        // Ink is measured from the baseline and runs negative upwards; the layout measures from the
+        // top of the line, so the baseline is what puts the two on one scale.
+        val inkCenterFromTop = layout.firstBaseline + (ink.top + ink.bottom) / 2f
+        with(density) { (boxHeight / 2f - inkCenterFromTop).toDp() }
     }
 }
 
