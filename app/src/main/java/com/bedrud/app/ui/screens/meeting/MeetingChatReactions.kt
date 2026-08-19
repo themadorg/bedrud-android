@@ -95,12 +95,18 @@ private const val ReactorSeparator = ", "
  * How much of the surrounding text colour a reaction the reader has not joined keeps.
  *
  * Low enough that the reader's own chips still read as the filled ones and the wash never competes
- * with the message it sits under, high enough to hold a visible edge in both themes.
+ * with the message it sits under, high enough to hold a visible edge on either bubble in both
+ * themes.
  */
 private const val UnreactedChipAlpha = 0.16f
 
 /**
  * The reactions already on a message, one chip per emoji.
+ *
+ * Sits inside the bubble it belongs to, along its bottom edge, so a reaction reads as part of the
+ * message rather than as a row of loose badges under the conversation. That placement is what sets
+ * the colours below: a chip drawn in a container colour would be invisible against the bubble
+ * already using it, so the chips key off the accent and off [contentColor] instead.
  *
  * Wraps rather than scrolls: a message with more reactions than fit on a line is unusual enough
  * that growing the row downwards is kinder than hiding half of them behind a gesture.
@@ -114,7 +120,7 @@ fun ChatReactionRow(
     onToggle: ((String) -> Unit)?,
     /**
      * What the surface behind these chips writes its text in. A reaction the reader has not joined
-     * is a wash of it, which is what keeps the chip legible wherever it is put: whatever the surface
+     * is a wash of it, which is what keeps the chip legible wherever it is put: whatever the bubble
      * underneath is coloured, its own text colour is by definition readable against it.
      */
     contentColor: Color,
@@ -124,7 +130,7 @@ fun ChatReactionRow(
     if (chips.isEmpty()) return
 
     FlowRow(
-        modifier = modifier.padding(top = Dimens.space2),
+        modifier = modifier,
         horizontalArrangement = Arrangement.spacedBy(Dimens.space4),
         verticalArrangement = Arrangement.spacedBy(Dimens.space4),
     ) {
@@ -139,7 +145,9 @@ fun ChatReactionRow(
                     .clip(BedrudShapeTokens.pill)
                     // Solid accent for the reader's own reaction, a wash of the surrounding text
                     // colour for everyone else's, so one glance answers "did I react to this"
-                    // without counting.
+                    // without counting. The rest state deliberately does not use the accent: on the
+                    // reader's own bubble, which is already tinted with that same accent, a wash of
+                    // it came out as a smudge rather than as a chip.
                     .background(
                         if (chip.mine) {
                             MaterialTheme.colorScheme.primary

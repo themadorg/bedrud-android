@@ -117,11 +117,12 @@ fun MeetingChatRow(
                     row = row,
                     shape = shape,
                     currentIdentity = currentIdentity,
-                    canVote = canParticipate,
+                    canParticipate = canParticipate,
                     serverURL = serverURL,
                     accessToken = accessToken,
                     onImageClick = onImageClick,
                     onLongPress = { menuOpen = true },
+                    onToggleReaction = { emoji -> onToggleReaction(row.message.id, emoji) },
                     onVote = onVote,
                     onShowPollResults = onShowPollResults,
                     onLinkClick = onLinkClick,
@@ -140,18 +141,28 @@ fun MeetingChatRow(
                     onShowReactions = { onShowReactions(row.message.id) },
                 )
             }
-            // The chips stay on show whether or not this reader may react: they are part of what
-            // was said, and a block takes away the reply, not the record.
-            ChatReactionRow(
-                reactions = row.message.reactions,
-                currentIdentity = currentIdentity,
-                onToggle = if (canParticipate) {
-                    { emoji -> onToggleReaction(row.message.id, emoji) }
-                } else {
-                    null
-                },
-                contentColor = MaterialTheme.colorScheme.onSurface,
-            )
+            // A message with text keeps its chips inside the bubble, along the bottom edge. One
+            // that is only a picture or a poll has no text container to put them in, so they hang
+            // below it as before.
+            // TODO(#135): overlay them on the picture and put them inside the poll bubble, so one
+            //  conversation does not carry two placements.
+            //
+            // Either way the chips stay on show whether or not this reader may react: they are part
+            // of what was said, and a block takes away the reply, not the record.
+            if (row.message.text.isEmpty()) {
+                ChatReactionRow(
+                    reactions = row.message.reactions,
+                    currentIdentity = currentIdentity,
+                    onToggle = if (canParticipate) {
+                        { emoji -> onToggleReaction(row.message.id, emoji) }
+                    } else {
+                        null
+                    },
+                    // No bubble behind these, so they key off the panel itself.
+                    contentColor = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.padding(top = Dimens.space2),
+                )
+            }
         }
     }
 }
@@ -163,11 +174,12 @@ private fun ChatBubble(
     row: ChatRow,
     shape: RoundedCornerShape,
     currentIdentity: String,
-    canVote: Boolean,
+    canParticipate: Boolean,
     serverURL: String,
     accessToken: String?,
     onImageClick: (String) -> Unit,
     onLongPress: () -> Unit,
+    onToggleReaction: (String) -> Unit,
     onVote: (String, String) -> Unit,
     onShowPollResults: (String) -> Unit,
     onLinkClick: (String) -> Unit,
@@ -194,7 +206,7 @@ private fun ChatBubble(
                 poll = poll,
                 currentIdentity = currentIdentity,
                 shape = shape,
-                onVote = if (canVote) {
+                onVote = if (canParticipate) {
                     { optionId -> onVote(message.id, optionId) }
                 } else {
                     null
@@ -212,16 +224,7 @@ private fun ChatBubble(
             } else {
                 MaterialTheme.colorScheme.onSurface
             }
-            Text(
-                text = rememberChatMessageText(
-                    text = message.text,
-                    contentColor = contentColor,
-                    onLinkClick = onLinkClick,
-                ),
-                style = MaterialTheme.typography.bodyMedium.copy(
-                    textDirection = BidiUtils.textDirection(message.text),
-                ),
-                color = contentColor,
+            Column(
                 modifier = Modifier
                     .background(
                         if (row.isLocal) {
@@ -234,7 +237,28 @@ private fun ChatBubble(
                     .clip(shape)
                     .combinedClickable(onClick = {}, onLongClick = onLongPress)
                     .padding(horizontal = Dimens.space12, vertical = Dimens.space8),
-            )
+            ) {
+                Text(
+                    text = rememberChatMessageText(
+                        text = message.text,
+                        contentColor = contentColor,
+                        onLinkClick = onLinkClick,
+                    ),
+                    style = MaterialTheme.typography.bodyMedium.copy(
+                        textDirection = BidiUtils.textDirection(message.text),
+                    ),
+                    color = contentColor,
+                )
+                // Start-aligned under the text rather than tucked against the bubble's outer edge,
+                // so a reaction on a long message begins where its first line does.
+                ChatReactionRow(
+                    reactions = message.reactions,
+                    currentIdentity = currentIdentity,
+                    onToggle = if (canParticipate) onToggleReaction else null,
+                    contentColor = contentColor,
+                    modifier = Modifier.padding(top = Dimens.space4),
+                )
+            }
         }
     }
 }
