@@ -674,19 +674,30 @@ private fun MeetCircleButton(
     badge: String? = null,
 ) {
     val button = @Composable {
-        Surface(
-            onClick = onClick,
-            shape = CircleShape,
-            color = containerColor,
-            modifier = Modifier.size(Dimens.meetingCircleButton),
+        // The circle is 44dp by design, but the thing a finger aims at must still be the
+        // accessibility floor: a 44dp clickable measured exactly 44dp, and a tap landing a few
+        // dp outside it died on the bar — which read as "the chat button needs two taps". The
+        // clickable spans the 48dp box; only the drawn circle stays 44.
+        Box(
+            modifier = Modifier
+                .size(Dimens.minTouchTarget)
+                .clip(CircleShape)
+                .clickable(onClick = onClick),
+            contentAlignment = Alignment.Center,
         ) {
-            Box(contentAlignment = Alignment.Center) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = contentDescription,
-                    tint = colors.onButton,
-                    modifier = Modifier.size(Dimens.meetingBarIconSm),
-                )
+            Surface(
+                shape = CircleShape,
+                color = containerColor,
+                modifier = Modifier.size(Dimens.meetingCircleButton),
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = contentDescription,
+                        tint = colors.onButton,
+                        modifier = Modifier.size(Dimens.meetingBarIconSm),
+                    )
+                }
             }
         }
     }
