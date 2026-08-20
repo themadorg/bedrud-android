@@ -21,6 +21,8 @@ import com.bedrud.app.core.livekit.ConnectionState
 import com.bedrud.app.core.livekit.RoomManager
 import com.bedrud.app.core.recent.RecentRoomsStore
 import com.bedrud.app.core.registerNotificationChannel
+import com.twilio.audioswitch.AudioDevice
+import com.twilio.audioswitch.AudioDeviceChangeListener
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -37,6 +39,8 @@ class CallService : Service() {
     private var serviceScope: CoroutineScope? = null
     private var callStartTime: Long = 0L
     private var wakeLock: PowerManager.WakeLock? = null
+    private var proximityScreenLock: ProximityScreenLock? = null
+    private var audioRouteListener: AudioDeviceChangeListener? = null
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -147,6 +151,15 @@ class CallService : Service() {
             }
         }
 
+        // Proximity blanking follows the audio route, and the route lives on the audio handler the
+        // room only builds once it connects — so it binds on connection rather than here. Binding
+        // is idempotent, which matters because a reconnect reports CONNECTED again.
+        serviceScope?.launch {
+            rm.connectionState.collectLatest { state ->
+                if (state == ConnectionState.CONNECTED) bindProximityBlanking(rm)
+            }
+        }
+
         return START_STICKY
     }
 
@@ -163,6 +176,8 @@ class CallService : Service() {
         }
 
         releaseWakeLock()
+        // Before roomManager is dropped: the listener is unregistered from its audio handler.
+        releaseProximityBlanking()
 
         roomManager?.onDisconnected = null
         if (userInitiatedHangUp) {
@@ -209,6 +224,39 @@ class CallService : Service() {
         ) {
             nm.notify(NOTIFICATION_ID, notification)
         }
+    }
+
+    /**
+     * Blanks the screen on proximity, but only while the earpiece is the output.
+     *
+     * That route is the one that means the phone is at an ear; speaker, wired and Bluetooth all
+     * mean it is not, and blanking on those would darken a phone sitting on the desk in front of
+     * its user.
+     */
+    private fun bindProximityBlanking(roomManager: RoomManager) {
+        val audioHandler = roomManager.audioHandler ?: return
+        val lock = proximityScreenLock
+            ?: ProximityScreenLock(this, MAX_CALL_DURATION_MS).also { proximityScreenLock = it }
+        val listener = audioRouteListener ?: run {
+            val created: AudioDeviceChangeListener = { _, selected ->
+                val atTheEar = selected is AudioDevice.Earpiece
+                Log.d(TAG, "Audio route ${selected?.javaClass?.simpleName}; proximity blanking=$atTheEar")
+                lock.setEnabled(atTheEar)
+            }
+            audioRouteListener = created
+            created
+        }
+        audioHandler.registerAudioDeviceChangeListener(listener)
+        lock.setEnabled(audioHandler.selectedAudioDevice is AudioDevice.Earpiece)
+    }
+
+    private fun releaseProximityBlanking() {
+        audioRouteListener?.let { listener ->
+            roomManager?.audioHandler?.unregisterAudioDeviceChangeListener(listener)
+        }
+        audioRouteListener = null
+        proximityScreenLock?.setEnabled(false)
+        proximityScreenLock = null
     }
 
     private fun acquireWakeLock() {
@@ -309,7 +357,9 @@ class CallService : Service() {
         const val ACTION_HANG_UP = "com.bedrud.app.HANG_UP"
         const val ACTION_TOGGLE_MUTE = "com.bedrud.app.TOGGLE_MUTE"
         const val ACTION_RETURN_TO_MEETING = "com.bedrud.app.RETURN_TO_MEETING"
-        private const val MAX_CALL_DURATION_MS = 8 * 60 * 60 * 1000L
+        // The ceiling both of the call's wake locks fall back on: no meeting runs this long, so
+        // reaching it means the service died without releasing, not that a call is still up.
+        internal const val MAX_CALL_DURATION_MS = 8 * 60 * 60 * 1000L
 
         var isRunning = false
             private set

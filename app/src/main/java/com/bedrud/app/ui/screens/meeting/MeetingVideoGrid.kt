@@ -25,7 +25,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -38,15 +37,11 @@ import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.text.style.TextOverflow
 import coil.compose.AsyncImage
 import com.bedrud.app.R
-import com.bedrud.app.core.livekit.RoomManager
 import com.bedrud.app.ui.components.InitialsAvatar
 import com.bedrud.app.ui.theme.BedrudShapeTokens
 import com.bedrud.app.ui.theme.Dimens
 import io.livekit.android.compose.ui.VideoTrackView
 import io.livekit.android.room.Room
-import io.livekit.android.room.participant.Participant
-import io.livekit.android.room.track.Track
-import org.json.JSONObject
 
 /** Most tiles the grid shows at once; beyond this the last slot collapses into a "+N" tile. */
 private const val MAX_GRID_TILES = 6
@@ -74,15 +69,13 @@ private fun gridRows(count: Int): List<Int> = when (count) {
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun MeetingVideoGrid(
-    tiles: List<Participant>,
+    tiles: List<ParticipantTileState>,
     room: Room,
     localIdentity: String?,
     disabledVideoIdentities: Set<String>,
     hideAllIncomingVideo: Boolean,
-    mutedIdentities: Set<String>,
     pinnedIdentity: String?,
     speakingLevels: Map<String, Float>,
-    isLocalMicEnabled: Boolean,
     isLocalDeafened: Boolean = false,
     deafenedIdentities: Set<String> = emptySet(),
     onOpenParticipantActions: (String) -> Unit,
@@ -101,17 +94,15 @@ fun MeetingVideoGrid(
     val tileContent: @Composable (slotIndex: Int, slotModifier: Modifier) -> Unit =
         { slotIndex, slotModifier ->
             if (slotIndex < visible.size) {
-                val participant = visible[slotIndex]
+                val tile = visible[slotIndex]
                 ParticipantTile(
-                    participant = participant,
-                    isLocalParticipant = participant.identity?.value == localIdentity,
+                    state = tile,
+                    isLocalParticipant = tile.identity == localIdentity,
                     room = room,
                     disabledVideoIdentities = disabledVideoIdentities,
                     hideAllIncomingVideo = hideAllIncomingVideo,
-                    mutedIdentities = mutedIdentities,
-                    isPinned = participant.identity?.value == pinnedIdentity,
-                    speakingLevel = speakingLevels[participant.identity?.value] ?: 0f,
-                    isLocalMicEnabled = isLocalMicEnabled,
+                    isPinned = tile.identity == pinnedIdentity,
+                    speakingLevel = speakingLevels[tile.identity] ?: 0f,
                     isLocalDeafened = isLocalDeafened,
                     deafenedIdentities = deafenedIdentities,
                     onOpenParticipantActions = onOpenParticipantActions,
@@ -203,51 +194,26 @@ private fun RowScope.HalfWidthCentered(
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 internal fun ParticipantTile(
-    participant: Participant,
+    state: ParticipantTileState,
     isLocalParticipant: Boolean = false,
     room: Room? = null,
     disabledVideoIdentities: Set<String> = emptySet(),
     hideAllIncomingVideo: Boolean = false,
-    mutedIdentities: Set<String> = emptySet(),
     isPinned: Boolean = false,
     speakingLevel: Float = 0f,
-    isLocalMicEnabled: Boolean = true,
     isLocalDeafened: Boolean = false,
     deafenedIdentities: Set<String> = emptySet(),
     onOpenParticipantActions: ((String) -> Unit)? = null,
     onExpand: ((String) -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
-    val identity = participant.identity?.value ?: RoomManager.UNKNOWN_PARTICIPANT_NAME
+    val identity = state.identity
     val isVideoLocallyDisabled =
         identity in disabledVideoIdentities || (!isLocalParticipant && hideAllIncomingVideo)
-    val isLocallyMuted = identity in mutedIdentities
-
-    val cameraPublication = participant.getTrackPublication(Track.Source.CAMERA)
-    val cameraTrack = cameraPublication
-        ?.track as? io.livekit.android.room.track.VideoTrack
-    val isCameraMuted = cameraPublication?.muted == true
-    // Your own mute reads from the manager, not from the publication. Muting flips the local
-    // state instantly but the track's muted flag settles a moment later, so a publication-driven
-    // badge lags your own tap — and the badge everyone else already sees is the one you expect to
-    // see on yourself.
-    val micPublication = participant.getTrackPublication(Track.Source.MICROPHONE)
-    val isMicOff = if (isLocalParticipant) {
-        !isLocalMicEnabled
-    } else {
-        micPublication == null || micPublication.muted
-    }
-    val name = participant.name?.ifBlank { identity } ?: identity
-
-    // Parse avatar URL from participant metadata
-    val avatarUrl = remember(participant.metadata) {
-        participant.metadata?.let { meta ->
-            try {
-                val obj = JSONObject(meta)
-                if (obj.has("avatarUrl")) obj.getString("avatarUrl") else null
-            } catch (_: Exception) { null }
-        }
-    }
+    val cameraTrack = state.cameraTrack
+    val isMicOff = state.isMicOff
+    val name = state.name
+    val avatarUrl = state.avatarUrl
 
     // Your own tile has no participant menu — the actions on it all belong to someone else.
     val openMenu: (() -> Unit)? = onOpenParticipantActions
@@ -288,7 +254,7 @@ internal fun ParticipantTile(
         contentAlignment = Alignment.Center
     ) {
         when {
-            cameraTrack != null && !isCameraMuted && !isVideoLocallyDisabled && room != null -> {
+            cameraTrack != null && !isVideoLocallyDisabled && room != null -> {
                 VideoTrackView(
                     videoTrack = cameraTrack,
                     modifier = Modifier.fillMaxSize(),

@@ -213,6 +213,12 @@ the `meeting*` tokens in `Dimens.kt`, timing in `Motion.meetingChromeAutoHideDel
   **Double-tap** expands a tile to fullscreen and long-press opens the participant actions;
   there is no corner button. Since touch exploration cannot produce a double tap, the tile also
   carries a custom accessibility action for fullscreen — the gesture is never the only route.
+  A tile draws from a resolved `ParticipantTileState`, never from LiveKit's `Participant` object.
+  Those objects mutate in place — a camera track appears on the instance already on screen — and
+  the compiler reports `ParticipantTile` as *skippable*, so a tile handed the same instance is
+  skipped and keeps drawing the avatar until some unrelated parameter happens to change. Resolving
+  the reads once per `participantVersion` makes the new track a changed parameter, which is what
+  makes the tile redraw at all.
 - **Streams** (`MeetingStreamTile`): every live screenshare gets a strip tile above the grid.
   Several people can share at once; watching is **opt-in per viewer, one stream at a time**
   (LiveKit selective subscription — no gossip protocol). Unwatched shares render as a
@@ -483,6 +489,15 @@ the `meeting*` tokens in `Dimens.kt`, timing in `Motion.meetingChromeAutoHideDel
   banner claiming every camera and message is captured is worse than none at all. The UI is kept
   and still compiles so the flag turns it back on. There is no side panel anymore — the
   participants list lives in the invite sheet.
+- **Screen off at the ear** (`core/call/ProximityScreenLock`): while the **earpiece** is the chosen
+  output, `CallService` holds a `PROXIMITY_SCREEN_OFF_WAKE_LOCK`, so the display blanks and stops
+  taking touches whenever the sensor is covered — the behaviour of every dialer, and the reason a
+  cheek cannot hang up the call it is resting on. The earpiece is the one route that means the
+  phone is against a face; on speaker, wired or Bluetooth the lock is released, because those all
+  describe a phone somebody is looking at. It follows the route rather than the call, so moving to
+  speaker mid-call lifts it immediately, and it is released on the way out with
+  `RELEASE_FLAG_WAIT_FOR_NO_PROXIMITY` so the screen does not flash back on against an ear. Devices
+  without the sensor never take the lock at all.
 
 ## Sound (`core/audio/MeetingTone.kt`)
 

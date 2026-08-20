@@ -51,7 +51,8 @@ app/src/main/java/com/bedrud/app/
 │   ├── meeting/presence/       Presence wire format (PresenceWire) — deafen state
 │   ├── chat/                   Image upload for chat attachments (ChatImageUploader) + URL helpers
 │   ├── pip/PipState.kt         PiP state holder
-│   └── call/                   CallService + CallConnectionService (telecom integration)
+│   └── call/                   CallService + CallConnectionService (telecom integration),
+│                               ProximityScreenLock (screen off while the phone is at an ear)
 ├── models/                     Data classes (Gson-serialized)
 └── ui/
     ├── theme/                  Design tokens: Color, Theme, Type, Shape, Dimens, Elevation, Motion
