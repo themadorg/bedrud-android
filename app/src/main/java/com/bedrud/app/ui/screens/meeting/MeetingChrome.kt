@@ -4,15 +4,19 @@ import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.border
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
+import androidx.compose.material3.Surface
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
@@ -28,7 +32,9 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import com.bedrud.app.R
+import com.bedrud.app.ui.theme.BedrudShapeTokens
 import com.bedrud.app.ui.theme.Dimens
+import com.bedrud.app.ui.theme.Elevation
 import com.bedrud.app.ui.theme.Motion
 
 /**
@@ -51,11 +57,45 @@ data class MeetingChromeColors(
     val divider: Color,
     val selected: Color,
     val accent: Color,
+    val onAccent: Color,
     val mediaError: Color,
     val onMediaError: Color,
     val endCall: Color,
     val onEndCall: Color,
 )
+
+/**
+ * The floating bottom bar's shell: the surface every bar over the call stands on.
+ *
+ * The controls bar and the chat composer are the same object with different contents — they sit in
+ * the same place on screen and swap with each other — so their margin, corner, fill, hairline and
+ * lift come from this one composable rather than from values each keeps matched by hand. When the
+ * two drifted apart (12dp lower, 16dp shorter, a different elevation), every drifted value was a
+ * separate token doing the same job; this is the fix that makes the next drift impossible rather
+ * than merely repaired.
+ *
+ * Contents supply their own inner padding — [Dimens.meetingBarPaddingH] beside,
+ * [Dimens.meetingBarPaddingV] below (and above, for a bar without a handle) — so a 48dp control
+ * band lands identically in every bar built on this.
+ */
+@Composable
+fun MeetingBarSurface(
+    modifier: Modifier = Modifier,
+    content: @Composable () -> Unit,
+) {
+    val colors = meetingChromeColors()
+    Surface(
+        modifier = modifier
+            .padding(horizontal = Dimens.meetingScreenMargin)
+            .fillMaxWidth(),
+        shape = BedrudShapeTokens.controlsBar,
+        color = colors.bar,
+        shadowElevation = Elevation.controlsBarShadow,
+        tonalElevation = Elevation.controlsBarTonal,
+        border = BorderStroke(Dimens.borderThin, colors.divider),
+        content = content,
+    )
+}
 
 @Composable
 fun meetingChromeColors(): MeetingChromeColors {
@@ -71,6 +111,7 @@ fun meetingChromeColors(): MeetingChromeColors {
         divider = scheme.outline.copy(alpha = 0.45f),
         selected = scheme.secondary,
         accent = scheme.primary,
+        onAccent = scheme.onPrimary,
         mediaError = scheme.error,
         onMediaError = scheme.onError,
         endCall = scheme.error,
