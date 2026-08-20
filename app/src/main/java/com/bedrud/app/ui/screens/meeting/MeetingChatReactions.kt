@@ -19,14 +19,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.PlatformTextStyle
-import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.style.LineHeightStyle
 import androidx.compose.ui.text.style.TextDirection
 import com.bedrud.app.R
 import com.bedrud.app.core.BidiUtils
@@ -37,6 +33,7 @@ import com.bedrud.app.ui.components.BedrudBottomSheet
 import com.bedrud.app.ui.components.BedrudSheetTitle
 import com.bedrud.app.ui.theme.BedrudShapeTokens
 import com.bedrud.app.ui.theme.Dimens
+import com.bedrud.app.ui.theme.rememberInkCenteringOffset
 
 /**
  * Who reacted with what, opened from the message's own menu.
@@ -97,37 +94,6 @@ fun ChatReactionsSheet(
 private const val ReactorSeparator = ", "
 
 /**
- * How the emoji and the tally are set inside a chip.
- *
- * Trimming the line box down to the font's own ascent and descent is the first half of centring a
- * chip's contents: a text node centred by the layout centres its *line box*, and an untrimmed line
- * box carries the leading, which is asymmetric and — for a colour emoji — far taller than the ink
- * it holds. See [ChipInkDescentShare] for the second half.
- */
-@Composable
-private fun chipTextStyle(base: TextStyle): TextStyle = base.copy(
-    platformStyle = PlatformTextStyle(includeFontPadding = false),
-    lineHeightStyle = LineHeightStyle(
-        alignment = LineHeightStyle.Alignment.Center,
-        trim = LineHeightStyle.Trim.Both,
-    ),
-)
-
-/**
- * How far a chip's contents are pushed down, as a share of the emoji's own font size.
- *
- * Trimming to the ascent–descent box and centring it still leaves the ink high, because ink sits
- * between the ascent and the *baseline* — the descent below it is empty, so centring the box lifts
- * everything in it by half a descent. Measured on screen at 12sp/2.625x: the emoji and the tally
- * both sat 3px high in a 53px chip, hence a shade under a tenth of the font size. Taken as a share
- * rather than as a fixed dp so it holds when the type scale or the font-size setting changes.
- *
- * Applied as an offset, not as padding: the chip's height is a token ([Dimens.chatReactionChip]),
- * and padding would let the glyph push the pill taller instead of moving inside it.
- */
-private const val ChipInkDescentShare = 0.095f
-
-/**
  * How much of the surrounding text colour a reaction the reader has not joined keeps.
  *
  * Low enough that the reader's own chips still read as the filled ones and the wash never competes
@@ -165,13 +131,8 @@ fun ChatReactionRow(
     val chips = reactions.grouped(currentIdentity)
     if (chips.isEmpty()) return
 
-    val glyphStyle = chipTextStyle(MaterialTheme.typography.labelMedium)
-    val countStyle = chipTextStyle(MaterialTheme.typography.labelSmall)
-    // One nudge for both, taken from the emoji's size: they are on one line and have to keep their
-    // relation to each other, so they move together rather than each settling on its own metrics.
-    val inkNudge = with(LocalDensity.current) {
-        (glyphStyle.fontSize.toPx() * ChipInkDescentShare).toDp()
-    }
+    val glyphStyle = MaterialTheme.typography.labelMedium
+    val countStyle = MaterialTheme.typography.labelSmall
 
     FlowRow(
         modifier = modifier,
@@ -220,18 +181,26 @@ fun ChatReactionRow(
                     alignment = Alignment.CenterHorizontally,
                 ),
             ) {
+                // Each glyph carries its own centring: an emoji and a digit have different ink
+                // inside boxes the layout treats alike, so one shared correction would only ever
+                // suit one of them.
                 Text(
                     text = chip.emoji,
                     style = glyphStyle,
-                    modifier = Modifier.offset(y = inkNudge),
+                    modifier = Modifier.offset(
+                        y = rememberInkCenteringOffset(chip.emoji, glyphStyle),
+                    ),
                 )
                 // One reaction needs no tally: the emoji is already the whole message, and "1"
                 // beside it only asks the reader to count to one.
                 if (chip.count > 1) {
+                    val tally = chip.count.toString()
                     Text(
-                        text = chip.count.toString(),
+                        text = tally,
                         style = countStyle,
-                        modifier = Modifier.offset(y = inkNudge),
+                        modifier = Modifier.offset(
+                            y = rememberInkCenteringOffset(tally, countStyle),
+                        ),
                         color = if (chip.mine) {
                             MaterialTheme.colorScheme.onPrimary
                         } else {
