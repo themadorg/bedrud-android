@@ -118,6 +118,7 @@
   <string name="meeting_chat_saveImage">ذخیره تصویر</string>
   <string name="meeting_contentDescription_react">واکنش به این پیام</string>
   <string name="meeting_chat_poll_new">نظرسنجی جدید</string>
+  <string name="meeting_chat_composerMenu">افزودن به پیام</string>
   <string name="meeting_chat_poll_question">پرسش</string>
   <string name="meeting_chat_poll_questionPlaceholder">درباره چه چیزی تصمیم می‌گیریم؟</string>
   <string name="meeting_chat_poll_option">گزینه %1$d</string>
@@ -154,7 +155,7 @@
   <string name="meeting_contentDescription_moreOptions">گزینه‌های بیشتر</string>
   <string name="meeting_contentDescription_closeChat">بستن چت</string>
   <string name="meeting_contentDescription_scrollToBottom">اسکرول به پایین</string>
-  <string name="meeting_contentDescription_attachImage">پیوست تصویر</string>
+  <string name="meeting_chat_attachImage">پیوست تصویر</string>
   <string name="meeting_contentDescription_send">ارسال</string>
   <string name="admin_users">کاربران</string>
   <string name="admin_tab_rooms">اتاق‌ها</string>

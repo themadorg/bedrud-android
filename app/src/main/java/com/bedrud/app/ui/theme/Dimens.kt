@@ -100,6 +100,10 @@ object Dimens {
     val meetingBarIconMedia = 22.dp
     val meetingBarIconSm = 20.dp
     val meetingBarIconLg = 24.dp
+    // Optical correction for the send plane: the glyph's ink centroid sits ~3dp behind its box's
+    // centre (wide tail left, sharp tip right, measured on a device capture), so a geometrically
+    // centred plane reads as sitting off towards the tail. Half the imbalance, towards the tip.
+    val meetingSendIconNudge = 1.5.dp
     val meetingHandleWidth = 32.dp       // controls-bar drag handle (M3 sheet handle metrics)
     val meetingHandleHeight = 4.dp
     // The mic pill's status arc. Thinner than a normal strong border: the arc travels around the
@@ -156,11 +160,9 @@ object Dimens {
     // So a single emoji is a pill rather than a circle. Only just wider than tall: at 40dp an 11.4dp
     // emoji floated in 14.5dp of padding a side, which is what made the chip read heavy.
     val chatReactionChipMinWidth = 32.dp
-    // The composer is one raised bar inset from the panel's edges, not a band across the bottom, and
-    // it is deliberately shorter than a Material text field: a call's chat dock competes with the
-    // conversation above it, where a form field is the main event on its screen.
-    val chatDockBar = 44.dp
-    val chatDockIcon = 36.dp             // icon targets inside that bar, sized to it rather than to the 48dp default
+    // The composer has no sizing tokens of its own: it is built on MeetingBarSurface and the
+    // controls bar's tokens (meetingBarPaddingH/V, meetingMediaButtonHeight, meetingEndCallWidth),
+    // so the two bars cannot drift apart again. See DESIGN.md, "Meeting chrome".
     val chatPollWidth = 220.dp           // a poll sets its own width, so its bars are comparable between messages
     val chatPollOption = 36.dp           // one answer row, tall enough to tap without reading as a button
 

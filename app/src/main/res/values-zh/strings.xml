@@ -120,6 +120,7 @@
   <string name="meeting_chat_saveImage">保存图片</string>
   <string name="meeting_contentDescription_react">回应这条消息</string>
   <string name="meeting_chat_poll_new">新建投票</string>
+  <string name="meeting_chat_composerMenu">添加到消息</string>
   <string name="meeting_chat_poll_question">问题</string>
   <string name="meeting_chat_poll_questionPlaceholder">我们要决定什么？</string>
   <string name="meeting_chat_poll_option">选项 %1$d</string>
@@ -155,7 +156,7 @@
   <string name="meeting_contentDescription_moreOptions">更多选项</string>
   <string name="meeting_contentDescription_closeChat">关闭聊天</string>
   <string name="meeting_contentDescription_scrollToBottom">滚动到底部</string>
-  <string name="meeting_contentDescription_attachImage">附加图片</string>
+  <string name="meeting_chat_attachImage">附加图片</string>
   <string name="meeting_contentDescription_send">发送</string>
   <string name="admin_users">用户</string>
   <string name="admin_tab_rooms">房间</string>

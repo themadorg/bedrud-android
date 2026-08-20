@@ -120,6 +120,7 @@
   <string name="meeting_chat_saveImage">حفظ الصورة</string>
   <string name="meeting_contentDescription_react">التفاعل مع هذه الرسالة</string>
   <string name="meeting_chat_poll_new">استطلاع جديد</string>
+  <string name="meeting_chat_composerMenu">إضافة إلى الرسالة</string>
   <string name="meeting_chat_poll_question">السؤال</string>
   <string name="meeting_chat_poll_questionPlaceholder">ما الذي نقرره؟</string>
   <string name="meeting_chat_poll_option">الإجابة %1$d</string>
@@ -165,7 +166,7 @@
   <string name="meeting_contentDescription_moreOptions">خيارات إضافية</string>
   <string name="meeting_contentDescription_closeChat">إغلاق الدردشة</string>
   <string name="meeting_contentDescription_scrollToBottom">التمرير إلى الأسفل</string>
-  <string name="meeting_contentDescription_attachImage">إرفاق صورة</string>
+  <string name="meeting_chat_attachImage">إرفاق صورة</string>
   <string name="meeting_contentDescription_send">إرسال</string>
   <string name="admin_users">المستخدمون</string>
   <string name="admin_tab_rooms">الغرف</string>

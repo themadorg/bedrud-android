@@ -120,6 +120,7 @@
   <string name="meeting_chat_saveImage">Сохранить изображение</string>
   <string name="meeting_contentDescription_react">Отреагировать на сообщение</string>
   <string name="meeting_chat_poll_new">Новый опрос</string>
+  <string name="meeting_chat_composerMenu">Добавить к сообщению</string>
   <string name="meeting_chat_poll_question">Вопрос</string>
   <string name="meeting_chat_poll_questionPlaceholder">Что решаем?</string>
   <string name="meeting_chat_poll_option">Вариант %1$d</string>
@@ -161,7 +162,7 @@
   <string name="meeting_contentDescription_moreOptions">Дополнительно</string>
   <string name="meeting_contentDescription_closeChat">Закрыть чат</string>
   <string name="meeting_contentDescription_scrollToBottom">Прокрутить вниз</string>
-  <string name="meeting_contentDescription_attachImage">Прикрепить изображение</string>
+  <string name="meeting_chat_attachImage">Прикрепить изображение</string>
   <string name="meeting_contentDescription_send">Отправить</string>
   <string name="admin_users">Пользователи</string>
   <string name="admin_tab_rooms">Комнаты</string>

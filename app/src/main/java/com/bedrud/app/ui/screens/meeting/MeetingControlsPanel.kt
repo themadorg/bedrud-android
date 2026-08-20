@@ -8,7 +8,6 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
@@ -29,7 +28,6 @@ import androidx.compose.material.icons.filled.Videocam
 import androidx.compose.material.icons.filled.VideocamOff
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -45,9 +43,7 @@ import com.bedrud.app.core.audio.MeetingInputMode
 import com.bedrud.app.core.audio.MeetingVoiceAlert
 import com.bedrud.app.core.livekit.ConnectionState
 import com.bedrud.app.ui.components.BedrudSheetActionRow
-import com.bedrud.app.ui.theme.BedrudShapeTokens
 import com.bedrud.app.ui.theme.Dimens
-import com.bedrud.app.ui.theme.Elevation
 import com.bedrud.app.ui.theme.Motion
 
 /** How far the scrim dims the call while the options are open. */
@@ -129,28 +125,20 @@ fun BoxScope.MeetingControlsPanel(
         )
     }
 
-    Surface(
-        modifier = modifier
-            .padding(horizontal = Dimens.meetingScreenMargin)
-            .fillMaxWidth()
-            .pointerInput(expanded) {
-                var dragTotal = 0f
-                detectVerticalDragGestures(
-                    onDragStart = { dragTotal = 0f },
-                    onVerticalDrag = { _, dragAmount -> dragTotal += dragAmount },
-                    // Up opens, down closes — the panel answers the same gesture in both
-                    // directions, so whatever opened it puts it away again.
-                    onDragEnd = {
-                        if (!expanded && dragTotal < -swipeThresholdPx) onExpandedChange(true)
-                        if (expanded && dragTotal > swipeThresholdPx) collapse()
-                    },
-                )
-            },
-        shape = BedrudShapeTokens.controlsBar,
-        color = colors.bar,
-        shadowElevation = Elevation.controlsBarShadow,
-        tonalElevation = Elevation.controlsBarTonal,
-        border = BorderStroke(Dimens.borderThin, colors.divider),
+    MeetingBarSurface(
+        modifier = modifier.pointerInput(expanded) {
+            var dragTotal = 0f
+            detectVerticalDragGestures(
+                onDragStart = { dragTotal = 0f },
+                onVerticalDrag = { _, dragAmount -> dragTotal += dragAmount },
+                // Up opens, down closes — the panel answers the same gesture in both
+                // directions, so whatever opened it puts it away again.
+                onDragEnd = {
+                    if (!expanded && dragTotal < -swipeThresholdPx) onExpandedChange(true)
+                    if (expanded && dragTotal > swipeThresholdPx) collapse()
+                },
+            )
+        },
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             MeetingPanelHandle(

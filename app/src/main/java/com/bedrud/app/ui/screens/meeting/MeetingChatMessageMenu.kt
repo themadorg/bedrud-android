@@ -245,8 +245,14 @@ private fun ChatMessageActions(
 }
 
 /** One row of the actions card: what it does on the reading side, what it is on the far side. */
+/**
+ * One row of a chat menu card: the label leads, the symbol trails.
+ *
+ * Shared by the message long-press card and the composer's "+" menu, so every menu that grows out
+ * of the conversation speaks one row language.
+ */
 @Composable
-private fun ChatMessageAction(
+internal fun ChatMessageAction(
     label: String,
     icon: ImageVector,
     onClick: () -> Unit,
