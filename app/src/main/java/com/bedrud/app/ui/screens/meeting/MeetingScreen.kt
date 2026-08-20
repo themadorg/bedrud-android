@@ -706,42 +706,15 @@ fun MeetingScreen(
                             }
 
                             if (!isTileFullscreen || fullscreenChromeVisible) {
-                                MeetingControlsBar(
+                                MeetingControlsPanel(
+                                    expanded = showMoreOptionsSheet,
+                                    onExpandedChange = { showMoreOptionsSheet = it },
                                     isMicEnabled = isMicEnabled,
                                     isCameraEnabled = isCameraEnabled,
                                     micHasError = micMediaError,
                                     cameraHasError = cameraMediaError,
                                     isScreenShareEnabled = isScreenShareEnabled,
                                     showChat = chatSheetVisible,
-                                    unreadCount = unreadCount,
-                                    inputMode = inputMode,
-                                    connectionState = connectionState,
-                                    voiceAlert = voiceAlert,
-                                    onPushToTalkChange = { active ->
-                                        scope.launch {
-                                            roomManager.setPushToTalkTransmitting(active)
-                                        }
-                                    },
-                                    onToggleMic = toggleMicAction,
-                                    onToggleCamera = toggleCameraAction,
-                                    onToggleScreenShare = toggleScreenShareAction,
-                                    onToggleChat = toggleChatAction,
-                                    onOpenMoreOptions = { showMoreOptionsSheet = true },
-                                    onEndCall = endCallAction,
-                                    modifier = Modifier
-                                        .align(Alignment.BottomCenter)
-                                        .padding(bottom = Dimens.space12),
-                                )
-                            }
-
-                            if (showMoreOptionsSheet) {
-                                MeetingMoreOptionsSheet(
-                                    isMicEnabled = isMicEnabled,
-                                    isCameraEnabled = isCameraEnabled,
-                                    micHasError = micMediaError,
-                                    cameraHasError = cameraMediaError,
-                                    isScreenShareEnabled = isScreenShareEnabled,
-                                    showChat = showChat,
                                     unreadCount = unreadCount,
                                     isDeafened = isDeafened,
                                     hideAllIncomingVideo = hideAllIncomingVideo,
@@ -766,7 +739,9 @@ fun MeetingScreen(
                                     onOpenAudioSettings = { showAudioSettingsSheet = true },
                                     onOpenNoiseSuppression = { showNoiseSuppressionSheet = true },
                                     onOpenRoomSettings = { showRoomSettingsSheet = true },
-                                    onDismiss = { showMoreOptionsSheet = false },
+                                    modifier = Modifier
+                                        .align(Alignment.BottomCenter)
+                                        .padding(bottom = Dimens.space12),
                                 )
                             }
 
