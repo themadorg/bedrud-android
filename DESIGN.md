@@ -272,29 +272,67 @@ the `meeting*` tokens in `Dimens.kt`, timing in `Motion.meetingChromeAutoHideDel
   collapsed into a sliver. And the **drag handle is drawn inside the content**, not in the sheet's
   handle slot, because that slot sits above the content and cannot be subtracted from it — with it in
   place the content overflowed by exactly one handle and took the input dock off the screen with it.
-  The composer is **built as the call's controls bar** — same corner token, same container colour,
-  same hairline, same `meetingScreenMargin` — rather than as a chat widget of its own. The two sit in
-  the same place on screen and swap with each other, so they are the same object with different
-  contents. Its attach control is a paperclip: the picker is still images-only, because an image is
-  the only attachment the wire carries.
-  The field **wraps and grows the bar with it**, up to five lines, then scrolls inside its own
-  height. It used to be single-line, which scrolled the text sideways and hid the start of the
-  sentence being written — the one part a writer needs in order to finish it. Five lines is a long
-  message by the standards of a call, and stopping there keeps the dock from climbing over the
-  conversation being answered.
-  Attach and poll **show only while the field is empty**. They hold a fixed column on the left, and
-  once the field wraps that column is a tall empty block beside the text — while what a writer needs
-  at that moment is width, not two controls they are not using. Standing down buys back the whole
-  column, which is often a line of the message. They return the moment the field is empty again,
-  which is also when attaching a picture or opening a poll is what someone is there to do. The trade
-  is deliberate: attaching to a half-written message means clearing it first.
-  The controls **sit at the bottom** of the grown bar, beside the line being written, rather than
-  floating against the middle of a block of text. Two paddings make that work and they are not
-  interchangeable: the bar's own is `space4`, because the icons are `chatDockIcon` tall and anything
-  more pushes past the `chatDockBar` minimum and silently grows the one-line dock; the field's is
-  `space8`, which brings a single line of text up to the icons' height so bottom-aligning is
-  indistinguishable from centring while there is only one line, and which then sits under the last
-  line so the bottom-aligned icons land centred on it rather than below it.
+  The composer is **built on the controls bar's own shell** — `MeetingBarSurface`, the shared
+  composable that owns the margin, corner, fill, hairline and lift of every floating bar over the
+  call — with the same 48dp control band on the same 12dp paddings, so both bars measure 72dp and
+  their bottom edges land on the same pixel. The two sit in the same place on screen and swap with
+  each other, so they are the same object with different contents, and they read as the same
+  sentence: secondary controls, a pill middle, a pill primary. They drifted apart once (12dp lower,
+  16dp shorter, flat, bottom-hung text) precisely because each kept its own copies of these values;
+  the shared shell is what makes the next drift impossible rather than merely repaired.
+
+  **Send is the hang-up button's twin** — the same `meetingEndCallWidth` × `meetingMediaButtonHeight`
+  pill in the same corner, differing only in role colour, because one ends the call and the other
+  does not. With nothing to send it keeps the pill and takes the media-**off** fill, so an empty
+  composer still shows where send is.
+
+  **The field sits bare on the bar**, the way the call bar holds its own controls — no inner
+  container. (It wore the mic pill's chrome for one build; one pill beside two more read as chrome
+  arguing with itself, and its inner edge bought nothing the bar's own edge was not providing.)
+  A single line centres in the resting bar, and the bar's two vertical 12s are **spendable
+  slack**, not the row's padding: the field's slot spans the bar's full resting height, and the
+  slack is budgeted exactly — three 20dp lines plus 6dp above and below is precisely the 72dp
+  resting height — so **the bar never grows at all**. Three lines is the cap; past it the field
+  scrolls within its height. The controls own their insets instead of inheriting the row's: send
+  keeps its 12dp above the bar's edge, the "+" centres.
+
+  **The dark palette's fill trap**, found the hard way: `colors.button` is `#292524` against a
+  `#2B2624` bar — two values out of 255, invisible — so anything that must read on `colors.bar`
+  leans on elevation for its edge (the mic pill always has; the disabled send pill now does). The
+  only fill that reads by colour alone is the media-off `#363130`, which is why **a filled button
+  on this bar means "this control is off", not "this is a button"** — and why the inert disabled
+  send deliberately does *not* wear it: on the call bar that fill marks controls that are off and
+  tappable (the muted mic, the stopped camera), and an inert pill wearing it would invite exactly
+  the tap it ignores. Check any new fill against `colors.bar` in the dark theme before shipping it.
+
+  **One "+" opens everything a message can carry** — image and poll today, whatever comes next —
+  rather than a glyph per kind: attachments multiply, and a bar that grows an icon each time runs
+  out of room at exactly the moment the field needs it most. The menu scales; the bar does not.
+  Its popup is **the message long-press card, not a stock menu** — same corners, same lift, the
+  shared `ChatMessageAction` rows with labels leading and symbols trailing — because both menus
+  grow out of the same conversation and should speak one language. The "+" **wears the camera toggle's
+  background** — the same field-shaped 56×48 surface in the media-off fill, the one fill that
+  survives the dark palette — so the composer's leading control is visibly a control, exactly as
+  the call bar's leading button is. That borrows the "off" tone for an always-live control, which
+  the fill-trap rule above argues against; it was weighed against an invisible button, and
+  visibility won. The image picker is images-only, because an image is the only attachment the
+  wire carries.
+  The field **wraps up to three lines, then scrolls** inside its height. It used to be
+  single-line, which scrolled the text sideways and hid the start of the sentence being written —
+  the one part a writer needs in order to finish it. Three lines is what the resting bar holds,
+  and stopping there keeps the dock from climbing over the conversation being answered.
+  The "+" **stays put** — while typing, and while the field grows. It used to stand down when the
+  field held text, which put a control appearing and disappearing beside every first and last
+  keystroke; a fixture of the bar does not visit. In a grown bar it **centres vertically**, because
+  attach-and-poll belongs to the whole message, where **send belongs to the line being written**
+  and stays at the bottom beside it; while the field is one line every slot is band-height, so the
+  two alignments are indistinguishable and nothing appears to move when growth begins. The field's
+  insets live **inside its decoration**, not around the field: a text field's tap target is its own
+  measured bounds, so padding outside it would leave strips of the slot drawn as input but dead to
+  the finger. The send plane is **nudged `meetingSendIconNudge` towards its tip**: the glyph's ink
+  centroid sits about 3dp behind its box's centre (wide tail, sharp tip — measured on a device
+  capture), so a geometrically centred plane reads as sitting off towards the tail; half the
+  imbalance corrects it without overshooting, and `offset` mirrors with the icon in RTL.
   A **long press opens the message menu** (`MeetingChatMessageMenu`), which straddles the bubble:
   the quick reactions as a pill above it, what can be done with the message — **who reacted**, Copy
   and Share — as a card below, and the message itself readable between them. One box containing
