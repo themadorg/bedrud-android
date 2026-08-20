@@ -120,6 +120,7 @@
   <string name="meeting_chat_saveImage">Bild speichern</string>
   <string name="meeting_contentDescription_react">Auf diese Nachricht reagieren</string>
   <string name="meeting_chat_poll_new">Neue Umfrage</string>
+  <string name="meeting_chat_composerMenu">Zur Nachricht hinzufügen</string>
   <string name="meeting_chat_poll_question">Frage</string>
   <string name="meeting_chat_poll_questionPlaceholder">Worüber entscheiden wir?</string>
   <string name="meeting_chat_poll_option">Antwort %1$d</string>
@@ -157,7 +158,7 @@
   <string name="meeting_contentDescription_moreOptions">Weitere Optionen</string>
   <string name="meeting_contentDescription_closeChat">Chat schließen</string>
   <string name="meeting_contentDescription_scrollToBottom">Nach unten scrollen</string>
-  <string name="meeting_contentDescription_attachImage">Bild anhängen</string>
+  <string name="meeting_chat_attachImage">Bild anhängen</string>
   <string name="meeting_contentDescription_send">Senden</string>
   <string name="admin_users">Benutzer</string>
   <string name="admin_tab_rooms">Räume</string>

@@ -120,6 +120,7 @@
   <string name="meeting_chat_saveImage">Görseli kaydet</string>
   <string name="meeting_contentDescription_react">Bu mesaja tepki ver</string>
   <string name="meeting_chat_poll_new">Yeni anket</string>
+  <string name="meeting_chat_composerMenu">Mesaja ekle</string>
   <string name="meeting_chat_poll_question">Soru</string>
   <string name="meeting_chat_poll_questionPlaceholder">Neye karar veriyoruz?</string>
   <string name="meeting_chat_poll_option">Yanıt %1$d</string>
@@ -157,7 +158,7 @@
   <string name="meeting_contentDescription_moreOptions">Diğer seçenekler</string>
   <string name="meeting_contentDescription_closeChat">Sohbeti Kapat</string>
   <string name="meeting_contentDescription_scrollToBottom">En alta kaydır</string>
-  <string name="meeting_contentDescription_attachImage">Görsel ekle</string>
+  <string name="meeting_chat_attachImage">Görsel ekle</string>
   <string name="meeting_contentDescription_send">Gönder</string>
   <string name="admin_users">Kullanıcılar</string>
   <string name="admin_tab_rooms">Odalar</string>

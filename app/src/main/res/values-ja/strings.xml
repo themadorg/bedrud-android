@@ -120,6 +120,7 @@
   <string name="meeting_chat_saveImage">画像を保存</string>
   <string name="meeting_contentDescription_react">このメッセージにリアクション</string>
   <string name="meeting_chat_poll_new">新しい投票</string>
+  <string name="meeting_chat_composerMenu">メッセージに追加</string>
   <string name="meeting_chat_poll_question">質問</string>
   <string name="meeting_chat_poll_questionPlaceholder">何を決めますか？</string>
   <string name="meeting_chat_poll_option">選択肢 %1$d</string>
@@ -155,7 +156,7 @@
   <string name="meeting_contentDescription_moreOptions">その他のオプション</string>
   <string name="meeting_contentDescription_closeChat">チャットを閉じる</string>
   <string name="meeting_contentDescription_scrollToBottom">一番下にスクロール</string>
-  <string name="meeting_contentDescription_attachImage">画像を添付</string>
+  <string name="meeting_chat_attachImage">画像を添付</string>
   <string name="meeting_contentDescription_send">送信</string>
   <string name="admin_users">ユーザー</string>
   <string name="admin_tab_rooms">ルーム</string>
