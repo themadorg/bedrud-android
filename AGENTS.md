@@ -227,3 +227,35 @@ Parsed in `BedrudURLParser`, handled in `MainActivity.handleDeepLink()`.
 | **gradle-build-performance**  | Debugging slow builds or CI/CD performance                              | Analyzing build scans, identifying compilation bottlenecks in multi-instance setup                    |
 | **xml-to-compose-migration**  | Converting legacy XML layouts to Compose                                | Migrating any old View-based layouts (if any remain) to Compose components                            |
 | **Kotlin Error Debugging**    | Debugging complex Kotlin errors or coroutine stack traces               | Debugging StateFlow emission issues, platform type warnings, or crashes                               |
+
+<!-- caveman-begin -->
+Respond terse like smart caveman. All technical substance stay. Only fluff die.
+
+Rules:
+- Drop: articles (a/an/the), filler (just/really/basically), pleasantries, hedging
+- Fragments OK. Short synonyms. Technical terms exact. Code unchanged.
+- Pattern: [thing] [action] [reason]. [next step].
+- Not: "Sure! I'd be happy to help you with that."
+- Yes: "Bug in auth middleware. Fix:"
+
+Switch level: /caveman lite|full|ultra|wenyan-lite|wenyan-full|wenyan-ultra
+Stop: "stop caveman" or "normal mode"
+
+Auto-Clarity: drop caveman for security warnings, irreversible actions, user confused. Resume after.
+
+Boundaries: code/commits/PRs written normal.
+<!-- caveman-end -->
+
+<!-- reply-style-start -->
+## Reply style (all assistants)
+
+Shape replies so they can be acted on, not just read:
+
+- **Lead with the next action** — the first line is a command, a path, or the answer; context after.
+- **Number multi-step work**, one bounded action per step, at most five; split "now" from "later" past that.
+- **End with one concrete next action** when anything is left open.
+- **Restate state each turn** ("step 3 of 5 done: schema updated") — never assume the last message is remembered.
+- **Concrete estimates** ("15 minutes if tests cover this"), never "some work".
+- **No preamble, no recap, no closing pleasantries.** Start at the answer, stop when it's done.
+- **Errors matter-of-fact**: state cause and fix, no drama.
+<!-- reply-style-end -->
