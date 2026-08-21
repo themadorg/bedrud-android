@@ -809,9 +809,14 @@ fun MeetingScreen(
                                     onChatInputChange = { chatInput = it },
                                     onSendChat = {
                                         if (chatInput.isNotBlank()) {
+                                            // Taken and cleared at tap time, not when the send
+                                            // returns: the first publish after joining can wait
+                                            // seconds on the data channel, and a field holding
+                                            // its text through that reads as a dead button.
+                                            val text = chatInput.trim()
+                                            chatInput = ""
                                             scope.launch {
-                                                roomManager.sendChatMessage(chatInput.trim())
-                                                chatInput = ""
+                                                roomManager.sendChatMessage(text)
                                             }
                                         }
                                     },

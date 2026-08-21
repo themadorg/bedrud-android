@@ -1263,22 +1263,29 @@ class RoomManager(
             emptyList()
         }
 
+        // Echoed before publishing, not after: the first reliable-channel publish after joining
+        // can suspend for seconds while the channel opens, and a send button that does nothing
+        // until then reads as broken. The sender sees their message at tap time; if publishing
+        // then actually fails, the echo is taken back along with the error line, so the list
+        // never keeps a message the room never got.
+        val message = ChatMessage(
+            id = id,
+            senderName = name,
+            senderIdentity = identity,
+            text = text,
+            timestamp = timestamp,
+            isLocal = true,
+            attachments = attachments,
+            poll = poll,
+        )
+        _chatMessages.value += message
+
         // A long message goes out as a header followed by its parts, and every one of them has to
         // land: stopping halfway leaves the other side holding a fragment it can never finish.
         val sent = packets.isNotEmpty() &&
             packets.all { publishData(ChatWire.CHAT_DATA_TOPIC, it) }
-        if (sent) {
-            _chatMessages.value += ChatMessage(
-                id = id,
-                senderName = name,
-                senderIdentity = identity,
-                text = text,
-                timestamp = timestamp,
-                isLocal = true,
-                attachments = attachments,
-                poll = poll,
-            )
-        } else {
+        if (!sent) {
+            _chatMessages.value -= message
             _error.value = application.getString(R.string.meeting_error_messageSendFailed)
         }
     }
