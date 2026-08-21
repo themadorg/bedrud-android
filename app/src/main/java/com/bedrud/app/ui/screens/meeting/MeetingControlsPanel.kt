@@ -3,6 +3,7 @@ package com.bedrud.app.ui.screens.meeting
 import androidx.activity.compose.BackHandler
 import androidx.annotation.StringRes
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
@@ -208,15 +209,40 @@ fun BoxScope.MeetingControlsPanel(
             )
         },
     ) {
+        // The conversation cannot sit straight on the bar's own fill: a bubble from someone else
+        // is that same colour, and on it the message dissolves into the panel. While chat is open
+        // the region above the row — handle included, the way the old sheet carried its handle —
+        // recedes to `surfaceContainerLow`, so the bubbles have a ground to stand off. Animated on
+        // the reveal's own clock, or the strip would snap while the panel is still growing.
+        val conversationGround by animateColorAsState(
+            targetValue = if (chatOpen) {
+                MaterialTheme.colorScheme.surfaceContainerLow
+            } else {
+                colors.bar
+            },
+            animationSpec = tween(
+                durationMillis = if (chatOpen) Motion.meetingChatExpandMs else Motion.meetingChatCollapseMs,
+                easing = Motion.standardEasing,
+            ),
+            label = "conversationGround",
+        )
+
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            MeetingPanelHandle(
-                color = colors.onButtonVariant,
-                description = stringResource(
-                    if (chatOpen) R.string.meeting_contentDescription_toggleChat
-                    else R.string.meeting_contentDescription_moreOptions,
-                ),
-                onClick = { if (chatOpen) closeChat() else onExpandedChange(!expanded) },
-            )
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(conversationGround),
+                contentAlignment = Alignment.Center,
+            ) {
+                MeetingPanelHandle(
+                    color = colors.onButtonVariant,
+                    description = stringResource(
+                        if (chatOpen) R.string.meeting_contentDescription_toggleChat
+                        else R.string.meeting_contentDescription_moreOptions,
+                    ),
+                    onClick = { if (chatOpen) closeChat() else onExpandedChange(!expanded) },
+                )
+            }
 
             AnimatedVisibility(
                 visible = expanded && !chatOpen,
@@ -314,7 +340,10 @@ fun BoxScope.MeetingControlsPanel(
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(maxHeight * ChatPanelHeightFraction),
+                            .height(maxHeight * ChatPanelHeightFraction)
+                            // The same ground as the handle strip above, so the recessed region
+                            // reads as one piece from the panel's top edge down to the row.
+                            .background(conversationGround),
                     ) {
                         chatConversation()
                     }

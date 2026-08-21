@@ -235,7 +235,11 @@ private fun ChatBubble(
                         if (row.isLocal) {
                             MaterialTheme.colorScheme.primaryContainer
                         } else {
-                            MaterialTheme.colorScheme.surfaceContainerHigh
+                            // Two full container steps above the conversation's
+                            // `surfaceContainerLow` ground. One step was tried and is not enough:
+                            // the warm neutral ramp is compressed (11 RGB units in light), and a
+                            // bubble one step off its ground read as the ground.
+                            MaterialTheme.colorScheme.surfaceContainerHighest
                         },
                         shape,
                     )

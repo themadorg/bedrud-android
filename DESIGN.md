@@ -294,6 +294,17 @@ the `meeting*` tokens in `Dimens.kt`, timing in `Motion.meetingChromeAutoHideDel
   chat being a panel and not a page. The handle, the scrim, Back and a swipe down on the bar all
   put it away — the same four exits the options have, because it is the same panel.
 
+  **The conversation's ground recedes.** While chat is open the region above the row — handle
+  included, the way the sheet used to carry its handle — drops from the bar's
+  `surfaceContainerHigh` to **`surfaceContainerLow`**, animated on the reveal's own clock. It
+  cannot stay on the bar's fill: a bubble from someone else was that exact colour and dissolved
+  into the panel. On that ground a remote bubble wears **`surfaceContainerHighest`** — two
+  container steps up, because one step is not enough on this palette's compressed warm-neutral
+  ramp (adjacent steps sit ~11 RGB units apart in light, and a bubble one step off its ground
+  read as the ground). Your own messages keep `primaryContainer`; a poll keeps the neutral
+  `surfaceContainerHigh` bubble with `surfaceContainerHighest` answer rows, its structure doing
+  the separating.
+
   **Send is the hang-up button's twin** — the same `meetingEndCallWidth` × `meetingMediaButtonHeight`
   pill in the same corner, differing only in role colour, because one ends the call and the other
   does not. With nothing to send it keeps the pill as a `button` fill lifted by the mic pill's
