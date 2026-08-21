@@ -97,14 +97,15 @@ class MeetingChatPanelRenderTest {
     @Test
     fun chatPanel() {
         capture("chat-panel") {
-            Panel(sendDisabledReason = null)
+            Panel(canParticipate = true)
         }
     }
 
+    /** Blocked from sending: the conversation stays readable, its reactions stop answering. */
     @Test
     fun chatPanelWithSendingBlocked() {
         capture("chat-panel-blocked") {
-            Panel(sendDisabledReason = R.string.meeting_chat_blockedByModerator)
+            Panel(canParticipate = false)
         }
     }
 
@@ -120,10 +121,14 @@ class MeetingChatPanelRenderTest {
             "chat-message-menu",
             windowMarker = QuickReactions.first(),
             beforeCapture = {
-                compose.onNodeWithText(LongPressedMessage).performTouchInput { longClick() }
+                // Substring, not exact: the bubble renders the message bidi-wrapped, and on an
+                // RTL-locale device the wrap brackets this Latin text in invisible isolate marks
+                // that an exact match trips over.
+                compose.onNodeWithText(LongPressedMessage, substring = true)
+                    .performTouchInput { longClick() }
             },
         ) {
-            Panel(sendDisabledReason = null)
+            Panel(canParticipate = true)
         }
     }
 
@@ -131,7 +136,7 @@ class MeetingChatPanelRenderTest {
     @Test
     fun chatReactions() {
         val reactions = messages().first { it.reactions.isNotEmpty() }.reactions
-        capture("chat-reactions", windowMarker = SheetMarkerReactions) {
+        capture("chat-reactions", windowMarker = localizedString(R.string.meeting_chat_reactions)) {
             ChatReactionsSheet(
                 reactions = reactions,
                 currentIdentity = "u-me",
@@ -144,7 +149,7 @@ class MeetingChatPanelRenderTest {
     /** The poll composer, which lives in a sheet of its own rather than in the panel. */
     @Test
     fun chatPollComposer() {
-        capture("chat-poll-composer", windowMarker = SheetMarkerNewPoll) {
+        capture("chat-poll-composer", windowMarker = localizedString(R.string.meeting_chat_poll_new)) {
             MeetingChatPollSheet(onDismiss = {}, onCreate = {})
         }
     }
@@ -164,29 +169,30 @@ class MeetingChatPanelRenderTest {
     }
 
     /**
-     * The panel paints no background of its own any more — the sheet it lives in provides one — so
-     * the capture supplies the same surface the sheet would.
+     * The conversation paints no background of its own — the controls panel recedes to
+     * `surfaceContainerLow` behind it — so the capture supplies the same ground the panel would.
      */
-    @OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
     @androidx.compose.runtime.Composable
-    private fun Panel(sendDisabledReason: Int?) {
+    private fun Panel(canParticipate: Boolean) {
       androidx.compose.material3.Surface(
-        color = androidx.compose.material3.BottomSheetDefaults.ContainerColor,
+        color = androidx.compose.material3.MaterialTheme.colorScheme.surfaceContainerLow,
         modifier = Modifier.fillMaxSize(),
       ) {
-        MeetingChatPanel(
+        MeetingChatConversation(
             messages = messages(),
-            input = "",
             currentIdentity = "u-me",
-            onInputChange = {},
-            onSend = {},
-            onSendAttachment = { _, _ -> },
-            onSendPoll = {},
+            composer = rememberMeetingChatComposerState(
+                imageContext = null,
+                input = "",
+                onInputChange = {},
+                onSendAttachment = { _, _ -> },
+            ),
             onToggleReaction = { _, _ -> },
             onVote = { _, _ -> },
+            onSendPoll = {},
             resolveName = { it },
             imageContext = null,
-            sendDisabledReason = sendDisabledReason,
+            canParticipate = canParticipate,
             knownHosts = emptySet(),
             modifier = Modifier.fillMaxSize(),
         )
@@ -218,7 +224,9 @@ class MeetingChatPanelRenderTest {
             // it. Waiting for the sheet's text also waits out its entrance; the display screenshot
             // then catches every window at once, sheet and scrim together.
             compose.waitUntil(SheetTimeoutMillis) {
-                compose.onAllNodesWithText(windowMarker).fetchSemanticsNodes().isNotEmpty()
+                // Substring: rendered text may be bidi-wrapped (see the long-press above).
+                compose.onAllNodesWithText(windowMarker, substring = true)
+                    .fetchSemanticsNodes().isNotEmpty()
             }
             compose.waitForIdle()
             InstrumentationRegistry.getInstrumentation().uiAutomation.takeScreenshot()
@@ -228,15 +236,16 @@ class MeetingChatPanelRenderTest {
         }
     }
 
+    /**
+     * A sheet's title in whatever language the device speaks — resolved from resources rather
+     * than written as an English literal, so the wait works on a Persian-locale device too.
+     */
+    private fun localizedString(resId: Int): String =
+        InstrumentationRegistry.getInstrumentation().targetContext.getString(resId)
+
     private companion object {
         /** Long enough for a sheet to finish arriving on a cold emulator, short enough to fail fast. */
         const val SheetTimeoutMillis = 5_000L
-
-        /** The composer's own title, which is how its window is told from the scrim's. */
-        const val SheetMarkerNewPoll = "New poll"
-
-        /** The reactions sheet's own title, told from the scrim the same way. */
-        const val SheetMarkerReactions = "Reactions"
 
         /** The message the picker is opened on — one of the fixture's, and short enough to hit. */
         const val LongPressedMessage = "Take your time 🙂"
