@@ -102,7 +102,6 @@
   <string name="meeting_action_kick">اخراج</string>
   <string name="meeting_action_ban">ممنوع کردن</string>
   <string name="meeting_panel_participants">شرکت‌کنندگان (<xliff:g id="count" example="5">%1$d</xliff:g>)</string>
-  <string name="meeting_panel_chat">چت</string>
   <string name="meeting_label_you">شما</string>
   <string name="meeting_state_kickedTitle">شما اخراج شدید</string>
   <string name="meeting_state_kickedMessage">یک مدیر شما را از این جلسه اخراج کرد.</string>

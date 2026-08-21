@@ -53,6 +53,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalClipboard
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextAlign
@@ -161,9 +162,6 @@ fun MeetingScreen(
     val chatMessages by roomManager.chatMessages.collectAsState()
     val isChatBlocked by roomManager.isChatBlocked.collectAsState()
     var showChat by remember { mutableStateOf(false) }
-    // Whether the sheet is *on its way* to being on screen, which is what the controls bar's chat
-    // button follows. `showChat` only says whether it is still composed.
-    var chatSheetVisible by remember { mutableStateOf(false) }
     var showInviteSheet by remember { mutableStateOf(false) }
     var chatInput by remember { mutableStateOf("") }
 
@@ -482,12 +480,29 @@ fun MeetingScreen(
                                 .padding(padding)
                         ) {
                             val isTileFullscreen = fullscreenParticipantIdentity != null
-                            // The call stays composed while chat is open — the sheet sits over it.
+                            // The call stays composed while chat is open — the conversation is
+                            // the bottom panel's own mode, and the grid keeps rendering behind
+                            // its scrim.
+                            //
+                            // Rendering, not participating: the scrim stops a finger, but it is
+                            // no wall to a screen reader — the panel is a sibling in the same
+                            // window, so without this the tiles and the top bar stayed in the
+                            // accessibility tree behind the dim, and a TalkBack double-tap could
+                            // fullscreen a tile underneath the open conversation. The platform
+                            // sheet's window used to provide this exclusion for free.
+                            val behindOverlay = showChat || showMoreOptionsSheet
                             if (!isTileFullscreen) {
                             Column(
                                 modifier = Modifier
                                     .fillMaxSize()
                                     .background(MaterialTheme.colorScheme.background)
+                                    .then(
+                                        if (behindOverlay) {
+                                            Modifier.clearAndSetSemantics { }
+                                        } else {
+                                            Modifier
+                                        }
+                                    )
                             ) {
                                 MeetingTopBar(
                                     roomName = roomName,
@@ -642,7 +657,17 @@ fun MeetingScreen(
                                     onToggleChrome = { fullscreenChromeVisible = !fullscreenChromeVisible },
                                     onAutoHideChrome = { fullscreenChromeVisible = false },
                                     onCollapse = { fullscreenParticipantIdentity = null },
-                                    modifier = Modifier.fillMaxSize(),
+                                    // Same exclusion as the grid: behind an open overlay this is
+                                    // scenery, not something a screen reader should land on.
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .then(
+                                            if (behindOverlay) {
+                                                Modifier.clearAndSetSemantics { }
+                                            } else {
+                                                Modifier
+                                            }
+                                        ),
                                 )
                             }
 
@@ -705,16 +730,57 @@ fun MeetingScreen(
                                 }
                             }
 
-                            if (!isTileFullscreen || fullscreenChromeVisible) {
+                            val chatImageContext = roomInfo?.id?.let { chatRoomId ->
+                                ChatImageContext(
+                                    roomId = chatRoomId,
+                                    roomApi = roomApi,
+                                    serverURL = serverURL,
+                                    accessToken = accessToken,
+                                )
+                            }
+                            // The room's own setting comes first: it explains the closed dock for
+                            // everyone present, where a block explains it for one person. Either
+                            // way the conversation stays readable.
+                            val chatSendDisabledReason = when {
+                                roomInfo?.settings?.allowChat == false ->
+                                    R.string.meeting_chat_disabledByRoom
+                                isChatBlocked -> R.string.meeting_chat_blockedByModerator
+                                else -> null
+                            }
+                            val chatComposer = rememberMeetingChatComposerState(
+                                imageContext = chatImageContext,
+                                input = chatInput,
+                                onInputChange = { chatInput = it },
+                                onSendAttachment = { text, attachment ->
+                                    scope.launch {
+                                        roomManager.sendChatMessage(text, listOf(attachment))
+                                    }
+                                },
+                            )
+
+                            // Chat keeps the panel on screen even in fullscreen: the conversation
+                            // is anchored to the bar, and closing the chrome under an open chat
+                            // would take both away mid-thought.
+                            if (!isTileFullscreen || fullscreenChromeVisible || showChat) {
                                 MeetingControlsPanel(
                                     expanded = showMoreOptionsSheet,
                                     onExpandedChange = { showMoreOptionsSheet = it },
+                                    chatOpen = showChat,
+                                    onChatOpenChange = { open ->
+                                        showChat = open
+                                        // In the same snapshot, not an effect: in fullscreen the
+                                        // chrome may have auto-hidden under chat's scrim, and the
+                                        // panel is only composed while chat is open OR the chrome
+                                        // is up. An effect lands a frame late — the panel would
+                                        // already be gone and its fold-into-the-bar exit skipped.
+                                        if (!open) fullscreenChromeVisible = true
+                                    },
                                     isMicEnabled = isMicEnabled,
                                     isCameraEnabled = isCameraEnabled,
                                     micHasError = micMediaError,
                                     cameraHasError = cameraMediaError,
                                     isScreenShareEnabled = isScreenShareEnabled,
-                                    showChat = chatSheetVisible,
+                                    showChat = showChat,
                                     unreadCount = unreadCount,
                                     isDeafened = isDeafened,
                                     hideAllIncomingVideo = hideAllIncomingVideo,
@@ -739,6 +805,57 @@ fun MeetingScreen(
                                     onOpenAudioSettings = { showAudioSettingsSheet = true },
                                     onOpenNoiseSuppression = { showNoiseSuppressionSheet = true },
                                     onOpenRoomSettings = { showRoomSettingsSheet = true },
+                                    chatInput = chatInput,
+                                    onChatInputChange = { chatInput = it },
+                                    onSendChat = {
+                                        if (chatInput.isNotBlank()) {
+                                            scope.launch {
+                                                roomManager.sendChatMessage(chatInput.trim())
+                                                chatInput = ""
+                                            }
+                                        }
+                                    },
+                                    chatComposer = chatComposer,
+                                    sendDisabledReason = chatSendDisabledReason,
+                                    chatConversation = {
+                                        MeetingChatConversation(
+                                            messages = chatMessages,
+                                            currentIdentity = localIdentity.orEmpty(),
+                                            composer = chatComposer,
+                                            onToggleReaction = { messageId, emoji ->
+                                                scope.launch {
+                                                    roomManager.reactToMessage(messageId, emoji)
+                                                }
+                                            },
+                                            onVote = { messageId, optionId ->
+                                                scope.launch {
+                                                    roomManager.voteInPoll(messageId, optionId)
+                                                }
+                                            },
+                                            onSendPoll = { poll ->
+                                                scope.launch {
+                                                    roomManager.sendChatMessage("", poll = poll)
+                                                }
+                                            },
+                                            // Whoever is still here is named from the room itself;
+                                            // anyone who has left is named from what the room
+                                            // remembered while they were in it. Only an identity
+                                            // this device never saw at all falls back to itself —
+                                            // a vote from before it joined, say.
+                                            resolveName = { identity ->
+                                                participants
+                                                    .firstOrNull { it.identity?.value == identity }
+                                                    ?.name
+                                                    ?.takeIf { it.isNotBlank() }
+                                                    ?: participantNames[identity]
+                                                    ?: identity
+                                            },
+                                            imageContext = chatImageContext,
+                                            canParticipate = chatSendDisabledReason == null,
+                                            knownHosts = knownHosts,
+                                            modifier = Modifier.fillMaxSize(),
+                                        )
+                                    },
                                     modifier = Modifier
                                         .align(Alignment.BottomCenter)
                                         .padding(bottom = Dimens.space12),
@@ -907,71 +1024,6 @@ fun MeetingScreen(
                                             onLeave()
                                         }
                                     },
-                                )
-                            }
-
-                            // A sheet over the call, not a page in front of it: the grid keeps
-                            // rendering behind the scrim while chat is open.
-                            if (showChat) {
-                                MeetingChatSheet(
-                                    messages = chatMessages,
-                                    input = chatInput,
-                                    currentIdentity = localIdentity.orEmpty(),
-                                    onInputChange = { chatInput = it },
-                                    onSend = {
-                                        if (chatInput.isNotBlank()) {
-                                            scope.launch {
-                                                roomManager.sendChatMessage(chatInput.trim())
-                                                chatInput = ""
-                                            }
-                                        }
-                                    },
-                                    onSendAttachment = { text, attachment ->
-                                        scope.launch {
-                                            roomManager.sendChatMessage(text, listOf(attachment))
-                                        }
-                                    },
-                                    onSendPoll = { poll ->
-                                        scope.launch { roomManager.sendChatMessage("", poll = poll) }
-                                    },
-                                    onToggleReaction = { messageId, emoji ->
-                                        scope.launch { roomManager.reactToMessage(messageId, emoji) }
-                                    },
-                                    onVote = { messageId, optionId ->
-                                        scope.launch { roomManager.voteInPoll(messageId, optionId) }
-                                    },
-                                    // Whoever is still here is named from the room itself; anyone who
-                                    // has left is named from what the room remembered while they were
-                                    // in it. Only an identity this device never saw at all falls back
-                                    // to itself — a vote from before it joined, say.
-                                    resolveName = { identity ->
-                                        participants
-                                            .firstOrNull { it.identity?.value == identity }
-                                            ?.name
-                                            ?.takeIf { it.isNotBlank() }
-                                            ?: participantNames[identity]
-                                            ?: identity
-                                    },
-                                    onClose = { showChat = false },
-                                    onVisibleChange = { chatSheetVisible = it },
-                                    imageContext = roomInfo?.id?.let { roomId ->
-                                        ChatImageContext(
-                                            roomId = roomId,
-                                            roomApi = roomApi,
-                                            serverURL = serverURL,
-                                            accessToken = accessToken,
-                                        )
-                                    },
-                                    // The room's own setting comes first: it explains the closed
-                                    // dock for everyone present, where a block explains it for one
-                                    // person. Either way the conversation stays readable.
-                                    sendDisabledReason = when {
-                                        roomInfo?.settings?.allowChat == false ->
-                                            R.string.meeting_chat_disabledByRoom
-                                        isChatBlocked -> R.string.meeting_chat_blockedByModerator
-                                        else -> null
-                                    },
-                                    knownHosts = knownHosts,
                                 )
                             }
 

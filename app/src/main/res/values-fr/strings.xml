@@ -104,7 +104,6 @@
   <string name="meeting_action_kick">Expulser</string>
   <string name="meeting_action_ban">Bannir</string>
   <string name="meeting_panel_participants">Participants (<xliff:g id="count" example="5">%1$d</xliff:g>)</string>
-  <string name="meeting_panel_chat">Discussion</string>
   <string name="meeting_label_you">vous</string>
   <string name="meeting_state_kickedTitle">Vous avez été retiré</string>
   <string name="meeting_state_kickedMessage">Un modérateur vous a retiré de cette réunion.</string>

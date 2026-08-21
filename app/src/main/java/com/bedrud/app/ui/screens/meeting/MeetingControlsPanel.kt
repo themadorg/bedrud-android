@@ -1,6 +1,7 @@
 package com.bedrud.app.ui.screens.meeting
 
 import androidx.activity.compose.BackHandler
+import androidx.annotation.StringRes
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
@@ -13,9 +14,12 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
@@ -29,13 +33,20 @@ import androidx.compose.material.icons.filled.VideocamOff
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.onClick
 import androidx.compose.ui.semantics.semantics
 import com.bedrud.app.R
@@ -62,11 +73,20 @@ private const val ScrimAlpha = 0.32f
  *
  * That anchoring is also why the options read bottom-up rather than top-down: the row you were
  * already touching stays the panel's floor, and everything new appears above it.
+ *
+ * Chat lives here too, as the same movement at a larger size: open it and the conversation
+ * ([chatConversation]) grows out of the bar the way the options do, while the bar's own row
+ * morphs slot-by-slot into the composer — camera to "+", mic pill to field, hang-up to send.
+ * One surface throughout, so chat is visibly something the call bar *does*, not a second screen
+ * dealt over it. The panel and the keyboard share a window now, which is what lets the bar ride
+ * up over the IME while the call stays where it is.
  */
 @Composable
 fun BoxScope.MeetingControlsPanel(
     expanded: Boolean,
     onExpandedChange: (Boolean) -> Unit,
+    chatOpen: Boolean,
+    onChatOpenChange: (Boolean) -> Unit,
     isMicEnabled: Boolean,
     isCameraEnabled: Boolean,
     micHasError: Boolean = false,
@@ -91,42 +111,86 @@ fun BoxScope.MeetingControlsPanel(
     onOpenAudioSettings: () -> Unit,
     onOpenNoiseSuppression: () -> Unit,
     onOpenRoomSettings: () -> Unit,
+    chatInput: String,
+    onChatInputChange: (String) -> Unit,
+    onSendChat: () -> Unit,
+    chatComposer: MeetingChatComposerState,
+    @StringRes sendDisabledReason: Int?,
+    chatConversation: @Composable () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val colors = meetingChromeColors()
     val collapse = { onExpandedChange(false) }
+    val closeChat = { onChatOpenChange(false) }
     val swipeThresholdPx = with(LocalDensity.current) {
         Dimens.meetingHandleSwipeThreshold.toPx()
     }
 
+    BackHandler(enabled = chatOpen, onBack = closeChat)
     BackHandler(enabled = expanded, onBack = collapse)
 
-    // Same timing as the panel it dims for, so the two read as one movement rather than a fade
-    // that finishes early and leaves the panel travelling on its own.
+    // The keyboard follows the field; it must not stay up pointing at a bar that has already
+    // become the call controls again. A reported upload failure is put away on the same edge —
+    // the composer state outlives the panel, and stale bad news must not greet the next open.
+    val focusManager = LocalFocusManager.current
+    LaunchedEffect(chatOpen) {
+        if (!chatOpen) {
+            focusManager.clearFocus()
+            chatComposer.dismissError()
+        }
+    }
+
+    // One scrim for both panels. Its clock follows whichever is moving — and on the way out,
+    // whichever *was* open — so the dim and the panel always read as one movement rather than a
+    // fade that finishes early and leaves the panel travelling on its own.
+    var scrimForChat by remember { mutableStateOf(false) }
+    LaunchedEffect(chatOpen, expanded) {
+        if (chatOpen) scrimForChat = true else if (expanded) scrimForChat = false
+    }
+    val overlayOpen = expanded || chatOpen
+    val scrimDurationMs = when {
+        chatOpen -> Motion.meetingChatExpandMs
+        expanded -> Motion.meetingOptionsExpandMs
+        scrimForChat -> Motion.meetingChatCollapseMs
+        else -> Motion.meetingOptionsCollapseMs
+    }
     val scrimAlpha by animateFloatAsState(
-        targetValue = if (expanded) ScrimAlpha else 0f,
-        animationSpec = tween(
-            durationMillis = if (expanded) Motion.meetingOptionsExpandMs else Motion.meetingOptionsCollapseMs,
-            easing = Motion.standardEasing,
-        ),
+        targetValue = if (overlayOpen) ScrimAlpha else 0f,
+        animationSpec = tween(durationMillis = scrimDurationMs, easing = Motion.standardEasing),
         label = "optionsScrimAlpha",
     )
     if (scrimAlpha > 0f) {
-        val closeLabel = stringResource(R.string.meeting_contentDescription_moreOptions)
+        val closeLabel = stringResource(
+            if (chatOpen) R.string.meeting_contentDescription_toggleChat
+            else R.string.meeting_contentDescription_moreOptions,
+        )
+        val dismiss = { if (chatOpen) closeChat() else collapse() }
+        // Interactive only while something is actually open: the dim lingers for its fade-out,
+        // and a scrim that kept swallowing taps through it would eat the first tap after every
+        // close — the exact tap-eater the platform sheet was left for.
+        val interaction = if (overlayOpen) {
+            Modifier
+                .pointerInput(expanded, chatOpen) { detectTapGestures { dismiss() } }
+                .semantics {
+                    role = Role.Button
+                    contentDescription = closeLabel
+                    onClick { dismiss(); true }
+                }
+        } else {
+            Modifier
+        }
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .background(MaterialTheme.colorScheme.scrim.copy(alpha = scrimAlpha))
-                .pointerInput(expanded) { detectTapGestures { collapse() } }
-                .semantics {
-                    contentDescription = closeLabel
-                    onClick { collapse(); true }
-                },
+                .then(interaction),
         )
     }
 
     MeetingBarSurface(
-        modifier = modifier.pointerInput(expanded) {
+        // The IME inset is the panel's own: the conversation and the composer live in the call's
+        // window now, so the whole panel rides up over the keyboard while the call stays put.
+        modifier = modifier.imePadding().pointerInput(expanded, chatOpen) {
             var dragTotal = 0f
             detectVerticalDragGestures(
                 onDragStart = { dragTotal = 0f },
@@ -134,8 +198,12 @@ fun BoxScope.MeetingControlsPanel(
                 // Up opens, down closes — the panel answers the same gesture in both
                 // directions, so whatever opened it puts it away again.
                 onDragEnd = {
-                    if (!expanded && dragTotal < -swipeThresholdPx) onExpandedChange(true)
-                    if (expanded && dragTotal > swipeThresholdPx) collapse()
+                    if (chatOpen) {
+                        if (dragTotal > swipeThresholdPx) closeChat()
+                    } else {
+                        if (!expanded && dragTotal < -swipeThresholdPx) onExpandedChange(true)
+                        if (expanded && dragTotal > swipeThresholdPx) collapse()
+                    }
                 },
             )
         },
@@ -143,11 +211,15 @@ fun BoxScope.MeetingControlsPanel(
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             MeetingPanelHandle(
                 color = colors.onButtonVariant,
-                onClick = { onExpandedChange(!expanded) },
+                description = stringResource(
+                    if (chatOpen) R.string.meeting_contentDescription_toggleChat
+                    else R.string.meeting_contentDescription_moreOptions,
+                ),
+                onClick = { if (chatOpen) closeChat() else onExpandedChange(!expanded) },
             )
 
             AnimatedVisibility(
-                visible = expanded,
+                visible = expanded && !chatOpen,
                 enter = expandVertically(
                     animationSpec = tween(Motion.meetingOptionsExpandMs, easing = Motion.standardEasing),
                 ) + fadeIn(
@@ -213,7 +285,44 @@ fun BoxScope.MeetingControlsPanel(
                 }
             }
 
+            // The conversation: the options' movement at a larger size. It grows from the same
+            // bottom edge, above the row it belongs to, on a slightly longer clock because it
+            // travels several times the height.
+            AnimatedVisibility(
+                visible = chatOpen,
+                // Weighted with fill off, so the conversation is measured LAST and takes only
+                // what the handle and the bar's row leave behind. Measured in document order it
+                // helped itself to a fixed share first, and in a short window — landscape with
+                // the keyboard up — the row was what got squeezed, its 48dp controls compressed
+                // below their touch size. The row's height is the bar's identity; the
+                // conversation is the part that can afford to shrink.
+                modifier = Modifier.weight(1f, fill = false),
+                enter = expandVertically(
+                    animationSpec = tween(Motion.meetingChatExpandMs, easing = Motion.standardEasing),
+                ) + fadeIn(
+                    animationSpec = tween(Motion.meetingChatExpandMs, easing = Motion.standardEasing),
+                ),
+                exit = shrinkVertically(
+                    animationSpec = tween(Motion.meetingChatCollapseMs, easing = Motion.standardEasing),
+                ) + fadeOut(
+                    animationSpec = tween(Motion.meetingChatCollapseMs, easing = Motion.standardEasing),
+                ),
+            ) {
+                // A share of the height the keyboard leaves, not all of it: the call stays in
+                // view above the panel, which is the point of chat being a panel and not a page.
+                BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(maxHeight * ChatPanelHeightFraction),
+                    ) {
+                        chatConversation()
+                    }
+                }
+            }
+
             MeetingCallControlsRow(
+                chatOpen = chatOpen,
                 isMicEnabled = isMicEnabled,
                 isCameraEnabled = isCameraEnabled,
                 micHasError = micHasError,
@@ -222,6 +331,11 @@ fun BoxScope.MeetingControlsPanel(
                 showChat = showChat,
                 unreadCount = unreadCount,
                 inputMode = inputMode,
+                chatInput = chatInput,
+                onChatInputChange = onChatInputChange,
+                onSendChat = onSendChat,
+                chatComposer = chatComposer,
+                sendDisabledReason = sendDisabledReason,
                 connectionState = connectionState,
                 voiceAlert = voiceAlert,
                 onPushToTalkChange = onPushToTalkChange,
@@ -247,6 +361,15 @@ fun BoxScope.MeetingControlsPanel(
         }
     }
 }
+
+/**
+ * The conversation's share of the height the keyboard leaves.
+ *
+ * Enough to read a real stretch of the conversation; short of enough to stop the call reading as
+ * the thing behind it. The old sheet rested at half the window — this sits a little taller because
+ * the bar below it is part of the same surface now, not a second object under a separate one.
+ */
+private const val ChatPanelHeightFraction = 0.6f
 
 /** The trailing tick an active toggle wears, in the panel's selection language. */
 @Composable

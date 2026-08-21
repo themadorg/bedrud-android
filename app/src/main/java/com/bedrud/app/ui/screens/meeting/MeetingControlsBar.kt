@@ -1,5 +1,13 @@
 package com.bedrud.app.ui.screens.meeting
 
+import androidx.annotation.StringRes
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedContentScope
+import androidx.compose.animation.EnterExitState
+import androidx.compose.animation.ContentTransform
+import androidx.compose.animation.SizeTransform
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateDpAsState
@@ -83,13 +91,53 @@ import com.bedrud.app.ui.theme.bedrudColors
 import kotlin.math.PI
 import kotlin.math.sin
 
+/** What the bar's middle is holding: the mic pill, the composer's field, or the cannot-send notice. */
+private enum class BarCentre { MIC, FIELD, NOTICE }
+
 /**
- * The five call controls: the row that sits at the foot of [MeetingControlsPanel], collapsed or
- * expanded. It is a composable of its own so the panel's two states share one definition of the
- * buttons — sizes, off-state fills, badge, and the push-to-talk pill included.
+ * Blocks a morphing slot's taps until the hand-off settles.
+ *
+ * AnimatedContent composes the arriving content from the first frame, on top of the departing
+ * one, and hit-testing neither knows nor cares that it is still at alpha 0 — so for the entrance
+ * delay a tap would land on a control the eye cannot see. The worst pair shares exact pixels:
+ * send stands where hang-up stood, and a tap meant for the still-visible send pill would have
+ * ended the call. Both copies go quiet instead; ~a quarter second of a bar that is visibly mid
+ * transformation not taking input reads as the transformation, not as a fault.
+ */
+@Composable
+private fun AnimatedContentScope.MorphSlotContent(content: @Composable () -> Unit) {
+    val settled = transition.currentState == EnterExitState.Visible &&
+        transition.targetState == EnterExitState.Visible
+    Box {
+        content()
+        if (!settled) {
+            Box(
+                modifier = Modifier
+                    .matchParentSize()
+                    .pointerInput(Unit) { detectTapGestures { } },
+            )
+        }
+    }
+}
+
+/**
+ * The bar's working row, in both of its lives: the five call controls at the foot of
+ * [MeetingControlsPanel], and the chat composer they morph into while the conversation is open.
+ *
+ * The morph is slot-by-slot rather than a whole-bar crossfade, so each control hands its place to
+ * the one that does its job in the other mode: the camera key's corner goes to the "+" (the same
+ * 56×48 surface in the same fill, changing its glyph and its job), the mic pill's middle goes to
+ * the text field (the expandable centre either way), and hang-up's end goes to send (the same
+ * pill trading the error role for the accent). Chat and screen share have no counterpart and
+ * simply ride out with their cluster. Three slots is within the one-third rule for simultaneous
+ * motion because they are one choreographed hand-off on one axis, not three journeys.
+ *
+ * When this person may not send, the composer mode is the notice alone in the centre — the sides
+ * collapse to nothing, and the centre's own horizontal padding keeps it symmetric.
  */
 @Composable
 internal fun MeetingCallControlsRow(
+    chatOpen: Boolean,
     isMicEnabled: Boolean,
     isCameraEnabled: Boolean,
     micHasError: Boolean,
@@ -98,6 +146,11 @@ internal fun MeetingCallControlsRow(
     showChat: Boolean,
     unreadCount: Int,
     inputMode: MeetingInputMode,
+    chatInput: String,
+    onChatInputChange: (String) -> Unit,
+    onSendChat: () -> Unit,
+    chatComposer: MeetingChatComposerState,
+    @StringRes sendDisabledReason: Int?,
     connectionState: ConnectionState = ConnectionState.CONNECTED,
     voiceAlert: MeetingVoiceAlert = MeetingVoiceAlert.None,
     onPushToTalkChange: (Boolean) -> Unit,
@@ -109,72 +162,186 @@ internal fun MeetingCallControlsRow(
     modifier: Modifier = Modifier,
 ) {
     val colors = meetingChromeColors()
-    // Three sections with equal-weight sides keep the mic slot — button or pill — exactly
-    // centered under the drag handle, whatever the input mode, at a constant bar width.
+    val centre = when {
+        !chatOpen -> BarCentre.MIC
+        sendDisabledReason == null -> BarCentre.FIELD
+        else -> BarCentre.NOTICE
+    }
+    // Bottom-aligned for the composer's sake: every control is 48dp tall so the alignment is
+    // moot at rest, but a field grown to a second line must keep send beside the line being
+    // written, not floating against the middle of a block of text.
     Row(
         modifier = modifier,
-        verticalAlignment = Alignment.CenterVertically,
+        verticalAlignment = Alignment.Bottom,
     ) {
-        // Side clusters anchor to the bar's edges so every control keeps its position across
-        // input modes; only the space beside the centered mic slot absorbs the difference.
-        Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.CenterStart) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(Dimens.meetingBarItemGap),
-            ) {
-                MeetMediaButton(
+        // The bar's leading corner: camera + screen share, or the composer's "+".
+        // Every slot keys on the same three-valued centre state, never on a boolean that
+        // collapses two of the modes together: "chat open but sending disabled" and "chat
+        // closed" both used to map to false here, and AnimatedContent only animates when its
+        // target *changes* — so opening a chat-disabled room snapped the clusters out of
+        // existence with no morph at all.
+        AnimatedContent(
+            targetState = centre,
+            transitionSpec = { barSlotMorph(targetState != BarCentre.MIC) },
+            contentAlignment = Alignment.CenterStart,
+            label = "barLeadingSlot",
+            // Centred, not bottom-aligned: attach-and-poll belongs to the whole message, where
+            // send belongs to the line being written — so in a grown bar the "+" rides its middle.
+            modifier = Modifier.align(Alignment.CenterVertically),
+        ) { c ->
+            MorphSlotContent {
+            if (c == BarCentre.FIELD) {
+                ComposerAddButton(
                     colors = colors,
-                    enabled = isCameraEnabled,
-                    hasError = cameraHasError,
-                    onClick = onToggleCamera,
-                    enabledIcon = Icons.Default.Videocam,
-                    disabledIcon = Icons.Default.VideocamOff,
-                    contentDescription = stringResource(R.string.meeting_contentDescription_toggleCamera),
+                    enabled = !chatComposer.isUploading,
+                    showAttach = chatComposer.canAttach,
+                    onAttach = { chatComposer.attachImage() },
+                    onPoll = { chatComposer.isComposingPoll = true },
                 )
-                MeetCircleButton(
-                    colors = colors,
-                    onClick = onToggleScreenShare,
-                    icon = if (isScreenShareEnabled) Icons.AutoMirrored.Filled.StopScreenShare
-                    else Icons.AutoMirrored.Filled.ScreenShare,
-                    contentDescription = stringResource(R.string.meeting_contentDescription_toggleScreenShare),
-                    containerColor = if (isScreenShareEnabled) colors.buttonActive else colors.button,
-                )
+            } else if (c == BarCentre.NOTICE) {
+                // Cannot send: the corner folds away and the notice holds the bar alone.
+                Box {}
+            } else {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(Dimens.meetingBarItemGap),
+                ) {
+                    MeetMediaButton(
+                        colors = colors,
+                        enabled = isCameraEnabled,
+                        hasError = cameraHasError,
+                        onClick = onToggleCamera,
+                        enabledIcon = Icons.Default.Videocam,
+                        disabledIcon = Icons.Default.VideocamOff,
+                        contentDescription = stringResource(R.string.meeting_contentDescription_toggleCamera),
+                    )
+                    MeetCircleButton(
+                        colors = colors,
+                        onClick = onToggleScreenShare,
+                        icon = if (isScreenShareEnabled) Icons.AutoMirrored.Filled.StopScreenShare
+                        else Icons.AutoMirrored.Filled.ScreenShare,
+                        contentDescription = stringResource(R.string.meeting_contentDescription_toggleScreenShare),
+                        containerColor = if (isScreenShareEnabled) colors.buttonActive else colors.button,
+                    )
+                }
+            }
             }
         }
 
-        MicPill(
-            colors = colors,
-            inputMode = inputMode,
-            isMicEnabled = isMicEnabled,
-            hasError = micHasError,
-            connectionState = connectionState,
-            voiceAlert = voiceAlert,
-            onToggleMic = onToggleMic,
-            onPushToTalkChange = onPushToTalkChange,
-        )
-
-        Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.CenterEnd) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(Dimens.meetingBarItemGap),
-            ) {
-                MeetCircleButton(
-                    colors = colors,
-                    onClick = onToggleChat,
-                    icon = Icons.AutoMirrored.Filled.Chat,
-                    contentDescription = stringResource(R.string.meeting_contentDescription_toggleChat),
-                    containerColor = if (showChat) colors.buttonActive else colors.button,
-                    badge = if (unreadCount > 0) {
-                        if (unreadCount > 9) "9+" else unreadCount.toString()
-                    } else {
-                        null
-                    },
+        // The expandable middle: the mic pill centred in its slack, or the field spending it.
+        AnimatedContent(
+            targetState = centre,
+            transitionSpec = { barSlotMorph(targetState != BarCentre.MIC) },
+            contentAlignment = Alignment.Center,
+            label = "barCentreSlot",
+            modifier = Modifier
+                .weight(1f)
+                .padding(horizontal = Dimens.meetingBarItemGap)
+                .align(Alignment.CenterVertically),
+        ) { c ->
+            MorphSlotContent {
+            when (c) {
+                BarCentre.MIC -> Box(
+                    modifier = Modifier.fillMaxWidth(),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    MicPill(
+                        colors = colors,
+                        inputMode = inputMode,
+                        isMicEnabled = isMicEnabled,
+                        hasError = micHasError,
+                        connectionState = connectionState,
+                        voiceAlert = voiceAlert,
+                        onToggleMic = onToggleMic,
+                        onPushToTalkChange = onPushToTalkChange,
+                    )
+                }
+                BarCentre.FIELD -> ChatComposerField(
+                    input = chatInput,
+                    onInputChange = onChatInputChange,
+                    modifier = Modifier.fillMaxWidth(),
                 )
-                MeetEndCallButton(colors = colors, onClick = onEndCall)
+                BarCentre.NOTICE -> Box(
+                    modifier = Modifier.fillMaxWidth(),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    // Read at composition, not captured: the reason can clear while the notice is
+                    // still animating out, and the leaving copy must not crash on the way.
+                    sendDisabledReason?.let { ChatSendDisabledNotice(it) }
+                }
+            }
+            }
+        }
+
+        // The bar's trailing corner: chat + hang-up, or the composer's send.
+        AnimatedContent(
+            targetState = centre,
+            transitionSpec = { barSlotMorph(targetState != BarCentre.MIC) },
+            contentAlignment = Alignment.CenterEnd,
+            label = "barTrailingSlot",
+        ) { c ->
+            MorphSlotContent {
+            if (c == BarCentre.FIELD) {
+                DockSendButton(
+                    colors = colors,
+                    enabled = chatInput.isNotBlank() && !chatComposer.isUploading,
+                    onClick = onSendChat,
+                )
+            } else if (c == BarCentre.NOTICE) {
+                Box {}
+            } else {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(Dimens.meetingBarItemGap),
+                ) {
+                    MeetCircleButton(
+                        colors = colors,
+                        onClick = onToggleChat,
+                        icon = Icons.AutoMirrored.Filled.Chat,
+                        contentDescription = stringResource(R.string.meeting_contentDescription_toggleChat),
+                        containerColor = if (showChat) colors.buttonActive else colors.button,
+                        badge = if (unreadCount > 0) {
+                            if (unreadCount > 9) "9+" else unreadCount.toString()
+                        } else {
+                            null
+                        },
+                    )
+                    MeetEndCallButton(colors = colors, onClick = onEndCall)
+                }
+            }
             }
         }
     }
 }
+
+/**
+ * How one slot hands its place to the other: the leaving content fades first, the arriving one
+ * fades in over the rest of the clock, and the slot's size glides between them the whole way.
+ *
+ * Sequential, not a plain crossfade — two controls at half opacity on top of each other read as
+ * mush, where a hand-off reads as one thing becoming another. The entrance gets the longer share
+ * ([MorphExitFraction] leaves), per the direction rule: what arrives matters more than what goes.
+ * Size is not clipped, so a wide cluster shrinking towards its corner slides out of the slot
+ * rather than being guillotined at its edge.
+ */
+private fun barSlotMorph(opening: Boolean): ContentTransform {
+    val totalMs = if (opening) Motion.meetingChatMorphOpenMs else Motion.meetingChatMorphCloseMs
+    val exitMs = (totalMs * MorphExitFraction).toInt()
+    return ContentTransform(
+        targetContentEnter = fadeIn(
+            tween(totalMs - exitMs, delayMillis = exitMs, easing = Motion.standardEasing),
+        ),
+        initialContentExit = fadeOut(
+            tween(exitMs, easing = Motion.standardEasing),
+        ),
+        sizeTransform = SizeTransform(clip = false) { _, _ ->
+            tween(totalMs, easing = Motion.standardEasing)
+        },
+    )
+}
+
+/** The leaving content's share of the morph clock; the entrance takes the rest. */
+private const val MorphExitFraction = 0.4f
 
 /**
  * The pull-up affordance above the controls. Sized like the M3 sheet drag handle, wrapped in a
@@ -183,9 +350,11 @@ internal fun MeetingCallControlsRow(
 @Composable
 internal fun MeetingPanelHandle(
     color: Color,
+    // Named by the caller because the handle serves two panels: pulling up the options, and
+    // putting the conversation away.
+    description: String,
     onClick: () -> Unit,
 ) {
-    val description = stringResource(R.string.meeting_contentDescription_moreOptions)
     Box(
         modifier = Modifier
             // Clip before clickable so the press ripple follows the shape instead of

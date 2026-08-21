@@ -88,9 +88,9 @@ object Dimens {
     val meetingSpeakingRingMax = 3.dp    // ...and at the loudest
     val meetingIndicatorDot = 8.dp       // top-bar dots (recording, reconnecting)
     val meetingBarPaddingH = 10.dp       // controls bar inner horizontal padding
-    // Bottom inset of the controls bar, mirroring the drag-handle block above the row so the
-    // 48dp controls sit centred. 12 + 48 + 12 puts the bar at 72dp — the same height as the chat
-    // dock that replaces it, so the bottom edge does not jump when chat opens.
+    // Bottom inset of the bar's row, mirroring the drag-handle block above it so the 48dp
+    // controls sit centred. The row keeps it in both of the bar's modes — call controls and chat
+    // composer — which is what holds the bar's resting height still through the morph.
     val meetingBarPaddingV = 12.dp
     val meetingBarItemGap = 8.dp         // gap between controls bar buttons
     val meetingMediaButtonWidth = 56.dp  // camera/mic toggles (wider, rectangular)
@@ -160,9 +160,10 @@ object Dimens {
     // So a single emoji is a pill rather than a circle. Only just wider than tall: at 40dp an 11.4dp
     // emoji floated in 14.5dp of padding a side, which is what made the chip read heavy.
     val chatReactionChipMinWidth = 32.dp
-    // The composer has no sizing tokens of its own: it is built on MeetingBarSurface and the
-    // controls bar's tokens (meetingBarPaddingH/V, meetingMediaButtonHeight, meetingEndCallWidth),
-    // so the two bars cannot drift apart again. See DESIGN.md, "Meeting chrome".
+    // The composer has no sizing tokens of its own: it is the controls bar's row in its chat
+    // mode, sized by that bar's tokens (meetingBarPaddingH/V, meetingMediaButtonHeight,
+    // meetingEndCallWidth) — one bar, so there is nothing left to drift. See DESIGN.md,
+    // "Meeting chrome".
     val chatPollWidth = 220.dp           // a poll sets its own width, so its bars are comparable between messages
     val chatPollOption = 36.dp           // one answer row, tall enough to tap without reading as a button
 

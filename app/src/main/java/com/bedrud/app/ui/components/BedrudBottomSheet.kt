@@ -38,8 +38,7 @@ import com.bedrud.app.ui.theme.Dimens
  * lift a sheet off the background, and it is opaque over video just the same, so there is no case
  * where a darker container buys anything.
  *
- * The handle is [BedrudSheetHandle], shared with the call's controls bar and the chat sheet, rather
- * than M3's own. The Material one pressed as a rounded rectangle splashing across its whole touch
+ * The handle is [BedrudSheetHandle] rather than M3's own. The Material one pressed as a rounded rectangle splashing across its whole touch
  * area, and announced itself as "Drag Handle" — a label Android shows on long press, naming the
  * widget instead of saying what it does. The shape token stays: [BedrudShapeTokens.sheetTop] is
  * already M3's 28dp `extraLarge` top corners, just named.

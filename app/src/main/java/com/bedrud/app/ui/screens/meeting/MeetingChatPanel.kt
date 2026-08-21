@@ -4,25 +4,19 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.StringRes
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.ime
-import androidx.compose.foundation.layout.navigationBars
-import androidx.compose.foundation.layout.union
-import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.background
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -38,22 +32,22 @@ import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SmallFloatingActionButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.Stable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
@@ -107,32 +101,146 @@ data class ChatImageContext(
 )
 
 /**
- * The in-call chat: the messages so far, and the dock to add to them.
+ * What the composer is doing beyond holding text — the state its two homes share.
+ *
+ * The composer's controls live in the call bar while the conversation lives in the panel above
+ * it, and an upload started from one is reported in the other: the "+" launches the picker, the
+ * spinner and any failure line sit at the foot of the conversation, and send stays disabled until
+ * the picture is up. One object holds that thread so the two places cannot disagree about it.
+ */
+@Stable
+class MeetingChatComposerState internal constructor() {
+    /** True while a picked image is travelling to the server. Disables attach and send. */
+    var isUploading by mutableStateOf(false)
+        internal set
+
+    /** Why the last upload failed, in the reader's words — or null. Shown by the conversation. */
+    var uploadError by mutableStateOf<String?>(null)
+        internal set
+
+    /** Whether the poll composer sheet is up. The bar raises it; the conversation renders it. */
+    var isComposingPoll by mutableStateOf(false)
+
+    // Snapshot state, not a plain var: [canAttach] is read in composition, and the room (and so
+    // the picker) arrives after the first frame — a plain var would change without invalidating
+    // the "+" menu that read it, and the attach entry would stay missing until an unrelated
+    // recomposition happened by.
+    internal var attach: (() -> Unit)? by mutableStateOf(null)
+
+    /** Whether this room can carry images at all — false until the room is known. */
+    val canAttach: Boolean get() = attach != null
+
+    /** Opens the system image picker; the upload and the send both follow from the result. */
+    fun attachImage() {
+        attach?.invoke()
+    }
+
+    /**
+     * Forgets a reported failure. Called when chat closes: the state outlives the panel so an
+     * upload can finish in the background, but a failure line from an hour ago reappearing on
+     * the next open would read as news.
+     */
+    fun dismissError() {
+        uploadError = null
+    }
+}
+
+/**
+ * Creates the composer's shared state and wires the image-upload flow into it.
  *
  * Attachments are a two-step send — the image goes to the server first, and only the URL it comes
- * back with travels to the other participants — so [onSendAttachment] is separate from [onSend].
- *
- * Reactions and votes are separate again — [onToggleReaction] and [onVote] name a message that may
- * be anybody's, where [onSendPoll] adds one of this reader's own.
- *
- * [sendDisabledReason] closes the dock and says why, while leaving the conversation readable:
- * turning chat off, or blocking one person, should not take away what has already been said.
+ * back with travels to the other participants — so [onSendAttachment] is separate from the plain
+ * text send. The caption travels with the picture: whatever [input] holds when the upload lands is
+ * sent along and cleared, same as pressing send.
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MeetingChatPanel(
-    messages: List<ChatMessage>,
+fun rememberMeetingChatComposerState(
+    imageContext: ChatImageContext?,
     input: String,
-    currentIdentity: String,
     onInputChange: (String) -> Unit,
-    onSend: () -> Unit,
     onSendAttachment: (String, ChatAttachment) -> Unit,
-    onSendPoll: (ChatPoll) -> Unit,
+): MeetingChatComposerState {
+    val state = remember { MeetingChatComposerState() }
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+
+    // The upload outlives recompositions, so it must read the caption and the callbacks as they
+    // are when it *finishes*, not as they were when the picker was launched.
+    val currentInput by rememberUpdatedState(input)
+    val currentOnInputChange by rememberUpdatedState(onInputChange)
+    val currentOnSendAttachment by rememberUpdatedState(onSendAttachment)
+
+    val unreadableMessage = stringResource(R.string.meeting_chat_uploadUnreadable)
+    val unreachableMessage = stringResource(R.string.meeting_chat_uploadUnreachable)
+    val rejectedFormat = stringResource(R.string.meeting_chat_uploadRejected)
+
+    val uploader = remember(imageContext) {
+        imageContext?.let { ChatImageUploader(context.contentResolver, it.roomApi) }
+    }
+
+    val imagePicker = rememberLauncherForActivityResult(
+        ActivityResultContracts.PickVisualMedia()
+    ) { uri ->
+        if (uri == null || uploader == null || imageContext == null) {
+            return@rememberLauncherForActivityResult
+        }
+        scope.launch {
+            state.isUploading = true
+            state.uploadError = null
+            when (val result = uploader.upload(imageContext.roomId, uri)) {
+                is ChatUploadResult.Success -> {
+                    currentOnSendAttachment(currentInput.trim(), result.attachment)
+                    currentOnInputChange("")
+                }
+                is ChatUploadResult.Failure -> {
+                    state.uploadError = when (val reason = result.reason) {
+                        ChatUploadFailure.Unreadable -> unreadableMessage
+                        ChatUploadFailure.Unreachable -> unreachableMessage
+                        is ChatUploadFailure.Rejected -> rejectedFormat.format(reason.code)
+                    }
+                }
+            }
+            state.isUploading = false
+        }
+    }
+
+    state.attach = if (imageContext != null) {
+        {
+            imagePicker.launch(
+                PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+            )
+        }
+    } else {
+        null
+    }
+    return state
+}
+
+/**
+ * The in-call conversation: the messages so far, and the overlays they open.
+ *
+ * The dock that adds to them is not here — it lives in the call bar below, whose controls morph
+ * into the composer while chat is open. This panel is what unfolds above that bar: the list, the
+ * jump-to-latest button, the upload spinner and failure line at its foot, and the sheets a message
+ * can open (poll results, reactions, the lightbox, the poll composer).
+ *
+ * Reactions and votes name a message that may be anybody's — [onToggleReaction] and [onVote] —
+ * where [onSendPoll] adds one of this reader's own.
+ *
+ * [canParticipate] is false when this person may not send (chat off for the room, or a moderator
+ * block): the conversation stays readable, but reactions and votes close with the dock.
+ */
+@Composable
+fun MeetingChatConversation(
+    messages: List<ChatMessage>,
+    currentIdentity: String,
+    composer: MeetingChatComposerState,
     onToggleReaction: (String, String) -> Unit,
     onVote: (String, String) -> Unit,
+    onSendPoll: (ChatPoll) -> Unit,
     resolveName: (String) -> String,
     imageContext: ChatImageContext?,
-    @StringRes sendDisabledReason: Int?,
+    canParticipate: Boolean,
     /**
      * The servers this person has added, by host. A room link on one of them opens the app; anything
      * else opens a browser. Passed in rather than looked up here because a link to somebody else's
@@ -145,7 +253,6 @@ fun MeetingChatPanel(
     val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
-    val bringIntoViewRequester = remember { BringIntoViewRequester() }
 
     // One item per message, each carrying where it sits in its sender's run. Grouping decides how a
     // row is drawn; it must not decide what a list item is, or a long run would become one giant
@@ -170,53 +277,15 @@ fun MeetingChatPanel(
             .collect { scrolling -> if (!scrolling) followLatest = !listState.canScrollBackward }
     }
 
-    var isUploading by remember { mutableStateOf(false) }
-    var uploadError by remember { mutableStateOf<String?>(null) }
     // A device with no browser at all cannot open a link, and a tap that silently does nothing
     // reads as a broken link rather than as a missing app. Shares the notice line below.
     var linkError by remember { mutableStateOf<String?>(null) }
     val linkUnopenable = stringResource(R.string.meeting_chat_linkUnopenable)
     var previewImageUrl by remember { mutableStateOf<String?>(null) }
-    var isComposingPoll by remember { mutableStateOf(false) }
-    // Attach and poll show only on an empty field. They hold a fixed column on the left, and once
     // The message whose results are open, rather than the poll itself: votes keep arriving while
     // the sheet is up, and holding the poll would freeze the numbers at the moment it opened.
     var resultsMessageId by remember { mutableStateOf<String?>(null) }
     var reactionsMessageId by remember { mutableStateOf<String?>(null) }
-
-    val unreadableMessage = stringResource(R.string.meeting_chat_uploadUnreadable)
-    val unreachableMessage = stringResource(R.string.meeting_chat_uploadUnreachable)
-    val rejectedFormat = stringResource(R.string.meeting_chat_uploadRejected)
-
-    val uploader = remember(imageContext) {
-        imageContext?.let { ChatImageUploader(context.contentResolver, it.roomApi) }
-    }
-
-    val imagePicker = rememberLauncherForActivityResult(
-        ActivityResultContracts.PickVisualMedia()
-    ) { uri ->
-        if (uri == null || uploader == null || imageContext == null) {
-            return@rememberLauncherForActivityResult
-        }
-        scope.launch {
-            isUploading = true
-            uploadError = null
-            when (val result = uploader.upload(imageContext.roomId, uri)) {
-                is ChatUploadResult.Success -> {
-                    onSendAttachment(input.trim(), result.attachment)
-                    onInputChange("")
-                }
-                is ChatUploadResult.Failure -> {
-                    uploadError = when (val reason = result.reason) {
-                        ChatUploadFailure.Unreadable -> unreadableMessage
-                        ChatUploadFailure.Unreachable -> unreachableMessage
-                        is ChatUploadFailure.Rejected -> rejectedFormat.format(reason.code)
-                    }
-                }
-            }
-            isUploading = false
-        }
-    }
 
     // Someone else's message follows the reader's wishes; your own overrides them, because pressing
     // send is a deliberate act and it would be strange to be left looking at something else.
@@ -246,7 +315,7 @@ fun MeetingChatPanel(
                     MeetingChatRow(
                         row = row,
                         currentIdentity = currentIdentity,
-                        canParticipate = sendDisabledReason == null,
+                        canParticipate = canParticipate,
                         serverURL = imageContext?.serverURL.orEmpty(),
                         accessToken = imageContext?.accessToken,
                         onImageClick = { previewImageUrl = it },
@@ -294,7 +363,7 @@ fun MeetingChatPanel(
             }
         }
 
-        if (isUploading) {
+        if (composer.isUploading) {
             Row(
                 modifier = Modifier.padding(horizontal = Dimens.space12, vertical = Dimens.space4),
                 verticalAlignment = Alignment.CenterVertically,
@@ -310,176 +379,13 @@ fun MeetingChatPanel(
                 )
             }
         }
-        (uploadError ?: linkError)?.let { error ->
+        (composer.uploadError ?: linkError)?.let { error ->
             Text(
                 text = error,
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.error,
                 modifier = Modifier.padding(horizontal = Dimens.space12, vertical = Dimens.space2),
             )
-        }
-
-        // Whichever is taller, the keyboard or the gesture bar — never both stacked. The panel used
-        // to sit inside the meeting Scaffold, which had already inset it past the navigation bar; in
-        // a sheet window it has to do that itself, and without this the gesture bar drew across the
-        // composer.
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .windowInsetsPadding(WindowInsets.ime.union(WindowInsets.navigationBars))
-                // Bottom gap = the control bar's own `space12`, because this bar replaces that one
-                // on screen and the swap must not move it. The horizontal margin belongs to
-                // MeetingBarSurface now; only the gap separating the dock from the conversation
-                // above it is this row's to keep.
-                .padding(top = Dimens.space8, bottom = Dimens.space12),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = if (sendDisabledReason == null) {
-                Arrangement.Start
-            } else {
-                Arrangement.Center
-            },
-        ) {
-            if (sendDisabledReason != null) {
-                Box(modifier = Modifier.padding(horizontal = Dimens.meetingScreenMargin)) {
-                    ChatSendDisabledNotice(reason = sendDisabledReason)
-                }
-            } else {
-                // Built as the call's controls bar, not as a chat widget: the same shell via
-                // MeetingBarSurface, the same 48dp control band on the same 12dp paddings. Chat is
-                // part of the call, and the two bars sit in the same place on screen and swap with
-                // each other — they are the same object with different contents.
-                val chrome = meetingChromeColors()
-                MeetingBarSurface {
-                    // Horizontal padding only: the bar's two vertical 12s are not the row's to
-                    // keep — they are slack the field spends. Its slot IS the bar's full resting
-                    // height, so a second line eats the padding's place and the bar itself grows
-                    // only once the text genuinely runs out of it. The controls own their insets
-                    // instead: send carries the 12dp bottom the row no longer provides, and the
-                    // "+" centres, so at one line nothing sits differently than it did.
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = Dimens.meetingBarPaddingH),
-                        horizontalArrangement = Arrangement.spacedBy(Dimens.meetingBarItemGap),
-                        // Bottom, so a grown field keeps the controls beside the line being written
-                        // rather than floating them against the middle of a block of text.
-                        verticalAlignment = Alignment.Bottom,
-                    ) {
-                        // A fixture of the bar, not a visitor: it used to stand down while there
-                        // was text, which put a control appearing and disappearing beside every
-                        // first and last keystroke. It centres in a grown bar — attach-and-poll
-                        // belongs to the whole message, where send belongs to the line being
-                        // written and stays at the bottom beside it.
-                        ComposerAddButton(
-                            colors = chrome,
-                            enabled = !isUploading,
-                            showAttach = imageContext != null,
-                            onAttach = {
-                                imagePicker.launch(
-                                    PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
-                                )
-                            },
-                            onPoll = { isComposingPoll = true },
-                            modifier = Modifier.align(Alignment.CenterVertically),
-                        )
-
-                        // A bare field on the bar's own surface, not a boxed one: the call bar
-                        // holds its controls directly and the composer holds its text the same
-                        // way. (It wore the mic pill's chrome for one build; one pill beside two
-                        // more read as chrome arguing with itself, and the inner edge bought
-                        // nothing the bar's own edge was not already providing.)
-                        //
-                        // Its insets live INSIDE the decoration, not around the field: a text
-                        // field's tap-to-focus region is its own measured bounds, so padding
-                        // outside it would leave strips of the slot drawn as input but dead to
-                        // the finger. The min height makes the field span the whole 48dp band —
-                        // anywhere in the middle of the bar is the field.
-                        //
-                        // A bare text field rather than an `OutlinedTextField`: that one carries
-                        // a focus outline drawn inside the bar it already sits in, and a 56dp
-                        // minimum that would outgrow the band.
-                        // propagateMinConstraints hands the slot's full size INTO the field, which
-                        // is what makes its tap-to-focus region span the whole band — `weight` plus
-                        // a min height on the field itself sized its layout but left its pointer
-                        // region hugging the text, and the slot's edges went dead to the finger.
-                        // (The pill Surface used to do exactly this propagation; this keeps the
-                        // mechanics without the chrome.)
-                        Box(
-                            modifier = Modifier
-                                .weight(1f)
-                                .heightIn(
-                                    min = Dimens.meetingMediaButtonHeight +
-                                        Dimens.meetingBarPaddingV * 2,
-                                ),
-                            propagateMinConstraints = true,
-                        ) {
-                                BasicTextField(
-                                    value = input,
-                                    onValueChange = onInputChange,
-                                    // Wraps and grows the bar with it. Single-line scrolled the
-                                    // text sideways instead, which hides the start of the sentence
-                                    // being written — the one part a writer needs to see to finish
-                                    // it. Capped so a long message cannot push the conversation it
-                                    // is replying to off the top of the panel; past the cap the
-                                    // field scrolls within its own height.
-                                    maxLines = ChatDockMaxLines,
-                                    textStyle = MaterialTheme.typography.bodyMedium.copy(
-                                        color = MaterialTheme.colorScheme.onSurface,
-                                        textDirection = BidiUtils.textDirection(input),
-                                        lineHeightStyle = CenteredLineHeight,
-                                    ),
-                                    cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
-                                    modifier = Modifier
-                                        .bringIntoViewRequester(bringIntoViewRequester)
-                                        .onFocusEvent { focusState ->
-                                            if (focusState.isFocused) {
-                                                scope.launch { bringIntoViewRequester.bringIntoView() }
-                                            }
-                                        },
-                                    // The placeholder and the field are stacked in a box that
-                                    // aligns them, rather than emitted as bare siblings: left to
-                                    // the slot's own placement the two sat on slightly different
-                                    // lines, and the hint read about a pixel lower than the text
-                                    // that replaces it.
-                                    decorationBox = { field ->
-                                        // This box IS the 48dp band: CenterStart centres a single
-                                        // line in it, and a grown field takes it past the minimum,
-                                        // where the row's bottom alignment takes over.
-                                        // space6, because the arithmetic is exact: three 20dp
-                                        // lines plus 6dp above and below is precisely the bar's
-                                        // 72dp resting height, so even the full three lines never
-                                        // grow the bar. A single line still centres in the band.
-                                        Box(
-                                            contentAlignment = Alignment.CenterStart,
-                                            modifier = Modifier.padding(
-                                                horizontal = Dimens.space4,
-                                                vertical = Dimens.space6,
-                                            ),
-                                        ) {
-                                            if (input.isEmpty()) {
-                                                Text(
-                                                    text = stringResource(R.string.meeting_chat_placeholder),
-                                                    style = MaterialTheme.typography.bodyMedium.copy(
-                                                        lineHeightStyle = CenteredLineHeight,
-                                                    ),
-                                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                                )
-                                            }
-                                            field()
-                                        }
-                                    },
-                                )
-                        }
-
-                        val canSend = input.isNotBlank() && !isUploading
-                        DockSendButton(
-                            colors = chrome,
-                            enabled = canSend,
-                            onClick = onSend,
-                        )
-                    }
-                }
-            }
         }
     }
 
@@ -490,11 +396,11 @@ fun MeetingChatPanel(
         onClose = { previewImageUrl = null },
     )
 
-    if (isComposingPoll) {
+    if (composer.isComposingPoll) {
         MeetingChatPollSheet(
-            onDismiss = { isComposingPoll = false },
+            onDismiss = { composer.isComposingPoll = false },
             onCreate = { poll ->
-                isComposingPoll = false
+                composer.isComposingPoll = false
                 onSendPoll(poll)
             },
         )
@@ -528,6 +434,92 @@ fun MeetingChatPanel(
 }
 
 /**
+ * The field the mic pill becomes: the composer's middle, spanning whatever the bar's centre gives
+ * it.
+ *
+ * A bare field on the bar's own surface, not a boxed one: the call bar holds its controls directly
+ * and the composer holds its text the same way. (It wore the mic pill's chrome for one build; one
+ * pill beside two more read as chrome arguing with itself, and the inner edge bought nothing the
+ * bar's own edge was not already providing.)
+ *
+ * Its insets live INSIDE the decoration, not around the field: a text field's tap-to-focus region
+ * is its own measured bounds, so padding outside it would leave strips of the slot drawn as input
+ * but dead to the finger. The min height makes the field span the whole 48dp control band —
+ * anywhere in the middle of the bar is the field. In the merged bar the band is the buttons' own
+ * 48dp, not the sheet-era 72: the panel's handle now sits above the row, so the bar's resting
+ * height is the same in both of its modes and the morph never changes it. A second line grows the
+ * bar from there; past [ChatDockMaxLines] the field scrolls within its own height rather than
+ * climbing over the conversation it is answering.
+ *
+ * propagateMinConstraints hands the slot's full size INTO the field, which is what makes its
+ * tap-to-focus region span the whole band — `weight` plus a min height on the field itself sized
+ * its layout but left its pointer region hugging the text, and the slot's edges went dead to the
+ * finger.
+ */
+@Composable
+internal fun ChatComposerField(
+    input: String,
+    onInputChange: (String) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val scope = rememberCoroutineScope()
+    val bringIntoViewRequester = remember { BringIntoViewRequester() }
+    Box(
+        modifier = modifier.heightIn(min = Dimens.meetingMediaButtonHeight),
+        propagateMinConstraints = true,
+    ) {
+        BasicTextField(
+            value = input,
+            onValueChange = onInputChange,
+            // Wraps and grows the bar with it. Single-line scrolled the text sideways instead,
+            // which hides the start of the sentence being written — the one part a writer needs
+            // to see to finish it.
+            maxLines = ChatDockMaxLines,
+            textStyle = MaterialTheme.typography.bodyMedium.copy(
+                color = MaterialTheme.colorScheme.onSurface,
+                textDirection = BidiUtils.textDirection(input),
+                lineHeightStyle = CenteredLineHeight,
+            ),
+            cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+            modifier = Modifier
+                .bringIntoViewRequester(bringIntoViewRequester)
+                .onFocusEvent { focusState ->
+                    if (focusState.isFocused) {
+                        scope.launch { bringIntoViewRequester.bringIntoView() }
+                    }
+                },
+            // The placeholder and the field are stacked in a box that aligns them, rather than
+            // emitted as bare siblings: left to the slot's own placement the two sat on slightly
+            // different lines, and the hint read about a pixel lower than the text that replaces
+            // it.
+            decorationBox = { field ->
+                // This box IS the control band: CenterStart centres a single line in it, and a
+                // grown field takes it past the minimum, where the row's bottom alignment takes
+                // over.
+                Box(
+                    contentAlignment = Alignment.CenterStart,
+                    modifier = Modifier.padding(
+                        horizontal = Dimens.space4,
+                        vertical = Dimens.space6,
+                    ),
+                ) {
+                    if (input.isEmpty()) {
+                        Text(
+                            text = stringResource(R.string.meeting_chat_placeholder),
+                            style = MaterialTheme.typography.bodyMedium.copy(
+                                lineHeightStyle = CenteredLineHeight,
+                            ),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    field()
+                }
+            },
+        )
+    }
+}
+
+/**
  * The composer's one secondary control: a "+" that opens everything a message can carry.
  *
  * One button rather than a row of them, for the reason every messenger converged on the same
@@ -538,13 +530,14 @@ fun MeetingChatPanel(
  *
  * It wears the camera toggle's background — the same field-shaped surface, at the same 56×48 —
  * so the composer's one secondary control is visibly a control, the way the call bar's leading
- * button is. The fill is the media-off tone because that is the only fill that survives the dark
- * palette (`colors.button` sits two values out of 255 from the bar); the state-language cost of
- * borrowing the "off" tone for an always-live control was weighed against an invisible button,
- * and visibility won.
+ * button is. In the morph that is also its arrival: it fades in exactly where the camera key
+ * fades out, the same shape in the same corner changing its job. The fill is the media-off tone
+ * because that is the only fill that survives the dark palette (`colors.button` sits two values
+ * out of 255 from the bar); the state-language cost of borrowing the "off" tone for an always-live
+ * control was weighed against an invisible button, and visibility won.
  */
 @Composable
-private fun ComposerAddButton(
+internal fun ComposerAddButton(
     colors: MeetingChromeColors,
     enabled: Boolean,
     showAttach: Boolean,
@@ -624,7 +617,9 @@ private fun ComposerAddButton(
  *
  * Both are the one primary action of a bar that is otherwise secondary controls and an expandable
  * middle, both sit at the same end of it, and both are a filled pill of the same size — only the
- * role colour differs, because one ends the call and the other does not.
+ * role colour differs, because one ends the call and the other does not. The morph trades one for
+ * the other in place: the pill at the bar's end keeps its seat and its shape while its colour
+ * crosses from the error role to the accent, which is the whole state change told on one control.
  *
  * With nothing to send it keeps the pill — an empty composer still shows where send is — as a
  * `button` fill lifted by the mic pill's resting shadow, with the icon dimmed. The shadow is what
@@ -634,7 +629,7 @@ private fun ComposerAddButton(
  * wearing it would invite exactly the tap it ignores.
  */
 @Composable
-private fun DockSendButton(
+internal fun DockSendButton(
     colors: MeetingChromeColors,
     enabled: Boolean,
     onClick: () -> Unit,
@@ -646,9 +641,6 @@ private fun DockSendButton(
         color = if (enabled) colors.accent else colors.button,
         shadowElevation = if (enabled) Elevation.level0 else Elevation.micPillResting,
         modifier = Modifier
-            // The bottom inset the row used to provide: the row gave its vertical padding to the
-            // field as spendable slack, so the pill keeps its own distance from the bar's edge.
-            .padding(bottom = Dimens.meetingBarPaddingV)
             .size(
                 width = Dimens.meetingEndCallWidth,
                 height = Dimens.meetingMediaButtonHeight,
@@ -682,7 +674,7 @@ private fun DockSendButton(
  * restriction to be told about — nothing has gone wrong and nothing is irreversible.
  */
 @Composable
-private fun ChatSendDisabledNotice(@StringRes reason: Int) {
+internal fun ChatSendDisabledNotice(@StringRes reason: Int) {
     Row(
         modifier = Modifier
             .clip(BedrudShapeTokens.pill)
@@ -726,10 +718,8 @@ private val CenteredLineHeight = LineHeightStyle(
 /**
  * How tall the composer may grow before it scrolls inside itself.
  *
- * Three lines: what the bar's resting height holds. The bar is tall enough by default — a wrapped
- * message spends the bar's own padding instead of growing it — and past three lines the field
- * scrolls within its height rather than climbing over the conversation it is answering, which is
- * the thing the writer is looking at while they type.
+ * Three lines: past that the field scrolls within its height rather than climbing over the
+ * conversation it is answering, which is the thing the writer is looking at while they type.
  */
 private const val ChatDockMaxLines = 3
 

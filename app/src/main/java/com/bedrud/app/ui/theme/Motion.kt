@@ -29,6 +29,28 @@ object Motion {
     const val meetingOptionsExpandMs = 320
     const val meetingOptionsCollapseMs = 260
 
+    /**
+     * The bar's contents trading places: call controls out, chat composer in — and back.
+     *
+     * Slot-level, not a whole-bar crossfade: the camera key hands its corner to the "+", the mic
+     * pill hands the middle to the field, hang-up hands its end to send. Shorter than the panel
+     * growing above it (the controls are light elements, the panel is a heavy one), and the close
+     * quicker than the open for the same reason the options panel's is: what is leaving should
+     * not keep the call waiting.
+     */
+    const val meetingChatMorphOpenMs = 280
+    const val meetingChatMorphCloseMs = 220
+
+    /**
+     * The conversation growing out of the bar, and folding back into it.
+     *
+     * The options panel's own timings, stretched: this panel travels roughly twice the height, and
+     * a taller reveal on the same clock reads faster than the small one, not the same. Slightly
+     * longer keeps the perceived pace of the two panels equal.
+     */
+    const val meetingChatExpandMs = 360
+    const val meetingChatCollapseMs = 300
+
     /** How long the top bar says "Connected" before handing the slot back to the room name. */
     const val meetingConnectedNoticeMs = 2000L
 

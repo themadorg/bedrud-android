@@ -65,18 +65,18 @@ data class MeetingChromeColors(
 )
 
 /**
- * The floating bottom bar's shell: the surface every bar over the call stands on.
+ * The floating bottom bar's shell: the margin, corner, fill, hairline and lift of the one bar
+ * that floats over the call.
  *
- * The controls bar and the chat composer are the same object with different contents — they sit in
- * the same place on screen and swap with each other — so their margin, corner, fill, hairline and
- * lift come from this one composable rather than from values each keeps matched by hand. When the
- * two drifted apart (12dp lower, 16dp shorter, a different elevation), every drifted value was a
- * separate token doing the same job; this is the fix that makes the next drift impossible rather
- * than merely repaired.
+ * One call site today — [MeetingControlsPanel] — because the bar no longer swaps with a separate
+ * chat composer: chat is that same bar's other mode, its row morphing in place. The shell stays
+ * its own composable as the record of those decisions made once; when the composer *was* a second
+ * bar it drifted from this one value by value (12dp lower, 16dp shorter, a different elevation),
+ * which is the arrangement nothing should quietly rebuild.
  *
  * Contents supply their own inner padding — [Dimens.meetingBarPaddingH] beside,
- * [Dimens.meetingBarPaddingV] below (and above, for a bar without a handle) — so a 48dp control
- * band lands identically in every bar built on this.
+ * [Dimens.meetingBarPaddingV] below — so the 48dp control band lands identically whatever the
+ * bar is showing.
  */
 @Composable
 fun MeetingBarSurface(

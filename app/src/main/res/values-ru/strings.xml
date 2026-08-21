@@ -104,7 +104,6 @@
   <string name="meeting_action_kick">Выгнать</string>
   <string name="meeting_action_ban">Заблокировать</string>
   <string name="meeting_panel_participants">Участники (<xliff:g id="count" example="5">%1$d</xliff:g>)</string>
-  <string name="meeting_panel_chat">Чат</string>
   <string name="meeting_label_you">вы</string>
   <string name="meeting_state_kickedTitle">Вас удалили</string>
   <string name="meeting_state_kickedMessage">Модератор удалил вас из этой встречи.</string>

@@ -195,7 +195,9 @@ the `meeting*` tokens in `Dimens.kt`, timing in `Motion.meetingChromeAutoHideDel
 - **Controls panel** (`MeetingControlsPanel`): a floating pill — camera, screen share, mic, chat,
   hang-up — with a **drag handle** on top. Tapping the handle, or swiping up anywhere on it, grows
   the pill into the room options; the handle, the scrim, Back and a swipe down all put it away.
-  There is no "⋯" button.
+  There is no "⋯" button. The same panel is chat's home too — see the chat section: the
+  conversation grows out of this bar the way the options do, while the row morphs into the
+  composer.
 
   **The one place in the app that is not a `BedrudBottomSheet`**, deliberately. As a sheet, the
   options arrived as a *second* surface carrying its own copy of the controls, sliding up over the
@@ -240,7 +242,7 @@ the `meeting*` tokens in `Dimens.kt`, timing in `Motion.meetingChromeAutoHideDel
   placeholder with a watch button, your own share offers stop, and long-pressing the watched
   stream opens `MeetingStreamSheet` (dev-hinted volume until share audio exists (#105), leave
   stream — neutral, not red: leaving is reversible).
-- **Chat** (`MeetingChatPanel`, `MeetingChatRow`): consecutive messages from one person, sent
+- **Chat** (`MeetingChatConversation`, `MeetingChatRow`): consecutive messages from one person, sent
   within `ChatClusterGapMs` of each other, are drawn as a single run — one name and one avatar at
   the top, then a bubble per message with the corners facing the sender's own side tightened so
   the run reads as one block. Senders are told apart by **identity, not display name**: two people
@@ -258,43 +260,53 @@ the `meeting*` tokens in `Dimens.kt`, timing in `Motion.meetingChromeAutoHideDel
   overrides it and always returns to the latest.
   Messages are ordered by **when they were sent**, not when they arrived: a burst can reach the
   data channel out of order, and a conversation that reads 7, 8, 6 is wrong however it came.
-  Chat is a **sheet over the call** (`MeetingChatSheet`), not a screen in front of it. It used to fill
-  the window wearing its own `TopAppBar`, on the same background as the call, arriving with a plain
-  fade — nothing of the room was left on screen, so it read as somewhere you went rather than
-  something the call has. Now the tiles keep rendering behind the scrim, and the header is a plain
-  title-and-close row, because an app bar is the signature of a screen.
-  Three heights, arbitrated by the platform sheet: half on open, full on drag, gone on a second drag
-  down. The keyboard expands it unprompted — a half sheet under a keyboard leaves almost no
-  conversation. Fully expanded still stops short of the status bar, so a band of the call stays in view.
-  Two layout details are load-bearing. The content keeps its **full height** and the part hanging
-  below the screen is removed with bottom padding, rather than being sized to what is visible: sizing
-  it that way fed the sheet's own height back into the offset that positioned it, and the sheet
-  collapsed into a sliver. And the **drag handle is drawn inside the content**, not in the sheet's
-  handle slot, because that slot sits above the content and cannot be subtracted from it — with it in
-  place the content overflowed by exactly one handle and took the input dock off the screen with it.
-  The composer is **built on the controls bar's own shell** — `MeetingBarSurface`, the shared
-  composable that owns the margin, corner, fill, hairline and lift of every floating bar over the
-  call — with the same 48dp control band on the same 12dp paddings, so both bars measure 72dp and
-  their bottom edges land on the same pixel. The two sit in the same place on screen and swap with
-  each other, so they are the same object with different contents, and they read as the same
-  sentence: secondary controls, a pill middle, a pill primary. They drifted apart once (12dp lower,
-  16dp shorter, flat, bottom-hung text) precisely because each kept its own copies of these values;
-  the shared shell is what makes the next drift impossible rather than merely repaired.
+  Chat is **the controls panel's second life** — not a sheet, not a screen. Opening it does two
+  things to the one bar that is already on screen: the conversation grows out of its top edge the
+  way the room options do (`MeetingControlsPanel`, the same anchored-panel movement at a larger
+  size), and the bar's own row **morphs slot-by-slot into the composer**. It went through both
+  earlier shapes on the way here. As a full-window page nothing of the room stayed on screen, so
+  chat read as somewhere you went. As a `ModalBottomSheet` (`MeetingChatSheet`, now deleted) the
+  tiles stayed visible, but chat arrived as a *second* window over the call carrying a second
+  bar-shaped object, with a platform-owned close that yanked it away at 117 ms, a ~300 ms
+  modal-teardown that ate the next tap, and a keyboard that belonged to its window rather than
+  the call's. One panel on the call's own window ends all four: one surface, one composer that
+  *is* the call bar's row, the call's own IME insets (`adjustResize` — the panel wears
+  `imePadding`, so the bar rides up over the keyboard while the call stays put).
+
+  **The morph** (`MeetingCallControlsRow`): each control hands its place to the one that does its
+  job in the other mode — the camera key's corner goes to the **"+"** (the same 56×48 surface in
+  the same fill, changing glyph and job), the mic pill's middle goes to the **field** (the
+  expandable centre either way), and hang-up's end goes to **send** (the same pill trading the
+  error role for the accent — the state change told on one control). Chat and screen share have
+  no counterpart and ride out with their clusters. The hand-off is **sequential, not a
+  crossfade**: the leaving content fades in the first ~40% of the clock
+  (`Motion.meetingChatMorphOpenMs` 280 / close 220), the arriving one fades in over the rest, and
+  the slot's size glides the whole way, unclipped, so a shrinking cluster slides toward its
+  corner rather than being guillotined at the slot's edge. The conversation's own reveal runs on
+  a slightly longer clock (`meetingChatExpandMs` 360 / 300) because it travels several times the
+  height — the options' timings stretched, so the two panels read at the same pace. **The bar's
+  resting height never changes**: every slot is the same 48dp band in both modes, so the morph is
+  purely contents trading places inside a fixed shell.
+
+  The conversation takes a **fixed 0.6 share of the height the keyboard leaves** — no half/full
+  states to arbitrate now that there is no platform sheet; a raised IME shrinks the panel instead
+  of pushing the call off the top, and the call stays in view above it, which is the point of
+  chat being a panel and not a page. The handle, the scrim, Back and a swipe down on the bar all
+  put it away — the same four exits the options have, because it is the same panel.
 
   **Send is the hang-up button's twin** — the same `meetingEndCallWidth` × `meetingMediaButtonHeight`
   pill in the same corner, differing only in role colour, because one ends the call and the other
-  does not. With nothing to send it keeps the pill and takes the media-**off** fill, so an empty
-  composer still shows where send is.
+  does not. With nothing to send it keeps the pill as a `button` fill lifted by the mic pill's
+  resting shadow, so an empty composer still shows where send is.
 
   **The field sits bare on the bar**, the way the call bar holds its own controls — no inner
   container. (It wore the mic pill's chrome for one build; one pill beside two more read as chrome
   arguing with itself, and its inner edge bought nothing the bar's own edge was not providing.)
-  A single line centres in the resting bar, and the bar's two vertical 12s are **spendable
-  slack**, not the row's padding: the field's slot spans the bar's full resting height, and the
-  slack is budgeted exactly — three 20dp lines plus 6dp above and below is precisely the 72dp
-  resting height — so **the bar never grows at all**. Three lines is the cap; past it the field
-  scrolls within its height. The controls own their insets instead of inheriting the row's: send
-  keeps its 12dp above the bar's edge, the "+" centres.
+  A single line centres in the 48dp band the controls share; a second line grows the bar upward
+  from there — the panel's handle sits above the row now, so the sheet era's 72dp private band
+  (and its exactly-budgeted slack) went with the sheet. Three lines is still the cap; past it the
+  field scrolls within its height. Send stays beside the line being written (the row is
+  bottom-aligned), the "+" centres in a grown bar (attach-and-poll belongs to the whole message).
 
   **The dark palette's fill trap**, found the hard way: `colors.button` is `#292524` against a
   `#2B2624` bar — two values out of 255, invisible — so anything that must read on `colors.bar`
@@ -578,7 +590,7 @@ someone moved the call to speaker.
 - **Deafened.** Deafen means silence, and it means all of it.
 - **Within 1.5 s of connecting or reconnecting.** A reconnect replays the room's population as
   fresh arrivals, which would otherwise chime once per person already present.
-- **The chat sheet is open.** A message landing in front of the reader announces itself — the same
+- **The chat panel is open.** A message landing in front of the reader announces itself — the same
   line the unread badge is drawn on.
 - **Less than 500 ms since the last message pop.** A burst of messages is one event to the person
   hearing it, not six.

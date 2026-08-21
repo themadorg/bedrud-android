@@ -104,7 +104,6 @@
   <string name="meeting_action_kick">キック</string>
   <string name="meeting_action_ban">BAN</string>
   <string name="meeting_panel_participants">参加者 (<xliff:g id="count" example="5">%1$d</xliff:g>)</string>
-  <string name="meeting_panel_chat">チャット</string>
   <string name="meeting_label_you">あなた</string>
   <string name="meeting_state_kickedTitle">退出されました</string>
   <string name="meeting_state_kickedMessage">モデレーターがこのミーティングから退出させました。</string>
