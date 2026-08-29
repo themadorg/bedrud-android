@@ -28,13 +28,11 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.text.style.TextOverflow
 import com.bedrud.app.R
-import com.bedrud.app.core.livekit.RoomManager
 import com.bedrud.app.ui.theme.BedrudShapeTokens
 import com.bedrud.app.ui.theme.Dimens
 import io.livekit.android.compose.ui.ScaleType
 import io.livekit.android.compose.ui.VideoTrackView
 import io.livekit.android.room.Room
-import io.livekit.android.room.participant.Participant
 
 /** Scrim opacity behind stream tile chrome, matching the participant tiles. */
 private const val StreamChipAlpha = 0.7f
@@ -48,22 +46,17 @@ private const val StreamChipAlpha = 0.7f
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun MeetingStreamTile(
-    participant: Participant,
+    state: ParticipantTileState,
     isLocal: Boolean,
     isWatched: Boolean,
     room: Room,
-    participantVersion: Int,
     onWatch: () -> Unit,
     onExpand: () -> Unit,
     onOpenStreamSheet: () -> Unit,
     onStopShare: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    @Suppress("UNUSED_VARIABLE")
-    val trackVersion = participantVersion
-
-    val identity = participant.identity?.value ?: RoomManager.UNKNOWN_PARTICIPANT_NAME
-    val name = participant.name?.ifBlank { identity } ?: identity
+    val name = state.name
 
     Box(
         modifier = modifier
@@ -104,10 +97,10 @@ fun MeetingStreamTile(
                 }
             }
             isWatched -> {
-                val trackRef = resolveParticipantScreenShare(participant)
-                if (trackRef != null && trackRef.isRenderable) {
+                val screenShare = state.screenShare
+                if (screenShare != null) {
                     VideoTrackView(
-                        trackReference = trackRef.trackReference,
+                        trackReference = screenShare.trackReference,
                         modifier = Modifier.fillMaxSize(),
                         room = room,
                         mirror = false,
