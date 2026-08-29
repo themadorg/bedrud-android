@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.ZeroCornerSize
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.ContentCopy
 import androidx.compose.material3.DropdownMenuItem
@@ -38,6 +39,7 @@ import com.bedrud.app.R
 import com.bedrud.app.core.BidiUtils
 import com.bedrud.app.core.meeting.chat.ChatRow
 import com.bedrud.app.core.meeting.chat.ChatWire
+import com.bedrud.app.core.meeting.chat.grouped
 import com.bedrud.app.ui.components.ChatImage
 import com.bedrud.app.ui.components.InitialsAvatar
 import com.bedrud.app.ui.theme.BedrudShapeTokens
@@ -143,28 +145,6 @@ fun MeetingChatRow(
                     onShowReactions = { onShowReactions(row.message.id) },
                 )
             }
-            // A message with text keeps its chips inside the bubble, along the bottom edge. One
-            // that is only a picture or a poll has no text container to put them in, so they hang
-            // below it as before.
-            // TODO(#135): overlay them on the picture and put them inside the poll bubble, so one
-            //  conversation does not carry two placements.
-            //
-            // Either way the chips stay on show whether or not this reader may react: they are part
-            // of what was said, and a block takes away the reply, not the record.
-            if (row.message.text.isEmpty()) {
-                ChatReactionRow(
-                    reactions = row.message.reactions,
-                    currentIdentity = currentIdentity,
-                    onToggle = if (canParticipate) {
-                        { emoji -> onToggleReaction(row.message.id, emoji) }
-                    } else {
-                        null
-                    },
-                    // No bubble behind these, so they key off the panel itself.
-                    contentColor = MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier.padding(top = Dimens.space2),
-                )
-            }
         }
     }
 }
@@ -187,22 +167,69 @@ private fun ChatBubble(
     onLinkClick: (String) -> Unit,
 ) {
     val message = row.message
+    val images = message.attachments.filter { it.kind == ChatWire.ATTACHMENT_KIND_IMAGE }
+    val bubbleColor = if (row.isLocal) {
+        MaterialTheme.colorScheme.primaryContainer
+    } else {
+        MaterialTheme.colorScheme.surfaceContainerHigh
+    }
+    val bubbleContentColor = if (row.isLocal) {
+        MaterialTheme.colorScheme.onPrimaryContainer
+    } else {
+        MaterialTheme.colorScheme.onSurface
+    }
+
+    // The chips belong to the last container the message has — its text bubble, else its poll, else
+    // its picture — so one conversation carries one placement however a message is made up. They
+    // stay on show whether or not this reader may react: they are part of what was said, and a
+    // block takes away the reply, not the record.
+    //
+    // A message with nothing to show hosts nothing: the chip row draws no space when it is empty,
+    // but the container it would sit in still would, and an unreacted picture came out wearing an
+    // 8dp band of bubble along its bottom edge.
+    val chipsOn = when {
+        message.reactions.grouped(currentIdentity).isEmpty() -> ChipHost.NONE
+        message.text.isNotEmpty() -> ChipHost.TEXT
+        message.poll != null -> ChipHost.POLL
+        images.isNotEmpty() -> ChipHost.IMAGE
+        else -> ChipHost.NONE
+    }
+    val reactionRow: @Composable (Color) -> Unit = { contentColor ->
+        ChatReactionRow(
+            reactions = message.reactions,
+            currentIdentity = currentIdentity,
+            onToggle = if (canParticipate) onToggleReaction else null,
+            contentColor = contentColor,
+            modifier = Modifier.padding(top = Dimens.space4),
+        )
+    }
+
     Column(
         horizontalAlignment = if (row.isLocal) Alignment.End else Alignment.Start,
         verticalArrangement = Arrangement.spacedBy(Dimens.chatBubbleGap),
     ) {
-        message.attachments
-            .filter { it.kind == ChatWire.ATTACHMENT_KIND_IMAGE }
-            .forEach { attachment ->
-                ChatMessageImage(
-                    url = attachment.url,
-                    serverURL = serverURL,
-                    accessToken = accessToken,
-                    shape = shape,
-                    onClick = { onImageClick(attachment.url) },
-                    onLongPress = onLongPress,
-                )
-            }
+        images.forEachIndexed { index, attachment ->
+            // Neutral on both sides, unlike every other bubble. The accent tint says "mine" by
+            // colouring the thing that was said, and behind a line of text that is what it does —
+            // but a picture is its own body, so the tint colours nothing and only competes with the
+            // photo. Measured on a full-width photo in dark, where `primaryContainer` came out as a
+            // saturated band along the bottom edge; the same colour behind text never reads that
+            // heavy because it never runs that wide.
+            ChatMessageImage(
+                url = attachment.url,
+                serverURL = serverURL,
+                accessToken = accessToken,
+                shape = shape,
+                bubbleColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                onClick = { onImageClick(attachment.url) },
+                onLongPress = onLongPress,
+                reactions = if (chipsOn == ChipHost.IMAGE && index == images.lastIndex) {
+                    { reactionRow(MaterialTheme.colorScheme.onSurface) }
+                } else {
+                    null
+                },
+            )
+        }
         message.poll?.let { poll ->
             ChatPollBubble(
                 poll = poll,
@@ -214,6 +241,11 @@ private fun ChatBubble(
                     null
                 },
                 onShowResults = { onShowPollResults(message.id) },
+                reactions = if (chipsOn == ChipHost.POLL) {
+                    { reactionRow(MaterialTheme.colorScheme.onSurface) }
+                } else {
+                    null
+                },
                 modifier = Modifier.combinedClickable(
                     onClick = {},
                     onLongClick = onLongPress,
@@ -221,24 +253,13 @@ private fun ChatBubble(
             )
         }
         if (message.text.isNotEmpty()) {
-            val contentColor = if (row.isLocal) {
-                MaterialTheme.colorScheme.onPrimaryContainer
-            } else {
-                MaterialTheme.colorScheme.onSurface
-            }
+            val contentColor = bubbleContentColor
             val bodyStyle = MaterialTheme.typography.bodyMedium.copy(
                 textDirection = BidiUtils.textDirection(message.text),
             )
             Column(
                 modifier = Modifier
-                    .background(
-                        if (row.isLocal) {
-                            MaterialTheme.colorScheme.primaryContainer
-                        } else {
-                            MaterialTheme.colorScheme.surfaceContainerHigh
-                        },
-                        shape,
-                    )
+                    .background(bubbleColor, shape)
                     .clip(shape)
                     .combinedClickable(onClick = {}, onLongClick = onLongPress)
                     .padding(horizontal = Dimens.space12, vertical = Dimens.space8),
@@ -261,19 +282,26 @@ private fun ChatBubble(
                 )
                 // Start-aligned under the text rather than tucked against the bubble's outer edge,
                 // so a reaction on a long message begins where its first line does.
-                ChatReactionRow(
-                    reactions = message.reactions,
-                    currentIdentity = currentIdentity,
-                    onToggle = if (canParticipate) onToggleReaction else null,
-                    contentColor = contentColor,
-                    modifier = Modifier.padding(top = Dimens.space4),
-                )
+                reactionRow(contentColor)
             }
         }
     }
 }
 
-/** A picture in a message, capped so a tall photo cannot push the conversation off screen. */
+/**
+ * A picture in a message, capped so a tall photo cannot push the conversation off screen.
+ *
+ * With [reactions] the picture is a bubble like any other message: the chips sit on the bubble's own
+ * surface along its bottom edge, which is what lets them keep the colours they use everywhere else.
+ * Drawn over the photo instead they would need a scrim and a second, opaque chip colour — a
+ * reaction the reader has not joined is a 16% wash of the surrounding text colour, legible only
+ * because there is normally an opaque bubble behind it.
+ *
+ * Without reactions nothing is drawn around the picture at all, so an unreacted photo is exactly
+ * what it was: the container has no padding, and the photo covers every edge of it but the bottom.
+ * That is also why the photo needs no inset radius — it shares the container's corners rather than
+ * sitting inside them.
+ */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun ChatMessageImage(
@@ -281,22 +309,51 @@ private fun ChatMessageImage(
     serverURL: String,
     accessToken: String?,
     shape: RoundedCornerShape,
+    bubbleColor: Color,
     onClick: () -> Unit,
     onLongPress: () -> Unit,
+    reactions: (@Composable () -> Unit)?,
 ) {
-    ChatImage(
-        url = url,
-        serverURL = serverURL,
-        accessToken = accessToken,
-        contentDescription = stringResource(R.string.meeting_contentDescription_viewImage),
+    val imageShape = if (reactions == null) {
+        shape
+    } else {
+        shape.copy(bottomStart = ZeroCornerSize, bottomEnd = ZeroCornerSize)
+    }
+
+    Column(
         modifier = Modifier
             .fillMaxWidth(ChatImageWidthFraction)
-            .heightIn(max = Dimens.chatImageMaxHeight)
-            .clip(shape)
-            .combinedClickable(onClick = onClick, onLongClick = onLongPress),
-        contentScale = ContentScale.Crop,
-    )
+            .then(if (reactions == null) Modifier else Modifier.background(bubbleColor, shape))
+            .clip(shape),
+    ) {
+        ChatImage(
+            url = url,
+            serverURL = serverURL,
+            accessToken = accessToken,
+            contentDescription = stringResource(R.string.meeting_contentDescription_viewImage),
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(max = Dimens.chatImageMaxHeight)
+                .clip(imageShape)
+                .combinedClickable(onClick = onClick, onLongClick = onLongPress),
+            contentScale = ContentScale.Crop,
+        )
+        if (reactions != null) {
+            Column(
+                modifier = Modifier.padding(
+                    start = Dimens.space12,
+                    end = Dimens.space12,
+                    bottom = Dimens.space8,
+                ),
+            ) {
+                reactions()
+            }
+        }
+    }
 }
+
+/** Which of a message's containers carries its reaction chips. */
+private enum class ChipHost { TEXT, POLL, IMAGE, NONE }
 
 /**
  * A stable accent for one person, so a busy room stays scannable by colour as well as by name.

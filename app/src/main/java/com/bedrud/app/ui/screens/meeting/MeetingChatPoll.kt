@@ -63,6 +63,11 @@ fun ChatPollBubble(
     onVote: ((String) -> Unit)?,
     onShowResults: () -> Unit,
     modifier: Modifier = Modifier,
+    /**
+     * The message's reaction chips, when this bubble is the one carrying them. Passed in rather than
+     * built here so the poll stays a poll: it knows where a footer goes, not what reactions are.
+     */
+    reactions: (@Composable () -> Unit)? = null,
 ) {
     val myVote = poll.voteOf(currentIdentity)
     val total = poll.totalVotes
@@ -76,11 +81,15 @@ fun ChatPollBubble(
             // baseline, so equal padding put the title 10dp from the edge against 13dp at the sides.
             // Top 12 / bottom 8 lands the *ink* at roughly 14 / 13 / 13, which reads even with a
             // touch more air above the heading.
+            //
+            // Chips end the bubble on a filled pill instead of on a label's baseline, and a pill
+            // carries no slack under its ink, so the 8 that reads as 13 under text reads as 8 under
+            // a chip. The full 12 goes back when they are there.
             .padding(
                 start = Dimens.space12,
                 end = Dimens.space12,
                 top = Dimens.space12,
-                bottom = Dimens.space8,
+                bottom = if (reactions == null) Dimens.space8 else Dimens.space12,
             ),
         verticalArrangement = Arrangement.spacedBy(Dimens.space6),
     ) {
@@ -127,6 +136,8 @@ fun ChatPollBubble(
                     .padding(horizontal = Dimens.space4, vertical = Dimens.space2),
             )
         }
+
+        reactions?.invoke()
     }
 }
 
