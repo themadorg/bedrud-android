@@ -50,7 +50,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
@@ -73,7 +72,6 @@ import com.bedrud.app.ui.components.BedrudButton
 import com.bedrud.app.ui.components.BedrudScaffoldContentInsets
 import com.bedrud.app.ui.components.BedrudSnackbarHost
 import com.bedrud.app.ui.components.DevOnly
-import com.bedrud.app.ui.theme.Alpha
 import com.bedrud.app.ui.theme.BedrudShapeTokens
 import com.bedrud.app.ui.theme.Dimens
 import com.bedrud.app.ui.theme.Motion
@@ -104,15 +102,19 @@ fun AddInstanceScreen(
     val instances by instanceManager.store.instances.collectAsState()
 
     val defaultUrl = remember { ServerUrlCanonicalizer.canonicalize(BuildConfig.DEFAULT_SERVER_HOST) }
-    // The official server can only be added once -- if it's already among the user's instances,
-    // selecting it again here would just re-trigger submit()'s switchTo(existing.id) path. Disable
-    // it instead so "Add Server" reliably means "add a *new* one" rather than sometimes silently
-    // switching back to a server the user already has.
+    // Whether the official server is already among the user's instances. It only labels the card
+    // with the "Added" badge -- it must never disable it. This screen answers "which server?" for
+    // two different questions: adding a new one from the instance list, and choosing the one to
+    // sign in to after backing out of the sign-in hub. Refusing an added server served the first
+    // and stranded the second, with no live control on screen and Continue permanently greyed
+    // (#102). Continuing on a server that is already stored is not a no-op: submit() switches to
+    // it and hands off to sign-in, which is exactly what the signed-out user came here for.
     val isDefaultAdded = defaultUrl != null && instances.any { it.serverURL.equals(defaultUrl, ignoreCase = true) }
 
-    var choice by rememberSaveable {
-        mutableStateOf(if (isDefaultAdded) ServerChoice.CUSTOM else ServerChoice.DEFAULT)
-    }
+    // Always starts on the official server. It used to start on CUSTOM whenever the default was
+    // added -- which, with the field empty, opened the screen with Continue disabled and the
+    // keyboard already up, presenting "type your own server" to a user who had chosen nothing.
+    var choice by rememberSaveable { mutableStateOf(ServerChoice.DEFAULT) }
     var customInput by rememberSaveable { mutableStateOf("") }
     var isChecking by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
@@ -231,7 +233,6 @@ fun AddInstanceScreen(
                             if (isDefaultAdded) R.string.instance_choice_default_addedTag
                             else R.string.instance_choice_default_tag
                         ),
-                        enabled = !isDefaultAdded,
                     ) { selected ->
                         Text(
                             text = displayUrl(defaultUrl ?: BuildConfig.DEFAULT_SERVER_HOST),
@@ -369,7 +370,6 @@ private fun ServerChoiceCard(
     title: String,
     badge: String?,
     modifier: Modifier = Modifier,
-    enabled: Boolean = true,
     content: @Composable (selected: Boolean) -> Unit
 ) {
     val borderColor by animateColorAsState(
@@ -381,15 +381,10 @@ private fun ServerChoiceCard(
     val borderWidth = if (selected) Dimens.borderStrong else Dimens.borderThin
 
     Surface(
-        // A disabled card's own colors are indistinguishable from an unselected-but-selectable
-        // one, so without this the "already added" state reads as merely deselected. Dimming the
-        // whole Surface fades border, title, address and badge together in one pass.
         modifier = modifier
             .fillMaxWidth()
-            .alpha(if (enabled) 1f else Alpha.disabled)
             .selectable(
                 selected = selected,
-                enabled = enabled,
                 role = Role.RadioButton,
                 onClick = onSelect
             ),
@@ -407,7 +402,6 @@ private fun ServerChoiceCard(
             RadioButton(
                 selected = selected,
                 onClick = null,
-                enabled = enabled,
                 modifier = Modifier.align(Alignment.TopEnd)
             )
             Column(

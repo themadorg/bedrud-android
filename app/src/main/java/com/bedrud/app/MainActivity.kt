@@ -262,8 +262,19 @@ fun BedrudNavHost(
         composable(Routes.ADD_INSTANCE) {
             AddInstanceScreen(
                 onInstanceAdded = {
-                    navController.navigate(Routes.LOGIN) {
+                    // Where to land is the chosen server's own auth state, read after the switch
+                    // rather than from this composable's collected copy, which is a frame behind.
+                    // A brand-new server always needs sign-in, but the picker can now also be used
+                    // to continue on a server already stored (#102) — and sending a user who is
+                    // signed in there to the sign-in hub would strand them a second way: the auth
+                    // router does not re-fire, because none of its keys changed.
+                    val signedIn = instanceManager.authManager.value?.isLoggedIn?.value == true
+                    // singleTop because the sign-in hub may already be underneath: reaching this
+                    // screen from the hub's back button now leaves LOGIN on the stack (see its
+                    // onBack), and pushing a second copy would put two hubs back to back.
+                    navController.navigate(if (signedIn) Routes.MAIN else Routes.LOGIN) {
                         popUpTo(Routes.ADD_INSTANCE) { inclusive = true }
+                        launchSingleTop = true
                     }
                 }
             )
@@ -283,9 +294,11 @@ fun BedrudNavHost(
                     navController.navigate(Routes.REGISTER)
                 },
                 onBack = {
-                    navController.navigate(Routes.ADD_INSTANCE) {
-                        popUpTo(0) { inclusive = true }
-                    }
+                    // Pushed on top of the hub rather than replacing it. Clearing the stack here
+                    // made the server picker the only entry, so system back had nowhere to go and
+                    // the user was stuck on it (#102). Leaving LOGIN underneath means back from
+                    // the picker returns to sign-in, which is where they came from.
+                    navController.navigate(Routes.ADD_INSTANCE)
                 }
             )
         }
