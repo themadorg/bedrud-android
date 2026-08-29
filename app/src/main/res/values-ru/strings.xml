@@ -274,6 +274,8 @@
   <string name="meeting_error_screenShareFailed">Не удалось начать демонстрацию экрана.</string>
   <string name="meeting_error_roomNoLongerExists">Эта комната больше не существует</string>
   <string name="meeting_error_joinFailed">Не удалось присоединиться к комнате</string>
+  <string name="meeting_error_endForEveryoneFailed">Не удалось завершить встречу для всех</string>
+  <string name="meeting_action_leaveAnyway">Всё равно выйти</string>
   <string name="meeting_share_chooserTitle">Поделиться ссылкой на встречу</string>
   <string name="meeting_sheet_roomSettings">Настройки комнаты</string>
   <string name="meeting_sheet_deafen">Оглушить</string>

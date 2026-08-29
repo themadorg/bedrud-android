@@ -268,6 +268,8 @@
   <string name="meeting_error_screenShareFailed">无法开始屏幕共享。</string>
   <string name="meeting_error_roomNoLongerExists">此房间已不存在</string>
   <string name="meeting_error_joinFailed">加入房间失败</string>
+  <string name="meeting_error_endForEveryoneFailed">无法为所有人结束会议</string>
+  <string name="meeting_action_leaveAnyway">仍然离开</string>
   <string name="meeting_share_chooserTitle">分享会议链接</string>
   <string name="meeting_sheet_roomSettings">房间设置</string>
   <string name="meeting_sheet_deafen">拒听</string>
