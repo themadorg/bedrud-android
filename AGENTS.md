@@ -86,8 +86,10 @@ The rooms dashboard (`DashboardContent`) lists the **active** server's rooms fro
 Retrofit + OkHttp + Gson (not kotlinx-serialization for HTTP). `kotlin-serialization` plugin enabled but used elsewhere.
 
 - `AuthInterceptor` — attaches `Authorization: Bearer <token>` to every request
-- `TokenAuthenticator` — handles 401 by refreshing token synchronously (creates separate Retrofit to avoid recursion), retries once, forces logout on failure
-- Base URL format: `https://host/api/` (trailing slash appended by `ApiClientFactory`)
+- `TokenAuthenticator` — handles 401 by refreshing token synchronously (on a plain Retrofit, so the refresh cannot recurse back through the authenticator that triggered it), retries once, forces logout on failure
+- `plainRetrofit(baseURL, timeoutSeconds)` (`core/api/ApiClient.kt`) — the client with no session attached, for the two calls that must not carry one: the token refresh above, and `InstanceManager.checkHealth`, which probes a server the app has no account on yet. Build a session-less client through it rather than hand-rolling a `Retrofit.Builder()`.
+- Base URL format: `https://host/api/` (trailing slash appended by `ApiClientFactory` and `plainRetrofit`)
+- Gson is lenient for every client, from one `lenientGson()` in `ApiClient.kt` — a payload parses the same way whichever client fetched it
 
 ### Meeting data channel
 
