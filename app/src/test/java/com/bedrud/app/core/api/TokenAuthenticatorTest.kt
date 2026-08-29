@@ -3,7 +3,6 @@ package com.bedrud.app.core.api
 import com.bedrud.app.core.auth.AuthManager
 import com.bedrud.app.models.RefreshTokenResponse
 import com.bedrud.app.testutil.InMemorySharedPreferences
-import io.mockk.mockk
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.mockwebserver.MockResponse
@@ -23,14 +22,11 @@ class TokenAuthenticatorTest : MockApiTest() {
         authManager = AuthManager(prefs)
     }
 
-    private fun buildAuthenticator(): TokenAuthenticator {
-        val baseUrl = server.url("/").toString()
-        return TokenAuthenticator(
+    private fun buildAuthenticator(): TokenAuthenticator =
+        TokenAuthenticator(
             authManager = authManager,
-            baseURL = baseUrl,
-            authApiProvider = { mockk<AuthApi>() }
+            baseURL = server.url("/").toString(),
         )
-    }
 
     @Test
     fun `successful refresh saves new tokens and retries with new token`() {
