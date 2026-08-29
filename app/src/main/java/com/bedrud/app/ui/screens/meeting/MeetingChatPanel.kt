@@ -426,6 +426,12 @@ fun MeetingChatPanel(
                                     textStyle = MaterialTheme.typography.bodyMedium.copy(
                                         color = MaterialTheme.colorScheme.onSurface,
                                         textDirection = BidiUtils.textDirection(input),
+                                        // Alignment as well as direction: the field spans the
+                                        // whole band, so an unaligned RTL paragraph writes its
+                                        // words in the right order and still starts against the
+                                        // left edge, leaving the gap on the side the writer's eye
+                                        // begins at.
+                                        textAlign = BidiUtils.textAlign(input),
                                         lineHeightStyle = CenteredLineHeight,
                                     ),
                                     cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
@@ -465,7 +471,24 @@ fun MeetingChatPanel(
                                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                                 )
                                             }
-                                            field()
+                                            // The band's full width has to reach the text itself,
+                                            // not stop at the box around it. A plain Box hands its
+                                            // children a minimum width of zero, so the paragraph
+                                            // laid out at exactly its own width — and a paragraph
+                                            // no wider than its own letters has nothing to align
+                                            // within, which is why setting `textAlign` alone moved
+                                            // a Persian message not at all.
+                                            //
+                                            // Width only. Propagating the band's minimum height as
+                                            // well would make the field as tall as the band and
+                                            // render its single line against the top of it, losing
+                                            // the vertical centring the enclosing box provides.
+                                            Box(
+                                                modifier = Modifier.fillMaxWidth(),
+                                                propagateMinConstraints = true,
+                                            ) {
+                                                field()
+                                            }
                                         }
                                     },
                                 )

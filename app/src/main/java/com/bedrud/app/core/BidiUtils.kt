@@ -1,6 +1,7 @@
 package com.bedrud.app.core
 
 import android.text.BidiFormatter
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDirection
 
 object BidiUtils {
@@ -18,6 +19,22 @@ object BidiUtils {
 
     fun textDirection(text: String): TextDirection =
         if (startsRtl(text)) TextDirection.Rtl else TextDirection.Ltr
+
+    /**
+     * Which edge a paragraph of [text] should sit against.
+     *
+     * [textDirection] reorders the runs within a line but does not move the line itself: Compose
+     * resolves an unspecified alignment as `TextAlign.Start`, and `Start` is answered by the
+     * *layout* direction rather than by the paragraph's own. In an English-language app that is
+     * always the left edge, so a Persian message came out with its words correctly ordered and
+     * then pinned to the left of the field, with the empty space on the side the reader starts
+     * from. Alignment has to follow the same first-strong-character decision the direction does.
+     *
+     * Deliberately [TextAlign.Right] and [TextAlign.Left] rather than `Start`/`End`, which would
+     * be resolved against the layout direction again and change nothing.
+     */
+    fun textAlign(text: String): TextAlign =
+        if (startsRtl(text)) TextAlign.Right else TextAlign.Left
 
     fun wrap(text: String): String = formatter.unicodeWrap(text)
 }
