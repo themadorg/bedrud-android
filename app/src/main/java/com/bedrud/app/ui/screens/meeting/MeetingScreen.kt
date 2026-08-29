@@ -76,6 +76,7 @@ import com.bedrud.app.core.pip.PipStateHolder
 import com.bedrud.app.ui.screens.settings.SettingsStore
 import com.bedrud.app.models.JoinRoomRequest
 import com.bedrud.app.models.JoinRoomResponse
+import io.livekit.android.compose.ui.ScaleType
 import io.livekit.android.compose.ui.VideoTrackView
 import io.livekit.android.room.Room
 import io.livekit.android.room.track.Track
@@ -420,6 +421,22 @@ fun MeetingScreen(
 
                     val localIdentity = room.localParticipant.identity?.value
 
+                    // Everything drawn from a participant is resolved here, once per
+                    // participantVersion, and every view below is handed plain values instead of
+                    // the room's own objects. Those mutate in place — a camera or a screenshare
+                    // appears on the very same instance already on screen — so a view handed the
+                    // instance is skipped and keeps drawing what it drew before. Resolving in one
+                    // place also means a view cannot be correct merely because of where it sits.
+                    val tileStates = rememberParticipantTileStates(
+                        participants = participants,
+                        participantVersion = participantVersion,
+                        localIdentity = localIdentity,
+                        isLocalMicEnabled = isMicEnabled,
+                    )
+                    val tileStatesByIdentity = remember(tileStates) {
+                        tileStates.associateBy { it.identity }
+                    }
+
                     if (isInPipMode) {
                         val pipWatchedIdentity = watchedStreamIdentity
                         val pipParticipant = if (pipWatchedIdentity != null) {
@@ -436,37 +453,36 @@ fun MeetingScreen(
                                 .background(MaterialTheme.colorScheme.surfaceVariant),
                             contentAlignment = Alignment.Center
                         ) {
-                            if (pipParticipant != null) {
-                                val screenSharePublication = pipParticipant.getTrackPublication(
-                                    Track.Source.SCREEN_SHARE,
-                                )
-                                val screenShareTrack = screenSharePublication
-                                    ?.track as? io.livekit.android.room.track.VideoTrack
-                                val isScreenShareMuted = screenSharePublication?.muted == true
-
-                                val cameraPublication = pipParticipant.getTrackPublication(Track.Source.CAMERA)
-                                val cameraTrack = cameraPublication
-                                    ?.track as? io.livekit.android.room.track.VideoTrack
-                                val isCameraMuted = cameraPublication?.muted == true
+                            val pipState = pipParticipant?.identity?.value
+                                ?.let { tileStatesByIdentity[it] }
+                            if (pipState != null) {
                                 val isPipVideoLocallyDisabled =
-                                    pipParticipant.identity?.value in locallyHiddenVideoIdentities
+                                    pipState.identity in locallyHiddenVideoIdentities
+                                val pipScreenShare = pipState.screenShare
+                                    ?.takeIf { pipWatchedIdentity != null }
+                                val pipCameraTrack = pipState.cameraTrack
+                                    ?.takeIf { !isPipVideoLocallyDisabled }
 
-                                val pipTrack = when {
-                                    pipWatchedIdentity != null && screenShareTrack != null && !isScreenShareMuted ->
-                                        screenShareTrack
-                                    cameraTrack != null && !isCameraMuted && !isPipVideoLocallyDisabled -> cameraTrack
-                                    else -> null
-                                }
-
-                                if (pipTrack != null) {
-                                    VideoTrackView(
-                                        videoTrack = pipTrack,
+                                when {
+                                    // By trackReference, as the grid and the fullscreen view do.
+                                    // Reading publication.track here instead left PiP on the camera
+                                    // while a share was being watched: subscription can finish
+                                    // without the room reporting a participant change, so the track
+                                    // resolved at that moment was still null.
+                                    pipScreenShare != null -> VideoTrackView(
+                                        trackReference = pipScreenShare.trackReference,
+                                        modifier = Modifier.fillMaxSize(),
+                                        room = room,
+                                        mirror = false,
+                                        scaleType = ScaleType.FitInside,
+                                    )
+                                    pipCameraTrack != null -> VideoTrackView(
+                                        videoTrack = pipCameraTrack,
                                         modifier = Modifier.fillMaxSize(),
                                         passedRoom = room,
                                     )
-                                } else {
-                                    Text(
-                                        text = (pipParticipant.name ?: "").take(1).uppercase(),
+                                    else -> Text(
+                                        text = pipState.name.take(1).uppercase(),
                                         style = MaterialTheme.typography.displayLarge,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     )
@@ -518,16 +534,10 @@ fun MeetingScreen(
                                         addAll(room.remoteParticipants.values)
                                     }.sortedByDescending { it.identity?.value == pinnedIdentity }
                                 }
-                                // The grid draws from resolved values rather than from the room's
-                                // own objects: those mutate in place, and a tile handed the same
-                                // unchanged participant is skipped — which is how a camera could
-                                // come on without the tile ever noticing.
-                                val gridTileStates = rememberParticipantTileStates(
-                                    participants = gridTiles,
-                                    participantVersion = participantVersion,
-                                    localIdentity = localIdentity,
-                                    isLocalMicEnabled = isMicEnabled,
-                                )
+                                // The grid's own slice of the resolved states, in grid order.
+                                val gridTileStates = remember(gridTiles, tileStatesByIdentity) {
+                                    gridTiles.mapNotNull { tileStatesByIdentity[it.identity?.value] }
+                                }
                                 // Nobody else in the grid: a stream takes the stage and shares the
                                 // full height instead of staying strip-sized, and the self-tile
                                 // stands down for it — there is no one to hear you anyway.
@@ -536,12 +546,14 @@ fun MeetingScreen(
                                     aloneInRoom && streamParticipants.isNotEmpty()
                                 streamParticipants.forEach { presenter ->
                                     val presenterIdentity = presenter.identity?.value
+                                    val presenterState =
+                                        presenterIdentity?.let { tileStatesByIdentity[it] }
+                                            ?: return@forEach
                                     MeetingStreamTile(
-                                        participant = presenter,
+                                        state = presenterState,
                                         isLocal = presenterIdentity == localIdentity,
                                         isWatched = presenterIdentity == watchedStreamIdentity,
                                         room = room,
-                                        participantVersion = participantVersion,
                                         onWatch = { roomManager.watchStream(presenterIdentity) },
                                         onExpand = {
                                             if (presenterIdentity != null) {
@@ -629,16 +641,16 @@ fun MeetingScreen(
                             BackHandler(enabled = fullscreenParticipant != null) {
                                 fullscreenParticipantIdentity = null
                             }
-                            if (fullscreenParticipant != null) {
+                            val fullscreenState = fullscreenParticipant?.identity?.value
+                                ?.let { tileStatesByIdentity[it] }
+                            if (fullscreenState != null) {
                                 MeetingParticipantFullscreen(
-                                    participant = fullscreenParticipant,
+                                    state = fullscreenState,
                                     room = room,
-                                    participantVersion = participantVersion,
                                     chromeVisible = fullscreenChromeVisible,
                                     isVideoLocallyDisabled =
-                                        fullscreenParticipant.identity?.value in locallyHiddenVideoIdentities,
-                                    speakingLevel =
-                                        speakingLevels[fullscreenParticipant.identity?.value] ?: 0f,
+                                        fullscreenState.identity in locallyHiddenVideoIdentities,
+                                    speakingLevel = speakingLevels[fullscreenState.identity] ?: 0f,
                                     onToggleChrome = { fullscreenChromeVisible = !fullscreenChromeVisible },
                                     onAutoHideChrome = { fullscreenChromeVisible = false },
                                     onCollapse = { fullscreenParticipantIdentity = null },
