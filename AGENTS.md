@@ -81,6 +81,8 @@ Switching instances: `instanceManager.switchTo(id)` → sets active → rebuilds
 
 The rooms dashboard (`DashboardContent`) lists the **active** server's rooms from the API and weaves in **recent** rooms from every server (`RecentRoomsStore`, which stores each recent's server id, name, and accent color). Its **All** tab merges both (recency/live first); **My Rooms** is the subset the user created. Each card is tinted with its server's color, and tapping a recent that lives on another server prompts a confirm-and-switch (`switchTo` + join) rather than switching silently.
 
+A room is written to `RecentRoomsStore` when its call actually starts (`MeetingScreen.startMeetingCall`), never when a card is tapped — a room the server has already deleted must not be recorded as visited. The mirror of that: `MeetingScreen` drops the recent when a join is refused with 404/410, so a dead card stops being offered. Why the join failed is reported through `JoinFailureRelay` and shown by `MainScreen`, not by the meeting screen: a failed join leaves that screen at once, and a snackbar raised on a host that is being destroyed is never seen.
+
 ## Networking
 
 Retrofit + OkHttp + Gson (not kotlinx-serialization for HTTP). `kotlin-serialization` plugin enabled but used elsewhere.
