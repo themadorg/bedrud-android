@@ -102,6 +102,9 @@ class TokenAuthenticator(
         }
 
         // Perform synchronous token refresh
+        // TODO(#161): the provider's AuthApi is called and discarded. Calling it does assert that
+        // wiring finished before a refresh runs — decide whether that guard is worth keeping and
+        // write it as one, or drop the parameter.
         val refreshCall = authApiProvider().let { _ ->
             // Plain client, so the refresh cannot recurse back through this authenticator.
             val refreshApi = plainRetrofit(baseURL).create(AuthApi::class.java)
