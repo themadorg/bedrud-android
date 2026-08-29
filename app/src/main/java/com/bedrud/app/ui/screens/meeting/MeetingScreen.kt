@@ -36,6 +36,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -58,8 +59,10 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextAlign
 import androidx.core.content.ContextCompat
 import com.bedrud.app.R
+import com.bedrud.app.core.api.apiAction
 import com.bedrud.app.core.api.parseApiErrorMessage
 import com.bedrud.app.core.call.CallService
+import com.bedrud.app.core.toUserMessage
 import com.bedrud.app.core.deeplink.BedrudURLParser
 import com.bedrud.app.core.instance.InstanceManager
 import com.bedrud.app.ui.components.BedrudScaffoldContentInsets
@@ -110,6 +113,8 @@ fun MeetingScreen(
     val permissionsRequiredMessage = stringResource(R.string.meeting_error_permissionsRequired)
     val roomNoLongerExistsMessage = stringResource(R.string.meeting_error_roomNoLongerExists)
     val joinFailedMessage = stringResource(R.string.meeting_error_joinFailed)
+    val endForEveryoneFailedMessage = stringResource(R.string.meeting_error_endForEveryoneFailed)
+    val leaveAnywayLabel = stringResource(R.string.meeting_action_leaveAnyway)
     val linkCopiedMessage = stringResource(R.string.meeting_toast_linkCopied)
     val clipLabel = stringResource(R.string.app_name)
     val isInPipMode by pipStateHolder.isInPipMode.collectAsState()
@@ -897,14 +902,36 @@ fun MeetingScreen(
                                         CallService.stop(context)
                                         onLeave()
                                     },
+                                    // A delete that fails must not read as a meeting that ended: the
+                                    // room is still live for everyone else, and leaving anyway would
+                                    // say the opposite. Staying is also the only way the failure is
+                                    // seen at all — the snackbar's host is this screen's Scaffold, so
+                                    // navigating away first destroys it mid-message. Leaving is still
+                                    // offered, as the snackbar's own action, once the owner knows.
                                     onEndForEveryone = {
                                         showLeaveDialog = false
                                         scope.launch {
-                                            try {
+                                            val ended = apiAction(
+                                                endForEveryoneFailedMessage,
+                                                { message ->
+                                                    val choice = snackbarHostState.showSnackbar(
+                                                        message = message,
+                                                        actionLabel = leaveAnywayLabel,
+                                                        withDismissAction = true,
+                                                    )
+                                                    if (choice == SnackbarResult.ActionPerformed) {
+                                                        CallService.stop(context)
+                                                        onLeave()
+                                                    }
+                                                },
+                                                classifyError = { it.toUserMessage(context) },
+                                            ) {
                                                 roomApi.deleteRoom(roomId)
-                                            } catch (_: Exception) {}
-                                            CallService.stop(context)
-                                            onLeave()
+                                            }
+                                            if (ended) {
+                                                CallService.stop(context)
+                                                onLeave()
+                                            }
                                         }
                                     },
                                 )
