@@ -13,6 +13,7 @@ import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.Videocam
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -25,6 +26,8 @@ import androidx.compose.ui.res.stringResource
 import com.bedrud.app.R
 import com.bedrud.app.core.instance.InstanceManager
 import com.bedrud.app.core.recent.RecentRoomsStore
+import com.bedrud.app.core.rooms.JoinFailureRelay
+import com.bedrud.app.ui.components.BedrudSnackbarHost
 import com.bedrud.app.ui.components.BottomNavTab
 import com.bedrud.app.ui.components.BedrudBottomNavigationBar
 import com.bedrud.app.ui.screens.admin.AdminScreen
@@ -44,6 +47,7 @@ fun MainScreen(
     onNavigateToAddInstance: () -> Unit,
     instanceManager: InstanceManager = koinInject(),
     settingsStore: SettingsStore = koinInject(),
+    joinFailureRelay: JoinFailureRelay = koinInject(),
     recentRoomsStore: RecentRoomsStore = koinInject(),
 ) {
     fun recordAndJoin(
@@ -112,8 +116,22 @@ fun MainScreen(
         settingsStore.setLastTab(selectedTab)
     }
 
+    // Why a join failed, said here rather than on the meeting screen that discovered it — see
+    // JoinFailureRelay. Hosted by the shell rather than by the Rooms tab because a room opened
+    // from a link can fail while any tab is showing, and the message must not depend on which.
+    val snackbarHostState = remember { SnackbarHostState() }
+    val joinFailure by joinFailureRelay.message.collectAsState()
+    LaunchedEffect(joinFailure) {
+        val message = joinFailure ?: return@LaunchedEffect
+        // Consumed only once it has been read out: clearing it first would change this effect's key
+        // mid-message, cancelling the very snackbar it was showing.
+        snackbarHostState.showSnackbar(message)
+        joinFailureRelay.consume()
+    }
+
     Scaffold(
         contentWindowInsets = BedrudMainScaffoldContentInsets,
+        snackbarHost = { BedrudSnackbarHost(snackbarHostState) },
         bottomBar = {
             BedrudBottomNavigationBar(
                 tabs = tabs,

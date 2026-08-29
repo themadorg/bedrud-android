@@ -62,6 +62,9 @@ import com.bedrud.app.core.api.parseApiErrorMessage
 import com.bedrud.app.core.call.CallService
 import com.bedrud.app.core.deeplink.BedrudURLParser
 import com.bedrud.app.core.instance.InstanceManager
+import com.bedrud.app.core.recent.RecentRoomsStore
+import com.bedrud.app.core.rooms.JoinFailureRelay
+import com.bedrud.app.core.toUserMessage
 import com.bedrud.app.ui.components.BedrudScaffoldContentInsets
 import com.bedrud.app.ui.theme.BedrudShapeTokens
 import com.bedrud.app.ui.theme.Dimens
@@ -83,6 +86,14 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
+import java.net.HttpURLConnection
+
+// The two ways the server says the room is over, rather than that the request failed: 404 for a
+// name it has no record of, 410 for one it has deleted. Everything else may well work next try.
+private val GONE_STATUS_CODES = setOf(
+    HttpURLConnection.HTTP_NOT_FOUND,
+    HttpURLConnection.HTTP_GONE,
+)
 
 @Composable
 fun MeetingScreen(
@@ -91,6 +102,8 @@ fun MeetingScreen(
     instanceManager: InstanceManager = koinInject(),
     pipStateHolder: PipStateHolder = koinInject(),
     settingsStore: SettingsStore = koinInject(),
+    recentRoomsStore: RecentRoomsStore = koinInject(),
+    joinFailureRelay: JoinFailureRelay = koinInject(),
 ) {
     val roomApi = instanceManager.roomApi.collectAsState().value ?: return
     val roomManager = instanceManager.roomManager.collectAsState().value ?: return
@@ -302,6 +315,27 @@ fun MeetingScreen(
         }
     }
 
+    // Abandons the join and says why on the screen the user lands on.
+    //
+    // The message cannot be shown here. This screen has nothing to offer once the join has failed —
+    // no call to stay for, only a spinner — so it leaves immediately, and its snackbar host leaves
+    // with it. Announcing it here parked the user in front of "Preparing…" for the snackbar's whole
+    // duration and then dropped them on a dashboard that said nothing at all.
+    //
+    // [isGone] means the server has stated the room is over (404/410), not that the request failed:
+    // a room that no longer exists is dropped from the recents so its dead card stops being offered,
+    // while a network or server-side failure leaves the card alone, since it may well join next try.
+    fun failJoin(message: String, isGone: Boolean) {
+        if (isGone) {
+            instanceManager.store.activeInstanceId.value?.let { instanceId ->
+                recentRoomsStore.remove(roomName, instanceId)
+            }
+        }
+        joinFailureRelay.report(message)
+        isJoining = false
+        onLeave()
+    }
+
     // Join room via API and connect to LiveKit (or reattach to an ongoing call)
     LaunchedEffect(roomName) {
         // Even when reattaching to a call CallService already has running in the
@@ -324,25 +358,28 @@ fun MeetingScreen(
                         permissionLauncher.launch(requiredPermissions)
                     }
                 } else {
-                    snackbarHostState.showSnackbar(roomNoLongerExistsMessage)
-                    isJoining = false
-                    onLeave()
+                    // A 2xx with no usable token says the same thing a 410 does.
+                    failJoin(roomNoLongerExistsMessage, isGone = true)
                 }
             } else {
-                // The server names the specific problem (e.g. "Room not found") when it has
-                // one; show that instead of a generic failure. Either way, leave -- staying on
-                // this screen after a failed join left the user stuck on an infinite spinner
-                // with no way back except the system back button.
-                snackbarHostState.showSnackbar(parseApiErrorMessage(response) ?: joinFailedMessage)
-                isJoining = false
-                onLeave()
+                // A room the server declares over gets our own wording: its reply for one is the
+                // sentence fragment "room is no longer active", which is English-only and reads
+                // mid-sentence in a snackbar. Every other status keeps the server's own text —
+                // "Not available for guest accounts" says far more than a generic failure could.
+                val isGone = response.code() in GONE_STATUS_CODES
+                val message = if (isGone) {
+                    roomNoLongerExistsMessage
+                } else {
+                    parseApiErrorMessage(response) ?: joinFailedMessage
+                }
+                failJoin(message, isGone = isGone)
             }
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
-            snackbarHostState.showSnackbar(e.message ?: joinFailedMessage)
-            isJoining = false
-            onLeave()
+            // Classified by type, never by the exception's own text: an SSL handshake's message is
+            // not something to put in front of anyone.
+            failJoin(e.toUserMessage(context), isGone = false)
         }
     }
 
