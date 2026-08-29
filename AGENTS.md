@@ -91,6 +91,30 @@ Retrofit + OkHttp + Gson (not kotlinx-serialization for HTTP). `kotlin-serializa
 - `TokenAuthenticator` — handles 401 by refreshing token synchronously (creates separate Retrofit to avoid recursion), retries once, forces logout on failure
 - Base URL format: `https://host/api/` (trailing slash appended by `ApiClientFactory`)
 
+### Reporting a failed call
+
+Every API method returns `Response<T>`, so **Retrofit throws only on IO** — a 401, 403 or 500 comes
+back as an ordinary response with `isSuccessful == false` and a null `body()`. A bare
+`try { api.call().body() } catch (e: Exception) { … }` therefore never reports an HTTP error at all:
+the catch is unreachable for it, and the screen simply shows nothing. Screens must not hand-roll
+that shape. Call through `apiBody` / `apiAction` (`core/api/ApiCall.kt`) instead, which:
+
+- report the **server's own explanation** when it sent one (`{"error": "…"}`), since "Not available
+  for guest accounts" beats any wording written here;
+- fall back to a **localized** message when it did not — pass `classifyError = { it.toUserMessage(context) }`
+  (`core/ErrorMessages.kt`) so raw exception text never reaches the UI;
+- rethrow `CancellationException` rather than recording a cancelled call as a failure.
+
+Two rules go with them. **Local state changes only on success** — `apiAction` returns `false` on a
+refused write, and applying the change first leaves a rejected edit sitting on screen as though it
+had been accepted. And a load that shows a spinner **holds its message until the spinner clears**:
+`showSnackbar` suspends until the message is dismissed, so reporting inline pins the screen on its
+spinner for the message's whole time on screen.
+
+The one deliberate exception is a background poll (the admin overview's 30-second online count),
+which stays silent rather than putting a snackbar on screen every 30 seconds while the connection
+is down.
+
 ### Meeting data channel
 
 Chat messages never reach the server. They go participant-to-participant over the LiveKit data
