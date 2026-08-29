@@ -267,6 +267,8 @@
   <string name="meeting_error_screenShareFailed">شروع اشتراک‌گذاری صفحه ممکن نشد.</string>
   <string name="meeting_error_roomNoLongerExists">این اتاق دیگر وجود ندارد</string>
   <string name="meeting_error_joinFailed">پیوستن به اتاق ناموفق بود</string>
+  <string name="meeting_error_endForEveryoneFailed">پایان دادن به جلسه برای همه ممکن نشد</string>
+  <string name="meeting_action_leaveAnyway">به هر حال خروج</string>
   <string name="meeting_share_chooserTitle">اشتراک لینک جلسه</string>
   <string name="meeting_sheet_roomSettings">تنظیمات اتاق</string>
   <string name="meeting_sheet_deafen">قطع شنیدن</string>

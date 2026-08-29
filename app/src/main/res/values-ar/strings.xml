@@ -278,6 +278,8 @@
   <string name="meeting_error_screenShareFailed">تعذّر بدء مشاركة الشاشة.</string>
   <string name="meeting_error_roomNoLongerExists">هذه الغرفة لم تعد موجودة</string>
   <string name="meeting_error_joinFailed">فشل الانضمام إلى الغرفة</string>
+  <string name="meeting_error_endForEveryoneFailed">تعذّر إنهاء الاجتماع للجميع</string>
+  <string name="meeting_action_leaveAnyway">المغادرة على أي حال</string>
   <string name="meeting_share_chooserTitle">مشاركة رابط الاجتماع</string>
   <string name="meeting_sheet_roomSettings">إعدادات الغرفة</string>
   <string name="meeting_sheet_deafen">كتم السماع</string>

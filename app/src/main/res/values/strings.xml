@@ -236,6 +236,8 @@
   <string name="meeting_error_screenShareFailed">Could not start screen sharing.</string>
   <string name="meeting_error_roomNoLongerExists">This room no longer exists</string>
   <string name="meeting_error_joinFailed">Failed to join room</string>
+  <string name="meeting_error_endForEveryoneFailed">Couldn\'t end the meeting for everyone</string>
+  <string name="meeting_action_leaveAnyway">Leave anyway</string>
   <string name="meeting_share_chooserTitle">Share meeting link</string>
   <string name="meeting_sheet_roomSettings">Room Settings</string>
   <string name="meeting_sheet_deafen">Deafen</string>
