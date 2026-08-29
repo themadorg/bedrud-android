@@ -582,6 +582,24 @@ fun DashboardContent(
         }
     }
 
+    // The same problem for a room joined rather than created. A call records its room when it
+    // starts, which is while this screen is gone: the room arrives at the top of the list, pushing
+    // everything below it down by one, and the scroll offset Navigation restores then sits one card
+    // too low — leaving the room just left hidden directly above the viewport. Returning to the top
+    // whenever the newest visit gets newer puts it back where it is looked for.
+    var newestVisitSeenAtMs by rememberSaveable { mutableLongStateOf(0L) }
+    val newestVisitAtMs = remember(recentRooms, activeInstanceId) {
+        recentRooms
+            .filter { it.instanceId == activeInstanceId }
+            .maxOfOrNull { it.leftAt ?: it.joinedAt } ?: 0L
+    }
+    LaunchedEffect(newestVisitAtMs) {
+        if (newestVisitAtMs > newestVisitSeenAtMs) {
+            newestVisitSeenAtMs = newestVisitAtMs
+            listState.scrollToItem(0)
+        }
+    }
+
     Box(
         modifier = modifier
             .fillMaxSize()
