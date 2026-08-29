@@ -71,13 +71,17 @@ import com.bedrud.app.ui.components.BottomNavTab
 import com.bedrud.app.ui.components.BedrudBottomNavigationBar
 
 import androidx.compose.ui.platform.LocalClipboard
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.bedrud.app.R
+import com.bedrud.app.core.api.apiAction
+import com.bedrud.app.core.api.apiBody
 import com.bedrud.app.core.instance.InstanceManager
+import com.bedrud.app.core.toUserMessage
 import com.bedrud.app.models.AdminRoom
 import com.bedrud.app.models.AdminSettings
 import com.bedrud.app.models.AdminUser
@@ -100,6 +104,9 @@ private enum class AdminTab(@StringRes val labelResId: Int, val icon: ImageVecto
 
 // How often the overview tab re-polls the live online-user count.
 private const val ONLINE_COUNT_REFRESH_INTERVAL_MS = 30_000L
+
+// How long a generated invite token stays valid: one week.
+private const val INVITE_TOKEN_LIFETIME_HOURS = 168
 
 @Composable
 fun AdminScreen(
@@ -173,22 +180,34 @@ private fun AdminOverviewContent(
     modifier: Modifier = Modifier,
     adminApi: com.bedrud.app.core.api.AdminApi
 ) {
-    val scope = rememberCoroutineScope()
+    val context = LocalContext.current
     val snackbarHostState = remember { SnackbarHostState() }
+    val loadFailedMessage = stringResource(R.string.admin_error_loadOverviewFailed)
     var users by remember { mutableStateOf<List<AdminUser>>(emptyList()) }
     var rooms by remember { mutableStateOf<List<AdminRoom>>(emptyList()) }
     var onlineCount by remember { mutableIntStateOf(0) }
     var isLoading by remember { mutableStateOf(true) }
     suspend fun load() {
         isLoading = true
-        try {
-            users = adminApi.listUsers().body()?.users ?: emptyList()
-            rooms = adminApi.listRooms().body()?.rooms ?: emptyList()
-            onlineCount = adminApi.getOnlineCount().body()?.get("count") ?: 0
-        } catch (e: Exception) {
-            snackbarHostState.showSnackbar(e.message ?: "Failed to load data")
-        }
+        // The three calls share one message. A server that is down fails all three, and three
+        // snackbars queued behind each other would take twelve seconds to clear.
+        var failure: String? = null
+        val keepFirstFailure: suspend (String) -> Unit = { if (failure == null) failure = it }
+        val classify: (Throwable) -> String = { it.toUserMessage(context) }
+        users = apiBody(loadFailedMessage, keepFirstFailure, classify) {
+            adminApi.listUsers()
+        }?.users ?: emptyList()
+        rooms = apiBody(loadFailedMessage, keepFirstFailure, classify) {
+            adminApi.listRooms()
+        }?.rooms ?: emptyList()
+        onlineCount = apiBody(loadFailedMessage, keepFirstFailure, classify) {
+            adminApi.getOnlineCount()
+        }?.get("count") ?: 0
         isLoading = false
+        // Reported only once the spinner is gone: showSnackbar suspends until the message is
+        // dismissed, so reporting first would hold the tab on its spinner for the message's
+        // whole time on screen.
+        failure?.let { snackbarHostState.showSnackbar(it) }
     }
 
     // Keyed on Unit like the sibling tabs — never on the Retrofit client: its dynamic proxy is
@@ -196,7 +215,9 @@ private fun AdminOverviewContent(
     // recomposition, including the ones this effect's own 30s online-count writes trigger.
     LaunchedEffect(Unit) {
         load()
-        // Auto-refresh online count every 30s
+        // Auto-refresh online count every 30s. The one deliberate silence in this screen: a
+        // background poll that reported itself would put a snackbar on screen every 30 seconds
+        // for as long as the connection is down. It keeps the last count instead.
         while (true) {
             delay(ONLINE_COUNT_REFRESH_INTERVAL_MS)
             try {
@@ -333,18 +354,22 @@ private fun AdminUsersContent(
     adminApi: com.bedrud.app.core.api.AdminApi
 ) {
     val scope = rememberCoroutineScope()
+    val context = LocalContext.current
     val snackbarHostState = remember { SnackbarHostState() }
+    val loadFailedMessage = stringResource(R.string.admin_error_loadUsersFailed)
+    val updateUserFailedMessage = stringResource(R.string.admin_error_updateUserFailed)
     var users by remember { mutableStateOf<List<AdminUser>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
     var search by remember { mutableStateOf("") }
     LaunchedEffect(Unit) {
         isLoading = true
-        try {
-            users = adminApi.listUsers().body()?.users ?: emptyList()
-        } catch (e: Exception) {
-            snackbarHostState.showSnackbar(e.message ?: "Failed to load users")
-        }
+        // Held rather than shown, so the spinner clears before the message takes the screen.
+        var failure: String? = null
+        users = apiBody(loadFailedMessage, { failure = it }, { it.toUserMessage(context) }) {
+            adminApi.listUsers()
+        }?.users ?: emptyList()
         isLoading = false
+        failure?.let { snackbarHostState.showSnackbar(it) }
     }
 
     val filtered = remember(users, search) {
@@ -410,15 +435,21 @@ private fun AdminUsersContent(
                             Row {
                                 IconButton(onClick = {
                                     scope.launch {
-                                        try {
+                                        // The row flips only on a 2xx. Flipping first showed the
+                                        // ban as done while the server had refused it.
+                                        val updated = apiAction(
+                                            updateUserFailedMessage,
+                                            { snackbarHostState.showSnackbar(it) },
+                                            { it.toUserMessage(context) },
+                                        ) {
                                             adminApi.setUserStatus(
                                                 user.id,
                                                 mapOf("active" to !user.isActive)
                                             )
+                                        }
+                                        if (updated) {
                                             users =
                                                 users.map { if (it.id == user.id) it.copy(isActive = !user.isActive) else it }
-                                        } catch (e: Exception) {
-                                            snackbarHostState.showSnackbar(e.message ?: "Failed")
                                         }
                                     }
                                 }) {
@@ -448,17 +479,21 @@ private fun AdminRoomsContent(
     adminApi: com.bedrud.app.core.api.AdminApi
 ) {
     val scope = rememberCoroutineScope()
+    val context = LocalContext.current
     val snackbarHostState = remember { SnackbarHostState() }
+    val loadFailedMessage = stringResource(R.string.admin_error_loadRoomsFailed)
+    val deleteRoomFailedMessage = stringResource(R.string.admin_error_deleteRoomFailed)
     var rooms by remember { mutableStateOf<List<AdminRoom>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
     LaunchedEffect(Unit) {
         isLoading = true
-        try {
-            rooms = adminApi.listRooms().body()?.rooms ?: emptyList()
-        } catch (e: Exception) {
-            snackbarHostState.showSnackbar(e.message ?: "Failed to load rooms")
-        }
+        // Held rather than shown, so the spinner clears before the message takes the screen.
+        var failure: String? = null
+        rooms = apiBody(loadFailedMessage, { failure = it }, { it.toUserMessage(context) }) {
+            adminApi.listRooms()
+        }?.rooms ?: emptyList()
         isLoading = false
+        failure?.let { snackbarHostState.showSnackbar(it) }
     }
 
     AdminTabScaffold(
@@ -509,13 +544,17 @@ private fun AdminRoomsContent(
                         trailingContent = {
                             IconButton(onClick = {
                                 scope.launch {
-                                    try {
+                                    // The row goes only on a 2xx, so a refused delete leaves the
+                                    // room where it is rather than hiding a room that still exists.
+                                    val deleted = apiAction(
+                                        deleteRoomFailedMessage,
+                                        { snackbarHostState.showSnackbar(it) },
+                                        { it.toUserMessage(context) },
+                                    ) {
                                         adminApi.deleteRoom(room.id)
+                                    }
+                                    if (deleted) {
                                         rooms = rooms.filter { it.id != room.id }
-                                    } catch (e: Exception) {
-                                        snackbarHostState.showSnackbar(
-                                            e.message ?: "Failed to delete"
-                                        )
                                     }
                                 }
                             }) {
@@ -542,9 +581,14 @@ private fun AdminSettingsContent(
     adminApi: com.bedrud.app.core.api.AdminApi
 ) {
     val scope = rememberCoroutineScope()
+    val context = LocalContext.current
     val snackbarHostState = remember { SnackbarHostState() }
     val clipboard = LocalClipboard.current
     val clipLabel = stringResource(R.string.app_name)
+    val loadFailedMessage = stringResource(R.string.admin_error_loadSettingsFailed)
+    val saveSettingsFailedMessage = stringResource(R.string.admin_error_saveSettingsFailed)
+    val createTokenFailedMessage = stringResource(R.string.admin_error_createTokenFailed)
+    val deleteTokenFailedMessage = stringResource(R.string.admin_error_deleteTokenFailed)
     var settings by remember { mutableStateOf<AdminSettings?>(null) }
     var tokens by remember { mutableStateOf<List<InviteToken>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
@@ -552,13 +596,18 @@ private fun AdminSettingsContent(
     var newToken by remember { mutableStateOf<InviteToken?>(null) }
     LaunchedEffect(Unit) {
         isLoading = true
-        try {
-            settings = adminApi.getSettings().body()
-            tokens = adminApi.listInviteTokens().body()?.tokens ?: emptyList()
-        } catch (e: Exception) {
-            snackbarHostState.showSnackbar(e.message ?: "Failed to load settings")
+        // One message for both calls, and held until loading is done — as in the sibling tabs.
+        var failure: String? = null
+        val keepFirstFailure: suspend (String) -> Unit = { if (failure == null) failure = it }
+        val classify: (Throwable) -> String = { it.toUserMessage(context) }
+        settings = apiBody(loadFailedMessage, keepFirstFailure, classify) {
+            adminApi.getSettings()
         }
+        tokens = apiBody(loadFailedMessage, keepFirstFailure, classify) {
+            adminApi.listInviteTokens()
+        }?.tokens ?: emptyList()
         isLoading = false
+        failure?.let { snackbarHostState.showSnackbar(it) }
     }
 
     AdminTabScaffold(
@@ -595,13 +644,17 @@ private fun AdminSettingsContent(
                                     onCheckedChange = { newVal ->
                                         scope.launch {
                                             val updated = s.copy(registrationEnabled = newVal)
-                                            try {
-                                                adminApi.updateSettings(updated); settings = updated
-                                            } catch (e: Exception) {
-                                                snackbarHostState.showSnackbar(
-                                                    e.message ?: "Failed"
-                                                )
+                                            // The switch follows the server, not the tap. Writing
+                                            // the new value in first left a refused change sitting
+                                            // on screen as though it had been accepted.
+                                            val saved = apiAction(
+                                                saveSettingsFailedMessage,
+                                                { snackbarHostState.showSnackbar(it) },
+                                                { it.toUserMessage(context) },
+                                            ) {
+                                                adminApi.updateSettings(updated)
                                             }
+                                            if (saved) settings = updated
                                         }
                                     })
                             },
@@ -616,13 +669,14 @@ private fun AdminSettingsContent(
                                     onCheckedChange = { newVal ->
                                         scope.launch {
                                             val updated = s.copy(tokenRegistrationOnly = newVal)
-                                            try {
-                                                adminApi.updateSettings(updated); settings = updated
-                                            } catch (e: Exception) {
-                                                snackbarHostState.showSnackbar(
-                                                    e.message ?: "Failed"
-                                                )
+                                            val saved = apiAction(
+                                                saveSettingsFailedMessage,
+                                                { snackbarHostState.showSnackbar(it) },
+                                                { it.toUserMessage(context) },
+                                            ) {
+                                                adminApi.updateSettings(updated)
                                             }
+                                            if (saved) settings = updated
                                         }
                                     })
                             },
@@ -674,19 +728,21 @@ private fun AdminSettingsContent(
                         Spacer(modifier = Modifier.width(8.dp))
                         Button(onClick = {
                             scope.launch {
-                                try {
-                                    val body = CreateInviteTokenRequest(
-                                        email = tokenEmail.takeIf { it.isNotBlank() },
-                                        expiresInHours = 168
-                                    )
-                                    val created = adminApi.createInviteToken(body).body()
-                                    if (created != null) {
-                                        tokens = tokens + created
-                                        newToken = created
-                                        tokenEmail = ""
-                                    }
-                                } catch (e: Exception) {
-                                    snackbarHostState.showSnackbar(e.message ?: "Failed")
+                                val body = CreateInviteTokenRequest(
+                                    email = tokenEmail.takeIf { it.isNotBlank() },
+                                    expiresInHours = INVITE_TOKEN_LIFETIME_HOURS
+                                )
+                                val created = apiBody(
+                                    createTokenFailedMessage,
+                                    { snackbarHostState.showSnackbar(it) },
+                                    { it.toUserMessage(context) },
+                                ) {
+                                    adminApi.createInviteToken(body)
+                                }
+                                if (created != null) {
+                                    tokens = tokens + created
+                                    newToken = created
+                                    tokenEmail = ""
                                 }
                             }
                         }) { Text(stringResource(R.string.common_button_generate)) }
@@ -726,13 +782,15 @@ private fun AdminSettingsContent(
                                     }
                                     IconButton(onClick = {
                                         scope.launch {
-                                            try {
+                                            val removed = apiAction(
+                                                deleteTokenFailedMessage,
+                                                { snackbarHostState.showSnackbar(it) },
+                                                { it.toUserMessage(context) },
+                                            ) {
                                                 adminApi.deleteInviteToken(tok.id)
+                                            }
+                                            if (removed) {
                                                 tokens = tokens.filter { it.id != tok.id }
-                                            } catch (e: Exception) {
-                                                snackbarHostState.showSnackbar(
-                                                    e.message ?: "Failed"
-                                                )
                                             }
                                         }
                                     }) {
