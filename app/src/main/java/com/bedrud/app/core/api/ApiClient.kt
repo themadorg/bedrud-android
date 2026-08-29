@@ -3,6 +3,7 @@ package com.bedrud.app.core.api
 import com.bedrud.app.BuildConfig
 import com.bedrud.app.core.auth.AuthManager
 import com.bedrud.app.models.RefreshTokenRequest
+import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import com.google.gson.Strictness
 import okhttp3.Authenticator
@@ -21,6 +22,39 @@ private const val DEFAULT_TIMEOUT_SECONDS = 30L
 
 /** Cap on 401-driven token-refresh retries before forcing logout, to avoid infinite loops. */
 private const val MAX_REFRESH_ATTEMPTS = 2
+
+/**
+ * Gson as every Bedrud client reads a response. Shared so a payload parses the same way whichever
+ * client fetched it, rather than each builder deciding for itself.
+ */
+private fun lenientGson(): Gson = GsonBuilder()
+    .setStrictness(Strictness.LENIENT)
+    .create()
+
+/**
+ * A Retrofit client with nothing attached: no auth header, no token authenticator, no logging.
+ *
+ * Two calls need one. The token refresh cannot carry the authenticator it was triggered by, or a
+ * refresh that itself answers 401 re-enters it. The health probe runs against a server the app has
+ * no account on yet, so there is no session to attach.
+ *
+ * [timeoutSeconds] defaults to the app-wide API timeout; a caller with a reason to wait less passes
+ * its own. The trailing slash Retrofit demands of a base URL is applied here, so no caller repeats
+ * it.
+ */
+internal fun plainRetrofit(
+    baseURL: String,
+    timeoutSeconds: Long = DEFAULT_TIMEOUT_SECONDS,
+): Retrofit = Retrofit.Builder()
+    .baseUrl(baseURL.trimEnd('/') + "/")
+    .client(
+        OkHttpClient.Builder()
+            .connectTimeout(timeoutSeconds, TimeUnit.SECONDS)
+            .readTimeout(timeoutSeconds, TimeUnit.SECONDS)
+            .build()
+    )
+    .addConverterFactory(GsonConverterFactory.create(lenientGson()))
+    .build()
 
 /**
  * Interceptor that attaches the JWT access token to every outgoing request.
@@ -68,20 +102,12 @@ class TokenAuthenticator(
         }
 
         // Perform synchronous token refresh
+        // TODO(#161): the provider's AuthApi is called and discarded. Calling it does assert that
+        // wiring finished before a refresh runs — decide whether that guard is worth keeping and
+        // write it as one, or drop the parameter.
         val refreshCall = authApiProvider().let { _ ->
-            // Use a separate retrofit instance without the authenticator to avoid recursion
-            val refreshRetrofit = Retrofit.Builder()
-                .baseUrl(baseURL.trimEnd('/') + "/")
-                .addConverterFactory(GsonConverterFactory.create())
-                .client(
-                    OkHttpClient.Builder()
-                        .connectTimeout(DEFAULT_TIMEOUT_SECONDS, TimeUnit.SECONDS)
-                        .readTimeout(DEFAULT_TIMEOUT_SECONDS, TimeUnit.SECONDS)
-                        .build()
-                )
-                .build()
-
-            val refreshApi = refreshRetrofit.create(AuthApi::class.java)
+            // Plain client, so the refresh cannot recurse back through this authenticator.
+            val refreshApi = plainRetrofit(baseURL).create(AuthApi::class.java)
             try {
                 val refreshResponse = kotlinx.coroutines.runBlocking {
                     refreshApi.refreshToken(RefreshTokenRequest(refreshToken))
@@ -148,14 +174,10 @@ class ApiClientFactory(private val baseURL: String) {
     }
 
     fun createRetrofit(okHttpClient: OkHttpClient): Retrofit {
-        val gson = GsonBuilder()
-            .setStrictness(Strictness.LENIENT)
-            .create()
-
         return Retrofit.Builder()
             .baseUrl(baseURL.trimEnd('/') + "/")
             .client(okHttpClient)
-            .addConverterFactory(GsonConverterFactory.create(gson))
+            .addConverterFactory(GsonConverterFactory.create(lenientGson()))
             .build()
     }
 
