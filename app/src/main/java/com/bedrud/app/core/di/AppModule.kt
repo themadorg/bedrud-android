@@ -4,6 +4,7 @@ import com.bedrud.app.core.instance.InstanceManager
 import com.bedrud.app.core.instance.InstanceStore
 import com.bedrud.app.core.recent.RecentRoomsStore
 import com.bedrud.app.core.pip.PipStateHolder
+import com.bedrud.app.core.rooms.JoinFailureRelay
 import com.bedrud.app.ui.screens.settings.SettingsStore
 import org.koin.android.ext.koin.androidApplication
 import org.koin.android.ext.koin.androidContext
@@ -15,4 +16,5 @@ val appModule = module {
     single { SettingsStore(androidContext()) }
     single { InstanceManager(androidApplication(), get(), get()) }
     single { PipStateHolder() }
+    single { JoinFailureRelay() }
 }

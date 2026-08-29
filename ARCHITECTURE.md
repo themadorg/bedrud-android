@@ -77,7 +77,7 @@ building blocks, not just LiveKit.
 ```mermaid
 flowchart TD
     UI["UI · Compose (per route)<br/>MainActivity/NavHost · MeetingScreen · Dashboard · Admin · Login/Register/Guest · Profile · Settings · theme/ · components/"]
-    ST["State & Managers · StateFlow, no ViewModels<br/>InstanceManager · RoomManager · AuthManager · PasskeyManager · InstanceStore · SettingsStore · RecentRoomsStore · PipStateHolder"]
+    ST["State & Managers · StateFlow, no ViewModels<br/>InstanceManager · RoomManager · AuthManager · PasskeyManager · InstanceStore · SettingsStore · RecentRoomsStore · PipStateHolder · JoinFailureRelay"]
     DA["Data · Retrofit + Gson<br/>AuthApi · RoomApi · AdminApi · ApiClientFactory · AuthInterceptor · TokenAuthenticator · models/"]
     PL["Platform & OS · Android + LiveKit<br/>LiveKit Room · CallService (foreground) · CallConnectionService (telecom) · EncryptedSharedPreferences · CredentialManager/FIDO · Custom Tabs · MediaProjection"]
     UI --> ST --> DA --> PL
