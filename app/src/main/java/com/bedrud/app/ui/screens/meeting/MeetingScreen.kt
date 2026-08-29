@@ -34,7 +34,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -66,6 +65,7 @@ import com.bedrud.app.core.recent.RecentRoomsStore
 import com.bedrud.app.core.rooms.JoinFailureRelay
 import com.bedrud.app.core.toUserMessage
 import com.bedrud.app.ui.components.BedrudScaffoldContentInsets
+import com.bedrud.app.ui.components.BedrudSnackbarHost
 import com.bedrud.app.ui.theme.BedrudShapeTokens
 import com.bedrud.app.ui.theme.Dimens
 import com.bedrud.app.ui.theme.Motion
@@ -418,7 +418,7 @@ fun MeetingScreen(
 
     Scaffold(
         contentWindowInsets = BedrudScaffoldContentInsets,
-        snackbarHost = { SnackbarHost(snackbarHostState) },
+        snackbarHost = { BedrudSnackbarHost(snackbarHostState) },
         containerColor = MaterialTheme.colorScheme.background
     ) { padding ->
         when (connectionState) {

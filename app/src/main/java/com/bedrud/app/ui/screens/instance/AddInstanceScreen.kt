@@ -36,7 +36,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -72,6 +71,7 @@ import com.bedrud.app.core.instance.InstanceManager
 import com.bedrud.app.core.instance.ServerUrlCanonicalizer
 import com.bedrud.app.ui.components.BedrudButton
 import com.bedrud.app.ui.components.BedrudScaffoldContentInsets
+import com.bedrud.app.ui.components.BedrudSnackbarHost
 import com.bedrud.app.ui.components.DevOnly
 import com.bedrud.app.ui.theme.Alpha
 import com.bedrud.app.ui.theme.BedrudShapeTokens
@@ -190,7 +190,7 @@ fun AddInstanceScreen(
         // Standard insets (IME excluded) — the keyboard is allowed to cover the Continue button.
         // The scrollable content below adds imePadding so the focused input still scrolls into view.
         contentWindowInsets = BedrudScaffoldContentInsets,
-        snackbarHost = { SnackbarHost(snackbarHostState) }
+        snackbarHost = { BedrudSnackbarHost(snackbarHostState) }
     ) { padding ->
         Column(
             modifier = Modifier
