@@ -186,6 +186,17 @@
   <string name="admin_room_maxParticipants">Maks: <xliff:g id="count" example="100">%1$d</xliff:g></string>
   <string name="admin_token_status_used">Kullanıldı</string>
   <string name="admin_token_status_noEmail">E-posta yok</string>
+
+  <!-- Admin failures -->
+  <string name="admin_error_loadOverviewFailed">Genel bakış yüklenemedi</string>
+  <string name="admin_error_loadUsersFailed">Kullanıcılar yüklenemedi</string>
+  <string name="admin_error_updateUserFailed">Bu kullanıcı güncellenemedi</string>
+  <string name="admin_error_loadRoomsFailed">Odalar yüklenemedi</string>
+  <string name="admin_error_deleteRoomFailed">Bu oda silinemedi</string>
+  <string name="admin_error_loadSettingsFailed">Ayarlar yüklenemedi</string>
+  <string name="admin_error_saveSettingsFailed">Ayarlar kaydedilemedi</string>
+  <string name="admin_error_createTokenFailed">Davet kodu oluşturulamadı</string>
+  <string name="admin_error_deleteTokenFailed">Davet kodu silinemedi</string>
   <string name="common_action_copy">Kopyala</string>
   <string name="common_action_share">Paylaş</string>
   <string name="settings_title">Ayarlar</string>
@@ -311,6 +322,7 @@
   <string name="meeting_error_voteFailed">Oyunuz gönderilemedi</string>
   <string name="meeting_error_kickFailed">Katılımcı çıkarılamadı</string>
   <string name="meeting_error_banFailed">Katılımcı engellenemedi</string>
+  <string name="dashboard_error_loadRoomsFailed">Odalar yüklenemedi</string>
   <string name="dashboard_error_createRoomFailed">Oda oluşturulamadı</string>
   <string name="dashboard_error_deleteRoomFailed">Oda silinemedi</string>
   <string name="dashboard_error_saveSettingsFailed">Ayarlar kaydedilemedi</string>

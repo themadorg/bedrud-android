@@ -190,6 +190,18 @@
   <string name="admin_room_maxParticipants">Max: <xliff:g id="count" example="100">%1$d</xliff:g></string>
   <string name="admin_token_status_used">Used</string>
   <string name="admin_token_status_noEmail">No email</string>
+
+  <!-- Admin failures. Shown when the server refuses a request or cannot be reached; the server's
+       own explanation is preferred over these whenever it sends one. -->
+  <string name="admin_error_loadOverviewFailed">Couldn\'t load the overview</string>
+  <string name="admin_error_loadUsersFailed">Couldn\'t load users</string>
+  <string name="admin_error_updateUserFailed">Couldn\'t update this user</string>
+  <string name="admin_error_loadRoomsFailed">Couldn\'t load rooms</string>
+  <string name="admin_error_deleteRoomFailed">Couldn\'t delete this room</string>
+  <string name="admin_error_loadSettingsFailed">Couldn\'t load settings</string>
+  <string name="admin_error_saveSettingsFailed">Couldn\'t save settings</string>
+  <string name="admin_error_createTokenFailed">Couldn\'t create the invite token</string>
+  <string name="admin_error_deleteTokenFailed">Couldn\'t delete the invite token</string>
   <string name="common_action_copy">Copy</string>
   <string name="common_action_share">Share</string>
   <string name="settings_title">Settings</string>
@@ -315,6 +327,7 @@
   <string name="meeting_error_banFailed">Failed to ban participant</string>
 
   <!-- Dashboard room actions -->
+  <string name="dashboard_error_loadRoomsFailed">Couldn\'t load rooms</string>
   <string name="dashboard_error_createRoomFailed">Failed to create room</string>
   <string name="dashboard_error_deleteRoomFailed">Failed to delete room</string>
   <string name="dashboard_error_saveSettingsFailed">Failed to save settings</string>
