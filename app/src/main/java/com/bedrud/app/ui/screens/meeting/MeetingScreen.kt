@@ -253,6 +253,13 @@ fun MeetingScreen(
             info.token!!,
             currentUser?.avatarUrl,
         )
+        // Recorded here, where the call actually starts, rather than on the card that was tapped.
+        // Stamped at tap time it recorded an intention: a room the server had already deleted was
+        // written back as visited just now, so a card that could never be joined kept resurfacing
+        // at the top of the list, labelled "Live" by the very tap that failed to open it.
+        instanceManager.store.activeInstance?.let { instance ->
+            recentRoomsStore.add(roomName, instance.id, instance.displayName, instance.iconColorHex)
+        }
         isJoining = false
     }
 

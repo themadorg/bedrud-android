@@ -31,7 +31,6 @@ import com.bedrud.app.core.createLocaleContext
 import com.bedrud.app.core.deeplink.BedrudURLParser
 import com.bedrud.app.core.instance.InstanceManager
 import com.bedrud.app.core.meeting.VideoAspect
-import com.bedrud.app.core.recent.RecentRoomsStore
 import com.bedrud.app.core.pip.PipStateHolder
 import com.bedrud.app.ui.screens.auth.EmailLoginScreen
 import com.bedrud.app.ui.screens.auth.LoginScreen
@@ -197,7 +196,6 @@ fun BedrudNavHost(
     val authManager by instanceManager.authManager.collectAsState()
     val authApi by instanceManager.authApi.collectAsState()
     val isLoggedIn = authManager?.isLoggedIn?.collectAsState()?.value ?: false
-    val recentRoomsStore: RecentRoomsStore = koinInject()
 
     // Route to the right top-level destination for the current auth state. This re-runs when the
     // active instance is switched (authManager swaps) — including a switch made as part of a
@@ -247,9 +245,8 @@ fun BedrudNavHost(
     LaunchedEffect(deepLink) {
         val roomName = deepLink ?: return@LaunchedEffect
         if (isLoggedIn) {
-            instanceManager.store.activeInstance?.let { instance ->
-                recentRoomsStore.add(roomName, instance.id, instance.displayName, instance.iconColorHex)
-            }
+            // The recent is recorded once the call actually starts (MeetingScreen), not on the way
+            // in: a link to a room the server has deleted must not leave a card behind for it.
             navController.navigate(Routes.meeting(roomName)) {
                 launchSingleTop = true
                 popUpTo(Routes.MEETING) { inclusive = true }

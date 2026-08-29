@@ -25,7 +25,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import com.bedrud.app.R
 import com.bedrud.app.core.instance.InstanceManager
-import com.bedrud.app.core.recent.RecentRoomsStore
 import com.bedrud.app.core.rooms.JoinFailureRelay
 import com.bedrud.app.ui.components.BedrudSnackbarHost
 import com.bedrud.app.ui.components.BottomNavTab
@@ -48,26 +47,7 @@ fun MainScreen(
     instanceManager: InstanceManager = koinInject(),
     settingsStore: SettingsStore = koinInject(),
     joinFailureRelay: JoinFailureRelay = koinInject(),
-    recentRoomsStore: RecentRoomsStore = koinInject(),
 ) {
-    fun recordAndJoin(
-        roomName: String,
-        instanceId: String,
-        instanceName: String,
-        instanceColorHex: String?,
-    ) {
-        recentRoomsStore.add(roomName, instanceId, instanceName, instanceColorHex)
-        onJoinRoom(roomName)
-    }
-
-    fun joinFromDashboard(roomName: String) {
-        val instance = instanceManager.store.activeInstance
-        if (instance != null) {
-            recordAndJoin(roomName, instance.id, instance.displayName, instance.iconColorHex)
-        } else {
-            onJoinRoom(roomName)
-        }
-    }
     val authManager by instanceManager.authManager.collectAsState()
     val currentUser by remember(authManager) {
         authManager?.currentUser ?: kotlinx.coroutines.flow.MutableStateFlow(null)
@@ -145,7 +125,7 @@ fun MainScreen(
         when (selectedTab) {
             0 -> DashboardContent(
                 modifier = Modifier.padding(contentPadding),
-                onJoinRoom = ::joinFromDashboard,
+                onJoinRoom = onJoinRoom,
                 // Rooms=0, Profile=1 — the header avatar is a shortcut to the Profile tab.
                 onOpenProfile = { selectedTab = PROFILE_TAB_INDEX },
                 onNavigateToAddInstance = onNavigateToAddInstance,
@@ -153,12 +133,7 @@ fun MainScreen(
                     if (recent.instanceId != instanceManager.store.activeInstanceId.value) {
                         instanceManager.switchTo(recent.instanceId)
                     }
-                    recordAndJoin(
-                        recent.roomName,
-                        recent.instanceId,
-                        recent.instanceName,
-                        recent.instanceColorHex,
-                    )
+                    onJoinRoom(recent.roomName)
                 },
                 instanceManager = instanceManager,
             )
