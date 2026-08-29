@@ -86,7 +86,6 @@ class AuthInterceptor(
 class TokenAuthenticator(
     private val authManager: AuthManager,
     private val baseURL: String,
-    private val authApiProvider: () -> AuthApi
 ) : Authenticator {
 
     override fun authenticate(route: Route?, response: Response): Request? {
@@ -101,12 +100,9 @@ class TokenAuthenticator(
             return null
         }
 
-        // Perform synchronous token refresh
-        // TODO(#161): the provider's AuthApi is called and discarded. Calling it does assert that
-        // wiring finished before a refresh runs — decide whether that guard is worth keeping and
-        // write it as one, or drop the parameter.
-        val refreshCall = authApiProvider().let { _ ->
-            // Plain client, so the refresh cannot recurse back through this authenticator.
+        // Perform synchronous token refresh on a plain client, so it cannot recurse back through
+        // this authenticator.
+        val refreshCall = run {
             val refreshApi = plainRetrofit(baseURL).create(AuthApi::class.java)
             try {
                 val refreshResponse = kotlinx.coroutines.runBlocking {
