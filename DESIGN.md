@@ -604,6 +604,23 @@ lint fails CI on `MissingTranslation`, so shipping English-only is not an option
 `LocaleHelper` and `BedrudTheme` set the layout direction from the active `AppLanguage`, while the
 typeface does not vary by locale at all — see [Typography](#typography-typekt).
 
+**Content direction is separate from layout direction.** What someone types is not governed by the
+language they chose the app in: a Persian message written in the English build is still a
+right-to-left paragraph. `BidiUtils` answers that from the text itself, by its first strong
+character, and any surface showing user-entered text applies **both** of its answers —
+`textDirection` for the order of the runs within a line, and `textAlign` for which edge the line
+sits against. Direction alone is not enough: Compose resolves an unspecified alignment as
+`TextAlign.Start`, and `Start` is answered by the layout direction, so in the English build a
+Persian message ordered its words correctly and then hugged the left edge. For the same reason
+`BidiUtils.textAlign` returns `Left`/`Right` rather than `Start`/`End`, which would be resolved
+against the layout direction again and change nothing.
+
+Alignment also needs something to align **within**: a paragraph laid out at its own width has no
+slack to move in. Where the text sits in a container wider than itself — the chat composer's field
+spans the whole control band — the container's width has to reach the text, which for a `Box` means
+`propagateMinConstraints`. Propagate the width only; carrying the minimum height down as well makes
+a single line render against the top of the band instead of centred in it.
+
 ## Self-hosting / rebranding
 
 To re-skin, retune the ramps in `Color.kt` (or reseed with Material Theme Builder from the two brand seeds
