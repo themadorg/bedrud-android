@@ -35,6 +35,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import com.bedrud.app.ui.components.BedrudOutlinedCard
+import com.bedrud.app.ui.components.BedrudSnackbarHost
 import com.bedrud.app.ui.components.BedrudTextField
 import com.bedrud.app.ui.util.setPlainText
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -48,7 +49,6 @@ import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -327,7 +327,7 @@ private fun AdminTabScaffold(
         modifier = modifier,
         contentWindowInsets = BedrudTabScaffoldContentInsets,
         topBar = { BedrudCompactTopBar(title = title) },
-        snackbarHost = { SnackbarHost(snackbarHostState) },
+        snackbarHost = { BedrudSnackbarHost(snackbarHostState) },
         content = content,
     )
 }
