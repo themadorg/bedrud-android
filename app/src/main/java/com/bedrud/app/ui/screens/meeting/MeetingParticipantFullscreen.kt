@@ -35,6 +35,7 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import coil.compose.AsyncImage
 import com.bedrud.app.R
+import com.bedrud.app.core.livekit.ParticipantMetadata
 import com.bedrud.app.core.livekit.RoomManager
 import com.bedrud.app.ui.components.InitialsAvatar
 import com.bedrud.app.ui.theme.BedrudShapeTokens
@@ -46,7 +47,6 @@ import io.livekit.android.room.Room
 import io.livekit.android.room.participant.Participant
 import io.livekit.android.room.track.Track
 import kotlinx.coroutines.delay
-import org.json.JSONObject
 
 /** Scrim opacity behind the fullscreen chrome (name chip, collapse button). */
 private const val FullscreenChipAlpha = 0.7f
@@ -113,12 +113,7 @@ fun MeetingParticipantFullscreen(
     val isCameraMuted = cameraPublication?.muted == true
 
     val avatarUrl = remember(participant.metadata) {
-        participant.metadata?.let { meta ->
-            try {
-                val obj = JSONObject(meta)
-                if (obj.has("avatarUrl")) obj.getString("avatarUrl") else null
-            } catch (_: Exception) { null }
-        }
+        ParticipantMetadata.avatarUrl(participant.metadata)
     }
 
     Box(
