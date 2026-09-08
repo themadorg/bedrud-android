@@ -270,6 +270,8 @@
   <string name="meeting_error_screenShareFailed">Bildschirmfreigabe konnte nicht gestartet werden.</string>
   <string name="meeting_error_roomNoLongerExists">Dieser Raum existiert nicht mehr</string>
   <string name="meeting_error_joinFailed">Beitritt zum Raum fehlgeschlagen</string>
+  <string name="meeting_error_endForEveryoneFailed">Das Meeting konnte nicht für alle beendet werden</string>
+  <string name="meeting_action_leaveAnyway">Trotzdem verlassen</string>
   <string name="meeting_share_chooserTitle">Meeting-Link teilen</string>
   <string name="meeting_sheet_roomSettings">Raumeinstellungen</string>
   <string name="meeting_sheet_deafen">Taub schalten</string>

@@ -268,6 +268,8 @@
   <string name="meeting_error_screenShareFailed">画面共有を開始できませんでした。</string>
   <string name="meeting_error_roomNoLongerExists">このルームは存在しません</string>
   <string name="meeting_error_joinFailed">ルームへの参加に失敗しました</string>
+  <string name="meeting_error_endForEveryoneFailed">全員の会議を終了できませんでした</string>
+  <string name="meeting_action_leaveAnyway">それでも退室</string>
   <string name="meeting_share_chooserTitle">ミーティングリンクを共有</string>
   <string name="meeting_sheet_roomSettings">ルーム設定</string>
   <string name="meeting_sheet_deafen">スピーカーミュート</string>

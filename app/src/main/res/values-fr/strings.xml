@@ -270,6 +270,8 @@
   <string name="meeting_error_screenShareFailed">Impossible de démarrer le partage d\'écran.</string>
   <string name="meeting_error_roomNoLongerExists">Cette salle n\'existe plus</string>
   <string name="meeting_error_joinFailed">Impossible de rejoindre la salle</string>
+  <string name="meeting_error_endForEveryoneFailed">Impossible de terminer la réunion pour tout le monde</string>
+  <string name="meeting_action_leaveAnyway">Quitter quand même</string>
   <string name="meeting_share_chooserTitle">Partager le lien de la réunion</string>
   <string name="meeting_sheet_roomSettings">Paramètres du salon</string>
   <string name="meeting_sheet_deafen">Assourdir</string>

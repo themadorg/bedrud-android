@@ -270,6 +270,8 @@
   <string name="meeting_error_screenShareFailed">Ekran paylaşımı başlatılamadı.</string>
   <string name="meeting_error_roomNoLongerExists">Bu oda artık mevcut değil</string>
   <string name="meeting_error_joinFailed">Odaya katılma başarısız oldu</string>
+  <string name="meeting_error_endForEveryoneFailed">Toplantı herkes için sonlandırılamadı</string>
+  <string name="meeting_action_leaveAnyway">Yine de ayrıl</string>
   <string name="meeting_share_chooserTitle">Toplantı bağlantısını paylaş</string>
   <string name="meeting_sheet_roomSettings">Oda Ayarları</string>
   <string name="meeting_sheet_deafen">Sağırlaştır</string>
