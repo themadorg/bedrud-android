@@ -218,14 +218,14 @@ dependencies {
     implementation("androidx.activity:activity-compose:1.13.0")
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.11.0")
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.11.0")
-    implementation("androidx.navigation:navigation-compose:2.9.8")
+    implementation("androidx.navigation:navigation-compose:2.10.0")
 
     // Kotlin
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.11.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.11.0")
 
     // LiveKit
-    implementation("io.livekit:livekit-android:2.28.0")
+    implementation("io.livekit:livekit-android:2.28.1")
     implementation("io.livekit:livekit-android-compose-components:2.4.2")
 
     // Retrofit + OkHttp
@@ -245,7 +245,7 @@ dependencies {
     // Credential Manager (Passkeys)
     implementation("androidx.credentials:credentials:1.6.0")
     implementation("androidx.credentials:credentials-play-services-auth:1.6.0")
-    implementation("com.google.android.gms:play-services-fido:21.3.0")
+    implementation("com.google.android.gms:play-services-fido:21.3.1")
 
     // Coil for image loading
     implementation("io.coil-kt:coil-compose:2.7.0")
