@@ -7,6 +7,7 @@ import com.bedrud.app.core.api.AuthApi
 import com.bedrud.app.core.api.AuthInterceptor
 import com.bedrud.app.core.api.RoomApi
 import com.bedrud.app.core.api.TokenAuthenticator
+import com.bedrud.app.core.api.plainRetrofit
 import com.bedrud.app.core.auth.AuthManager
 import com.bedrud.app.core.auth.PasskeyManager
 import com.bedrud.app.core.livekit.RoomManager
@@ -14,8 +15,6 @@ import com.bedrud.app.models.HealthResponse
 import com.bedrud.app.models.Instance
 import com.bedrud.app.models.PublicSettings
 import com.bedrud.app.ui.screens.settings.SettingsStore
-import com.google.gson.GsonBuilder
-import com.google.gson.Strictness
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -26,11 +25,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
-import okhttp3.OkHttpClient
-import okhttp3.logging.HttpLoggingInterceptor
-import retrofit2.Retrofit
-import retrofit2.converter.gson.GsonConverterFactory
-import java.util.concurrent.TimeUnit
 
 /** How long to wait for the public-settings fetch before giving up and falling back to defaults. */
 private const val SETTINGS_TIMEOUT_MS = 8_000L
@@ -176,18 +170,7 @@ class InstanceManager(
         } else {
             "$serverURL/${Instance.API_PATH_SEGMENT}"
         }
-        val plainClient = OkHttpClient.Builder()
-            .connectTimeout(HEALTH_CHECK_TIMEOUT_SECONDS, TimeUnit.SECONDS)
-            .readTimeout(HEALTH_CHECK_TIMEOUT_SECONDS, TimeUnit.SECONDS)
-            .build()
-        val gson = GsonBuilder().setStrictness(Strictness.LENIENT).create()
-        val retrofit = Retrofit.Builder()
-            .baseUrl(baseURL.trimEnd('/') + "/")
-            .client(plainClient)
-            .addConverterFactory(GsonConverterFactory.create(gson))
-            .build()
-
-        val api = retrofit.create(HealthApi::class.java)
+        val api = plainRetrofit(baseURL, HEALTH_CHECK_TIMEOUT_SECONDS).create(HealthApi::class.java)
         val response = api.health()
         if (response.isSuccessful) {
             return response.body() ?: HealthResponse()
