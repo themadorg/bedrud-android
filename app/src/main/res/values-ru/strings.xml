@@ -190,6 +190,17 @@
   <string name="admin_room_maxParticipants">Макс: <xliff:g id="count" example="100">%1$d</xliff:g></string>
   <string name="admin_token_status_used">Использован</string>
   <string name="admin_token_status_noEmail">Нет эл. почты</string>
+
+  <!-- Admin failures -->
+  <string name="admin_error_loadOverviewFailed">Не удалось загрузить обзор</string>
+  <string name="admin_error_loadUsersFailed">Не удалось загрузить пользователей</string>
+  <string name="admin_error_updateUserFailed">Не удалось обновить этого пользователя</string>
+  <string name="admin_error_loadRoomsFailed">Не удалось загрузить комнаты</string>
+  <string name="admin_error_deleteRoomFailed">Не удалось удалить эту комнату</string>
+  <string name="admin_error_loadSettingsFailed">Не удалось загрузить настройки</string>
+  <string name="admin_error_saveSettingsFailed">Не удалось сохранить настройки</string>
+  <string name="admin_error_createTokenFailed">Не удалось создать пригласительный код</string>
+  <string name="admin_error_deleteTokenFailed">Не удалось удалить пригласительный код</string>
   <string name="common_action_copy">Копировать</string>
   <string name="common_action_share">Поделиться</string>
   <string name="settings_title">Настройки</string>
@@ -315,6 +326,7 @@
   <string name="meeting_error_voteFailed">Не удалось отправить голос</string>
   <string name="meeting_error_kickFailed">Не удалось удалить участника</string>
   <string name="meeting_error_banFailed">Не удалось заблокировать участника</string>
+  <string name="dashboard_error_loadRoomsFailed">Не удалось загрузить комнаты</string>
   <string name="dashboard_error_createRoomFailed">Не удалось создать комнату</string>
   <string name="dashboard_error_deleteRoomFailed">Не удалось удалить комнату</string>
   <string name="dashboard_error_saveSettingsFailed">Не удалось сохранить настройки</string>
