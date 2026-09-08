@@ -184,6 +184,17 @@
   <string name="admin_room_maxParticipants">最多: <xliff:g id="count" example="100">%1$d</xliff:g></string>
   <string name="admin_token_status_used">已使用</string>
   <string name="admin_token_status_noEmail">无邮箱</string>
+
+  <!-- Admin failures -->
+  <string name="admin_error_loadOverviewFailed">无法加载概览</string>
+  <string name="admin_error_loadUsersFailed">无法加载用户</string>
+  <string name="admin_error_updateUserFailed">无法更新该用户</string>
+  <string name="admin_error_loadRoomsFailed">无法加载房间</string>
+  <string name="admin_error_deleteRoomFailed">无法删除该房间</string>
+  <string name="admin_error_loadSettingsFailed">无法加载设置</string>
+  <string name="admin_error_saveSettingsFailed">无法保存设置</string>
+  <string name="admin_error_createTokenFailed">无法创建邀请令牌</string>
+  <string name="admin_error_deleteTokenFailed">无法删除邀请令牌</string>
   <string name="common_action_copy">复制</string>
   <string name="common_action_share">分享</string>
   <string name="settings_title">设置</string>
@@ -309,6 +320,7 @@
   <string name="meeting_error_voteFailed">无法发送您的投票</string>
   <string name="meeting_error_kickFailed">无法移除参与者</string>
   <string name="meeting_error_banFailed">无法封禁参与者</string>
+  <string name="dashboard_error_loadRoomsFailed">无法加载房间</string>
   <string name="dashboard_error_createRoomFailed">无法创建房间</string>
   <string name="dashboard_error_deleteRoomFailed">无法删除房间</string>
   <string name="dashboard_error_saveSettingsFailed">无法保存设置</string>
