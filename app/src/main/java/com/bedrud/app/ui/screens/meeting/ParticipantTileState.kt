@@ -24,6 +24,14 @@ data class ParticipantTileState(
     val avatarUrl: String?,
     /** The camera to render, or null when there is nothing to show — unpublished, or muted. */
     val cameraTrack: VideoTrack?,
+    /**
+     * The screenshare to render, or null when there is none — unpublished, or muted.
+     *
+     * Null carries the decision the resolver already made, so nothing downstream has to consult
+     * `publication.muted` again while composing. Reading it there was the same trap the camera
+     * had: a share that stops is a mutation of an object Compose is not watching.
+     */
+    val screenShare: ScreenShareTrackRef?,
     val isMicOff: Boolean,
 )
 
@@ -62,6 +70,7 @@ private fun Participant.toTileState(
         avatarUrl = ParticipantMetadata.avatarUrl(metadata),
         cameraTrack = (cameraPublication?.track as? VideoTrack)
             ?.takeIf { !cameraPublication.muted },
+        screenShare = resolveParticipantScreenShare(this),
         isMicOff = if (identity == localIdentity) {
             !isLocalMicEnabled
         } else {

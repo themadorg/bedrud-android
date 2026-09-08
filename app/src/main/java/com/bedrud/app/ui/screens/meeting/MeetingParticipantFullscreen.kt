@@ -20,7 +20,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -35,8 +34,6 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import coil.compose.AsyncImage
 import com.bedrud.app.R
-import com.bedrud.app.core.livekit.ParticipantMetadata
-import com.bedrud.app.core.livekit.RoomManager
 import com.bedrud.app.ui.components.InitialsAvatar
 import com.bedrud.app.ui.theme.BedrudShapeTokens
 import com.bedrud.app.ui.theme.Dimens
@@ -44,8 +41,6 @@ import com.bedrud.app.ui.theme.Motion
 import io.livekit.android.compose.ui.ScaleType
 import io.livekit.android.compose.ui.VideoTrackView
 import io.livekit.android.room.Room
-import io.livekit.android.room.participant.Participant
-import io.livekit.android.room.track.Track
 import kotlinx.coroutines.delay
 
 /** Scrim opacity behind the fullscreen chrome (name chip, collapse button). */
@@ -62,9 +57,8 @@ private const val FullscreenChipAlpha = 0.7f
  */
 @Composable
 fun MeetingParticipantFullscreen(
-    participant: Participant,
+    state: ParticipantTileState,
     room: Room,
-    participantVersion: Int,
     chromeVisible: Boolean,
     isVideoLocallyDisabled: Boolean,
     speakingLevel: Float,
@@ -73,11 +67,7 @@ fun MeetingParticipantFullscreen(
     onCollapse: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    @Suppress("UNUSED_VARIABLE")
-    val trackVersion = participantVersion
-
-    val identity = participant.identity?.value ?: RoomManager.UNKNOWN_PARTICIPANT_NAME
-    val name = participant.name?.ifBlank { identity } ?: identity
+    val name = state.name
 
     // Chrome auto-hide: (re)arm whenever the chrome becomes visible.
     LaunchedEffect(chromeVisible) {
@@ -106,15 +96,9 @@ fun MeetingParticipantFullscreen(
         }
     }
 
-    val screenShareRef = resolveParticipantScreenShare(participant)
-    val cameraPublication = participant.getTrackPublication(Track.Source.CAMERA)
-    val cameraTrack = cameraPublication
-        ?.track as? io.livekit.android.room.track.VideoTrack
-    val isCameraMuted = cameraPublication?.muted == true
-
-    val avatarUrl = remember(participant.metadata) {
-        ParticipantMetadata.avatarUrl(participant.metadata)
-    }
+    val screenShare = state.screenShare
+    val cameraTrack = state.cameraTrack
+    val avatarUrl = state.avatarUrl
 
     Box(
         modifier = modifier
@@ -126,16 +110,16 @@ fun MeetingParticipantFullscreen(
         contentAlignment = Alignment.Center,
     ) {
         when {
-            screenShareRef != null && screenShareRef.isRenderable -> {
+            screenShare != null -> {
                 VideoTrackView(
-                    trackReference = screenShareRef.trackReference,
+                    trackReference = screenShare.trackReference,
                     modifier = Modifier.fillMaxSize(),
                     room = room,
                     mirror = false,
                     scaleType = ScaleType.FitInside,
                 )
             }
-            cameraTrack != null && !isCameraMuted && !isVideoLocallyDisabled -> {
+            cameraTrack != null && !isVideoLocallyDisabled -> {
                 VideoTrackView(
                     videoTrack = cameraTrack,
                     modifier = Modifier.fillMaxSize(),
