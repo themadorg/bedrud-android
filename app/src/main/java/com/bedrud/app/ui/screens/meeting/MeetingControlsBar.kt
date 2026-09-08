@@ -676,16 +676,30 @@ private fun MeetCircleButton(
     val button = @Composable {
         // The circle is 44dp by design, but the thing a finger aims at must still be the
         // accessibility floor: a 44dp clickable measured exactly 44dp, and a tap landing a few
-        // dp outside it died on the bar — which read as "the chat button needs two taps". The
-        // clickable spans the 48dp box; only the drawn circle stays 44.
+        // dp outside it died on the bar — which read as "the chat button needs two taps".
+        //
+        // The click belongs to the Surface rather than to a larger Box around it. A clickable
+        // Surface publishes its own container's content colour, and the ripple is drawn in
+        // whatever `LocalContentColor` holds — so a click mounted outside it inherited the *bar's*
+        // near-white instead, and these two buttons splashed in a colour no other control in the
+        // row uses. It also clipped the ripple to the 48dp touch box rather than to the circle,
+        // which spilled a ring of it onto the bar, most visibly on the lit chat button.
+        //
+        // The touch target survives the move: a clickable Surface applies
+        // `minimumInteractiveComponentSize`, which expands the tappable bounds to the 48dp square
+        // around the drawn 44dp circle. Measured on device — a tap 23dp from the centre, outside
+        // the circle, still opens chat.
+        //
+        // The Box stays, now purely as layout. That expansion widens what the finger can hit
+        // without reserving the space, so with the Box gone each of these buttons occupied 44dp
+        // instead of 48 and both icons slid 2dp outwards — the row keeps its rhythm only if the
+        // slot keeps its width.
         Box(
-            modifier = Modifier
-                .size(Dimens.minTouchTarget)
-                .clip(CircleShape)
-                .clickable(onClick = onClick),
+            modifier = Modifier.size(Dimens.minTouchTarget),
             contentAlignment = Alignment.Center,
         ) {
             Surface(
+                onClick = onClick,
                 shape = CircleShape,
                 color = containerColor,
                 modifier = Modifier.size(Dimens.meetingCircleButton),
