@@ -186,6 +186,17 @@
   <string name="admin_room_maxParticipants">Máx: <xliff:g id="count" example="100">%1$d</xliff:g></string>
   <string name="admin_token_status_used">Usado</string>
   <string name="admin_token_status_noEmail">Sin correo electrónico</string>
+
+  <!-- Admin failures -->
+  <string name="admin_error_loadOverviewFailed">No se pudo cargar el resumen</string>
+  <string name="admin_error_loadUsersFailed">No se pudieron cargar los usuarios</string>
+  <string name="admin_error_updateUserFailed">No se pudo actualizar este usuario</string>
+  <string name="admin_error_loadRoomsFailed">No se pudieron cargar las salas</string>
+  <string name="admin_error_deleteRoomFailed">No se pudo eliminar esta sala</string>
+  <string name="admin_error_loadSettingsFailed">No se pudo cargar la configuración</string>
+  <string name="admin_error_saveSettingsFailed">No se pudo guardar la configuración</string>
+  <string name="admin_error_createTokenFailed">No se pudo crear el token de invitación</string>
+  <string name="admin_error_deleteTokenFailed">No se pudo eliminar el token de invitación</string>
   <string name="common_action_copy">Copiar</string>
   <string name="common_action_share">Compartir</string>
   <string name="settings_title">Ajustes</string>
@@ -311,6 +322,7 @@
   <string name="meeting_error_voteFailed">No se pudo enviar tu voto</string>
   <string name="meeting_error_kickFailed">No se pudo expulsar al participante</string>
   <string name="meeting_error_banFailed">No se pudo bloquear al participante</string>
+  <string name="dashboard_error_loadRoomsFailed">No se pudieron cargar las salas</string>
   <string name="dashboard_error_createRoomFailed">No se pudo crear la sala</string>
   <string name="dashboard_error_deleteRoomFailed">No se pudo eliminar la sala</string>
   <string name="dashboard_error_saveSettingsFailed">No se pudo guardar la configuración</string>

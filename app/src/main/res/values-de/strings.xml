@@ -186,6 +186,17 @@
   <string name="admin_room_maxParticipants">Max: <xliff:g id="count" example="100">%1$d</xliff:g></string>
   <string name="admin_token_status_used">Verwendet</string>
   <string name="admin_token_status_noEmail">Keine E-Mail</string>
+
+  <!-- Admin failures -->
+  <string name="admin_error_loadOverviewFailed">Übersicht konnte nicht geladen werden</string>
+  <string name="admin_error_loadUsersFailed">Benutzer konnten nicht geladen werden</string>
+  <string name="admin_error_updateUserFailed">Benutzer konnte nicht aktualisiert werden</string>
+  <string name="admin_error_loadRoomsFailed">Räume konnten nicht geladen werden</string>
+  <string name="admin_error_deleteRoomFailed">Raum konnte nicht gelöscht werden</string>
+  <string name="admin_error_loadSettingsFailed">Einstellungen konnten nicht geladen werden</string>
+  <string name="admin_error_saveSettingsFailed">Einstellungen konnten nicht gespeichert werden</string>
+  <string name="admin_error_createTokenFailed">Einladungstoken konnte nicht erstellt werden</string>
+  <string name="admin_error_deleteTokenFailed">Einladungstoken konnte nicht gelöscht werden</string>
   <string name="common_action_copy">Kopieren</string>
   <string name="common_action_share">Teilen</string>
   <string name="settings_title">Einstellungen</string>
@@ -311,6 +322,7 @@
   <string name="meeting_error_voteFailed">Deine Stimme konnte nicht gesendet werden</string>
   <string name="meeting_error_kickFailed">Teilnehmer konnte nicht entfernt werden</string>
   <string name="meeting_error_banFailed">Teilnehmer konnte nicht gesperrt werden</string>
+  <string name="dashboard_error_loadRoomsFailed">Räume konnten nicht geladen werden</string>
   <string name="dashboard_error_createRoomFailed">Raum konnte nicht erstellt werden</string>
   <string name="dashboard_error_deleteRoomFailed">Raum konnte nicht gelöscht werden</string>
   <string name="dashboard_error_saveSettingsFailed">Einstellungen konnten nicht gespeichert werden</string>
