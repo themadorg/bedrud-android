@@ -13,6 +13,7 @@ import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.Videocam
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -24,7 +25,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import com.bedrud.app.R
 import com.bedrud.app.core.instance.InstanceManager
-import com.bedrud.app.core.recent.RecentRoomsStore
+import com.bedrud.app.core.rooms.JoinFailureRelay
+import com.bedrud.app.ui.components.BedrudSnackbarHost
 import com.bedrud.app.ui.components.BottomNavTab
 import com.bedrud.app.ui.components.BedrudBottomNavigationBar
 import com.bedrud.app.ui.screens.admin.AdminScreen
@@ -44,26 +46,8 @@ fun MainScreen(
     onNavigateToAddInstance: () -> Unit,
     instanceManager: InstanceManager = koinInject(),
     settingsStore: SettingsStore = koinInject(),
-    recentRoomsStore: RecentRoomsStore = koinInject(),
+    joinFailureRelay: JoinFailureRelay = koinInject(),
 ) {
-    fun recordAndJoin(
-        roomName: String,
-        instanceId: String,
-        instanceName: String,
-        instanceColorHex: String?,
-    ) {
-        recentRoomsStore.add(roomName, instanceId, instanceName, instanceColorHex)
-        onJoinRoom(roomName)
-    }
-
-    fun joinFromDashboard(roomName: String) {
-        val instance = instanceManager.store.activeInstance
-        if (instance != null) {
-            recordAndJoin(roomName, instance.id, instance.displayName, instance.iconColorHex)
-        } else {
-            onJoinRoom(roomName)
-        }
-    }
     val authManager by instanceManager.authManager.collectAsState()
     val currentUser by remember(authManager) {
         authManager?.currentUser ?: kotlinx.coroutines.flow.MutableStateFlow(null)
@@ -112,8 +96,22 @@ fun MainScreen(
         settingsStore.setLastTab(selectedTab)
     }
 
+    // Why a join failed, said here rather than on the meeting screen that discovered it — see
+    // JoinFailureRelay. Hosted by the shell rather than by the Rooms tab because a room opened
+    // from a link can fail while any tab is showing, and the message must not depend on which.
+    val snackbarHostState = remember { SnackbarHostState() }
+    val joinFailure by joinFailureRelay.message.collectAsState()
+    LaunchedEffect(joinFailure) {
+        val message = joinFailure ?: return@LaunchedEffect
+        // Consumed only once it has been read out: clearing it first would change this effect's key
+        // mid-message, cancelling the very snackbar it was showing.
+        snackbarHostState.showSnackbar(message)
+        joinFailureRelay.consume()
+    }
+
     Scaffold(
         contentWindowInsets = BedrudMainScaffoldContentInsets,
+        snackbarHost = { BedrudSnackbarHost(snackbarHostState) },
         bottomBar = {
             BedrudBottomNavigationBar(
                 tabs = tabs,
@@ -127,7 +125,7 @@ fun MainScreen(
         when (selectedTab) {
             0 -> DashboardContent(
                 modifier = Modifier.padding(contentPadding),
-                onJoinRoom = ::joinFromDashboard,
+                onJoinRoom = onJoinRoom,
                 // Rooms=0, Profile=1 — the header avatar is a shortcut to the Profile tab.
                 onOpenProfile = { selectedTab = PROFILE_TAB_INDEX },
                 onNavigateToAddInstance = onNavigateToAddInstance,
@@ -135,12 +133,7 @@ fun MainScreen(
                     if (recent.instanceId != instanceManager.store.activeInstanceId.value) {
                         instanceManager.switchTo(recent.instanceId)
                     }
-                    recordAndJoin(
-                        recent.roomName,
-                        recent.instanceId,
-                        recent.instanceName,
-                        recent.instanceColorHex,
-                    )
+                    onJoinRoom(recent.roomName)
                 },
                 instanceManager = instanceManager,
             )
