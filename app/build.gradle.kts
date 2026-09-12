@@ -225,7 +225,7 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.11.0")
 
     // LiveKit
-    implementation("io.livekit:livekit-android:2.28.1")
+    implementation("io.livekit:livekit-android:2.28.2")
     implementation("io.livekit:livekit-android-compose-components:2.4.2")
 
     // Retrofit + OkHttp
