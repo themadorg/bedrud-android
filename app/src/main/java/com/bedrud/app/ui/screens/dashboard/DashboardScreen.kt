@@ -110,6 +110,7 @@ import com.bedrud.app.core.recent.formatRecentRoomTimeAgo
 import com.bedrud.app.core.recent.recentRoomsNotInApiList
 import com.bedrud.app.core.rooms.DeletedRoomTombstones
 import com.bedrud.app.core.rooms.resolveRoomActivityAt
+import com.bedrud.app.core.rooms.sortByActivity
 import com.bedrud.app.core.api.apiAction
 import com.bedrud.app.core.api.apiBody
 import com.bedrud.app.core.toUserMessage
@@ -524,39 +525,43 @@ fun DashboardContent(
 
     val filteredRooms = remember(rooms, activeFilter, currentUser, activeRecentByName) {
         when (activeFilter) {
-            // Same recency order as the All tab: most-recently-used first, rooms never joined from
-            // this device last (stable sort keeps those in their existing server order).
+            // Same activity order as the All tab: most recently active first, rooms nobody has been
+            // in last (a stable sort keeps those in their existing server order).
             RoomFilter.MY_ROOMS ->
-                rooms.filter { it.createdBy == currentUser?.id }
-                    .sortedByDescending {
-                        activeRecentByName[it.name]?.let { r -> r.leftAt ?: r.joinedAt } ?: Long.MIN_VALUE
-                    }
+                sortByActivity(rooms.filter { room -> room.createdBy == currentUser?.id }) { room ->
+                    lastActivityFor(room)
+                }
             RoomFilter.ALL -> rooms
         }
     }
 
-    // One recency-ordered list: every room with local history — whether it renders as an API card
-    // (active server) or a recent card (other servers / not yet in the API list) — is positioned
-    // by when it was last used. This keeps a room's rank stable across server switches; the old
-    // recents-first-then-server-order split made the same room jump sections (and the list
-    // visibly reshuffle) every time the active server changed. Server rooms never joined from
-    // this device have no recency, so they follow at the end in server order.
+    // One activity-ordered list: every room that can be dated at all — whether it renders as an API
+    // card (active server) or a recent card (other servers / not yet in the API list) — is
+    // positioned by when it was last active, so a card's rank agrees with the "3h ago" it prints.
+    // This keeps a room's rank stable across server switches; the old recents-first-then-server-
+    // order split made the same room jump sections (and the list visibly reshuffle) every time the
+    // active server changed. A room nothing can date follows at the end in server order, which is
+    // where every API room sat before the server began reporting its activity.
     val allTabEntries = remember(rooms, recentRooms, activeInstanceId) {
-        val recencyByName = recentRooms
-            .filter { it.instanceId == activeInstanceId }
-            .associate { it.roomName to (it.leftAt ?: it.joinedAt) }
+        val visitByName = recentRooms
+            .filter { recent -> recent.instanceId == activeInstanceId }
+            .associate { recent -> recent.roomName to (recent.leftAt ?: recent.joinedAt) }
         val recentOnly = recentRoomsNotInApiList(
             recentRooms,
-            rooms.map { it.name }.toSet(),
+            rooms.map { room -> room.name }.toSet(),
             activeInstanceId,
         )
-        val dated = recentOnly.map { RoomListEntry.FromRecent(it) to (it.leftAt ?: it.joinedAt) } +
-            rooms.mapNotNull { room ->
-                recencyByName[room.name]?.let { RoomListEntry.FromApi(room) to it }
+        val entries = recentOnly.map { recent -> RoomListEntry.FromRecent(recent) } +
+            rooms.map { room -> RoomListEntry.FromApi(room) }
+        sortByActivity(entries) { entry ->
+            when (entry) {
+                // A recent card is a room the active server does not list, so local history is all
+                // there is to date it by.
+                is RoomListEntry.FromRecent -> entry.recent.leftAt ?: entry.recent.joinedAt
+                is RoomListEntry.FromApi ->
+                    resolveRoomActivityAt(entry.room.lastActivityAt, visitByName[entry.room.name])
             }
-        val neverJoined = rooms.filter { it.name !in recencyByName }.map { RoomListEntry.FromApi(it) }
-        dated.sortedByDescending { (_, lastUsedAt) -> lastUsedAt }.map { (entry, _) -> entry } +
-            neverJoined
+        }
     }
 
     val isCurrentTabEmpty = when (activeFilter) {

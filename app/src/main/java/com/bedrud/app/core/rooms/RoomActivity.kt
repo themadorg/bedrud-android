@@ -30,3 +30,15 @@ fun parseServerTimestamp(value: String?): Long? {
  */
 fun resolveRoomActivityAt(serverLastActivityAt: String?, localVisitAtMs: Long?): Long? =
     parseServerTimestamp(serverLastActivityAt) ?: localVisitAtMs
+
+/**
+ * Orders items by when they were last active, most recent first, with the ones nobody can date
+ * left at the end in the order they arrived.
+ *
+ * The sort is stable on purpose. Rooms sharing a timestamp, and the undated tail, keep the order
+ * the caller handed over — otherwise the list reshuffles under the reader on every refresh.
+ */
+fun <T> sortByActivity(items: List<T>, activityAtMs: (T) -> Long?): List<T> {
+    val (dated, undated) = items.partition { item -> activityAtMs(item) != null }
+    return dated.sortedByDescending { item -> activityAtMs(item) } + undated
+}

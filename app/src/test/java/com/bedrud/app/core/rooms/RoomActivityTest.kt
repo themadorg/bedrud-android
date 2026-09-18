@@ -85,4 +85,45 @@ class RoomActivityTest {
     fun `resolveRoomActivityAt returns null when neither side knows`() {
         assertNull(resolveRoomActivityAt(serverLastActivityAt = null, localVisitAtMs = null))
     }
+
+    @Test
+    fun `sortByActivity puts the most recently active first`() {
+        val items = listOf("older" to 1_000L, "newest" to 3_000L, "middle" to 2_000L)
+
+        val sorted = sortByActivity(items) { (_, activityAtMs) -> activityAtMs }
+
+        assertEquals(listOf("newest", "middle", "older"), sorted.map { (name, _) -> name })
+    }
+
+    @Test
+    fun `sortByActivity keeps items of unknown activity last, in the order they arrived`() {
+        val items = listOf(
+            "unknown-first" to null,
+            "active" to 1_000L,
+            "unknown-second" to null,
+        )
+
+        val sorted = sortByActivity(items) { (_, activityAtMs) -> activityAtMs }
+
+        // The server's own order is the only thing left to rank a room nobody has ever been in.
+        assertEquals(
+            listOf("active", "unknown-first", "unknown-second"),
+            sorted.map { (name, _) -> name },
+        )
+    }
+
+    @Test
+    fun `sortByActivity leaves equally active items in the order they arrived`() {
+        val items = listOf("first" to 1_000L, "second" to 1_000L, "third" to 1_000L)
+
+        val sorted = sortByActivity(items) { (_, activityAtMs) -> activityAtMs }
+
+        // A stable sort matters here: an unstable one would reshuffle the list on every refresh.
+        assertEquals(listOf("first", "second", "third"), sorted.map { (name, _) -> name })
+    }
+
+    @Test
+    fun `sortByActivity returns an empty list unchanged`() {
+        assertEquals(emptyList<Pair<String, Long?>>(), sortByActivity(emptyList<Pair<String, Long?>>()) { null })
+    }
 }
