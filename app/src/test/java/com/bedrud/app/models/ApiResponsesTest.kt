@@ -135,6 +135,35 @@ class ApiResponsesTest {
     }
 
     @Test
+    fun `UserRoomResponse Gson deserialization keeps the server's last activity`() {
+        val json = """
+            {
+                "id":"r1","name":"Room 1","createdBy":"u1","isActive":true,
+                "maxParticipants":50,"expiresAt":"",
+                "settings":{"allowChat":true,"allowVideo":true,"allowAudio":true,"requireApproval":false,"e2ee":false},
+                "mode":"meeting","lastActivityAt":"2025-09-18T10:00:00Z"
+            }
+        """.trimIndent()
+        val resp = gson.fromJson(json, UserRoomResponse::class.java)
+        assertEquals("2025-09-18T10:00:00Z", resp.lastActivityAt)
+    }
+
+    @Test
+    fun `UserRoomResponse Gson deserialization leaves last activity null when unreported`() {
+        // A server that predates the field, or one that never fills it in, must still parse.
+        val json = """
+            {
+                "id":"r1","name":"Room 1","createdBy":"u1","isActive":true,
+                "maxParticipants":50,"expiresAt":"",
+                "settings":{"allowChat":true,"allowVideo":true,"allowAudio":true,"requireApproval":false,"e2ee":false},
+                "mode":"meeting"
+            }
+        """.trimIndent()
+        val resp = gson.fromJson(json, UserRoomResponse::class.java)
+        assertNull(resp.lastActivityAt)
+    }
+
+    @Test
     fun `ApiError Gson deserialization`() {
         val json = """{"error": "not_found", "message": "Room not found"}"""
         val err = gson.fromJson(json, ApiError::class.java)
