@@ -36,3 +36,16 @@ inline fun <reified T : Enum<T>> SharedPreferences.getEnum(key: String, default:
 fun <T : Enum<T>> SharedPreferences.putEnum(key: String, value: T) {
     edit().putString(key, value.name).apply()
 }
+
+/**
+ * Applies [edits] and returns once they are on disk, rather than on a background thread.
+ *
+ * For the writes whose next step depends on them having landed — reading a value back to check it
+ * arrived, or deleting the file it was copied from. Everything else should use `apply()`.
+ */
+@Suppress("ApplySharedPref", "UseKtx")
+fun SharedPreferences.editBlocking(edits: SharedPreferences.Editor.() -> Unit): Boolean {
+    val editor = edit()
+    editor.edits()
+    return editor.commit()
+}

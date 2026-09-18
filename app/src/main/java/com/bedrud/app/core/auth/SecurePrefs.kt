@@ -15,6 +15,9 @@ object AuthPrefsKeys {
     const val ACCESS_TOKEN = "access_token"
     const val REFRESH_TOKEN = "refresh_token"
     const val USER = "user"
+
+    /** Every key an instance's auth prefs file can hold, for the code that has to copy them all. */
+    val ALL = listOf(ACCESS_TOKEN, REFRESH_TOKEN, USER)
 }
 
 /**
