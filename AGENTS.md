@@ -72,7 +72,7 @@ App connects to user-chosen Bedrud server instances, not fixed backend.
 
 - `InstanceStore` — persists instance list + active ID in plain `SharedPreferences` ("bedrud_instances")
 - `InstanceManager` — central wiring hub. `rebuild()` creates fresh `AuthManager`, `ApiClientFactory`, Retrofit interfaces, `PasskeyManager`, and `RoomManager` for active instance. All exposed as `StateFlow<T?>`.
-- `AuthManager` — per-instance `EncryptedSharedPreferences` ("bedrud_secure_$instanceId") storing JWT tokens + user JSON.
+- `AuthManager` — per-instance encrypted prefs ("bedrud_keystore_$instanceId") storing JWT tokens + user JSON. See [Credential storage](#credential-storage).
 - API base URL: `{serverURL}/api` (computed property on `Instance`).
 - Health check (`GET /api/health`) runs before adding new instance.
 - `AddInstanceScreen`'s custom-server field can also be filled by scanning a QR code instead of typing; the scanned text goes through the same `ServerUrlCanonicalizer` as manual/pasted input. Scanning uses ZXing (`com.journeyapps:zxing-android-embedded`) — a pure on-device decoder with no Play Services dependency, chosen after Google Play Services' own code scanner proved unreliable in practice: its module is fetched over network on first use and failed outright (`MlKitException: Failed to scan code`) in a network-restricted test environment. ZXing needs the CAMERA permission this app already holds for calls; its own capture activity requests it if somehow missing. **Standard follow-up work, not done here:** this only decodes a QR code — nothing in this Android-only repo generates one. For "point your camera at the admin's screen" onboarding to actually work, a self-hosted Bedrud server's admin panel needs its own page that renders a QR code encoding its own address. That's backend/admin-UI work; this repo only has the Android client (backend was stripped out, see git history).
@@ -119,6 +119,38 @@ room, while the metadata is what somebody joining later reads. A client that wri
 the other, and a client that reads must merge both: metadata answers for everyone who has said
 nothing since you arrived, and a live announcement overrides it. Writing metadata needs a
 permission the token may not grant, so the presence message is the half that always lands.
+
+## Credential storage
+
+Every access token, refresh token and user record lives in `EncryptedPrefs`
+(`core/auth/EncryptedPrefs.kt`): an ordinary `SharedPreferences` file whose values are sealed by
+`KeystoreCipher`, an AES-GCM key held in the Android Keystore. One file per server the user has
+added, named `bedrud_keystore_$instanceId`, opened through `secureInstancePrefs`.
+
+This replaced `EncryptedSharedPreferences`, which androidx deprecated with no successor. Two
+rules keep that replacement honest:
+
+- **Strings only.** The typed putters and getters throw rather than delegate, so nothing can be
+  written to a credential file unencrypted by reaching for `putInt`. Key names are stored in the
+  clear — they are the three constants in `AuthPrefsKeys`, compiled into the APK anyway.
+- **A value that will not open is absent.** A restored backup never carries the Keystore key, and
+  a lock-screen change can invalidate it. Both surface as a failed decrypt, which drops the entry
+  and signs the user out, rather than throwing on launch. `android:allowBackup` is still `true`,
+  so credential files *are* backed up; they come back unreadable, and this is what makes that a
+  clean sign-in screen instead of a crash loop.
+
+Two migrations run, and neither may be broken by the other:
+
+- `secureInstancePrefs` carries an instance's credentials out of the deprecated store on first
+  open (`SecurePrefsMigration`), then deletes the old file — but only once every value has read
+  back out of the new one, because until then the old file is the only copy. A run that is killed
+  part-way just happens again on the next open.
+- `MigrationHelper` still seeds the per-instance layout from the single-server file that predates
+  it. That file was written by `EncryptedSharedPreferences`, so it is read through
+  `legacySecurePrefs` — the deprecated reader, kept for exactly these two paths.
+
+`androidx.security:security-crypto` therefore stays a dependency until the old files can be
+assumed gone; removing it earlier signs out everyone who has not upgraded through this version.
 
 ## Key Conventions
 
