@@ -109,6 +109,7 @@ import com.bedrud.app.core.recent.RecentRoomsStore
 import com.bedrud.app.core.recent.formatRecentRoomTimeAgo
 import com.bedrud.app.core.recent.recentRoomsNotInApiList
 import com.bedrud.app.core.rooms.DeletedRoomTombstones
+import com.bedrud.app.core.rooms.resolveRoomActivityAt
 import com.bedrud.app.core.api.apiAction
 import com.bedrud.app.core.api.apiBody
 import com.bedrud.app.core.toUserMessage
@@ -214,6 +215,11 @@ fun DashboardContent(
     }
     fun lastVisitFor(roomName: String): Long? =
         activeRecentByName[roomName]?.let { it.leftAt ?: it.joinedAt }
+    // What an API card reports: the room's own last activity, which the server stamps on every
+    // participant's join. A room somebody else was in an hour ago says so even on a device that
+    // has never opened it, and local history answers for a server that reports no activity at all.
+    fun lastActivityFor(room: UserRoomResponse): Long? =
+        resolveRoomActivityAt(room.lastActivityAt, lastVisitFor(room.name))
     fun isOngoingFor(roomName: String): Boolean =
         CallService.isRunning &&
             CallService.activeRoomName == roomName &&
@@ -749,7 +755,7 @@ fun DashboardContent(
                                                 room = entry.room,
                                                 isOwner = entry.room.createdBy == currentUser?.id,
                                                 isOngoing = isOngoingFor(entry.room.name),
-                                                lastVisitAtMs = lastVisitFor(entry.room.name),
+                                                lastActivityAtMs = lastActivityFor(entry.room),
                                                 now = nowTickMs,
                                                 onJoin = { onJoinRoom(entry.room.name) },
                                                 onDelete = { roomToDelete = entry.room },
@@ -778,7 +784,7 @@ fun DashboardContent(
                                             room = room,
                                             isOwner = room.createdBy == currentUser?.id,
                                             isOngoing = isOngoingFor(room.name),
-                                            lastVisitAtMs = lastVisitFor(room.name),
+                                            lastActivityAtMs = lastActivityFor(room),
                                             now = nowTickMs,
                                             onJoin = { onJoinRoom(room.name) },
                                             onDelete = { roomToDelete = room },
@@ -994,7 +1000,7 @@ private fun RoomCard(
     room: UserRoomResponse,
     isOwner: Boolean,
     isOngoing: Boolean,
-    lastVisitAtMs: Long?,
+    lastActivityAtMs: Long?,
     now: Long,
     onJoin: () -> Unit,
     onDelete: () -> Unit,
@@ -1006,7 +1012,8 @@ private fun RoomCard(
         if (parts.size >= 2) "${parts[0]}-${parts[1]}" else room.id
     }
 
-    val presence = presenceFor(isOngoing = isOngoing, lastVisitAtMs = lastVisitAtMs, now = now)
+    val presence =
+        presenceFor(isOngoing = isOngoing, lastActivityAtMs = lastActivityAtMs, now = now)
     val statusTint by animateColorAsState(
         targetValue = if (presence?.isLive == true) MaterialTheme.colorScheme.primary
         else MaterialTheme.colorScheme.onSurfaceVariant,
@@ -1076,7 +1083,8 @@ private fun RecentRoomCard(
         CallService.activeInstanceId == recent.instanceId
     val presence = presenceFor(
         isOngoing = isOngoing,
-        lastVisitAtMs = recent.leftAt ?: recent.joinedAt,
+        // A recent card is a room the active server does not list, so local history is all there is.
+        lastActivityAtMs = recent.leftAt ?: recent.joinedAt,
         now = now,
     )
     val statusTint by animateColorAsState(
@@ -1120,20 +1128,20 @@ private fun RecentRoomCard(
 /** A card's presence label plus whether it's the "Live" state (so the caller can tint it). */
 private data class Presence(val text: String, val isLive: Boolean)
 
-// The user counts as "Live" while in the room or within a minute of leaving; after that we show
-// how long ago they were last in.
+// A room counts as "Live" while its last activity is under a minute old, or while this device is in
+// the call; after that we show how long ago it was last active.
 private const val LIVE_WINDOW_MS = 60_000L
 
-// Two presence states only. Null means the user has never joined this room — a server-backed card
-// with no local history shows no presence line at all.
+// Two presence states only. Null means nothing is known about this room's activity — neither the
+// server nor local history — and such a card shows no presence line at all.
 @Composable
-private fun presenceFor(isOngoing: Boolean, lastVisitAtMs: Long?, now: Long): Presence? {
-    val isLive = isOngoing || (lastVisitAtMs != null && now - lastVisitAtMs < LIVE_WINDOW_MS)
+private fun presenceFor(isOngoing: Boolean, lastActivityAtMs: Long?, now: Long): Presence? {
+    val isLive = isOngoing || (lastActivityAtMs != null && now - lastActivityAtMs < LIVE_WINDOW_MS)
     return when {
         isLive -> Presence(stringResource(R.string.dashboard_status_live), isLive = true)
-        lastVisitAtMs != null -> Presence(
+        lastActivityAtMs != null -> Presence(
             // "%1$s ago" — the connective is localized; the compact duration ("12m", "3h") is not.
-            stringResource(R.string.dashboard_status_timeAgo, formatRecentRoomTimeAgo(lastVisitAtMs, now)),
+            stringResource(R.string.dashboard_status_timeAgo, formatRecentRoomTimeAgo(lastActivityAtMs, now)),
             isLive = false,
         )
         else -> null
