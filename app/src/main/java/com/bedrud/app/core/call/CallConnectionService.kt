@@ -1,8 +1,12 @@
 package com.bedrud.app.core.call
 
+import android.app.Application
 import android.content.Context
 import android.net.Uri
 import android.os.Build
+import android.os.OutcomeReceiver
+import android.telecom.CallEndpoint
+import android.telecom.CallEndpointException
 import android.telecom.Connection
 import android.telecom.ConnectionRequest
 import android.telecom.ConnectionService
@@ -10,6 +14,7 @@ import android.telecom.DisconnectCause
 import android.telecom.PhoneAccountHandle
 import android.telecom.TelecomManager
 import android.util.Log
+import androidx.annotation.RequiresApi
 import com.bedrud.app.R
 import com.bedrud.app.core.deeplink.BedrudScheme
 
@@ -21,11 +26,15 @@ class CallConnectionService : ConnectionService() {
     ): Connection {
         val roomName = parseRoomName(request?.address)
             ?: getString(R.string.call_default_room_name)
-        val connection = BedrudConnection(applicationContext, roomName)
+        val connection = BedrudConnection(application, roomName)
         connection.setInitializing()
         connection.setDialing()
         connection.setActive()
         activeConnection = connection
+        pendingRoute?.let { route ->
+            pendingRoute = null
+            connection.adoptPendingRoute(route)
+        }
         Log.d(TAG, "Outgoing connection active for room: $roomName")
         return connection
     }
@@ -39,10 +48,70 @@ class CallConnectionService : ConnectionService() {
     }
 
     private class BedrudConnection(
-        private val context: Context,
+        private val application: Application,
         private val roomName: String,
     ) : Connection() {
+
+        // API 34+ only: the output still waiting for an endpoint Telecom can route it to. Owned
+        // by the connection, so nothing is carried over into the next call.
+        private var endpointSelector: CallEndpointSelector<CallEndpoint>? = null
+
+        // Below API 34: the route asked for before Telecom started honouring requests on this
+        // connection, flushed from onCallAudioStateChanged.
+        private var pendingLegacyRoute: CallAudioRoute? = null
+
+        /**
+         * Returns [endpoint]'s type, for the selector to match a wanted output against.
+         */
+        @RequiresApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
+        private fun endpointTypeOf(endpoint: CallEndpoint): Int = endpoint.endpointType
+
+        /**
+         * Asks Telecom to route this call's audio to [endpoint], and reports what came of it.
+         *
+         * Unlike the route mask it replaces, this request is answered: a refusal arrives as a
+         * [CallEndpointException] carrying a reason, which is the whole reason this path is
+         * better than the one below API 34.
+         */
+        @RequiresApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
+        private fun changeEndpoint(endpoint: CallEndpoint) {
+            Log.d(TAG, "Requesting endpoint ${endpoint.endpointName} type=${endpoint.endpointType}")
+            requestCallEndpointChange(
+                endpoint,
+                application.mainExecutor,
+                object : OutcomeReceiver<Void, CallEndpointException> {
+                    override fun onResult(result: Void?) {
+                        Log.d(TAG, "Call audio routed to ${endpoint.endpointName}")
+                    }
+
+                    override fun onError(error: CallEndpointException) {
+                        Log.e(
+                            TAG,
+                            "Failed to route call audio to ${endpoint.endpointName} " +
+                                "code=${error.code}",
+                            error
+                        )
+                    }
+                },
+            )
+        }
+
+        /**
+         * Routes this call's audio to [route] through the pre-34 route mask.
+         */
+        @Suppress("DEPRECATION")
+        private fun setLegacyAudioRoute(route: CallAudioRoute) {
+            try {
+                setAudioRoute(route.toLegacyRoute())
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to set audio route", e)
+            }
+        }
+
         init {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                endpointSelector = CallEndpointSelector(::endpointTypeOf)
+            }
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 connectionProperties = PROPERTY_SELF_MANAGED
             }
@@ -58,8 +127,10 @@ class CallConnectionService : ConnectionService() {
         override fun onDisconnect() {
             setDisconnected(DisconnectCause(DisconnectCause.LOCAL))
             destroy()
+            endpointSelector?.reset()
+            pendingLegacyRoute = null
             activeConnection = null
-            CallService.stop(context)
+            CallService.stop(application)
         }
 
         override fun onAbort() {
@@ -70,9 +141,9 @@ class CallConnectionService : ConnectionService() {
             muteListener?.invoke(isMuted)
         }
 
-        // Deprecated alongside setAudioRoute (see below). Telecom still delivers this to a
-        // self-managed Connection, and it is the only signal that routing requests will now
-        // be honoured, so the override stays until the CallsManager migration.
+        // Deprecated alongside setAudioRoute, and kept for the devices below API 34 that have no
+        // endpoint callbacks. Telecom still delivers this to a self-managed Connection, and it is
+        // the only signal that routing requests will now be honoured there.
         @Suppress("OVERRIDE_DEPRECATION")
         override fun onCallAudioStateChanged(state: android.telecom.CallAudioState?) {
             // LiveKit manages capture/playback; system routes call audio.
@@ -87,15 +158,56 @@ class CallConnectionService : ConnectionService() {
             // the Connection is created has no effect, even though activeConnection is already
             // non-null by then). This callback is the actual signal that Telecom is now
             // listening, so apply anything that was requested before that point now.
-            @Suppress("DEPRECATION")
-            pendingAudioRoute?.let { route ->
-                pendingAudioRoute = null
+            pendingLegacyRoute?.let { route ->
+                pendingLegacyRoute = null
                 Log.d(TAG, "Flushing pending audio route=$route")
-                try {
-                    this@BedrudConnection.setAudioRoute(route)
-                } catch (e: Exception) {
-                    Log.e(TAG, "Failed to flush pending audio route", e)
+                setLegacyAudioRoute(route)
+            }
+        }
+
+        @RequiresApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
+        override fun onCallEndpointChanged(endpoint: CallEndpoint) {
+            Log.d(TAG, "Call audio now on ${endpoint.endpointName} type=${endpoint.endpointType}")
+        }
+
+        @RequiresApi(Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
+        override fun onAvailableCallEndpointsChanged(endpoints: List<CallEndpoint>) {
+            Log.d(
+                TAG,
+                "Available endpoints: " +
+                    endpoints.joinToString { endpoint -> endpoint.endpointName }
+            )
+            endpointSelector?.onEndpointsAvailable(endpoints)?.let(::changeEndpoint)
+        }
+
+        /**
+         * Applies [route], which was asked for before this connection existed.
+         *
+         * Below API 34 it only records the request: Telecom ignores a route set this early, and
+         * [onCallAudioStateChanged] is what flushes it.
+         */
+        fun adoptPendingRoute(route: CallAudioRoute) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                routeTo(route)
+            } else {
+                pendingLegacyRoute = route
+            }
+        }
+
+        /**
+         * Routes this call's audio to [route], or holds the request until an endpoint that can
+         * serve it is announced.
+         */
+        fun routeTo(route: CallAudioRoute) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                val endpoint = endpointSelector?.onRouteRequested(route)
+                if (endpoint == null) {
+                    Log.d(TAG, "No endpoint for $route announced yet; holding the request")
+                    return
                 }
+                changeEndpoint(endpoint)
+            } else {
+                setLegacyAudioRoute(route)
             }
         }
     }
@@ -104,8 +216,8 @@ class CallConnectionService : ConnectionService() {
         private const val TAG = "CallConnectionService"
         const val SCHEME = BedrudScheme.SCHEME
         private const val ROOM_URI_AUTHORITY = "room"
-        private var activeConnection: Connection? = null
-        private var pendingAudioRoute: Int? = null
+        private var activeConnection: BedrudConnection? = null
+        private var pendingRoute: CallAudioRoute? = null
         var muteListener: ((Boolean) -> Unit)? = null
 
         fun placeCall(context: Context, roomName: String): Boolean {
@@ -140,7 +252,7 @@ class CallConnectionService : ConnectionService() {
                 Log.e(TAG, "Failed to end call connection", e)
             }
             activeConnection = null
-            pendingAudioRoute = null
+            pendingRoute = null
         }
 
         fun updateMuteState(muted: Boolean) {
@@ -153,36 +265,30 @@ class CallConnectionService : ConnectionService() {
         }
 
         /**
-         * Routes call audio via Telecom's [CallAudioState.ROUTE_*] on our self-managed
-         * [Connection]. Plain AudioManager-level routing (AudioSwitch's setSpeakerphoneOn /
-         * setCommunicationDevice) can silently lose to a connected Bluetooth SCO headset,
-         * which the platform's own CallAudioRouteController otherwise auto-prioritizes for
-         * any active call. Going through the Connection gives this app the same routing
-         * authority a system dialer has, which is what actually overrides that priority.
+         * Routes call audio to [route] through our self-managed [Connection]. Plain
+         * AudioManager-level routing (AudioSwitch's setSpeakerphoneOn / setCommunicationDevice)
+         * can silently lose to a connected Bluetooth SCO headset, which the platform's own
+         * CallAudioRouteController otherwise auto-prioritizes for any active call. Going through
+         * the Connection gives this app the same routing authority a system dialer has, which is
+         * what actually overrides that priority.
+         *
+         * From API 34 the connection names a [CallEndpoint] Telecom announced; below that it sets
+         * a route mask. Both paths ship — minSdk is 28 — and the property above is what either
+         * one has to preserve. The remaining deprecation, `CAPABILITY_SELF_MANAGED`, has no
+         * replacement on these classes and needs the androidx.core.telecom CallsManager API,
+         * which replaces this whole ConnectionService rather than any single call.
          */
-        // Connection.setAudioRoute is deprecated in favour of requestCallEndpointChange
-        // (API 34+) and, above that, the androidx.core.telecom CallsManager API. Neither is
-        // a drop-in here: minSdk is 28, so the old path has to stay for older devices
-        // regardless, and CallsManager replaces this whole ConnectionService rather than
-        // this one call. Doing it properly means running both paths against real Bluetooth,
-        // wired and speaker hardware - the exact routing this comment block explains is
-        // fragile - so it is deliberately left as its own piece of work.
-        @Suppress("DEPRECATION")
-        fun setAudioRoute(route: Int) {
+        fun setAudioRoute(route: CallAudioRoute) {
             Log.d(TAG, "setAudioRoute requested=$route activeConnection=${activeConnection != null}")
             val connection = activeConnection
             if (connection == null) {
                 // AudioSwitch's startup device selection can race ahead of connection
                 // creation; remember the request and apply it once onCreateOutgoingConnection
                 // hands us a Connection, instead of silently dropping it.
-                pendingAudioRoute = route
+                pendingRoute = route
                 return
             }
-            try {
-                connection.setAudioRoute(route)
-            } catch (e: Exception) {
-                Log.e(TAG, "Failed to set audio route", e)
-            }
+            connection.routeTo(route)
         }
 
         fun roomUri(roomName: String): Uri =
