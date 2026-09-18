@@ -109,6 +109,8 @@ import com.bedrud.app.core.recent.RecentRoomsStore
 import com.bedrud.app.core.recent.formatRecentRoomTimeAgo
 import com.bedrud.app.core.recent.recentRoomsNotInApiList
 import com.bedrud.app.core.rooms.DeletedRoomTombstones
+import com.bedrud.app.core.rooms.resolveRoomActivityAt
+import com.bedrud.app.core.rooms.sortByActivity
 import com.bedrud.app.core.api.apiAction
 import com.bedrud.app.core.api.apiBody
 import com.bedrud.app.core.toUserMessage
@@ -214,6 +216,11 @@ fun DashboardContent(
     }
     fun lastVisitFor(roomName: String): Long? =
         activeRecentByName[roomName]?.let { it.leftAt ?: it.joinedAt }
+    // What an API card reports: the room's own last activity, which the server stamps on every
+    // participant's join. A room somebody else was in an hour ago says so even on a device that
+    // has never opened it, and local history answers for a server that reports no activity at all.
+    fun lastActivityFor(room: UserRoomResponse): Long? =
+        resolveRoomActivityAt(room.lastActivityAt, lastVisitFor(room.name))
     fun isOngoingFor(roomName: String): Boolean =
         CallService.isRunning &&
             CallService.activeRoomName == roomName &&
@@ -518,39 +525,43 @@ fun DashboardContent(
 
     val filteredRooms = remember(rooms, activeFilter, currentUser, activeRecentByName) {
         when (activeFilter) {
-            // Same recency order as the All tab: most-recently-used first, rooms never joined from
-            // this device last (stable sort keeps those in their existing server order).
+            // Same activity order as the All tab: most recently active first, rooms nobody has been
+            // in last (a stable sort keeps those in their existing server order).
             RoomFilter.MY_ROOMS ->
-                rooms.filter { it.createdBy == currentUser?.id }
-                    .sortedByDescending {
-                        activeRecentByName[it.name]?.let { r -> r.leftAt ?: r.joinedAt } ?: Long.MIN_VALUE
-                    }
+                sortByActivity(rooms.filter { room -> room.createdBy == currentUser?.id }) { room ->
+                    lastActivityFor(room)
+                }
             RoomFilter.ALL -> rooms
         }
     }
 
-    // One recency-ordered list: every room with local history — whether it renders as an API card
-    // (active server) or a recent card (other servers / not yet in the API list) — is positioned
-    // by when it was last used. This keeps a room's rank stable across server switches; the old
-    // recents-first-then-server-order split made the same room jump sections (and the list
-    // visibly reshuffle) every time the active server changed. Server rooms never joined from
-    // this device have no recency, so they follow at the end in server order.
+    // One activity-ordered list: every room that can be dated at all — whether it renders as an API
+    // card (active server) or a recent card (other servers / not yet in the API list) — is
+    // positioned by when it was last active, so a card's rank agrees with the "3h ago" it prints.
+    // This keeps a room's rank stable across server switches; the old recents-first-then-server-
+    // order split made the same room jump sections (and the list visibly reshuffle) every time the
+    // active server changed. A room nothing can date follows at the end in server order, which is
+    // where every API room sat before the server began reporting its activity.
     val allTabEntries = remember(rooms, recentRooms, activeInstanceId) {
-        val recencyByName = recentRooms
-            .filter { it.instanceId == activeInstanceId }
-            .associate { it.roomName to (it.leftAt ?: it.joinedAt) }
+        val visitByName = recentRooms
+            .filter { recent -> recent.instanceId == activeInstanceId }
+            .associate { recent -> recent.roomName to (recent.leftAt ?: recent.joinedAt) }
         val recentOnly = recentRoomsNotInApiList(
             recentRooms,
-            rooms.map { it.name }.toSet(),
+            rooms.map { room -> room.name }.toSet(),
             activeInstanceId,
         )
-        val dated = recentOnly.map { RoomListEntry.FromRecent(it) to (it.leftAt ?: it.joinedAt) } +
-            rooms.mapNotNull { room ->
-                recencyByName[room.name]?.let { RoomListEntry.FromApi(room) to it }
+        val entries = recentOnly.map { recent -> RoomListEntry.FromRecent(recent) } +
+            rooms.map { room -> RoomListEntry.FromApi(room) }
+        sortByActivity(entries) { entry ->
+            when (entry) {
+                // A recent card is a room the active server does not list, so local history is all
+                // there is to date it by.
+                is RoomListEntry.FromRecent -> entry.recent.leftAt ?: entry.recent.joinedAt
+                is RoomListEntry.FromApi ->
+                    resolveRoomActivityAt(entry.room.lastActivityAt, visitByName[entry.room.name])
             }
-        val neverJoined = rooms.filter { it.name !in recencyByName }.map { RoomListEntry.FromApi(it) }
-        dated.sortedByDescending { (_, lastUsedAt) -> lastUsedAt }.map { (entry, _) -> entry } +
-            neverJoined
+        }
     }
 
     val isCurrentTabEmpty = when (activeFilter) {
@@ -749,7 +760,7 @@ fun DashboardContent(
                                                 room = entry.room,
                                                 isOwner = entry.room.createdBy == currentUser?.id,
                                                 isOngoing = isOngoingFor(entry.room.name),
-                                                lastVisitAtMs = lastVisitFor(entry.room.name),
+                                                lastActivityAtMs = lastActivityFor(entry.room),
                                                 now = nowTickMs,
                                                 onJoin = { onJoinRoom(entry.room.name) },
                                                 onDelete = { roomToDelete = entry.room },
@@ -778,7 +789,7 @@ fun DashboardContent(
                                             room = room,
                                             isOwner = room.createdBy == currentUser?.id,
                                             isOngoing = isOngoingFor(room.name),
-                                            lastVisitAtMs = lastVisitFor(room.name),
+                                            lastActivityAtMs = lastActivityFor(room),
                                             now = nowTickMs,
                                             onJoin = { onJoinRoom(room.name) },
                                             onDelete = { roomToDelete = room },
@@ -994,7 +1005,7 @@ private fun RoomCard(
     room: UserRoomResponse,
     isOwner: Boolean,
     isOngoing: Boolean,
-    lastVisitAtMs: Long?,
+    lastActivityAtMs: Long?,
     now: Long,
     onJoin: () -> Unit,
     onDelete: () -> Unit,
@@ -1006,7 +1017,8 @@ private fun RoomCard(
         if (parts.size >= 2) "${parts[0]}-${parts[1]}" else room.id
     }
 
-    val presence = presenceFor(isOngoing = isOngoing, lastVisitAtMs = lastVisitAtMs, now = now)
+    val presence =
+        presenceFor(isOngoing = isOngoing, lastActivityAtMs = lastActivityAtMs, now = now)
     val statusTint by animateColorAsState(
         targetValue = if (presence?.isLive == true) MaterialTheme.colorScheme.primary
         else MaterialTheme.colorScheme.onSurfaceVariant,
@@ -1076,7 +1088,8 @@ private fun RecentRoomCard(
         CallService.activeInstanceId == recent.instanceId
     val presence = presenceFor(
         isOngoing = isOngoing,
-        lastVisitAtMs = recent.leftAt ?: recent.joinedAt,
+        // A recent card is a room the active server does not list, so local history is all there is.
+        lastActivityAtMs = recent.leftAt ?: recent.joinedAt,
         now = now,
     )
     val statusTint by animateColorAsState(
@@ -1120,20 +1133,20 @@ private fun RecentRoomCard(
 /** A card's presence label plus whether it's the "Live" state (so the caller can tint it). */
 private data class Presence(val text: String, val isLive: Boolean)
 
-// The user counts as "Live" while in the room or within a minute of leaving; after that we show
-// how long ago they were last in.
+// A room counts as "Live" while its last activity is under a minute old, or while this device is in
+// the call; after that we show how long ago it was last active.
 private const val LIVE_WINDOW_MS = 60_000L
 
-// Two presence states only. Null means the user has never joined this room — a server-backed card
-// with no local history shows no presence line at all.
+// Two presence states only. Null means nothing is known about this room's activity — neither the
+// server nor local history — and such a card shows no presence line at all.
 @Composable
-private fun presenceFor(isOngoing: Boolean, lastVisitAtMs: Long?, now: Long): Presence? {
-    val isLive = isOngoing || (lastVisitAtMs != null && now - lastVisitAtMs < LIVE_WINDOW_MS)
+private fun presenceFor(isOngoing: Boolean, lastActivityAtMs: Long?, now: Long): Presence? {
+    val isLive = isOngoing || (lastActivityAtMs != null && now - lastActivityAtMs < LIVE_WINDOW_MS)
     return when {
         isLive -> Presence(stringResource(R.string.dashboard_status_live), isLive = true)
-        lastVisitAtMs != null -> Presence(
+        lastActivityAtMs != null -> Presence(
             // "%1$s ago" — the connective is localized; the compact duration ("12m", "3h") is not.
-            stringResource(R.string.dashboard_status_timeAgo, formatRecentRoomTimeAgo(lastVisitAtMs, now)),
+            stringResource(R.string.dashboard_status_timeAgo, formatRecentRoomTimeAgo(lastActivityAtMs, now)),
             isLive = false,
         )
         else -> null
