@@ -3,8 +3,9 @@ package com.bedrud.app.core.instance
 import android.content.Context
 import android.content.SharedPreferences
 import com.bedrud.app.core.auth.AuthPrefsKeys
+import com.bedrud.app.core.auth.legacySecurePrefs
 import com.bedrud.app.core.auth.secureInstancePrefs
-import com.bedrud.app.core.auth.securePrefs
+import com.bedrud.app.core.prefs.editBlocking
 import com.bedrud.app.models.Instance
 
 object MigrationHelper {
@@ -23,9 +24,10 @@ object MigrationHelper {
 
         mainPrefs.edit().putBoolean(MIGRATION_DONE_KEY, true).apply()
 
-        // Try to read old prefs
+        // Try to read old prefs. This file predates both the per-instance layout and the Keystore
+        // store, so it is read through the deprecated implementation that wrote it.
         val oldPrefs: SharedPreferences = try {
-            securePrefs(context, OLD_PREFS_FILE)
+            legacySecurePrefs(context, OLD_PREFS_FILE)
         } catch (e: Exception) {
             return
         }
@@ -50,7 +52,8 @@ object MigrationHelper {
             .putString(AuthPrefsKeys.USER, oldPrefs.getString(AuthPrefsKeys.USER, null))
             .apply()
 
-        // Clear old prefs
-        oldPrefs.edit().clear().apply()
+        // Clear old prefs, and wait for that to land before the file itself goes.
+        oldPrefs.editBlocking { clear() }
+        context.deleteSharedPreferences(OLD_PREFS_FILE)
     }
 }
