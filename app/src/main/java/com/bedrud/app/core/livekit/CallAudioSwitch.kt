@@ -3,7 +3,7 @@ package com.bedrud.app.core.livekit
 import android.app.Application
 import android.media.AudioAttributes
 import android.media.AudioManager
-import android.telecom.CallAudioState
+import com.bedrud.app.core.call.CallAudioRoute
 import com.bedrud.app.core.call.CallConnectionService
 import com.twilio.audioswitch.AudioDevice
 import com.twilio.audioswitch.AudioDeviceChangeListener
@@ -83,9 +83,9 @@ class CallAudioSwitch(private val application: Application) : AudioHandler {
     }
 }
 
-private fun AudioDevice.toCallAudioRoute(): Int = when (this) {
-    is AudioDevice.BluetoothHeadset -> CallAudioState.ROUTE_BLUETOOTH
-    is AudioDevice.WiredHeadset -> CallAudioState.ROUTE_WIRED_HEADSET
-    is AudioDevice.Speakerphone -> CallAudioState.ROUTE_SPEAKER
-    is AudioDevice.Earpiece -> CallAudioState.ROUTE_EARPIECE
+private fun AudioDevice.toCallAudioRoute(): CallAudioRoute = when (this) {
+    is AudioDevice.BluetoothHeadset -> CallAudioRoute.BLUETOOTH
+    is AudioDevice.WiredHeadset -> CallAudioRoute.WIRED_HEADSET
+    is AudioDevice.Speakerphone -> CallAudioRoute.SPEAKER
+    is AudioDevice.Earpiece -> CallAudioRoute.EARPIECE
 }

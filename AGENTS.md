@@ -52,7 +52,8 @@ app/src/main/java/com/bedrud/app/
 │   ├── chat/                   Image upload for chat attachments (ChatImageUploader) + URL helpers
 │   ├── pip/PipState.kt         PiP state holder
 │   └── call/                   CallService + CallConnectionService (telecom integration),
-│                               ProximityScreenLock (screen off while the phone is at an ear)
+│                               CallAudioRoute + CallEndpointSelector (which output the call
+│                               is routed to), ProximityScreenLock (screen off at an ear)
 ├── models/                     Data classes (Gson-serialized)
 └── ui/
     ├── theme/                  Design tokens: Color, Theme, Type, Shape, Dimens, Elevation, Motion
@@ -145,6 +146,35 @@ room, while the metadata is what somebody joining later reads. A client that wri
 the other, and a client that reads must merge both: metadata answers for everyone who has said
 nothing since you arrived, and a live announcement overrides it. Writing metadata needs a
 permission the token may not grant, so the presence message is the half that always lands.
+
+## Call Audio Routing
+
+Which output a meeting is heard on is decided by Telecom, not by `AudioManager`. `CallAudioSwitch`
+picks a device and every pick is handed to `CallConnectionService.setAudioRoute`, because plain
+AudioManager-level routing loses to a connected Bluetooth SCO headset — the platform prioritises
+one for any active call, and only a `Connection` carries the authority to override that.
+
+Telecom names outputs two different ways, so the app names them once itself, as `CallAudioRoute`
+(`core/call/CallAudioRoute.kt`), and converts at the edge:
+
+- **API 34+** — `requestCallEndpointChange` with a `CallEndpoint` Telecom announced through
+  `onAvailableCallEndpointsChanged`. The request is answered: success or a `CallEndpointException`
+  with a reason arrives on the `OutcomeReceiver`, and both are logged.
+- **Below 34** — `setAudioRoute` with a `CallAudioState` route mask, whose outcome is not
+  reported at all. Deprecated, and kept because `minSdk` is 28.
+
+Both paths hold a request they cannot serve yet rather than dropping it, for reasons that differ:
+
+- No connection exists yet — `AudioSwitch` picks a device as it starts up, which runs ahead of
+  `onCreateOutgoingConnection`. Held in the companion and handed to the connection at creation.
+- **API 34+:** the connection exists but Telecom has announced no endpoint the app could name.
+  `CallEndpointSelector` holds the wanted output until one appears, and serves it once.
+- **Below 34:** Telecom silently ignores a route set before it has sent the connection its first
+  audio-state callback, so the route waits for `onCallAudioStateChanged`.
+
+`PhoneAccount.CAPABILITY_SELF_MANAGED` is deprecated as of compileSdk 37 and still in use: it has
+no replacement on these classes, only `androidx.core.telecom`'s `CallsManager`, which would
+replace `CallConnectionService` outright. Tracked separately, not with the routing APIs.
 
 ## Key Conventions
 
