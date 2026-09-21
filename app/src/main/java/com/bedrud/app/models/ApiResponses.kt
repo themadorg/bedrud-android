@@ -157,6 +157,12 @@ data class UserRoomResponse(
     // on every unspecified constructor param and crashes with a Kotlin intrinsics NPE.
     val relationship: String? = null,
     val mode: String,
+    // RFC 3339, stamped by the server every time a participant joins, so it reports the room's own
+    // activity rather than this install's history -- a room somebody else was in last still carries
+    // a fresh timestamp here. Null when the server does not report it, which is what an older one
+    // looks like from here.
+    @SerializedName("lastActivityAt")
+    val lastActivityAt: String? = null,
     // The server soft-deletes: DELETE room/{id} returns 202 and a background job later stamps
     // deletedAt -- but room/list keeps returning stamped rooms indefinitely (observed 24h+).
     // Non-null here means the room is dead and must never be shown.
