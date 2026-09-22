@@ -23,14 +23,17 @@ import com.bedrud.app.ui.theme.Dimens
  * The room-level settings toggles shared by the dashboard's settings dialog and the in-meeting
  * settings sheet — one place to add or unlock a toggle so the two surfaces can't drift.
  *
- * Public visibility is live; Require Approval, Recording, and E2EE are shown but locked off for
- * now — not ready to be user-controlled yet, tracked for a later pass. [contentColor] lets the
+ * Public visibility and chat are live; Require Approval, Recording, and E2EE are shown but
+ * locked off for now — not ready to be user-controlled yet, tracked for a later pass. The live
+ * toggles come first so the locked ones sit together below them. [contentColor] lets the
  * meeting sheet render labels on its chrome palette; Unspecified inherits the ambient color.
  */
 @Composable
 fun RoomSettingsForm(
     isPublic: Boolean,
     onIsPublicChange: (Boolean) -> Unit,
+    allowChat: Boolean,
+    onAllowChatChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
     contentColor: Color = Color.Unspecified,
     verticalSpacing: Dp = Dimens.space4,
@@ -41,6 +44,12 @@ fun RoomSettingsForm(
             checked = isPublic,
             contentColor = contentColor,
             onCheckedChange = onIsPublicChange,
+        )
+        RoomSettingToggleRow(
+            label = stringResource(R.string.dashboard_roomSettings_allowChat),
+            checked = allowChat,
+            contentColor = contentColor,
+            onCheckedChange = onAllowChatChange,
         )
         RoomSettingToggleRow(
             label = stringResource(R.string.dashboard_roomSettings_requireApproval),

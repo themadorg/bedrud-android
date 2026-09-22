@@ -27,6 +27,7 @@ fun RoomSettingsDialog(
     // server side); false is the safe fallback if it's ever missing rather than true,
     // since defaulting an unknown room to public would be the wrong direction to fail in.
     var isPublic by remember { mutableStateOf(room.isPublic ?: false) }
+    var allowChat by remember { mutableStateOf(room.settings.allowChat) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -35,13 +36,17 @@ fun RoomSettingsDialog(
             RoomSettingsForm(
                 isPublic = isPublic,
                 onIsPublicChange = { isPublic = it },
+                allowChat = allowChat,
+                onAllowChatChange = { allowChat = it },
             )
         },
         confirmButton = {
             BedrudButton(
                 text = stringResource(R.string.common_button_save),
                 variant = BedrudButtonVariant.TONAL,
-                onClick = { onSave(isPublic, room.settings.withLockedToggles()) },
+                onClick = {
+                    onSave(isPublic, room.settings.copy(allowChat = allowChat).withLockedToggles())
+                },
             )
         },
         dismissButton = {
