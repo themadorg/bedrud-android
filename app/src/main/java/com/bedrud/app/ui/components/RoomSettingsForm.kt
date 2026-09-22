@@ -68,11 +68,11 @@ fun RoomSettingsForm(
 
 /**
  * What both save paths submit alongside the form: the toggles the form shows locked are forced
- * to their locked values, and the media flags stay on (no UI for them yet). Must change together
- * with [RoomSettingsForm].
+ * to their locked values, and the media flags stay on (no UI for them yet). Chat is left as the
+ * caller set it, so a room that has chat off keeps it off. Must change together with
+ * [RoomSettingsForm].
  */
 fun RoomSettings.withLockedToggles(): RoomSettings = copy(
-    allowChat = true,
     allowVideo = true,
     allowAudio = true,
     requireApproval = false,
