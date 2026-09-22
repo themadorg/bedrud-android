@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -44,7 +43,7 @@ import com.bedrud.app.ui.components.ChatImage
 import com.bedrud.app.ui.components.InitialsAvatar
 import com.bedrud.app.ui.theme.BedrudShapeTokens
 import com.bedrud.app.ui.theme.Dimens
-import com.bedrud.app.ui.theme.rememberInkCenteringOffset
+import com.bedrud.app.ui.theme.typeCentered
 import com.bedrud.app.ui.util.setPlainText
 import kotlinx.coroutines.launch
 
@@ -274,11 +273,12 @@ private fun ChatBubble(
                     color = contentColor,
                     // The bubble keeps its height from the font's box, which is what leaves room
                     // for every script it may carry — Persian tails and Arabic marks included.
-                    // Only the asymmetry is corrected, by moving the line to where its letters
-                    // centre rather than where the box does. Spacing from the baselines instead
-                    // was tried and rejected: it ties the bubble's height to cap height, a Latin
-                    // measure, and left Persian descenders close to the edge.
-                    modifier = Modifier.offset(y = rememberInkCenteringOffset(message.text, bodyStyle)),
+                    // Only the asymmetry is corrected, and per style rather than per message: one
+                    // bubble's correction must not depend on whether that message happened to
+                    // contain a descender. Spacing from the baselines instead was tried and
+                    // rejected: it ties the bubble's height to cap height, a Latin measure, and
+                    // left Persian descenders close to the edge.
+                    modifier = Modifier.typeCentered(bodyStyle),
                 )
                 // Start-aligned under the text rather than tucked against the bubble's outer edge,
                 // so a reaction on a long message begins where its first line does.
