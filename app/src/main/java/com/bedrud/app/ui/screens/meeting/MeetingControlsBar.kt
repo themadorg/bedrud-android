@@ -41,6 +41,7 @@ import androidx.compose.material.icons.filled.VideocamOff
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -81,6 +82,7 @@ import com.bedrud.app.ui.theme.Elevation
 import com.bedrud.app.ui.theme.Motion
 import com.bedrud.app.ui.theme.bedrudColors
 import com.bedrud.app.ui.theme.inkCentered
+import com.bedrud.app.ui.theme.typeCentered
 import kotlin.math.PI
 import kotlin.math.sin
 
@@ -545,12 +547,14 @@ private fun PillContent(
             tint = contentColor,
             modifier = Modifier.size(Dimens.meetingBarIconMedia),
         )
+        val labelStyle = MaterialTheme.typography.labelMedium
         Text(
             text = stringResource(textRes),
-            style = MaterialTheme.typography.labelMedium,
+            style = labelStyle,
             color = contentColor,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.typeCentered(labelStyle),
         )
     }
 }
@@ -730,7 +734,8 @@ private fun MeetCircleButton(
     if (badge != null) {
         BadgedBox(
             badge = {
-                Badge { Text(badge) }
+                // A count alone in its dot, so its own digits are measured.
+                Badge { Text(badge, modifier = Modifier.inkCentered(badge, LocalTextStyle.current)) }
             },
         ) {
             button()

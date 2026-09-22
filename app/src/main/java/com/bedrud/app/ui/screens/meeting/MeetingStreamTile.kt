@@ -182,12 +182,14 @@ fun MeetingStreamTile(
                 tint = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.size(Dimens.meetingBadgeIcon),
             )
+            val nameStyle = MaterialTheme.typography.labelSmall.copy(textDirection = TextDirection.Content)
             Text(
                 text = name,
-                style = MaterialTheme.typography.labelSmall.copy(textDirection = TextDirection.Content),
+                style = nameStyle,
                 color = MaterialTheme.colorScheme.onSurface,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.typeCentered(nameStyle),
             )
         }
     }

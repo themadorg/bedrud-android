@@ -83,6 +83,7 @@ import com.bedrud.app.core.pip.PipStateHolder
 import com.bedrud.app.ui.screens.settings.SettingsStore
 import com.bedrud.app.models.JoinRoomRequest
 import com.bedrud.app.models.JoinRoomResponse
+import com.bedrud.app.ui.theme.inkCentered
 import com.bedrud.app.ui.theme.typeCentered
 import io.livekit.android.compose.ui.ScaleType
 import io.livekit.android.compose.ui.VideoTrackView
@@ -532,11 +533,17 @@ fun MeetingScreen(
                                         modifier = Modifier.fillMaxSize(),
                                         passedRoom = room,
                                     )
-                                    else -> Text(
-                                        text = pipState.name.take(1).uppercase(),
-                                        style = MaterialTheme.typography.displayLarge,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    )
+                                    // One initial alone in the window, measured as an avatar's is.
+                                    else -> {
+                                        val initial = pipState.name.take(1).uppercase()
+                                        val initialStyle = MaterialTheme.typography.displayLarge
+                                        Text(
+                                            text = initial,
+                                            style = initialStyle,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            modifier = Modifier.inkCentered(initial, initialStyle),
+                                        )
+                                    }
                                 }
                             }
                         }
