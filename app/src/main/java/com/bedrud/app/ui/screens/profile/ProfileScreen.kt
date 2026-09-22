@@ -29,6 +29,7 @@ import androidx.compose.material3.Icon
 import com.bedrud.app.ui.components.BedrudCompactTopBar
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -58,6 +59,7 @@ import com.bedrud.app.ui.screens.instance.InstanceSwitcherSheet
 import com.bedrud.app.ui.theme.BedrudRadius
 import com.bedrud.app.ui.theme.BedrudShapeTokens
 import com.bedrud.app.ui.theme.parseInstanceColor
+import com.bedrud.app.ui.theme.typeCentered
 import org.koin.compose.koinInject
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -192,7 +194,11 @@ fun ProfileContent(
                                         modifier = Modifier.size(18.dp)
                                     )
                                     Spacer(modifier = Modifier.width(4.dp))
-                                    Text(stringResource(R.string.profile_button_switch))
+                                    val switchStyle = LocalTextStyle.current
+                                    Text(
+                                        stringResource(R.string.profile_button_switch),
+                                        modifier = Modifier.typeCentered(switchStyle),
+                                    )
                                 }
                             },
                             colors = ListItemDefaults.colors(containerColor = Color.Transparent)
@@ -257,7 +263,13 @@ fun ProfileContent(
                     modifier = Modifier.size(18.dp)
                 )
                 Spacer(modifier = Modifier.width(8.dp))
-                Text(stringResource(R.string.profile_button_signOut), style = MaterialTheme.typography.labelLarge)
+                // Centred against the icon beside it, like every other label paired with one.
+                val signOutStyle = MaterialTheme.typography.labelLarge
+                Text(
+                    stringResource(R.string.profile_button_signOut),
+                    style = signOutStyle,
+                    modifier = Modifier.typeCentered(signOutStyle),
+                )
             }
 
             Spacer(modifier = Modifier.height(16.dp))

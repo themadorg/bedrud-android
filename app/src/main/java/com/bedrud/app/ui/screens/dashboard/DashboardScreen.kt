@@ -44,6 +44,7 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHostState
@@ -133,6 +134,7 @@ import com.bedrud.app.ui.screens.instance.InstanceSwitcherSheet
 import com.bedrud.app.ui.theme.BedrudShapeTokens
 import com.bedrud.app.ui.theme.Dimens
 import com.bedrud.app.ui.theme.Motion
+import com.bedrud.app.ui.theme.typeCentered
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
@@ -517,7 +519,13 @@ fun DashboardContent(
             },
             dismissButton = {
                 TextButton(onClick = { pendingServerSwitch = null }) {
-                    Text(stringResource(R.string.common_button_cancel))
+                    // Corrected like the BedrudButton beside it, or the two labels in this dialog
+                    // sit at different heights.
+                    val cancelStyle = LocalTextStyle.current
+                    Text(
+                        stringResource(R.string.common_button_cancel),
+                        modifier = Modifier.typeCentered(cancelStyle),
+                    )
                 }
             }
         )
@@ -1272,7 +1280,9 @@ private fun SwipeActionBackground(action: SwipeAction, state: SwipeToDismissBoxS
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(Dimens.space8),
         ) {
-            Text(action.label, style = MaterialTheme.typography.labelLarge, color = action.contentColor)
+            // Centred against the icon beside it rather than against other text.
+            val labelStyle = MaterialTheme.typography.labelLarge
+            Text(action.label, style = labelStyle, color = action.contentColor, modifier = Modifier.typeCentered(labelStyle))
             Icon(action.icon, contentDescription = null, tint = action.contentColor, modifier = Modifier.size(Dimens.iconSm))
         }
     }
@@ -1513,7 +1523,13 @@ private fun CreateRoomDialog(
         },
         dismissButton = {
             TextButton(onClick = onDismiss, enabled = !isCreating) {
-                Text(stringResource(R.string.common_button_cancel))
+                // Corrected like the BedrudButton beside it, or the two labels in this dialog sit
+                // at different heights — measured 5px apart before this was applied.
+                val cancelStyle = LocalTextStyle.current
+                Text(
+                    stringResource(R.string.common_button_cancel),
+                    modifier = Modifier.typeCentered(cancelStyle),
+                )
             }
         }
     )

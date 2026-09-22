@@ -54,6 +54,7 @@ import com.bedrud.app.ui.components.BedrudTextField
 import com.bedrud.app.ui.theme.BedrudShapeTokens
 import com.bedrud.app.ui.theme.Alpha
 import com.bedrud.app.ui.theme.Dimens
+import com.bedrud.app.ui.theme.typeCentered
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 
@@ -296,9 +297,12 @@ fun LoginScreen(
                 onClick = onNavigateToRegister,
                 enabled = !isBusy && registrationEnabled
             ) {
+                // Corrected like every other button label, so the prompt beside it stays level.
+                val signUpStyle = MaterialTheme.typography.labelLarge
                 Text(
                     text = stringResource(R.string.auth_button_signUp),
-                    style = MaterialTheme.typography.labelLarge
+                    style = signUpStyle,
+                    modifier = Modifier.typeCentered(signUpStyle),
                 )
             }
         }

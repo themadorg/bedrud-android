@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -16,6 +17,7 @@ import androidx.compose.ui.res.stringResource
 import com.bedrud.app.ui.theme.BedrudShapeTokens
 import com.bedrud.app.ui.theme.Dimens
 import com.bedrud.app.R
+import com.bedrud.app.ui.theme.typeCentered
 
 /**
  * Whether the recording indicator and its banner are drawn at all.
@@ -79,7 +81,11 @@ fun MeetingRecordingBanner(
                 horizontalArrangement = Arrangement.End,
             ) {
                 TextButton(onClick = onAcknowledge) {
-                    Text(stringResource(R.string.meeting_recording_acknowledge))
+                    val labelStyle = LocalTextStyle.current
+                    Text(
+                        stringResource(R.string.meeting_recording_acknowledge),
+                        modifier = Modifier.typeCentered(labelStyle),
+                    )
                 }
             }
         }

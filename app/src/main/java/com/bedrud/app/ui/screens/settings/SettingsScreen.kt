@@ -33,6 +33,7 @@ import com.bedrud.app.ui.components.BedrudTabScaffoldContentInsets
 import com.bedrud.app.ui.components.CardSectionHeader
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
@@ -62,6 +63,7 @@ import com.bedrud.app.core.instance.InstanceManager
 import com.bedrud.app.ui.theme.BedrudShapeTokens
 import com.bedrud.app.models.ChangePasswordRequest
 import com.bedrud.app.core.api.apiAction
+import com.bedrud.app.ui.theme.typeCentered
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 
@@ -295,7 +297,13 @@ fun SettingsContent(
                             },
                             enabled = currentPassword.isNotBlank() && newPassword.isNotBlank() && confirmPassword.isNotBlank(),
                             modifier = Modifier.fillMaxWidth()
-                        ) { Text(stringResource(R.string.settings_button_changePassword)) }
+                        ) {
+                            val labelStyle = LocalTextStyle.current
+                            Text(
+                                stringResource(R.string.settings_button_changePassword),
+                                modifier = Modifier.typeCentered(labelStyle),
+                            )
+                        }
                     }
                 }
             }
