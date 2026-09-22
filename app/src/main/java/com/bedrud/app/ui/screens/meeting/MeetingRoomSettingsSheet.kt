@@ -59,6 +59,7 @@ fun MeetingRoomSettingsSheet(
             onIsPublicChange = { localIsPublic = it },
             allowChat = localAllowChat,
             onAllowChatChange = { localAllowChat = it },
+            roomSettings = settings,
             contentColor = colors.onButton,
         )
 

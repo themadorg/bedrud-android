@@ -38,6 +38,7 @@ fun RoomSettingsDialog(
                 onIsPublicChange = { isPublic = it },
                 allowChat = allowChat,
                 onAllowChatChange = { allowChat = it },
+                roomSettings = room.settings,
             )
         },
         confirmButton = {
