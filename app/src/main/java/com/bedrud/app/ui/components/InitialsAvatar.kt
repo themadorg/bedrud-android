@@ -2,7 +2,6 @@ package com.bedrud.app.ui.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
@@ -15,7 +14,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import com.bedrud.app.ui.theme.rememberInkCenteringOffset
+import com.bedrud.app.ui.theme.inkCentered
 
 /**
  * A colored circle showing the first letter of [name], uppercased — the app's initials avatar,
@@ -47,10 +46,12 @@ fun InitialsAvatar(
             text = initial,
             style = textStyle,
             color = contentColor,
-            // A circle has no edges to align to, so the letter has to carry its own centring. The
-            // box Compose centres is the font's, and this app's font sizes that box for Arabic
-            // marks and Persian tails that a Latin capital never uses.
-            modifier = Modifier.offset(y = rememberInkCenteringOffset(initial, textStyle)),
+            // A circle has no edges to align to, so the letter measures its own centring rather
+            // than taking the style's. The two differ where the letter is not Latin: a CJK initial
+            // arrives from the platform's fallback, whose line box is taller than Vazirmatn's, and
+            // a correction derived from a Latin capital leaves it sitting low — measured at 6px
+            // low in a 147px circle. Measuring the glyph itself is what covers every script.
+            modifier = Modifier.inkCentered(initial, textStyle),
         )
     }
 }
