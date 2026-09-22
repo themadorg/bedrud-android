@@ -111,6 +111,71 @@ class TextInkTest {
         assertEquals(single * 2f, double, TOLERANCE)
     }
 
+    @Test
+    fun `blockCenteringOffsetPx matches the single-line correction when both lines are the same line`() {
+        // A block of one line is just a line. Vazirmatn's capital from above has to come out at the
+        // same 15.585, or the two forms of the correction would disagree about the simplest case.
+        assertEquals(
+            15.585f,
+            blockCenteringOffsetPx(
+                firstBaselinePx = 102.54f,
+                firstInkTopPx = -80,
+                lastBoxHeightPx = 156.25f,
+                lastBaselinePx = 102.54f,
+            ),
+            TOLERANCE,
+        )
+    }
+
+    @Test
+    fun `blockCenteringOffsetPx returns zero when the room above the first line equals the room below the last`() {
+        // 20px between the first line's box top and its capitals, 20px between the last line's
+        // baseline and its box bottom: the letters already sit in the block's middle.
+        assertEquals(
+            0f,
+            blockCenteringOffsetPx(
+                firstBaselinePx = 60f,
+                firstInkTopPx = -40,
+                lastBoxHeightPx = 50f,
+                lastBaselinePx = 30f,
+            ),
+            TOLERANCE,
+        )
+    }
+
+    @Test
+    fun `blockCenteringOffsetPx moves the block up when the first line leaves more room above than the last leaves below`() {
+        // 30px above the capitals against 20px below the baseline: the letters sit 5px low.
+        assertEquals(
+            -5f,
+            blockCenteringOffsetPx(
+                firstBaselinePx = 60f,
+                firstInkTopPx = -30,
+                lastBoxHeightPx = 50f,
+                lastBaselinePx = 30f,
+            ),
+            TOLERANCE,
+        )
+    }
+
+    @Test
+    fun `blockCenteringOffsetPx is not the average of each line's own correction`() {
+        // Vazirmatn at a 22px em over the same face at 14px, like a name over its email. Each line
+        // corrected on its own would move by 3.63 and 2.08, carrying the block down by their
+        // average, 2.86. The block only needs 1.48: the big line's extra room above is partly
+        // matched by the small line's room below. Averaging put the profile card 4px low.
+        assertEquals(
+            1.48f,
+            blockCenteringOffsetPx(
+                firstBaselinePx = 22.559f,
+                firstInkTopPx = -18,
+                lastBoxHeightPx = 21.875f,
+                lastBaselinePx = 14.356f,
+            ),
+            TOLERANCE,
+        )
+    }
+
     private companion object {
         /** Sub-pixel slack: these are float pixel positions, not exact decimals. */
         const val TOLERANCE = 0.01f

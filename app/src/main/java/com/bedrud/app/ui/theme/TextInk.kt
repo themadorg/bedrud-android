@@ -39,6 +39,29 @@ internal fun inkCenteringOffsetPx(
     return boxHeightPx / 2f - inkCenterFromTop
 }
 
+/**
+ * How far down a block of stacked lines has to move for its letters, from the first line's
+ * capitals to the last line's baseline, to sit centred in the block's box.
+ *
+ * Only the two outer gaps decide it: the room between the block's top and its first capital, and
+ * the room between its last baseline and its bottom. Whatever lies between — more lines, spacing —
+ * sits inside both the box and the letters and moves their centres together, so it cancels out.
+ *
+ * [firstBaselinePx] and [firstInkTopPx] belong to the first line, measured from its own box top and
+ * baseline; [lastBoxHeightPx] and [lastBaselinePx] belong to the last line, in its own box. A block
+ * of one line reduces to [inkCenteringOffsetPx] for a capital.
+ */
+internal fun blockCenteringOffsetPx(
+    firstBaselinePx: Float,
+    firstInkTopPx: Int,
+    lastBoxHeightPx: Float,
+    lastBaselinePx: Float,
+): Float {
+    val roomAboveLetters = firstBaselinePx + firstInkTopPx
+    val roomBelowLetters = lastBoxHeightPx - lastBaselinePx
+    return (roomBelowLetters - roomAboveLetters) / 2f
+}
+
 /** A [Paint] carrying the same typeface and size Compose will render [style] with. */
 @Composable
 private fun rememberFontPaint(style: TextStyle): Paint {
@@ -173,9 +196,11 @@ fun rememberTypeCenteringOffset(style: TextStyle): Dp =
  * Moves a `Text` at [style] so the type's letters sit centred, by the same amount for every string.
  *
  * For **text centred against something that is not text** — a button label in its fixed-height
- * container, a navigation label under its icon, a placeholder in a field beside an icon, any label
- * paired with an icon. Peer labels keep a shared baseline because the correction does not depend on
- * which word each one happens to be.
+ * container, a navigation label under its icon, a chip's or a badge's label, a list item's line
+ * beside its switch, a hint in a field beside an icon, any label paired with an icon. Peer labels
+ * keep a shared baseline because the correction does not depend on which word each one happens to
+ * be. For two or more lines centred as one, use the block form, which takes the first and last
+ * line's styles.
  *
  * Apply it to **every** such site, not the convenient ones. The correction's whole risk is
  * partiality: a corrected `BedrudButton` label measured 5px below the plain `TextButton` beside it
@@ -189,3 +214,46 @@ fun rememberTypeCenteringOffset(style: TextStyle): Dp =
 @Composable
 fun Modifier.typeCentered(style: TextStyle): Modifier =
     offset(y = rememberTypeCenteringOffset(style))
+
+/**
+ * How far to move a block of lines down so its letters, from the capitals of [firstLine] to the
+ * baseline of [lastLine], sit centred as one.
+ *
+ * The block form of [rememberTypeCenteringOffset], taken against the same reference glyph and so
+ * the same for every block sharing those two styles. With one style for both it gives the same
+ * number as the single-line form.
+ */
+@Composable
+fun rememberTypeCenteringOffset(firstLine: TextStyle, lastLine: TextStyle): Dp {
+    val measurer = rememberTextMeasurer()
+    val firstPaint = rememberFontPaint(firstLine)
+    val density = LocalDensity.current
+    return remember(measurer, firstPaint, firstLine, lastLine, density) {
+        val firstInk = Rect().also {
+            firstPaint.getTextBounds(CAP_HEIGHT_REFERENCE, 0, CAP_HEIGHT_REFERENCE.length, it)
+        }
+        val firstLayout = measurer.measure(CAP_HEIGHT_REFERENCE, firstLine)
+        val lastLayout = measurer.measure(CAP_HEIGHT_REFERENCE, lastLine)
+        val offsetPx = blockCenteringOffsetPx(
+            firstBaselinePx = firstLayout.firstBaseline,
+            firstInkTopPx = firstInk.top,
+            lastBoxHeightPx = lastLayout.size.height.toFloat(),
+            lastBaselinePx = lastLayout.lastBaseline,
+        )
+        with(density) { offsetPx.toDp() }
+    }
+}
+
+/**
+ * Moves one line of a block — a title over its supporting line — so the block's letters sit centred
+ * as one against something that is not text, such as the icon or avatar beside it.
+ *
+ * Give **every line of the block the same call**, with the block's first and last line styles, so
+ * they all move by one amount and keep their spacing. Correcting each line by its own style instead
+ * adds the lines' corrections together where they should partly cancel — the large first line's
+ * room above its capitals is offset by the small last line's room below its baseline — and put the
+ * profile card's 22sp name over a 14sp address 4px low, where uncorrected it had been 1.5px high.
+ */
+@Composable
+fun Modifier.typeCentered(firstLine: TextStyle, lastLine: TextStyle): Modifier =
+    offset(y = rememberTypeCenteringOffset(firstLine, lastLine))
