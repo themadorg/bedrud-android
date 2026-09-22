@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -59,6 +60,7 @@ import com.bedrud.app.ui.screens.instance.InstanceSwitcherSheet
 import com.bedrud.app.ui.theme.BedrudRadius
 import com.bedrud.app.ui.theme.BedrudShapeTokens
 import com.bedrud.app.ui.theme.parseInstanceColor
+import com.bedrud.app.ui.theme.rememberTypeCenteringOffset
 import com.bedrud.app.ui.theme.typeCentered
 import org.koin.compose.koinInject
 
@@ -124,34 +126,51 @@ fun ProfileContent(
                         )
                     }
                     Spacer(modifier = Modifier.width(16.dp))
-                    Column(modifier = Modifier.weight(1f)) {
+                    // Name and email are centred on the avatar as one block. The name's own
+                    // correction would not do: at 22sp over 14sp, the two lines' corrections added
+                    // up put the block 4px low.
+                    val nameStyle = MaterialTheme.typography.titleLarge.copy(textDirection = TextDirection.Content)
+                    val emailStyle = MaterialTheme.typography.bodyMedium.copy(textDirection = TextDirection.Ltr)
+                    Column(
+                        modifier = Modifier
+                            .weight(1f)
+                            .typeCentered(firstLine = nameStyle, lastLine = emailStyle)
+                    ) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             Text(
                                 user?.name ?: stringResource(R.string.profile_fallback_name),
-                                style = MaterialTheme.typography.titleLarge.copy(textDirection = TextDirection.Content)
+                                style = nameStyle
                             )
                             if (user?.isAdmin == true) {
+                                val badgeStyle = MaterialTheme.typography.labelSmall.copy(
+                                    fontWeight = FontWeight.Bold
+                                )
+                                // The block moved the name as it stands, so its letters still sit
+                                // above its own box's centre. The badge is raised by the name's
+                                // correction to meet them, rather than the name lowered to meet it.
+                                val nameCorrection = rememberTypeCenteringOffset(nameStyle)
                                 Text(
                                     stringResource(R.string.profile_badge_admin),
-                                    style = MaterialTheme.typography.labelSmall.copy(
-                                        fontWeight = FontWeight.Bold
-                                    ),
+                                    style = badgeStyle,
                                     color = MaterialTheme.colorScheme.onPrimary,
                                     modifier = Modifier
+                                        .offset(y = -nameCorrection)
                                         .background(
                                             MaterialTheme.colorScheme.primary,
                                             RoundedCornerShape(BedrudRadius.xs)
                                         )
                                         .padding(horizontal = 6.dp, vertical = 2.dp)
+                                        // After the background, so the letters move inside the badge.
+                                        .typeCentered(badgeStyle)
                                 )
                             }
                         }
                         Text(
                             user?.email ?: "",
-                            style = MaterialTheme.typography.bodyMedium.copy(textDirection = TextDirection.Ltr),
+                            style = emailStyle,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
@@ -167,17 +186,25 @@ fun ProfileContent(
                     )
 
                     if (activeInstance != null) {
+                        // Both lines take the block's correction, so they move as one.
+                        val serverNameStyle = MaterialTheme.typography.bodyLarge.copy(textDirection = TextDirection.Content)
+                        val urlStyle = MaterialTheme.typography.bodySmall.copy(textDirection = TextDirection.Ltr)
                         ListItem(
                             headlineContent = {
-                                Text(activeInstance.displayName, style = MaterialTheme.typography.bodyLarge.copy(textDirection = TextDirection.Content))
+                                Text(
+                                    activeInstance.displayName,
+                                    style = serverNameStyle,
+                                    modifier = Modifier.typeCentered(firstLine = serverNameStyle, lastLine = urlStyle)
+                                )
                             },
                             supportingContent = {
                                 Text(
                                     activeInstance.serverURL,
-                                    style = MaterialTheme.typography.bodySmall.copy(textDirection = TextDirection.Ltr),
+                                    style = urlStyle,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
+                                    overflow = TextOverflow.Ellipsis,
+                                    modifier = Modifier.typeCentered(firstLine = serverNameStyle, lastLine = urlStyle)
                                 )
                             },
                             leadingContent = {
@@ -217,12 +244,19 @@ fun ProfileContent(
 
                     if (user != null) {
                         ListItem(
-                            headlineContent = { Text(stringResource(R.string.profile_label_userId)) },
+                            headlineContent = {
+                                Text(
+                                    stringResource(R.string.profile_label_userId),
+                                    modifier = Modifier.typeCentered(LocalTextStyle.current)
+                                )
+                            },
                             trailingContent = {
+                                val valueStyle = MaterialTheme.typography.bodyMedium
                                 Text(
                                     user!!.id.take(8) + "...",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    style = valueStyle,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.typeCentered(valueStyle)
                                 )
                             },
                             colors = ListItemDefaults.colors(containerColor = Color.Transparent)
@@ -234,12 +268,19 @@ fun ProfileContent(
                                 color = MaterialTheme.colorScheme.outlineVariant
                             )
                             ListItem(
-                                headlineContent = { Text(stringResource(R.string.profile_label_provider)) },
+                                headlineContent = {
+                                    Text(
+                                        stringResource(R.string.profile_label_provider),
+                                        modifier = Modifier.typeCentered(LocalTextStyle.current)
+                                    )
+                                },
                                 trailingContent = {
+                                    val valueStyle = MaterialTheme.typography.bodyMedium
                                     Text(
                                         user!!.provider!!.replaceFirstChar { it.uppercase() },
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        style = valueStyle,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.typeCentered(valueStyle)
                                     )
                                 },
                                 colors = ListItemDefaults.colors(containerColor = Color.Transparent)

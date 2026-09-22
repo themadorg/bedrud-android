@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -90,6 +91,7 @@ import com.bedrud.app.models.CreateInviteTokenRequest
 import com.bedrud.app.models.InviteToken
 import com.bedrud.app.ui.theme.BedrudRadius
 import com.bedrud.app.ui.theme.BedrudShapeTokens
+import com.bedrud.app.ui.theme.rememberTypeCenteringOffset
 import com.bedrud.app.ui.theme.typeCentered
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -260,20 +262,25 @@ private fun AdminOverviewContent(
                     Column(modifier = Modifier.padding(16.dp)) {
                         CardSectionHeader(stringResource(R.string.admin_section_recentSignups))
                         Spacer(modifier = Modifier.height(8.dp))
+                        val nameStyle = MaterialTheme.typography.bodyMedium.copy(textDirection = TextDirection.Content)
+                        val emailStyle = MaterialTheme.typography.bodySmall.copy(textDirection = TextDirection.Ltr)
                         users.takeLast(5).reversed().forEach { user ->
+                            // Both lines take the block's correction, so they move as one.
                             ListItem(
                                 headlineContent = {
                                     Text(
                                         user.name,
                                         maxLines = 1,
                                         overflow = TextOverflow.Ellipsis,
-                                        style = MaterialTheme.typography.bodyMedium.copy(textDirection = TextDirection.Content)
+                                        style = nameStyle,
+                                        modifier = Modifier.typeCentered(firstLine = nameStyle, lastLine = emailStyle)
                                     )
                                 },
                                 supportingContent = {
                                     Text(
-                                        user.email, style = MaterialTheme.typography.bodySmall.copy(textDirection = TextDirection.Ltr),
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        user.email, style = emailStyle,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.typeCentered(firstLine = nameStyle, lastLine = emailStyle)
                                     )
                                 },
                                 leadingContent = {
@@ -403,18 +410,26 @@ private fun AdminUsersContent(
                 }
             } else {
                 items(filtered, key = { it.id }) { user ->
+                    // Both lines take the block's correction, so they move as one; the admin icon
+                    // is then raised by the name's own correction to meet the name's letters, as
+                    // the profile card's admin badge is.
+                    val nameStyle = MaterialTheme.typography.bodyMedium.copy(textDirection = TextDirection.Content)
+                    val emailStyle = MaterialTheme.typography.bodySmall.copy(textDirection = TextDirection.Ltr)
                     ListItem(
                         headlineContent = {
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                modifier = Modifier.typeCentered(firstLine = nameStyle, lastLine = emailStyle)
                             ) {
-                                Text(user.name, maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodyMedium.copy(textDirection = TextDirection.Content))
+                                Text(user.name, maxLines = 1, overflow = TextOverflow.Ellipsis, style = nameStyle)
                                 if (user.isAdmin) {
                                     Icon(
                                         Icons.Default.AdminPanelSettings,
                                         contentDescription = stringResource(R.string.admin_contentDescription_admin),
-                                        modifier = Modifier.size(14.dp),
+                                        modifier = Modifier
+                                            .offset(y = -rememberTypeCenteringOffset(nameStyle))
+                                            .size(14.dp),
                                         tint = MaterialTheme.colorScheme.primary
                                     )
                                 }
@@ -423,7 +438,8 @@ private fun AdminUsersContent(
                         supportingContent = {
                             Text(
                                 user.email,
-                                style = MaterialTheme.typography.bodySmall.copy(textDirection = TextDirection.Ltr)
+                                style = emailStyle,
+                                modifier = Modifier.typeCentered(firstLine = nameStyle, lastLine = emailStyle)
                             )
                         },
                         leadingContent = {
@@ -515,25 +531,32 @@ private fun AdminRoomsContent(
                 }
             } else {
                 items(rooms, key = { it.id }) { room ->
+                    // Both lines take the block's correction, so they move as one.
+                    val roomNameStyle = MaterialTheme.typography.bodyLarge.copy(fontFamily = FontFamily.Monospace)
+                    val detailStyle = MaterialTheme.typography.bodySmall
                     ListItem(
                         headlineContent = {
                             Text(
                                 room.name.ifBlank { room.id.take(8) },
-                                style = MaterialTheme.typography.bodyLarge.copy(fontFamily = FontFamily.Monospace),
-                                maxLines = 1, overflow = TextOverflow.Ellipsis
+                                style = roomNameStyle,
+                                maxLines = 1, overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.typeCentered(firstLine = roomNameStyle, lastLine = detailStyle)
                             )
                         },
                         supportingContent = {
-                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                modifier = Modifier.typeCentered(firstLine = roomNameStyle, lastLine = detailStyle)
+                            ) {
                                 Text(
                                     if (room.isActive) stringResource(R.string.admin_room_status_live) else stringResource(R.string.admin_room_status_idle),
                                     color = if (room.isActive) MaterialTheme.colorScheme.primary
                                     else MaterialTheme.colorScheme.onSurfaceVariant,
-                                    style = MaterialTheme.typography.bodySmall
+                                    style = detailStyle
                                 )
                                 Text(
                                     stringResource(R.string.admin_room_maxParticipants, room.maxParticipants),
-                                    style = MaterialTheme.typography.bodySmall
+                                    style = detailStyle
                                 )
                             }
                         },
@@ -639,7 +662,12 @@ private fun AdminSettingsContent(
                             )
                         )
                         ListItem(
-                            headlineContent = { Text(stringResource(R.string.admin_setting_allowRegistrations)) },
+                            headlineContent = {
+                                Text(
+                                    stringResource(R.string.admin_setting_allowRegistrations),
+                                    modifier = Modifier.typeCentered(LocalTextStyle.current)
+                                )
+                            },
                             trailingContent = {
                                 Switch(
                                     checked = s.registrationEnabled,
@@ -664,7 +692,12 @@ private fun AdminSettingsContent(
                         )
                         HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
                         ListItem(
-                            headlineContent = { Text(stringResource(R.string.admin_setting_requireInviteToken)) },
+                            headlineContent = {
+                                Text(
+                                    stringResource(R.string.admin_setting_requireInviteToken),
+                                    modifier = Modifier.typeCentered(LocalTextStyle.current)
+                                )
+                            },
                             trailingContent = {
                                 Switch(
                                     checked = s.tokenRegistrationOnly,
@@ -706,9 +739,13 @@ private fun AdminSettingsContent(
                                     .padding(12.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
+                                val tokenStyle = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace)
                                 Text(
-                                    tok.token, modifier = Modifier.weight(1f),
-                                    style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
+                                    tok.token,
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .typeCentered(tokenStyle),
+                                    style = tokenStyle,
                                     maxLines = 1, overflow = TextOverflow.Ellipsis
                                 )
                                 IconButton(onClick = { scope.launch { clipboard.setPlainText(clipLabel, tok.token) } }) {
@@ -758,20 +795,25 @@ private fun AdminSettingsContent(
 
                     Spacer(modifier = Modifier.height(8.dp))
 
+                    val tokenStyle = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace)
+                    val statusStyle = MaterialTheme.typography.bodySmall.copy(textDirection = TextDirection.Ltr)
                     tokens.forEach { tok ->
+                        // Both lines take the block's correction, so they move as one.
                         ListItem(
                             headlineContent = {
                                 Text(
                                     tok.token.take(16) + "…",
-                                    style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace)
+                                    style = tokenStyle,
+                                    modifier = Modifier.typeCentered(firstLine = tokenStyle, lastLine = statusStyle)
                                 )
                             },
                             supportingContent = {
                                 Text(
                                     if (tok.used) stringResource(R.string.admin_token_status_used) else tok.email ?: stringResource(R.string.admin_token_status_noEmail),
-                                    style = MaterialTheme.typography.bodySmall.copy(textDirection = TextDirection.Ltr),
+                                    style = statusStyle,
                                     color = if (tok.used) MaterialTheme.colorScheme.error
-                                    else MaterialTheme.colorScheme.onSurfaceVariant
+                                    else MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.typeCentered(firstLine = tokenStyle, lastLine = statusStyle)
                                 )
                             },
                             leadingContent = {

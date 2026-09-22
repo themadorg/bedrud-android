@@ -872,7 +872,11 @@ private fun RoomsHeaderTitle(serverName: String?, onClick: () -> Unit) {
             text = titleText,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.weight(1f, fill = false),
+            // Corrected at the server name's size, the run that sets this line's height, so the
+            // header sits where the other tabs' single-style titles do.
+            modifier = Modifier
+                .weight(1f, fill = false)
+                .typeCentered(MaterialTheme.typography.headlineSmall),
         )
         Icon(
             Icons.Default.ExpandMore,
@@ -988,7 +992,8 @@ private fun FilterRow(
                         when (filter) {
                             RoomFilter.ALL -> stringResource(R.string.dashboard_filter_all)
                             RoomFilter.MY_ROOMS -> stringResource(R.string.dashboard_filter_myRooms)
-                        }
+                        },
+                        modifier = Modifier.typeCentered(LocalTextStyle.current)
                     )
                 },
                 // Canonical M3 filter-chip affordance: a leading check on the active chip only, so
@@ -1054,18 +1059,7 @@ private fun RoomCard(
 
     SwipeableRoomRow(action = swipeAction, modifier = modifier.fillMaxWidth()) {
         RoomCardScaffold(onClick = onJoin) {
-            Column(modifier = Modifier.weight(1f)) {
-                RoomTitleLine(title = title)
-                if (metaText != null) {
-                    Text(
-                        text = metaText,
-                        style = MaterialTheme.typography.labelSmall,
-                        color = statusTint,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                }
-            }
+            RoomCardText(title = title, status = metaText, statusColor = statusTint)
 
             if (onSettings != null) {
                 IconButton(onClick = onSettings, modifier = Modifier.size(Dimens.minTouchTarget)) {
@@ -1120,18 +1114,7 @@ private fun RecentRoomCard(
 
     SwipeableRoomRow(action = swipeAction, modifier = modifier.fillMaxWidth()) {
         RoomCardScaffold(onClick = onJoin) {
-            Column(modifier = Modifier.weight(1f)) {
-                RoomTitleLine(title = recent.roomName)
-                if (presence != null) {
-                    Text(
-                        text = presence.text,
-                        style = MaterialTheme.typography.labelSmall,
-                        color = statusTint,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                }
-            }
+            RoomCardText(title = recent.roomName, status = presence?.text, statusColor = statusTint)
 
             TrailingChevron()
         }
@@ -1189,19 +1172,43 @@ private fun RoomCardScaffold(
     }
 }
 
-/** Line 1 of a room card: the room name in monospace. */
+/**
+ * A room card's text: the room name in monospace and, when anything is known, a second line saying
+ * whether it is live or how long since it was. The two are centred on the card's trailing icons as
+ * one block.
+ */
 @Composable
-private fun RoomTitleLine(title: String) {
-    Text(
-        text = title,
-        style = MaterialTheme.typography.bodyLarge.copy(
-            fontFamily = FontFamily.Monospace,
-            textDirection = TextDirection.Ltr,
-        ),
-        maxLines = 1,
-        overflow = TextOverflow.Ellipsis,
-        modifier = Modifier.fillMaxWidth(),
+private fun RowScope.RoomCardText(title: String, status: String?, statusColor: Color) {
+    val titleStyle = MaterialTheme.typography.bodyLarge.copy(
+        fontFamily = FontFamily.Monospace,
+        textDirection = TextDirection.Ltr,
     )
+    val statusStyle = MaterialTheme.typography.labelSmall
+    Column(
+        modifier = Modifier
+            .weight(1f)
+            .typeCentered(
+                firstLine = titleStyle,
+                lastLine = if (status != null) statusStyle else titleStyle,
+            ),
+    ) {
+        Text(
+            text = title,
+            style = titleStyle,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        if (status != null) {
+            Text(
+                text = status,
+                style = statusStyle,
+                color = statusColor,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+    }
 }
 
 @Composable
