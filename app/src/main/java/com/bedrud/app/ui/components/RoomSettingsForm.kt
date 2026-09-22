@@ -18,6 +18,7 @@ import androidx.compose.ui.unit.dp
 import com.bedrud.app.R
 import com.bedrud.app.models.RoomSettings
 import com.bedrud.app.ui.theme.Dimens
+import com.bedrud.app.ui.theme.typeCentered
 
 /**
  * The room-level settings toggles shared by the dashboard's settings dialog and the in-meeting
@@ -95,11 +96,14 @@ private fun RoomSettingToggleRow(
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
+        val labelStyle = MaterialTheme.typography.bodyLarge
         Text(
             text = label,
             color = contentColor,
-            style = MaterialTheme.typography.bodyLarge,
-            modifier = Modifier.weight(1f)
+            style = labelStyle,
+            modifier = Modifier
+                .weight(1f)
+                .typeCentered(labelStyle)
         )
         Switch(checked = checked, onCheckedChange = onCheckedChange, enabled = enabled)
     }
