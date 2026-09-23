@@ -5,27 +5,25 @@ import org.junit.Test
 
 class VoiceReachMonitorTest {
 
-    private val loud = VoiceReachMonitor.TalkingLevel + 0.1f
-    private val quiet = VoiceReachMonitor.TalkingLevel - 0.1f
     private val causeGrace = VoiceReachMonitor.CauseGraceMillis
     private val reachGrace = VoiceReachMonitor.ReachGraceMillis
 
     private fun VoiceReachMonitor.at(
         nowMillis: Long,
-        micLevel: Float = loud,
+        isSpeech: Boolean = true,
         isMicEnabled: Boolean = true,
         isPushToTalk: Boolean = false,
         isGateOpen: Boolean = true,
         roomHearsMe: Boolean = false,
         roomHasOthers: Boolean = true,
-    ) = sample(nowMillis, micLevel, isMicEnabled, isPushToTalk, isGateOpen, roomHearsMe, roomHasOthers)
+    ) = sample(nowMillis, isSpeech, isMicEnabled, isPushToTalk, isGateOpen, roomHearsMe, roomHasOthers)
 
     @Test
     fun `silence never raises anything`() {
         val monitor = VoiceReachMonitor()
 
-        assertEquals(MeetingVoiceAlert.None, monitor.at(0, micLevel = quiet))
-        assertEquals(MeetingVoiceAlert.None, monitor.at(10_000, micLevel = quiet))
+        assertEquals(MeetingVoiceAlert.None, monitor.at(0, isSpeech = false))
+        assertEquals(MeetingVoiceAlert.None, monitor.at(10_000, isSpeech = false))
     }
 
     @Test
@@ -41,7 +39,7 @@ class VoiceReachMonitorTest {
         monitor.at(0, isMicEnabled = false)
         // Quiet for less than the hold, then loud again: the run continues rather than resetting,
         // so a normal sentence still reaches the grace period.
-        monitor.at(causeGrace / 2, micLevel = quiet, isMicEnabled = false)
+        monitor.at(causeGrace / 2, isSpeech = false, isMicEnabled = false)
 
         assertEquals(MeetingVoiceAlert.Muted, monitor.at(causeGrace, isMicEnabled = false))
     }
@@ -96,7 +94,7 @@ class VoiceReachMonitorTest {
     fun `going quiet restarts the wait`() {
         val monitor = VoiceReachMonitor()
         monitor.at(0)
-        monitor.at(reachGrace - 1, micLevel = quiet)
+        monitor.at(reachGrace - 1, isSpeech = false)
 
         assertEquals(MeetingVoiceAlert.None, monitor.at(reachGrace))
         assertEquals(MeetingVoiceAlert.NotReachingRoom, monitor.at(2 * reachGrace))
@@ -131,7 +129,7 @@ class VoiceReachMonitorTest {
         val afterHold = causeGrace + VoiceReachMonitor.QuietHoldMillis
         assertEquals(
             MeetingVoiceAlert.None,
-            monitor.at(afterHold, micLevel = quiet, isMicEnabled = false),
+            monitor.at(afterHold, isSpeech = false, isMicEnabled = false),
         )
     }
 
@@ -143,7 +141,7 @@ class VoiceReachMonitorTest {
 
         assertEquals(
             MeetingVoiceAlert.Muted,
-            monitor.at(causeGrace + 200, micLevel = quiet, isMicEnabled = false),
+            monitor.at(causeGrace + 200, isSpeech = false, isMicEnabled = false),
         )
     }
 
@@ -151,10 +149,10 @@ class VoiceReachMonitorTest {
     fun `nothing is reported while you are quiet from the start`() {
         val monitor = VoiceReachMonitor()
 
-        assertEquals(MeetingVoiceAlert.None, monitor.at(0, micLevel = quiet, isMicEnabled = false))
+        assertEquals(MeetingVoiceAlert.None, monitor.at(0, isSpeech = false, isMicEnabled = false))
         assertEquals(
             MeetingVoiceAlert.None,
-            monitor.at(10 * reachGrace, micLevel = quiet, isMicEnabled = false),
+            monitor.at(10 * reachGrace, isSpeech = false, isMicEnabled = false),
         )
     }
 
