@@ -304,6 +304,29 @@ Release builds use minification + resource shrinking. Rules in `app/proguard-rul
 
 Parsed in `BedrudURLParser`, handled in `MainActivity.handleDeepLink()`.
 
+A room link tapped **in the chat** takes a different path, because it always arrives during a call
+and telecom refuses to place a second call over an unholdable one. `resolveChatLink`
+(`core/deeplink/ChatLinkTarget.kt`) decides where it leads — a page, the room this call is already
+in, or a room on one of the reader's own servers, matched by whole base URL as the dashboard's quick
+join does — and a room only opens after the reader confirms leaving this call. The call then ends
+through `CallService.stop`, the same teardown as the leave button; the app switches server if the room
+is on another one; and `navigateToMeeting` opens the room in the old one's place.
+
+The next room's screen appears while the call being left is still tearing down, so two things must
+hold for anything that touches the meeting screen:
+
+- A meeting screen counts only **its own room's** connection (`isOwnConnection`). On one server every
+  meeting screen reads the same `RoomManager`, so the room just left still reports `CONNECTED` for a
+  moment; counted as the new screen's own, its disconnect would read as the new call ending.
+- Leaving pops **only its own back-stack entry**. The room just left stays composed while it animates
+  out, and when its disconnect lands it asks to leave; matched by route rather than by entry, that
+  would close the room that was just opened.
+
+Nothing waits explicitly for the old call to end. On an emulator its service was destroyed and its
+telecom call disconnected before the next room's join request had even been sent, both on the same
+server and across servers. If that ever stops holding, the symptom is telecom refusing the new call
+as "unholdable", and the fix is to wait for the old one before joining.
+
 ## Skills Reference
 
 | Skill                         | When to Use                                                             | Example Scenarios for Bedrud                                                                          |
