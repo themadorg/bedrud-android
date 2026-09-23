@@ -404,6 +404,7 @@ class RoomManager(
 
                 _voiceAlert.value = voiceReachMonitor.sample(
                     nowMillis = now,
+                    micLevel = micLevel,
                     isSpeech = isSpeech,
                     isMicEnabled = isMicEnabled,
                     isPushToTalk = _inputMode.value == MeetingInputMode.PUSH_TO_TALK,
