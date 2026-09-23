@@ -8,14 +8,11 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
+// Entries saved by older versions also carry the server's name and colour, from when the dashboard
+// showed recents from every server. Gson skips fields the class no longer has, so they still load.
 data class RecentRoom(
     val roomName: String,
     val instanceId: String,
-    val instanceName: String,
-    // The server's accent color (`#RRGGBB`), captured at join time so a cross-server card stays
-    // correctly tinted even after that instance is removed. Nullable for entries persisted before
-    // this field existed — the UI falls back to a live instance lookup, then a neutral color.
-    val instanceColorHex: String? = null,
     val joinedAt: Long = System.currentTimeMillis(),
     val leftAt: Long? = null,
 )
@@ -29,20 +26,13 @@ class RecentRoomsStore(private val prefs: SharedPreferences) {
     private val _rooms = MutableStateFlow(loadRooms())
     val rooms: StateFlow<List<RecentRoom>> = _rooms.asStateFlow()
 
-    fun add(
-        roomName: String,
-        instanceId: String,
-        instanceName: String,
-        instanceColorHex: String? = null,
-    ) {
+    fun add(roomName: String, instanceId: String) {
         val trimmed = roomName.trim()
         if (trimmed.isBlank()) return
 
         val entry = RecentRoom(
             roomName = trimmed,
             instanceId = instanceId,
-            instanceName = instanceName.ifBlank { instanceId },
-            instanceColorHex = instanceColorHex,
             joinedAt = System.currentTimeMillis(),
         )
         val updated = listOf(entry) +
