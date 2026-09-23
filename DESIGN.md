@@ -76,7 +76,7 @@ had no weight hierarchy at all.
 resolve through the platform's fallback chain. That is not a regression — those three resolved the
 same way before Vazirmatn became the base font — but it does mean the app draws a different
 typeface for them than for everyone else, and on a device whose owner has themed the system font
-it will not even be the same one twice. Verified rendering cleanly on a Samsung SM-S928B in all
+it will not even be the same one twice. Verified rendering cleanly on a physical device in all
 three; the open question is only whether to bundle a companion face. Tracked in #118.
 
 **Rejected: keeping the platform sans for Latin.** `Typeface.CustomFallbackBuilder` (API 29+) can
