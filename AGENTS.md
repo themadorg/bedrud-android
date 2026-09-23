@@ -304,6 +304,24 @@ Release builds use minification + resource shrinking. Rules in `app/proguard-rul
 
 Parsed in `BedrudURLParser`, handled in `MainActivity.handleDeepLink()`.
 
+No way into a meeting navigates to it directly. A deep link, the call notification, a call still
+running when the activity is recreated, and every join from `MainScreen` (a room card, a new room,
+the quick-join box, including its switch to another server) all hold the room in `PendingRoom`
+(`core/rooms/PendingRoom.kt`), together with the server that was active when it was asked for.
+`BedrudNavHost` opens it once somebody is signed in on that server, and that is the only place the
+app navigates to `Routes.MEETING`.
+
+The reason is the sign-in in between. A room asked for on a server with nobody signed in, most
+often right after switching to it, sends the auth router to `LOGIN` with `popUpTo(0)`, which clears
+the back stack; a room kept only as a navigation entry was lost there, and the reader landed on
+the dashboard after signing in. Held outside the stack, it survives the sign-in and opens after it.
+It is opened only once, and dropped rather than opened when another server becomes active first:
+backing out of sign-in to another server means the reader has gone somewhere else.
+
+The effect that opens it re-runs on the collected sign-in state but decides on the live one
+(`instanceManager.authManager.value`). For a frame after a server switch the collected state is
+still the old server's, and deciding on it opened the room while nobody was signed in yet.
+
 ## Skills Reference
 
 | Skill                         | When to Use                                                             | Example Scenarios for Bedrud                                                                          |
