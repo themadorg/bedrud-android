@@ -129,12 +129,6 @@ fun MainScreen(
                 // Rooms=0, Profile=1 — the header avatar is a shortcut to the Profile tab.
                 onOpenProfile = { selectedTab = PROFILE_TAB_INDEX },
                 onNavigateToAddInstance = onNavigateToAddInstance,
-                onJoinRecent = { recent ->
-                    if (recent.instanceId != instanceManager.store.activeInstanceId.value) {
-                        instanceManager.switchTo(recent.instanceId)
-                    }
-                    onJoinRoom(recent.roomName)
-                },
                 instanceManager = instanceManager,
             )
             1 -> ProfileContent(
