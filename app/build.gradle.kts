@@ -276,6 +276,8 @@ dependencies {
     testImplementation("org.json:json:20260814")
     androidTestImplementation(composeBom)
     androidTestImplementation("androidx.test.ext:junit:1.3.0")
+    // For @SdkSuppress, which lint requires over @RequiresApi on a test that needs a newer API.
+    androidTestImplementation("androidx.test:runner:1.7.0")
     androidTestImplementation("androidx.compose.ui:ui-test-junit4")
     debugImplementation("androidx.compose.ui:ui-tooling")
     debugImplementation("androidx.compose.ui:ui-test-manifest")
