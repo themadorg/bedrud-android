@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.text.KeyboardActions
@@ -198,7 +199,7 @@ fun LoginScreen(
             },
             modifier = Modifier
                 .fillMaxWidth()
-                .height(Dimens.buttonHeightLarge)
+                .heightIn(min = Dimens.buttonHeightLarge)
         )
         Spacer(Modifier.height(Dimens.space12))
         BedrudButton(
@@ -216,7 +217,7 @@ fun LoginScreen(
             },
             modifier = Modifier
                 .fillMaxWidth()
-                .height(Dimens.buttonHeightLarge)
+                .heightIn(min = Dimens.buttonHeightLarge)
         )
         if (!passkeyEnabled) MethodDisabledHint()
 
@@ -276,7 +277,7 @@ fun LoginScreen(
             loading = loadingAction == HubAction.GUEST,
             modifier = Modifier
                 .fillMaxWidth()
-                .height(Dimens.buttonHeightLarge)
+                .heightIn(min = Dimens.buttonHeightLarge)
         )
         if (!guestEnabled) MethodDisabledHint()
 
