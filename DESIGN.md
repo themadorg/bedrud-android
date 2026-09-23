@@ -15,7 +15,7 @@ so there are no magic values scattered through screens.
 | `Color.kt`          | Reference palette — the raw rose/teal/neutral/red/amber tonal ramps                | Never read directly from UI             |
 | `Theme.kt`          | `BedrudTheme` + the light/dark `ColorScheme` role mapping (full M3 role set)       | UI reads `MaterialTheme.colorScheme.*`  |
 | `ExtendedColors.kt` | Non-M3 semantic colors (e.g. `warning`) via `LocalBedrudColors`                    | UI reads `MaterialTheme.bedrudColors.*` |
-| `Type.kt`           | `Typography` (M3 type scale) + RTL font families                                   | UI reads `MaterialTheme.typography.*`   |
+| `Type.kt`           | `Typography` (M3 type scale) + the one font family and its fallback chain          | UI reads `MaterialTheme.typography.*`   |
 | `Shape.kt`          | `BedrudShapes` (M3 scale) + `BedrudShapeTokens` (semantic: card/field/button/pill) | No raw `RoundedCornerShape(n.dp)`       |
 | `Dimens.kt`         | Spacing scale (4dp grid) + component sizes/heights/icon sizes                      | No raw `n.dp` for spacing/sizing        |
 | `Elevation.kt`      | Tonal elevation levels                                                             | Surfaces stay low (outline-first)       |
@@ -54,9 +54,9 @@ via `BedrudTheme(dynamicColor = true)`.
 ## Typography (`Type.kt`)
 
 Material 3 type scale on **Vazirmatn, applied unconditionally** — the typeface is never selected
-from the interface language. It covers the Latin and Arabic scripts, which is every locale the app
-ships except Russian, Japanese and Chinese; those fall to the platform's fallback chain (see the
-end of this section, tracked in #118).
+from the interface language. It covers the Latin and Arabic scripts. Cyrillic and Greek come from a
+bundled cut of Roboto that Android falls back to letter by letter, and Japanese and Chinese from the
+platform (see the end of this section).
 
 The font used to be picked from `AppLanguage`: Persian got Shabnam, other RTL languages got
 Vazirmatn, everyone else got `FontFamily.SansSerif`. That confuses the language someone *reads*
@@ -72,12 +72,33 @@ axis rather than four files — which is also what Shabnam could not do: it was 
 upstream, and registered under four weights that all loaded the same Regular face, so Persian UI
 had no weight hierarchy at all.
 
-**The boundary.** Vazirmatn carries no Cyrillic, Greek or CJK, so Russian, Japanese and Chinese
-resolve through the platform's fallback chain. That is not a regression — those three resolved the
-same way before Vazirmatn became the base font — but it does mean the app draws a different
-typeface for them than for everyone else, and on a device whose owner has themed the system font
-it will not even be the same one twice. Verified rendering cleanly on a physical device in all
-three; the open question is only whether to bundle a companion face. Tracked in #118.
+**Cyrillic and Greek: a bundled companion.** Vazirmatn carries neither, so Russian, and a Cyrillic
+or Greek name in any interface language, used to take whatever the platform fell back to: stock
+Roboto on one device, an owner's themed system font on the next. From API 29 the app builds its own
+fallback chain with `Typeface.CustomFallbackBuilder` — Vazirmatn, then
+`res/font/roboto_cyrillic_greek.ttf`, then the platform's `sans-serif` — and Android walks it per
+character, so mixed-script text takes each letter from the face that has it.
+
+- **Roboto, not Noto Sans.** Vazirmatn's Latin already is Roboto, so a Latin word inside Russian
+  text stays in one design, and a stock device draws Russian in the same design as before. Noto
+  Sans is a different design, and its variable file is four times the size of Roboto's.
+- **Cut down by [`tools/fonts/build-companion-font.sh`](tools/fonts/build-companion-font.sh)** from
+  Google Fonts' variable Roboto, pinned to one commit and checked against its hash: width fixed at
+  normal, weight limited to 400–700, and only Cyrillic, Cyrillic Supplement, Greek and the combining
+  marks Roboto has. The marks matter because Android keeps a mark in its letter's font only when
+  that font carries it; without them a stress mark on a Cyrillic vowel is drawn by Vazirmatn instead.
+  A rerun produces a byte-identical file. It is 109,404 bytes and adds 66,212 to the APK.
+- **Weights stay real.** Each of the scale's four weights is its own chain, with both fonts read at
+  the same `wght`. Handing Compose a single platform typeface through `FontFamily(Typeface)` does not
+  work: Compose returns that typeface unchanged for every weight it is asked for.
+- **Below API 29** Android offers no way to add an app font to the fallback chain, so Android 9 keeps
+  Vazirmatn alone and resolves Cyrillic and Greek through the platform, as before.
+- **Japanese and Chinese stay on the platform.** Google Fonts' variable Noto Sans is 9.6 MB for
+  Japanese and 17.8 MB for Simplified Chinese — too much for two locales in an APK this size. Those
+  two still take the device's own face, and follow a themed system font.
+- **Tested from both ends.** `TypeTest` checks the bundled file's coverage and weight axis in CI.
+  `TypeRenderTest` (instrumented, API 31+) asks Android's text shaper which font drew each glyph, at
+  which weight.
 
 **Rejected: keeping the platform sans for Latin.** `Typeface.CustomFallbackBuilder` (API 29+) can
 leave the system font drawing Latin and hand Vazirmatn only the Arabic-script runs, which would
