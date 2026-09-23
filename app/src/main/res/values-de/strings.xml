@@ -97,6 +97,10 @@
   <string name="meeting_button_goBack">Zurück</string>
   <string name="meeting_dialog_kickTitle">Teilnehmer kicken</string>
   <string name="meeting_dialog_kickMessage">Sind Sie sicher, dass Sie <xliff:g id="participantName" example="John Doe">%1$s</xliff:g> aus dem Raum kicken möchten?</string>
+  <string name="meeting_dialog_followRoomTitle">Diesen Anruf verlassen?</string>
+  <string name="meeting_dialog_followRoomMessage">Sie verlassen <xliff:g id="currentRoom" example="obd-hzpi-dfv">%1$s</xliff:g> und treten <xliff:g id="nextRoom" example="oqc-qpka-bvw">%2$s</xliff:g> bei.</string>
+  <string name="meeting_dialog_followRoomOnServerMessage">Sie verlassen <xliff:g id="currentRoom" example="obd-hzpi-dfv">%1$s</xliff:g> und treten <xliff:g id="nextRoom" example="oqc-qpka-bvw">%2$s</xliff:g> auf <xliff:g id="serverName" example="Bedrud">%3$s</xliff:g> bei.</string>
+  <string name="meeting_button_leaveAndJoin">Verlassen und beitreten</string>
   <string name="meeting_action_mute">Stummschalten</string>
   <string name="meeting_action_unmute">Stummschaltung aufheben</string>
   <string name="meeting_action_disableVideo">Video deaktivieren</string>
@@ -137,6 +141,7 @@
   <string name="meeting_chat_reactions">Reaktionen</string>
   <string name="meeting_chat_shareChooser">Nachricht teilen</string>
   <string name="meeting_chat_linkUnopenable">Keine App kann diesen Link öffnen</string>
+  <string name="meeting_chat_linkCurrentRoom">Sie sind bereits in diesem Raum</string>
   <plurals name="meeting_chat_reactionCount">
     <item quantity="one">%1$d Reaktion</item>
     <item quantity="other">%1$d Reaktionen</item>

@@ -374,7 +374,8 @@ fun BedrudNavHost(
                     if (navController.currentBackStackEntry?.id == backStackEntry.id) {
                         navController.popBackStack()
                     }
-                }
+                },
+                onJoinRoom = { nextRoomName -> navController.navigateToMeeting(nextRoomName) },
             )
         }
     }

@@ -95,6 +95,10 @@
   <string name="meeting_button_goBack">بازگشت</string>
   <string name="meeting_dialog_kickTitle">اخراج شرکت‌کننده</string>
   <string name="meeting_dialog_kickMessage">آیا مطمئن هستید که می‌خواهید <xliff:g id="participantName" example="John Doe">%1$s</xliff:g> را از اتاق اخراج کنید؟</string>
+  <string name="meeting_dialog_followRoomTitle">از این تماس خارج می‌شوید؟</string>
+  <string name="meeting_dialog_followRoomMessage">از <xliff:g id="currentRoom" example="obd-hzpi-dfv">%1$s</xliff:g> خارج می‌شوید و به <xliff:g id="nextRoom" example="oqc-qpka-bvw">%2$s</xliff:g> می‌پیوندید.</string>
+  <string name="meeting_dialog_followRoomOnServerMessage">از <xliff:g id="currentRoom" example="obd-hzpi-dfv">%1$s</xliff:g> خارج می‌شوید و در <xliff:g id="serverName" example="Bedrud">%3$s</xliff:g> به <xliff:g id="nextRoom" example="oqc-qpka-bvw">%2$s</xliff:g> می‌پیوندید.</string>
+  <string name="meeting_button_leaveAndJoin">خروج و پیوستن</string>
   <string name="meeting_action_mute">قطع صدا</string>
   <string name="meeting_action_unmute">فعال کردن صدا</string>
   <string name="meeting_action_disableVideo">غیرفعال کردن ویدئو</string>
@@ -135,6 +139,7 @@
   <string name="meeting_chat_reactions">واکنش‌ها</string>
   <string name="meeting_chat_shareChooser">هم‌رسانی پیام</string>
   <string name="meeting_chat_linkUnopenable">هیچ برنامه‌ای نمی‌تواند آن پیوند را باز کند</string>
+  <string name="meeting_chat_linkCurrentRoom">شما هم‌اکنون در این اتاق هستید</string>
   <plurals name="meeting_chat_reactionCount">
     <item quantity="one">%1$d واکنش</item>
     <item quantity="other">%1$d واکنش</item>

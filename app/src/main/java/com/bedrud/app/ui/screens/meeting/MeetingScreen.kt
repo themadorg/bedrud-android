@@ -63,16 +63,19 @@ import com.bedrud.app.core.api.parseApiErrorMessage
 import com.bedrud.app.core.call.CallService
 import com.bedrud.app.core.toUserMessage
 import com.bedrud.app.core.deeplink.BedrudURLParser
+import com.bedrud.app.core.deeplink.ChatLinkTarget
+import com.bedrud.app.core.deeplink.resolveChatLink
 import com.bedrud.app.core.instance.InstanceManager
 import com.bedrud.app.core.recent.RecentRoomsStore
 import com.bedrud.app.core.rooms.JoinFailureRelay
 import com.bedrud.app.core.toUserMessage
+import com.bedrud.app.ui.components.BedrudButtonVariant
 import com.bedrud.app.ui.components.BedrudScaffoldContentInsets
 import com.bedrud.app.ui.components.BedrudSnackbarHost
+import com.bedrud.app.ui.components.ConfirmDialog
 import com.bedrud.app.ui.theme.BedrudShapeTokens
 import com.bedrud.app.ui.theme.Dimens
 import com.bedrud.app.ui.theme.Motion
-import com.bedrud.app.ui.util.hostOf
 import com.bedrud.app.ui.util.setPlainText
 import com.bedrud.app.core.livekit.ConnectionState
 import com.bedrud.app.core.livekit.ParticipantMetadata
@@ -114,6 +117,8 @@ internal fun isOwnConnection(state: ConnectionState, connectedRoomName: String?,
 fun MeetingScreen(
     roomName: String,
     onLeave: () -> Unit,
+    // Opens another room in this one's place, once this call has been left for it.
+    onJoinRoom: (String) -> Unit,
     instanceManager: InstanceManager = koinInject(),
     pipStateHolder: PipStateHolder = koinInject(),
     settingsStore: SettingsStore = koinInject(),
@@ -125,10 +130,10 @@ fun MeetingScreen(
     val authManager = instanceManager.authManager.collectAsState().value
     val currentUser by (authManager?.currentUser ?: kotlinx.coroutines.flow.MutableStateFlow(null)).collectAsState()
     val serverURL = instanceManager.store.activeInstance?.serverURL.orEmpty()
-    // Every server this person has added, by host. A room link on one of them opens in the app
-    // rather than the website; anything else is somebody else's page and goes to a browser.
+    // Every server this person has added. A room link on one of them is joined in the app rather
+    // than opened as a website; anything else is somebody else's page and goes to a browser.
     val instances by instanceManager.store.instances.collectAsState()
-    val knownHosts = remember(instances) { instances.mapNotNull { hostOf(it.serverURL) }.toSet() }
+    val activeInstanceId by instanceManager.store.activeInstanceId.collectAsState()
     val accessToken = authManager?.getAccessToken()
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -251,6 +256,8 @@ fun MeetingScreen(
 
     // Leave/end dialog
     var showLeaveDialog by remember { mutableStateOf(false) }
+    // A room somebody linked in the chat, waiting on the reader to agree to leave this call for it.
+    var pendingRoomLink by remember { mutableStateOf<ChatLinkTarget.Room?>(null) }
     var showAudioSheet by remember { mutableStateOf(false) }
     var showRoomSettingsSheet by remember { mutableStateOf(false) }
     var showMoreOptionsSheet by remember { mutableStateOf(false) }
@@ -1066,7 +1073,50 @@ fun MeetingScreen(
                                         isChatBlocked -> R.string.meeting_chat_blockedByModerator
                                         else -> null
                                     },
-                                    knownHosts = knownHosts,
+                                    resolveLink = { url ->
+                                        resolveChatLink(
+                                            url = url,
+                                            servers = instances,
+                                            activeServerId = activeInstanceId,
+                                            currentRoomName = roomName,
+                                        )
+                                    },
+                                    onFollowRoom = { pendingRoomLink = it },
+                                )
+                            }
+
+                            // Following a room link ends this call, so it is asked first, naming
+                            // both rooms. Not destructive: the reader can come straight back.
+                            pendingRoomLink?.let { target ->
+                                ConfirmDialog(
+                                    title = stringResource(R.string.meeting_dialog_followRoomTitle),
+                                    message = if (target.switchesServer) {
+                                        stringResource(
+                                            R.string.meeting_dialog_followRoomOnServerMessage,
+                                            roomName,
+                                            target.roomName,
+                                            target.server.displayName,
+                                        )
+                                    } else {
+                                        stringResource(
+                                            R.string.meeting_dialog_followRoomMessage,
+                                            roomName,
+                                            target.roomName,
+                                        )
+                                    },
+                                    confirmLabel = stringResource(R.string.meeting_button_leaveAndJoin),
+                                    confirmVariant = BedrudButtonVariant.TONAL,
+                                    onConfirm = {
+                                        pendingRoomLink = null
+                                        // The same teardown as the leave button, so there is one way
+                                        // a call ends rather than two. The next room's screen opens
+                                        // while it finishes, which is why a screen only ever counts
+                                        // its own room's connection (see isOwnConnection).
+                                        CallService.stop(context)
+                                        if (target.switchesServer) instanceManager.switchTo(target.server.id)
+                                        onJoinRoom(target.roomName)
+                                    },
+                                    onDismiss = { pendingRoomLink = null },
                                 )
                             }
 

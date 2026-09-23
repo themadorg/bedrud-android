@@ -97,6 +97,10 @@
   <string name="meeting_button_goBack">Geri Dön</string>
   <string name="meeting_dialog_kickTitle">Katılımcıyı At</string>
   <string name="meeting_dialog_kickMessage"><xliff:g id="participantName" example="John Doe">%1$s</xliff:g> kişisini odadan atmak istediğinize emin misiniz?</string>
+  <string name="meeting_dialog_followRoomTitle">Bu aramadan ayrılmak istiyor musunuz?</string>
+  <string name="meeting_dialog_followRoomMessage"><xliff:g id="currentRoom" example="obd-hzpi-dfv">%1$s</xliff:g> odasından ayrılıp <xliff:g id="nextRoom" example="oqc-qpka-bvw">%2$s</xliff:g> odasına katılacaksınız.</string>
+  <string name="meeting_dialog_followRoomOnServerMessage"><xliff:g id="currentRoom" example="obd-hzpi-dfv">%1$s</xliff:g> odasından ayrılıp <xliff:g id="serverName" example="Bedrud">%3$s</xliff:g> sunucusundaki <xliff:g id="nextRoom" example="oqc-qpka-bvw">%2$s</xliff:g> odasına katılacaksınız.</string>
+  <string name="meeting_button_leaveAndJoin">Ayrıl ve katıl</string>
   <string name="meeting_action_mute">Sesi Kapat</string>
   <string name="meeting_action_unmute">Sesi Aç</string>
   <string name="meeting_action_disableVideo">Videoyu Devre Dışı Bırak</string>
@@ -137,6 +141,7 @@
   <string name="meeting_chat_reactions">Tepkiler</string>
   <string name="meeting_chat_shareChooser">Mesajı paylaş</string>
   <string name="meeting_chat_linkUnopenable">Bu bağlantıyı açabilecek bir uygulama yok</string>
+  <string name="meeting_chat_linkCurrentRoom">Zaten bu odadasınız</string>
   <plurals name="meeting_chat_reactionCount">
     <item quantity="one">%1$d tepki</item>
     <item quantity="other">%1$d tepki</item>
