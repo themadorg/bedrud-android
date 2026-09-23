@@ -101,6 +101,18 @@ as two unrelated systems rather than one.
 `buttonHeightLarge 56`, `fieldMinHeight 56`, `minTouchTarget 48`, `borderThin 1`, `borderStrong 2`,
 icon sizes `iconXs 16 · iconSm 18 · iconMd 24 · iconLg 32`, `avatar 40`, `brandMark 72`.
 
+**Text sets a floor, not a height.** A container that holds text takes a minimum height —
+`heightIn(min = …)`, or the component's own `defaultMinSize` — never a fixed `height(…)`. Text grows
+with the reader's font-size setting, up to 2× since Android 14, and a fixed box clips it: the rooms
+search field, the full-width sign-in buttons and the poll answers all did. Text fields are the
+sharpest case: M3's field pads 16dp above and below its line, so the 48dp the search field was
+pinned to left its 20sp line 16dp and cut it before the font was even raised. A growing
+container also has to hold its size while its content changes: `BedrudTextField` keeps a
+single-line field's placeholder to one line, because a hint that wrapped made the empty field
+taller than the typed one, and everything under it jumped on the first keystroke. Keep fixed
+heights for what does not scale with the font (icons, handles, slider tracks), and check a text
+container at font scale 1.0, 1.5 and 2.0.
+
 ## Elevation (`Elevation.kt`) & Motion (`Motion.kt`)
 
 Elevation is tonal and light — the app leans on outlines + tonal surfaces over shadows; most surfaces
@@ -119,8 +131,10 @@ disabled state reads as merely deselected.
 ## Components (`ui/components/`)
 
 - **`BedrudButton`** — 6 variants (PRIMARY, SECONDARY, TONAL, OUTLINE, GHOST, DESTRUCTIVE). Token-driven height
-  (`defaultMinSize(buttonHeight)`, so callers can grow it, e.g. `height(buttonHeightLarge)` for a full CTA),
-  shape (`BedrudShapeTokens.button`), and padding. Built-in `loading` state.
+  (`defaultMinSize(buttonHeight)`, so callers can grow it, e.g. `heightIn(min = buttonHeightLarge)` for a full CTA),
+  shape (`BedrudShapeTokens.button`), and padding — `space24` across, `space8` above and below; the
+  vertical half only shows once a label outgrows the minimum height, and keeps a wrapped label off
+  the edges. Built-in `loading` state.
 - **`BedrudCard` / `BedrudOutlinedCard`** — outline-first cards, tonal surface, minimal elevation.
 - **`BedrudCompactTopBar`** — compact status-bar-aware header. Takes either a `title: String` or a
   slot `title` composable (the rooms header uses the slot for its "{server} rooms" name, in a single

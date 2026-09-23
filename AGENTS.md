@@ -10,7 +10,21 @@ Kotlin + Jetpack Compose + Material 3. Single `:app` module. minSdk 28, compileS
 ./gradlew test                   # Unit tests only (src/test/)
 ```
 
-No instrumented test directory.
+Instrumented Compose tests live in `app/src/androidTest/` and run against a running emulator or
+device. CI does not run them, so run them yourself when a change touches what they cover — one
+class at a time while iterating:
+
+```bash
+./gradlew connectedDebugAndroidTest
+./gradlew connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.bedrud.app.ui.screens.dashboard.DashboardScreenTest
+```
+
+Name one class per run: a comma-separated `class=` list runs only its first class. To cover
+several, filter by `package=` instead (`…RunnerArguments.package=com.bedrud.app.ui.components`).
+
+Their method names are camelCase (`shouldLayOutPlaceholderInFullAtLargeFontScale`), not backticked
+sentences: with minSdk 28 the test APK is dexed below DEX version 040, which rejects spaces in
+method names.
 
 This repo also has its own root `Makefile` wrapping the above plus device, CI-parity and
 release steps — `make help` lists them. The two that matter most day to day:
@@ -24,7 +38,8 @@ For the single command to run before every commit, see **Verify command** under
 [Working Agreement](#working-agreement) — it folds install into the same invocation so the
 on-device pass doesn't pay Gradle's startup cost a second time.
 
-**Test stack:** JUnit 4, MockK, OkHttp MockWebServer, kotlinx-coroutines-test.
+**Test stack:** JUnit 4, MockK, OkHttp MockWebServer, kotlinx-coroutines-test; Compose UI test
+(`ui-test-junit4`) for the instrumented tests.
 **Test util:** `InMemorySharedPreferences` in `testutil/` — inject into any class taking `SharedPreferences` (InstanceStore, AuthManager). Avoid Android framework dependency.
 
 **Versioning:** there is no version number in the repo. `versionCode` comes from the CI run
@@ -211,7 +226,7 @@ assumed gone; removing it earlier signs out everyone who has not upgraded throug
 ## Key Conventions
 
 - **Design tokens:** All sizes/spacing/curves/colors/motion come from `ui/theme/` (`Dimens`, `BedrudShapeTokens`, `Elevation`, `Motion`, `MaterialTheme.colorScheme/typography/shapes`). No raw `n.dp` or hex literals in `ui/screens/**` or `ui/components/**`. See [DESIGN.md](DESIGN.md).
-- **Buttons:** Use `BedrudButton` with `BedrudButtonVariant` enum (PRIMARY, SECONDARY, OUTLINE, GHOST, DESTRUCTIVE). Height/shape/padding are token-driven (`Dimens.buttonHeight`, `BedrudShapeTokens.button`); grow via `Modifier.height(Dimens.buttonHeightLarge)` for a full CTA.
+- **Buttons:** Use `BedrudButton` with `BedrudButtonVariant` enum (PRIMARY, SECONDARY, OUTLINE, GHOST, DESTRUCTIVE). Height/shape/padding are token-driven (`Dimens.buttonHeight`, `BedrudShapeTokens.button`); grow via `Modifier.heightIn(min = Dimens.buttonHeightLarge)` for a full CTA — a floor, never a fixed `height(…)`, so a label that wraps at a large font scale grows the button instead of being clipped.
 - **Cards:** Use `BedrudCard` / `BedrudOutlinedCard` — outline-first, tonal surface, minimal elevation.
 - **Colors:** Always `MaterialTheme.colorScheme.*`. Rose (`#E11D48`) primary + teal (`#14B8A6`) tertiary on warm neutrals; the full M3 role set (light+dark) is mapped in `ui/theme/Theme.kt` from the ramps in `Color.kt`. `dynamicColor` is off by default.
 - **Serialization:** `@SerializedName` annotations on model fields (Gson). Snake_case from server ↔ camelCase in Kotlin.
