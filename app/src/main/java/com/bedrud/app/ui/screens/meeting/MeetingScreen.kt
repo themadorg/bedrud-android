@@ -99,6 +99,17 @@ private val GONE_STATUS_CODES = setOf(
     HttpURLConnection.HTTP_GONE,
 )
 
+/**
+ * Whether the room connection is this screen's own call rather than one it merely shares.
+ *
+ * Every meeting screen on a server reads the same connection. Following a room link leaves one call
+ * and opens the next room's screen straight away, while the call being left is still connected for a
+ * moment: counted as this screen's own, its disconnect a moment later would read as this call ending,
+ * and close the room that was just opened.
+ */
+internal fun isOwnConnection(state: ConnectionState, connectedRoomName: String?, roomName: String): Boolean =
+    state == ConnectionState.CONNECTED && connectedRoomName == roomName
+
 @Composable
 fun MeetingScreen(
     roomName: String,
@@ -397,9 +408,10 @@ fun MeetingScreen(
     }
 
     // Handle server-side disconnect: when connection drops after being connected, leave
+    val connectedRoomName by roomManager.roomName.collectAsState()
     var wasConnected by remember { mutableStateOf(false) }
-    LaunchedEffect(connectionState) {
-        if (connectionState == ConnectionState.CONNECTED) {
+    LaunchedEffect(connectionState, connectedRoomName) {
+        if (isOwnConnection(connectionState, connectedRoomName, roomName)) {
             wasConnected = true
         } else if (wasConnected && connectionState == ConnectionState.DISCONNECTED) {
             onLeave()
