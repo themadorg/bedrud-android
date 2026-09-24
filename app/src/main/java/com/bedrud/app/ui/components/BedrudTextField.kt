@@ -8,6 +8,7 @@ import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -26,6 +27,7 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextDirection
 import com.bedrud.app.R
 import com.bedrud.app.ui.theme.BedrudShapeTokens
+import com.bedrud.app.ui.theme.typeCentered
 
 /**
  * The app's standard single-line form field: outlined, [BedrudShapeTokens.field] corners, and
@@ -65,17 +67,19 @@ fun BedrudTextField(
     // its default bodyLarge regardless of [textStyle], so a compact field (e.g. bodyMedium) shows a
     // hint larger than the text the user types. Reuse the exact merged style for both.
     //
-    // This field deliberately takes no ink-centring correction (`typeCentered`, see TextInk.kt),
-    // although labels elsewhere in the app do. The placeholder is a `Text` this file could correct,
-    // but the value the user types is drawn inside OutlinedTextField where no modifier reaches it.
-    // Correcting the reachable half would put the hint at a different height from the text that
-    // replaces it, which is a worse fault than the one being fixed. Both halves stay uncorrected so
+    // The label is centred on its letters like every other label in the app (`typeCentered`, see
+    // TextInk.kt), in its own current style. It never shares its place with typed text: it rests
+    // in the field only while the field is empty and unfocused, and floats to the outline first.
+    //
+    // The placeholder deliberately takes no correction. It is replaced in place by the value the
+    // user types, which is drawn inside OutlinedTextField where no modifier reaches it; correcting
+    // only the placeholder would make the text jump on the first keystroke. Both stay uncorrected so
     // they agree with each other.
     val mergedTextStyle = textStyle.copy(textDirection = textDirection)
     OutlinedTextField(
         value = value,
         onValueChange = onValueChange,
-        label = label?.let { { Text(it) } },
+        label = label?.let { { Text(it, modifier = Modifier.typeCentered(LocalTextStyle.current)) } },
         placeholder = placeholder?.let { { Text(it, style = mergedTextStyle) } },
         leadingIcon = leadingIcon,
         trailingIcon = trailingIcon,
