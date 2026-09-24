@@ -378,9 +378,10 @@ private fun ServerChoiceCard(
     modifier: Modifier = Modifier,
     content: @Composable (selected: Boolean) -> Unit
 ) {
+    // Unselected, the card has the same outline as every other card in the app.
     val borderColor by animateColorAsState(
         targetValue = if (selected) MaterialTheme.colorScheme.primary
-        else MaterialTheme.colorScheme.outlineVariant,
+        else MaterialTheme.colorScheme.outline,
         animationSpec = tween(Motion.durationMedium, easing = Motion.standardEasing),
         label = "cardBorder"
     )
@@ -389,6 +390,8 @@ private fun ServerChoiceCard(
     Surface(
         modifier = modifier
             .fillMaxWidth()
+            // Clipped before selectable, so the press ripple keeps to the card's corners.
+            .clip(BedrudShapeTokens.card)
             .selectable(
                 selected = selected,
                 role = Role.RadioButton,
