@@ -243,6 +243,9 @@ fun DashboardContent(
     var isCreatingRoom by remember { mutableStateOf(false) }
     var roomToEdit by remember { mutableStateOf<UserRoomResponse?>(null) }
     var roomToDelete by remember { mutableStateOf<UserRoomResponse?>(null) }
+    var deletingRoomId by remember { mutableStateOf<String?>(null) }
+    // A room's card stays swiped out from the moment its delete is asked for until the answer is in.
+    fun isDeleteHeld(room: UserRoomResponse) = roomToDelete?.id == room.id || deletingRoomId == room.id
     var pendingServerSwitch by remember { mutableStateOf<PendingServerSwitch?>(null) }
     var activeFilter by rememberSaveable { mutableStateOf(RoomFilter.ALL) }
     var quickJoinText by remember { mutableStateOf("") }
@@ -442,6 +445,7 @@ fun DashboardContent(
             onConfirm = {
                 val deleting = room
                 roomToDelete = null
+                deletingRoomId = deleting.id
                 scope.launch {
                     val deleted = apiAction(
                         deleteRoomFailedMsg,
@@ -450,6 +454,9 @@ fun DashboardContent(
                     ) {
                         roomApi.deleteRoom(deleting.id)
                     }
+                    // Released either way: a deleted room's card is gone by the time this is read,
+                    // and a refused one slides back into place.
+                    deletingRoomId = null
                     if (deleted) {
                         // Keep refreshes from resurrecting it while the server's
                         // async delete catches up...
@@ -774,6 +781,7 @@ fun DashboardContent(
                                                 now = nowTickMs,
                                                 onJoin = { onJoinRoom(entry.room.name) },
                                                 onDelete = { roomToDelete = entry.room },
+                                                isDeleteHeld = isDeleteHeld(entry.room),
                                                 onSettings = if (entry.room.createdBy == currentUser?.id) {
                                                     { roomToEdit = entry.room }
                                                 } else null,
@@ -803,6 +811,7 @@ fun DashboardContent(
                                             now = nowTickMs,
                                             onJoin = { onJoinRoom(room.name) },
                                             onDelete = { roomToDelete = room },
+                                            isDeleteHeld = isDeleteHeld(room),
                                             onSettings = if (room.createdBy == currentUser?.id) {
                                                 { roomToEdit = room }
                                             } else null,
@@ -1024,6 +1033,8 @@ private fun RoomCard(
     now: Long,
     onJoin: () -> Unit,
     onDelete: () -> Unit,
+    // True while this room's delete is being asked about or is on its way to the server.
+    isDeleteHeld: Boolean,
     onSettings: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
@@ -1052,12 +1063,13 @@ private fun RoomCard(
             icon = Icons.Default.Delete,
             containerColor = MaterialTheme.colorScheme.errorContainer,
             contentColor = MaterialTheme.colorScheme.onErrorContainer,
-            // Route through the confirm dialog (destructive), so put the row back rather than dismiss.
-            onTriggered = { onDelete(); false },
+            // Asks first through the confirm dialog; the row stays swiped out, held by
+            // isDeleteHeld, until the question is answered.
+            onTriggered = { onDelete(); true },
         )
     } else null
 
-    SwipeableRoomRow(action = swipeAction, modifier = modifier.fillMaxWidth()) {
+    SwipeableRoomRow(action = swipeAction, held = isDeleteHeld, modifier = modifier.fillMaxWidth()) {
         RoomCardScaffold(onClick = onJoin) {
             RoomCardText(title = title, status = metaText, statusColor = statusTint)
 
@@ -1238,18 +1250,26 @@ private data class SwipeAction(
     val icon: ImageVector,
     val containerColor: Color,
     val contentColor: Color,
-    // Returns true to leave the row dismissed (instant action), false to put it back
-    // (deferred/confirmed — the action opens a dialog, so the row should still be there
-    // behind it).
+    // Returns true to leave the row swiped out, false to put it back at once. An action that asks
+    // first returns true and holds the row out through SwipeableRoomRow's `held` until answered.
     val onTriggered: () -> Boolean,
 )
 
-/** Wraps a card in a leading-edge swipe gesture that reveals [action]; no swipe when it's null. */
+/**
+ * Wraps a card in a leading-edge swipe gesture that reveals [action]; no swipe when it's null.
+ *
+ * While [held] the row stays swiped out, its action's panel showing, and when it stops being held
+ * with the row still there it slides back. An action that asks for confirmation uses this: the
+ * row stays out while the question is open, slides back if it is cancelled or refused, and is
+ * simply gone if the action goes through — rather than flying off and returning behind the dialog
+ * before the question has been answered.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun SwipeableRoomRow(
     action: SwipeAction?,
     modifier: Modifier = Modifier,
+    held: Boolean = false,
     content: @Composable () -> Unit,
 ) {
     if (action == null) {
@@ -1260,6 +1280,9 @@ private fun SwipeableRoomRow(
         positionalThreshold = { totalDistance -> totalDistance * SwipeCommitFraction },
     )
     val scope = rememberCoroutineScope()
+    LaunchedEffect(held) {
+        if (!held && state.currentValue != SwipeToDismissBoxValue.Settled) state.reset()
+    }
     SwipeToDismissBox(
         state = state,
         modifier = modifier,
