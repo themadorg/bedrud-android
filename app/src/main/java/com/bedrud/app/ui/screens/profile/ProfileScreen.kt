@@ -6,7 +6,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -55,6 +54,7 @@ import com.bedrud.app.R
 import com.bedrud.app.core.instance.InstanceManager
 import com.bedrud.app.ui.components.InitialsAvatar
 import com.bedrud.app.ui.screens.instance.InstanceSwitcherSheet
+import com.bedrud.app.ui.theme.Dimens
 import com.bedrud.app.ui.theme.OnInstanceColor
 import com.bedrud.app.ui.theme.parseInstanceColor
 import com.bedrud.app.ui.theme.rememberTypeCenteringOffset
@@ -92,17 +92,16 @@ fun ProfileContent(
             modifier = Modifier
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+                // The same page padding and card gap on every tab.
+                .padding(Dimens.screenPaddingCompact),
+            verticalArrangement = Arrangement.spacedBy(Dimens.space16)
         ) {
-            Spacer(modifier = Modifier.height(0.dp))
-
             // User section
             BedrudOutlinedCard {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(16.dp),
+                        .padding(Dimens.cardPadding),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     if (!user?.avatarUrl.isNullOrBlank()) {
@@ -122,7 +121,7 @@ fun ProfileContent(
                             contentColor = MaterialTheme.colorScheme.onPrimary
                         )
                     }
-                    Spacer(modifier = Modifier.width(16.dp))
+                    Spacer(modifier = Modifier.width(Dimens.space16))
                     // Name and email are centred on the avatar as one block. The name's own
                     // correction would not do: at 22sp over 14sp, the two lines' corrections added
                     // up put the block 4px low.
@@ -135,7 +134,7 @@ fun ProfileContent(
                     ) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            horizontalArrangement = Arrangement.spacedBy(Dimens.space8)
                         ) {
                             Text(
                                 user?.name ?: stringResource(R.string.profile_fallback_name),
@@ -166,7 +165,7 @@ fun ProfileContent(
                 Column {
                     CardSectionHeader(
                         stringResource(R.string.profile_section_server),
-                        modifier = Modifier.padding(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 8.dp)
+                        modifier = Modifier.padding(start = Dimens.cardPadding, top = Dimens.cardPadding, end = Dimens.cardPadding, bottom = Dimens.space8)
                     )
 
                     if (activeInstance != null) {
@@ -297,8 +296,6 @@ fun ProfileContent(
                     modifier = Modifier.typeCentered(signOutStyle),
                 )
             }
-
-            Spacer(modifier = Modifier.height(16.dp))
         }
     }
 }

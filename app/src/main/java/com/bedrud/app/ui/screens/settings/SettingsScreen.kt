@@ -60,6 +60,7 @@ import androidx.compose.ui.unit.dp
 import com.bedrud.app.R
 import com.bedrud.app.core.instance.InstanceManager
 import com.bedrud.app.ui.theme.BedrudShapeTokens
+import com.bedrud.app.ui.theme.Dimens
 import com.bedrud.app.ui.theme.Elevation
 import com.bedrud.app.models.ChangePasswordRequest
 import com.bedrud.app.core.api.apiAction
@@ -99,21 +100,20 @@ fun SettingsContent(
                 .fillMaxSize()
                 .padding(innerPadding)
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+                // The same page padding and card gap on every tab.
+                .padding(Dimens.screenPaddingCompact),
+            verticalArrangement = Arrangement.spacedBy(Dimens.space16)
         ) {
-            Spacer(modifier = Modifier.height(0.dp))
-
             // Appearance
             BedrudOutlinedCard {
-                Column(modifier = Modifier.padding(16.dp)) {
+                Column(modifier = Modifier.padding(Dimens.cardPadding)) {
                     CardSectionHeader(stringResource(R.string.settings_section_appearance))
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(Dimens.space12))
                     Text(
                         stringResource(R.string.settings_label_theme),
                         style = MaterialTheme.typography.bodyLarge
                     )
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(Dimens.space8))
                     SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
                         AppAppearance.entries.forEachIndexed { index, option ->
                             SegmentedButton(
@@ -131,12 +131,12 @@ fun SettingsContent(
                             }
                         }
                     }
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(Dimens.space12))
                     Text(
                         stringResource(R.string.settings_label_language),
                         style = MaterialTheme.typography.bodyLarge
                     )
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(Dimens.space8))
                     var languageExpanded by remember { mutableStateOf(false) }
                     ExposedDropdownMenuBox(
                         expanded = languageExpanded,
@@ -181,7 +181,7 @@ fun SettingsContent(
                 Column {
                     CardSectionHeader(
                         stringResource(R.string.settings_section_notifications),
-                        modifier = Modifier.padding(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 8.dp)
+                        modifier = Modifier.padding(start = Dimens.cardPadding, top = Dimens.cardPadding, end = Dimens.cardPadding, bottom = Dimens.space8)
                     )
                     ListItem(
                         headlineContent = {
@@ -230,7 +230,7 @@ fun SettingsContent(
                             },
                             colors = ListItemDefaults.colors(containerColor = Color.Transparent)
                         )
-                        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp),
+                        HorizontalDivider(modifier = Modifier.padding(horizontal = Dimens.space16),
                             color = MaterialTheme.colorScheme.outlineVariant)
                         ListItem(
                             headlineContent = {
@@ -246,7 +246,7 @@ fun SettingsContent(
                             },
                             colors = ListItemDefaults.colors(containerColor = Color.Transparent)
                         )
-                        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp),
+                        HorizontalDivider(modifier = Modifier.padding(horizontal = Dimens.space16),
                             color = MaterialTheme.colorScheme.outlineVariant)
                         ListItem(
                             headlineContent = {
@@ -269,9 +269,9 @@ fun SettingsContent(
             // Change Password
             val isLocalAccount = currentUser?.provider.let { it == null || it == "local" || it == "passkey" }
             BedrudOutlinedCard {
-                Column(modifier = Modifier.padding(16.dp)) {
+                Column(modifier = Modifier.padding(Dimens.cardPadding)) {
                     CardSectionHeader(stringResource(R.string.settings_section_security))
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(Dimens.space12))
 
                     if (!isLocalAccount) {
                         Text(stringResource(R.string.settings_password_unavailable, currentUser?.provider?.replaceFirstChar { it.uppercase() } ?: ""),
@@ -283,19 +283,19 @@ fun SettingsContent(
                             onValueChange = { currentPassword = it },
                             label = stringResource(R.string.settings_label_currentPassword)
                         )
-                        Spacer(modifier = Modifier.height(8.dp))
+                        Spacer(modifier = Modifier.height(Dimens.space8))
                         BedrudPasswordField(
                             value = newPassword,
                             onValueChange = { newPassword = it },
                             label = stringResource(R.string.settings_label_newPassword)
                         )
-                        Spacer(modifier = Modifier.height(8.dp))
+                        Spacer(modifier = Modifier.height(Dimens.space8))
                         BedrudPasswordField(
                             value = confirmPassword,
                             onValueChange = { confirmPassword = it },
                             label = stringResource(R.string.settings_label_confirmNewPassword)
                         )
-                        Spacer(modifier = Modifier.height(12.dp))
+                        Spacer(modifier = Modifier.height(Dimens.space12))
                         val passwordTooShortMessage =
                             stringResource(R.string.auth_hint_passwordMinLength, PasswordPolicy.MIN_LENGTH)
                         val passwordMismatchMessage = stringResource(R.string.auth_error_passwordMismatch)
@@ -348,7 +348,7 @@ fun SettingsContent(
                 Column {
                     CardSectionHeader(
                         stringResource(R.string.settings_section_about),
-                        modifier = Modifier.padding(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 8.dp)
+                        modifier = Modifier.padding(start = Dimens.cardPadding, top = Dimens.cardPadding, end = Dimens.cardPadding, bottom = Dimens.space8)
                     )
 
                     val packageInfo = try {
@@ -377,7 +377,7 @@ fun SettingsContent(
                     )
 
                     HorizontalDivider(
-                        modifier = Modifier.padding(horizontal = 16.dp),
+                        modifier = Modifier.padding(horizontal = Dimens.space16),
                         color = MaterialTheme.colorScheme.outlineVariant
                     )
 
@@ -401,8 +401,6 @@ fun SettingsContent(
                     )
                 }
             }
-
-            Spacer(modifier = Modifier.height(16.dp))
         }
     }
 }
