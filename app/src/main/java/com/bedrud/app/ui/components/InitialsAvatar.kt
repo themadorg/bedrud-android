@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.contentColorFor
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -23,6 +24,11 @@ import com.bedrud.app.ui.theme.inkCentered
  * [fallbackInitial] is shown when [name] is null or blank: "?" by default; callers that render
  * genuinely nameless entries (e.g. meeting participants before their name arrives) pass "" to keep
  * the circle empty, and the auth brand mark passes "B".
+ *
+ * [contentColor] defaults to the on-role Material pairs with [containerColor], so a person's
+ * avatar on primary, tertiary or secondary gets that role's own readable initial in both themes. A
+ * server's color is not a theme role, so server avatars pass
+ * [com.bedrud.app.ui.theme.OnInstanceColor].
  */
 @Composable
 fun InitialsAvatar(
@@ -31,7 +37,7 @@ fun InitialsAvatar(
     size: Dp = 36.dp,
     textStyle: TextStyle = MaterialTheme.typography.labelMedium,
     containerColor: Color = MaterialTheme.colorScheme.primary,
-    contentColor: Color = Color.White,
+    contentColor: Color = contentColorFor(containerColor),
     fallbackInitial: String = "?",
 ) {
     val initial = (name?.takeIf { it.isNotBlank() } ?: fallbackInitial).take(1).uppercase()

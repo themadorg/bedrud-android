@@ -59,6 +59,7 @@ import com.bedrud.app.ui.components.InitialsAvatar
 import com.bedrud.app.ui.screens.instance.InstanceSwitcherSheet
 import com.bedrud.app.ui.theme.BedrudRadius
 import com.bedrud.app.ui.theme.BedrudShapeTokens
+import com.bedrud.app.ui.theme.OnInstanceColor
 import com.bedrud.app.ui.theme.parseInstanceColor
 import com.bedrud.app.ui.theme.rememberTypeCenteringOffset
 import com.bedrud.app.ui.theme.typeCentered
@@ -210,7 +211,8 @@ fun ProfileContent(
                             leadingContent = {
                                 InitialsAvatar(
                                     name = activeInstance.displayName,
-                                    containerColor = parseInstanceColor(activeInstance.iconColorHex)
+                                    containerColor = parseInstanceColor(activeInstance.iconColorHex),
+                                    contentColor = OnInstanceColor,
                                 )
                             },
                             trailingContent = {

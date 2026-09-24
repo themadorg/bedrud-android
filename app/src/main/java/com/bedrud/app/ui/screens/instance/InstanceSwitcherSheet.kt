@@ -37,6 +37,7 @@ import com.bedrud.app.ui.components.BedrudSheetActionRow
 import com.bedrud.app.ui.components.BedrudSheetTitle
 import com.bedrud.app.ui.components.InitialsAvatar
 import com.bedrud.app.ui.theme.Dimens
+import com.bedrud.app.ui.theme.OnInstanceColor
 import com.bedrud.app.ui.theme.parseInstanceColor
 import com.bedrud.app.ui.theme.typeCentered
 
@@ -105,7 +106,8 @@ private fun SwitcherRow(
             InitialsAvatar(
                 name = instance.displayName,
                 size = SwitcherAvatar,
-                containerColor = parseInstanceColor(instance.iconColorHex)
+                containerColor = parseInstanceColor(instance.iconColorHex),
+                contentColor = OnInstanceColor,
             )
 
             Spacer(modifier = Modifier.width(Dimens.space16))
