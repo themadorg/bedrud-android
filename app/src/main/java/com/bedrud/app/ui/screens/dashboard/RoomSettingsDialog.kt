@@ -1,9 +1,9 @@
 package com.bedrud.app.ui.screens.dashboard
 
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -18,7 +18,6 @@ import com.bedrud.app.ui.components.BedrudButton
 import com.bedrud.app.ui.components.BedrudButtonVariant
 import com.bedrud.app.ui.components.RoomSettingsForm
 import com.bedrud.app.ui.components.withLockedToggles
-import com.bedrud.app.ui.theme.typeCentered
 
 @Composable
 fun RoomSettingsDialog(
@@ -35,9 +34,12 @@ fun RoomSettingsDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.dashboard_roomSettings_title)) },
         text = {
+            // Scrolls rather than clips when four switch rows outgrow the dialog, as they do in
+            // landscape or at a large font size.
             RoomSettingsForm(
                 isPublic = isPublic,
                 onIsPublicChange = { isPublic = it },
+                modifier = Modifier.verticalScroll(rememberScrollState()),
             )
         },
         confirmButton = {
@@ -48,15 +50,11 @@ fun RoomSettingsDialog(
             )
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
-                // Corrected like the BedrudButton beside it, or the two labels in this dialog sit
-                // at different heights.
-                val labelStyle = LocalTextStyle.current
-                Text(
-                    stringResource(R.string.common_button_cancel),
-                    modifier = Modifier.typeCentered(labelStyle),
-                )
-            }
+            BedrudButton(
+                text = stringResource(R.string.common_button_cancel),
+                variant = BedrudButtonVariant.GHOST,
+                onClick = onDismiss,
+            )
         }
     )
 }
