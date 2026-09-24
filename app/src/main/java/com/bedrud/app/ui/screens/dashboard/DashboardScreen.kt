@@ -1184,6 +1184,9 @@ private fun RoomCardScaffold(
 /** Line 1 of a room card: the room name in monospace. */
 @Composable
 private fun RoomTitleLine(title: String) {
+    // The slug is pinned LTR so its dashes keep their order, and an LTR paragraph aligns to its own
+    // left edge. Wrapping the text to its width instead of filling the row hands placement back to
+    // the parent Column, which puts it at the layout's start edge: the right one in an RTL locale.
     Text(
         text = title,
         style = MaterialTheme.typography.bodyLarge.copy(
@@ -1192,7 +1195,6 @@ private fun RoomTitleLine(title: String) {
         ),
         maxLines = 1,
         overflow = TextOverflow.Ellipsis,
-        modifier = Modifier.fillMaxWidth(),
     )
 }
 
