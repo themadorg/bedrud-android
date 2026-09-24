@@ -14,9 +14,9 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AdminPanelSettings
-import androidx.compose.material3.Button
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenuItem
+import com.bedrud.app.ui.components.BedrudButton
 import com.bedrud.app.ui.components.BedrudOutlinedCard
 import com.bedrud.app.ui.components.BedrudPasswordField
 import com.bedrud.app.ui.components.BedrudTextField
@@ -329,7 +329,8 @@ fun SettingsContent(
                         val passwordMismatchMessage = stringResource(R.string.auth_error_passwordMismatch)
                         val passwordChangedMessage = stringResource(R.string.settings_password_changeSuccess)
                         val passwordChangeFailedMessage = stringResource(R.string.settings_password_changeFailed)
-                        Button(
+                        BedrudButton(
+                            text = stringResource(R.string.settings_button_changePassword),
                             onClick = {
                                 when {
                                     !PasswordPolicy.meetsMinLength(newPassword) -> scope.launch {
@@ -360,13 +361,7 @@ fun SettingsContent(
                             },
                             enabled = currentPassword.isNotBlank() && newPassword.isNotBlank() && confirmPassword.isNotBlank(),
                             modifier = Modifier.fillMaxWidth()
-                        ) {
-                            val labelStyle = LocalTextStyle.current
-                            Text(
-                                stringResource(R.string.settings_button_changePassword),
-                                modifier = Modifier.typeCentered(labelStyle),
-                            )
-                        }
+                        )
                     }
                 }
             }

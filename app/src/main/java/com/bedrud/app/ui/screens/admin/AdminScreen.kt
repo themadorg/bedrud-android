@@ -30,9 +30,9 @@ import androidx.compose.material.icons.filled.MeetingRoom
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Token
-import androidx.compose.material3.Button
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import com.bedrud.app.ui.components.BedrudButton
 import com.bedrud.app.ui.components.BedrudOutlinedCard
 import com.bedrud.app.ui.components.BedrudSnackbarHost
 import com.bedrud.app.ui.components.BedrudTextField
@@ -830,32 +830,29 @@ private fun AdminSettingsContent(
                             textDirection = TextDirection.Ltr
                         )
                         Spacer(modifier = Modifier.width(Dimens.space8))
-                        Button(onClick = {
-                            scope.launch {
-                                val body = CreateInviteTokenRequest(
-                                    email = tokenEmail.takeIf { it.isNotBlank() },
-                                    expiresInHours = INVITE_TOKEN_LIFETIME_HOURS
-                                )
-                                val created = apiBody(
-                                    createTokenFailedMessage,
-                                    { snackbarHostState.showSnackbar(it) },
-                                    { it.toUserMessage(context) },
-                                ) {
-                                    adminApi.createInviteToken(body)
+                        BedrudButton(
+                            text = stringResource(R.string.common_button_generate),
+                            onClick = {
+                                scope.launch {
+                                    val body = CreateInviteTokenRequest(
+                                        email = tokenEmail.takeIf { it.isNotBlank() },
+                                        expiresInHours = INVITE_TOKEN_LIFETIME_HOURS
+                                    )
+                                    val created = apiBody(
+                                        createTokenFailedMessage,
+                                        { snackbarHostState.showSnackbar(it) },
+                                        { it.toUserMessage(context) },
+                                    ) {
+                                        adminApi.createInviteToken(body)
+                                    }
+                                    if (created != null) {
+                                        tokens = tokens + created
+                                        newToken = created
+                                        tokenEmail = ""
+                                    }
                                 }
-                                if (created != null) {
-                                    tokens = tokens + created
-                                    newToken = created
-                                    tokenEmail = ""
-                                }
-                            }
-                        }) {
-                            val labelStyle = LocalTextStyle.current
-                            Text(
-                                stringResource(R.string.common_button_generate),
-                                modifier = Modifier.typeCentered(labelStyle),
-                            )
-                        }
+                            },
+                        )
                     }
 
                     Spacer(modifier = Modifier.height(Dimens.space8))

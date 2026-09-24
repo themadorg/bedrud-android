@@ -19,10 +19,11 @@ import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material3.ButtonDefaults
 
 import com.bedrud.app.ui.components.BedrudBadge
+import com.bedrud.app.ui.components.BedrudButton
+import com.bedrud.app.ui.components.BedrudButtonVariant
 import com.bedrud.app.ui.components.BedrudOutlinedCard
 import com.bedrud.app.ui.components.CardSectionHeader
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import com.bedrud.app.ui.components.BedrudCompactTopBar
 import androidx.compose.material3.ListItem
@@ -197,19 +198,18 @@ fun ProfileContent(
                                 )
                             },
                             trailingContent = {
-                                FilledTonalButton(onClick = { showInstanceSwitcher = true }) {
-                                    Icon(
-                                        Icons.Default.SwapHoriz,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(18.dp)
-                                    )
-                                    Spacer(modifier = Modifier.width(4.dp))
-                                    val switchStyle = LocalTextStyle.current
-                                    Text(
-                                        stringResource(R.string.profile_button_switch),
-                                        modifier = Modifier.typeCentered(switchStyle),
-                                    )
-                                }
+                                BedrudButton(
+                                    text = stringResource(R.string.profile_button_switch),
+                                    onClick = { showInstanceSwitcher = true },
+                                    variant = BedrudButtonVariant.TONAL,
+                                    leadingIcon = {
+                                        Icon(
+                                            Icons.Default.SwapHoriz,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(Dimens.iconSm),
+                                        )
+                                    },
+                                )
                             },
                             colors = ListItemDefaults.colors(containerColor = Color.Transparent)
                         )
