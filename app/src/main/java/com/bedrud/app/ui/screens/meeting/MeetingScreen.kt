@@ -32,7 +32,6 @@ import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHostState
@@ -68,6 +67,8 @@ import com.bedrud.app.core.instance.InstanceManager
 import com.bedrud.app.core.recent.RecentRoomsStore
 import com.bedrud.app.core.rooms.JoinFailureRelay
 import com.bedrud.app.core.toUserMessage
+import com.bedrud.app.ui.components.BedrudButton
+import com.bedrud.app.ui.components.BedrudButtonVariant
 import com.bedrud.app.ui.components.BedrudScaffoldContentInsets
 import com.bedrud.app.ui.components.BedrudSnackbarHost
 import com.bedrud.app.ui.theme.BedrudShapeTokens
@@ -84,7 +85,6 @@ import com.bedrud.app.ui.screens.settings.SettingsStore
 import com.bedrud.app.models.JoinRoomRequest
 import com.bedrud.app.models.JoinRoomResponse
 import com.bedrud.app.ui.theme.inkCentered
-import com.bedrud.app.ui.theme.typeCentered
 import io.livekit.android.compose.ui.ScaleType
 import io.livekit.android.compose.ui.VideoTrackView
 import io.livekit.android.room.Room
@@ -1142,21 +1142,17 @@ fun MeetingScreen(
                             }
                         }
                         Spacer(modifier = Modifier.height(Dimens.space24))
-                        androidx.compose.material3.FilledTonalButton(
+                        BedrudButton(
+                            text = stringResource(R.string.meeting_button_goBack),
+                            variant = BedrudButtonVariant.TONAL,
                             // The service normally self-stops the instant the connection fails
                             // (see CallService); this is a guarded safety net for any case where
                             // it is still up, so we never navigate back leaving its notification.
                             onClick = {
                                 if (CallService.isRunning) CallService.stop(context)
                                 onLeave()
-                            }
-                        ) {
-                            val labelStyle = LocalTextStyle.current
-                            Text(
-                                stringResource(R.string.meeting_button_goBack),
-                                modifier = Modifier.typeCentered(labelStyle),
-                            )
-                        }
+                            },
+                        )
                     }
                 }
             }
@@ -1196,13 +1192,11 @@ private fun KickedScreen(onBack: () -> Unit) {
                 modifier = Modifier.padding(horizontal = Dimens.meetingStatePadding)
             )
             Spacer(modifier = Modifier.height(Dimens.space24))
-            androidx.compose.material3.FilledTonalButton(onClick = onBack) {
-                val labelStyle = LocalTextStyle.current
-                Text(
-                    stringResource(R.string.meeting_button_backToDashboard),
-                    modifier = Modifier.typeCentered(labelStyle),
-                )
-            }
+            BedrudButton(
+                text = stringResource(R.string.meeting_button_backToDashboard),
+                variant = BedrudButtonVariant.TONAL,
+                onClick = onBack,
+            )
         }
     }
 }

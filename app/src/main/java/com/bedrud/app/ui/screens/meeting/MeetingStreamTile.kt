@@ -15,9 +15,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ScreenShare
 import androidx.compose.material.icons.filled.Fullscreen
-import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
-import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -29,6 +27,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.text.style.TextOverflow
 import com.bedrud.app.R
+import com.bedrud.app.ui.components.BedrudButton
+import com.bedrud.app.ui.components.BedrudButtonVariant
 import com.bedrud.app.ui.theme.BedrudShapeTokens
 import com.bedrud.app.ui.theme.Dimens
 import com.bedrud.app.ui.theme.typeCentered
@@ -93,13 +93,11 @@ fun MeetingStreamTile(
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
-                    FilledTonalButton(onClick = onStopShare) {
-                        val labelStyle = LocalTextStyle.current
-                        Text(
-                            stringResource(R.string.meeting_stream_stop),
-                            modifier = Modifier.typeCentered(labelStyle),
-                        )
-                    }
+                    BedrudButton(
+                        text = stringResource(R.string.meeting_stream_stop),
+                        onClick = onStopShare,
+                        variant = BedrudButtonVariant.TONAL,
+                    )
                 }
             }
             isWatched -> {
@@ -152,13 +150,11 @@ fun MeetingStreamTile(
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
-                    FilledTonalButton(onClick = onWatch) {
-                        val labelStyle = LocalTextStyle.current
-                        Text(
-                            stringResource(R.string.meeting_stream_watch),
-                            modifier = Modifier.typeCentered(labelStyle),
-                        )
-                    }
+                    BedrudButton(
+                        text = stringResource(R.string.meeting_stream_watch),
+                        onClick = onWatch,
+                        variant = BedrudButtonVariant.TONAL,
+                    )
                 }
             }
         }

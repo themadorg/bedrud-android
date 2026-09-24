@@ -2,11 +2,7 @@ package com.bedrud.app.ui.screens.meeting
 
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -21,11 +17,12 @@ import com.bedrud.app.core.api.apiAction
 import com.bedrud.app.models.RoomSettings
 import com.bedrud.app.models.UpdateRoomSettingsRequest
 import com.bedrud.app.ui.components.BedrudBottomSheet
+import com.bedrud.app.ui.components.BedrudButton
+import com.bedrud.app.ui.components.BedrudButtonVariant
 import com.bedrud.app.ui.components.BedrudSheetTitle
 import com.bedrud.app.ui.components.RoomSettingsForm
 import com.bedrud.app.ui.components.withLockedToggles
 import com.bedrud.app.ui.theme.Dimens
-import com.bedrud.app.ui.theme.typeCentered
 import kotlinx.coroutines.launch
 
 // In-room mirror of RoomSettingsDialog (dashboard) — same three room-level toggles,
@@ -61,9 +58,14 @@ fun MeetingRoomSettingsSheet(
             contentColor = colors.onButton,
         )
 
-        Button(
+        // The same Save as the dashboard's room settings dialog: tonal, with its spinner while the
+        // change is on its way.
+        BedrudButton(
+            text = stringResource(R.string.common_button_save),
+            variant = BedrudButtonVariant.TONAL,
+            loading = isSaving,
             onClick = {
-                if (isSaving) return@Button
+                if (isSaving) return@BedrudButton
                 val newSettings = settings.withLockedToggles()
                 isSaving = true
                 scope.launch {
@@ -83,17 +85,9 @@ fun MeetingRoomSettingsSheet(
                     }
                 }
             },
-            enabled = !isSaving,
-            colors = ButtonDefaults.buttonColors(containerColor = colors.accent),
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(top = Dimens.space4),
-        ) {
-            val labelStyle = LocalTextStyle.current
-            Text(
-                stringResource(R.string.common_button_save),
-                modifier = Modifier.typeCentered(labelStyle),
-            )
-        }
+        )
     }
 }
