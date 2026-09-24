@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -49,6 +50,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 
@@ -205,14 +207,25 @@ fun SettingsContent(
             if (currentUser != null) {
                 BedrudOutlinedCard {
                     Column {
+                        // The admin mark sits centred on the header's letters, at the small icon
+                        // size a mark beside a label takes elsewhere; it used to hang from the top
+                        // of the row at full icon size.
                         Row(
-                            modifier = Modifier.padding(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 8.dp),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            modifier = Modifier.padding(start = Dimens.cardPadding, top = Dimens.cardPadding, end = Dimens.cardPadding, bottom = Dimens.space8),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(Dimens.space8)
                         ) {
-                            CardSectionHeader(stringResource(R.string.settings_section_account))
+                            CardSectionHeader(
+                                stringResource(R.string.settings_section_account),
+                                modifier = Modifier.typeCentered(MaterialTheme.typography.labelLarge)
+                            )
                             if (currentUser?.isAdmin == true) {
-                                Icon(Icons.Default.AdminPanelSettings, contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.primary)
+                                Icon(
+                                    Icons.Default.AdminPanelSettings,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(Dimens.iconXs)
+                                )
                             }
                         }
                         ListItem(
