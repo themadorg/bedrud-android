@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -17,7 +16,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.SwapHoriz
-import androidx.compose.material3.ButtonDefaults
 
 import com.bedrud.app.ui.components.BedrudBadge
 import com.bedrud.app.ui.components.BedrudButton
@@ -32,7 +30,6 @@ import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -54,7 +51,6 @@ import com.bedrud.app.R
 import com.bedrud.app.core.instance.InstanceManager
 import com.bedrud.app.ui.components.InitialsAvatar
 import com.bedrud.app.ui.screens.instance.InstanceSwitcherSheet
-import com.bedrud.app.ui.theme.BedrudShapeTokens
 import com.bedrud.app.ui.theme.Dimens
 import com.bedrud.app.ui.theme.OnInstanceColor
 import com.bedrud.app.ui.theme.parseInstanceColor
@@ -223,33 +219,21 @@ fun ProfileContent(
             // in another format.
 
             // Sign Out
-            // Kept a plain text button for its error colour, which BedrudButton's ghost does not
-            // carry; the shape is the shared button token so it presses like every other button.
-            TextButton(
+            // Not in the error colour: signing out is neither an error nor irreversible, since
+            // the account is one sign-in away and nothing on the server is lost.
+            BedrudButton(
+                text = stringResource(R.string.profile_button_signOut),
                 onClick = onLogout,
-                shape = BedrudShapeTokens.button,
-                colors = ButtonDefaults.textButtonColors(
-                    contentColor = MaterialTheme.colorScheme.error
-                ),
-                // A text button's own floor is 40dp; every other button in the app is 48.
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .heightIn(min = Dimens.buttonHeight)
-            ) {
-                Icon(
-                    Icons.AutoMirrored.Filled.Logout,
-                    contentDescription = null,
-                    modifier = Modifier.size(Dimens.iconSm)
-                )
-                Spacer(modifier = Modifier.width(Dimens.space8))
-                // Centred against the icon beside it, like every other label paired with one.
-                val signOutStyle = MaterialTheme.typography.labelLarge
-                Text(
-                    stringResource(R.string.profile_button_signOut),
-                    style = signOutStyle,
-                    modifier = Modifier.typeCentered(signOutStyle),
-                )
-            }
+                variant = BedrudButtonVariant.GHOST,
+                leadingIcon = {
+                    Icon(
+                        Icons.AutoMirrored.Filled.Logout,
+                        contentDescription = null,
+                        modifier = Modifier.size(Dimens.iconSm),
+                    )
+                },
+                modifier = Modifier.fillMaxWidth(),
+            )
         }
     }
 }
