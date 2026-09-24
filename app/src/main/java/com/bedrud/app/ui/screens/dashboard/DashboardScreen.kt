@@ -1225,6 +1225,14 @@ private fun TrailingChevron() {
 
 // ── Swipe-to-action ────────────────────────────────────────────────────────────
 
+/**
+ * How far across its card a swipe must travel before letting go commits it: half the card.
+ *
+ * Material's list guidance has a full swipe trigger the action. The component's own default is a
+ * fixed 56dp, a fraction of a phone-width card, so a short sideways drag while scrolling committed.
+ */
+private const val SwipeCommitFraction = 0.5f
+
 private data class SwipeAction(
     val label: String,
     val icon: ImageVector,
@@ -1248,7 +1256,9 @@ private fun SwipeableRoomRow(
         Box(modifier = modifier) { content() }
         return
     }
-    val state = rememberSwipeToDismissBoxState()
+    val state = rememberSwipeToDismissBoxState(
+        positionalThreshold = { totalDistance -> totalDistance * SwipeCommitFraction },
+    )
     val scope = rememberCoroutineScope()
     SwipeToDismissBox(
         state = state,
