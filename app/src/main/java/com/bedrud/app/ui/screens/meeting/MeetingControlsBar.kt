@@ -737,8 +737,12 @@ private fun MeetCircleButton(
     if (badge != null) {
         BadgedBox(
             badge = {
-                // A count alone in its dot, so its own digits are measured.
-                Badge { Text(badge, modifier = Modifier.inkCentered(badge, LocalTextStyle.current)) }
+                // The call's accent rather than Material's default error red: an unread count is
+                // news, not a failure, and red here sat beside hang-up and the media-failure dot.
+                Badge(containerColor = colors.accent, contentColor = colors.onAccent) {
+                    // A count alone in its dot, so its own digits are measured.
+                    Text(badge, modifier = Modifier.inkCentered(badge, LocalTextStyle.current))
+                }
             },
         ) {
             button()
