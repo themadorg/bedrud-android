@@ -34,7 +34,7 @@ fun RoomSettingsDialog(
         onDismissRequest = onDismiss,
         title = { Text(stringResource(R.string.dashboard_roomSettings_title)) },
         text = {
-            // Scrolls rather than clips when four switch rows outgrow the dialog, as they do in
+            // Scrolls rather than clips when the switch rows outgrow the dialog, as they do in
             // landscape or at a large font size.
             RoomSettingsForm(
                 isPublic = isPublic,

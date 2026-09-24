@@ -199,7 +199,7 @@ untouched, and the same two buttons:
 `ConfirmDialog` is that dialog for a title and a one-line message, with the confirm variant as a
 parameter; anything with its own content — the create-room field, the room settings switches — is a
 bespoke `AlertDialog` built from the same two buttons. A body that can outgrow the dialog (a field
-with its error, four switch rows) scrolls, since the keyboard, landscape or a large font size leave it
+with its error, a list of switch rows) scrolls, since the keyboard, landscape or a large font size leave it
 little room. A field's error belongs to the field: `isError` plus `supportingText`, as on the sign-in
 forms, not a separate line under it. The input's action key runs the confirm.
 
