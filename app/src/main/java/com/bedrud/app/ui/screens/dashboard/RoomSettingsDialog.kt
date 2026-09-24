@@ -19,9 +19,15 @@ import com.bedrud.app.ui.components.BedrudButtonVariant
 import com.bedrud.app.ui.components.RoomSettingsForm
 import com.bedrud.app.ui.components.withLockedToggles
 
+/**
+ * While [isSaving] the dialog holds still, like the create-room dialog: Save shows its spinner and
+ * stops accepting taps, so a double tap cannot send the change twice, and neither Cancel nor a
+ * scrim tap can dismiss a save that is already on its way to the server.
+ */
 @Composable
 fun RoomSettingsDialog(
     room: UserRoomResponse,
+    isSaving: Boolean,
     onDismiss: () -> Unit,
     onSave: (isPublic: Boolean, settings: RoomSettings) -> Unit
 ) {
@@ -31,7 +37,7 @@ fun RoomSettingsDialog(
     var isPublic by remember { mutableStateOf(room.isPublic ?: false) }
 
     AlertDialog(
-        onDismissRequest = onDismiss,
+        onDismissRequest = { if (!isSaving) onDismiss() },
         title = { Text(stringResource(R.string.dashboard_roomSettings_title)) },
         text = {
             // Scrolls rather than clips when the switch rows outgrow the dialog, as they do in
@@ -46,7 +52,8 @@ fun RoomSettingsDialog(
             BedrudButton(
                 text = stringResource(R.string.common_button_save),
                 variant = BedrudButtonVariant.TONAL,
-                onClick = { onSave(isPublic, room.settings.withLockedToggles()) },
+                onClick = { if (!isSaving) onSave(isPublic, room.settings.withLockedToggles()) },
+                loading = isSaving,
             )
         },
         dismissButton = {
@@ -54,6 +61,7 @@ fun RoomSettingsDialog(
                 text = stringResource(R.string.common_button_cancel),
                 variant = BedrudButtonVariant.GHOST,
                 onClick = onDismiss,
+                enabled = !isSaving,
             )
         }
     )
