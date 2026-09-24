@@ -39,7 +39,9 @@
   <string name="auth_hint_passwordMinLength">至少 %1$d 个字符</string>
   <string name="auth_error_emailInvalid">请输入有效的邮箱地址</string>
   <string name="auth_error_guestFailed">无法以访客身份加入。请重试。</string>
-  <string name="auth_error_nameTooShort">请至少输入 2 个字符。</string>
+  <plurals name="auth_error_nameTooShort">
+    <item quantity="other">请至少输入 %1$d 个字符。</item>
+  </plurals>
   <string name="auth_error_generic">出错了。请重试。</string>
   <string name="auth_error_registrationFailed">注册失败。请重试。</string>
   <string name="auth_error_signInFailed">登录失败。请重试。</string>

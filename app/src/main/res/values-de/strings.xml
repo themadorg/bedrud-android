@@ -39,7 +39,10 @@
   <string name="auth_hint_passwordMinLength">Mindestens %1$d Zeichen</string>
   <string name="auth_error_emailInvalid">Geben Sie eine gültige E-Mail-Adresse ein</string>
   <string name="auth_error_guestFailed">Beitritt als Gast nicht möglich. Bitte versuchen Sie es erneut.</string>
-  <string name="auth_error_nameTooShort">Bitte geben Sie mindestens 2 Zeichen ein.</string>
+  <plurals name="auth_error_nameTooShort">
+    <item quantity="one">Bitte geben Sie mindestens %1$d Zeichen ein.</item>
+    <item quantity="other">Bitte geben Sie mindestens %1$d Zeichen ein.</item>
+  </plurals>
   <string name="auth_error_generic">Etwas ist schiefgelaufen. Bitte versuchen Sie es erneut.</string>
   <string name="auth_error_registrationFailed">Registrierung fehlgeschlagen. Bitte versuchen Sie es erneut.</string>
   <string name="auth_error_signInFailed">Anmeldung fehlgeschlagen. Bitte versuchen Sie es erneut.</string>

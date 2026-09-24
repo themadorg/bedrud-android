@@ -39,7 +39,14 @@
   <string name="auth_hint_passwordMinLength">%1$d حرفًا على الأقل</string>
   <string name="auth_error_emailInvalid">أدخل بريدًا إلكترونيًا صالحًا</string>
   <string name="auth_error_guestFailed">تعذّر الانضمام كضيف. يرجى المحاولة مرة أخرى.</string>
-  <string name="auth_error_nameTooShort">الرجاء إدخال حرفين على الأقل.</string>
+  <plurals name="auth_error_nameTooShort">
+    <item quantity="zero">الرجاء إدخال %1$d حرف على الأقل.</item>
+    <item quantity="one">الرجاء إدخال حرف واحد على الأقل.</item>
+    <item quantity="two">الرجاء إدخال حرفين على الأقل.</item>
+    <item quantity="few">الرجاء إدخال %1$d أحرف على الأقل.</item>
+    <item quantity="many">الرجاء إدخال %1$d حرفًا على الأقل.</item>
+    <item quantity="other">الرجاء إدخال %1$d حرف على الأقل.</item>
+  </plurals>
   <string name="auth_error_generic">حدث خطأ ما. يرجى المحاولة مرة أخرى.</string>
   <string name="auth_error_registrationFailed">فشل إنشاء الحساب. يرجى المحاولة مرة أخرى.</string>
   <string name="auth_error_signInFailed">فشل تسجيل الدخول. يرجى المحاولة مرة أخرى.</string>

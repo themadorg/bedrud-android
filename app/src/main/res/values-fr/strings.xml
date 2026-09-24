@@ -39,7 +39,11 @@
   <string name="auth_hint_passwordMinLength">Au moins %1$d caractères</string>
   <string name="auth_error_emailInvalid">Saisissez une adresse e-mail valide</string>
   <string name="auth_error_guestFailed">Impossible de rejoindre en tant qu’invité. Réessayez.</string>
-  <string name="auth_error_nameTooShort">Veuillez saisir au moins 2 caractères.</string>
+  <plurals name="auth_error_nameTooShort">
+    <item quantity="one">Veuillez saisir au moins %1$d caractère.</item>
+    <item quantity="many">Veuillez saisir au moins %1$d de caractères.</item>
+    <item quantity="other">Veuillez saisir au moins %1$d caractères.</item>
+  </plurals>
   <string name="auth_error_generic">Une erreur s’est produite. Veuillez réessayer.</string>
   <string name="auth_error_registrationFailed">Échec de l\'inscription. Veuillez réessayer.</string>
   <string name="auth_error_signInFailed">Échec de la connexion. Veuillez réessayer.</string>
