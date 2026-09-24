@@ -448,7 +448,7 @@ private fun AdminUsersContent(
                     // Both lines take the block's correction, so they move as one; the admin icon
                     // is then raised by the name's own correction to meet the name's letters, as
                     // the profile card's admin badge is.
-                    val nameStyle = MaterialTheme.typography.bodyMedium.copy(textDirection = TextDirection.Content)
+                    val nameStyle = MaterialTheme.typography.bodyLarge.copy(textDirection = TextDirection.Content)
                     val emailStyle = MaterialTheme.typography.bodySmall.copy(textDirection = TextDirection.Ltr)
                     ListItem(
                         headlineContent = {

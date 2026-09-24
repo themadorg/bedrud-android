@@ -273,9 +273,12 @@ private fun ForgotPasswordSheet(
     // scaffold — this sheet only supplies its form.
     BedrudBottomSheet(onDismiss = onDismiss) {
         Column(modifier = Modifier.fillMaxWidth()) {
+            // The sheet-title style every other sheet's BedrudSheetTitle uses. This one stays a
+            // plain Text only for its inset: the form below it starts at the sheet's edge, not at
+            // BedrudSheetTitle's list-row inset.
             Text(
                 text = stringResource(R.string.auth_forgot_title),
-                style = MaterialTheme.typography.headlineSmall,
+                style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.onSurface
             )
 
