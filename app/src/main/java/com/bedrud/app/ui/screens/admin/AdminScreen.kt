@@ -464,7 +464,7 @@ private fun AdminUsersContent(
                                         contentDescription = stringResource(R.string.admin_contentDescription_admin),
                                         modifier = Modifier
                                             .offset(y = -rememberTypeCenteringOffset(nameStyle))
-                                            .size(14.dp),
+                                            .size(Dimens.iconXs),
                                         tint = MaterialTheme.colorScheme.primary
                                     )
                                 }
@@ -892,14 +892,14 @@ private fun AdminSettingsContent(
                                     IconButton(onClick = { scope.launch { clipboard.setPlainText(clipLabel, tok.token) } }) {
                                         Icon(
                                             Icons.Default.ContentCopy, contentDescription = stringResource(R.string.common_action_copy),
-                                            modifier = Modifier.size(18.dp)
+                                            modifier = Modifier.size(Dimens.iconMd)
                                         )
                                     }
                                     IconButton(onClick = { tokenToDelete = tok }) {
                                         Icon(
                                             Icons.Default.Delete, contentDescription = stringResource(R.string.common_button_delete),
                                             tint = MaterialTheme.colorScheme.error,
-                                            modifier = Modifier.size(18.dp)
+                                            modifier = Modifier.size(Dimens.iconMd)
                                         )
                                     }
                                 }

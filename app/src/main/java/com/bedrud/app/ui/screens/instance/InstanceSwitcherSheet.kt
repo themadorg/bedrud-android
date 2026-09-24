@@ -29,7 +29,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
 import com.bedrud.app.R
 import com.bedrud.app.core.instance.InstanceManager
 import com.bedrud.app.models.Instance
@@ -109,7 +108,6 @@ private fun SwitcherRow(
         ) {
             InitialsAvatar(
                 name = instance.displayName,
-                size = SwitcherAvatar,
                 containerColor = parseInstanceColor(instance.iconColorHex),
                 contentColor = OnInstanceColor,
             )
@@ -150,6 +148,3 @@ private fun SwitcherRow(
         }
     }
 }
-
-// The server avatar is this sheet's own leading element, not a shared size.
-private val SwitcherAvatar = 32.dp

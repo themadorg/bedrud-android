@@ -108,14 +108,14 @@ fun ProfileContent(
                             model = user?.avatarUrl,
                             contentDescription = stringResource(R.string.profile_contentDescription_profilePicture),
                             modifier = Modifier
-                                .size(56.dp)
+                                .size(Dimens.avatarXl)
                                 .clip(CircleShape),
                             contentScale = ContentScale.Crop
                         )
                     } else {
                         InitialsAvatar(
                             name = user?.name,
-                            size = 56.dp,
+                            size = Dimens.avatarXl,
                             textStyle = MaterialTheme.typography.headlineSmall,
                             contentColor = MaterialTheme.colorScheme.onPrimary
                         )

@@ -1057,7 +1057,8 @@ private fun RoomCard(
                     Icon(
                         Icons.Default.Settings,
                         contentDescription = stringResource(R.string.dashboard_contentDescription_settings),
-                        modifier = Modifier.size(Dimens.iconSm),
+                        // A list row's action at the list icon size, level with the chevron beside it.
+                        modifier = Modifier.size(Dimens.iconMd),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
