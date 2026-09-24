@@ -154,6 +154,21 @@ Elevation is tonal and light — the app leans on outlines + tonal surfaces over
 sit at level 0–1. Motion uses shared duration tokens (`durationShort/Medium/Long`) + `standardEasing`;
 drive `animate*AsState` with `tween(Motion.durationMedium, easing = Motion.standardEasing)`.
 
+**Swiping a room card** follows Material's own `SwipeToDismissBox` pattern and its list guidance: a
+single action at the end edge, committed by a full swipe — past half the card
+(`SwipeCommitFraction`), where the component's own default of 56dp let a short sideways drag while
+scrolling commit. The action's panel is there from the first pixel of the swipe in a neutral tone and eases into the
+action's colour over `Motion.durationShort` once letting go would commit, with one
+`GestureThresholdActivate` haptic tick at that moment. An action that asks first (Delete) keeps its
+card swiped out, its panel showing, while the dialog is open and while the delete is on its way;
+Cancel, or a refused delete, slides the card back, and a completed one removes it. The card used to
+fly off, come back behind the dialog, and leave the question about a card that was already in place.
+
+A swipe is never the only way to its action, as Material's list accessibility guidance requires.
+**Long-pressing a card** opens its menu (`RoomCardMenu`) with the same action — Delete, in the
+error colour, on your own rooms, beside Settings; Remove on a recent — and TalkBack offers each
+menu item as a custom action on the card.
+
 ## Disabled state (`Alpha.kt`)
 
 M3 components (buttons, radios, fields) already dim themselves when `enabled = false`. Where the app
