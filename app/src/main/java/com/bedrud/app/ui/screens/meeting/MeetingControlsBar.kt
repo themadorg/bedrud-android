@@ -140,7 +140,7 @@ internal fun MeetingCallControlsRow(
                     icon = if (isScreenShareEnabled) Icons.AutoMirrored.Filled.StopScreenShare
                     else Icons.AutoMirrored.Filled.ScreenShare,
                     contentDescription = stringResource(R.string.meeting_contentDescription_toggleScreenShare),
-                    containerColor = if (isScreenShareEnabled) colors.buttonActive else colors.button,
+                    isActive = isScreenShareEnabled,
                 )
             }
         }
@@ -166,7 +166,7 @@ internal fun MeetingCallControlsRow(
                     onClick = onToggleChat,
                     icon = Icons.AutoMirrored.Filled.Chat,
                     contentDescription = stringResource(R.string.meeting_contentDescription_toggleChat),
-                    containerColor = if (showChat) colors.buttonActive else colors.button,
+                    isActive = showChat,
                     badge = if (unreadCount > 0) {
                         if (unreadCount > 9) "9+" else unreadCount.toString()
                     } else {
@@ -234,7 +234,7 @@ private fun MicPill(
         else -> colors.buttonMediaOff
     }
     val contentColor = when {
-        transmitting -> colors.onButton
+        transmitting -> colors.onButtonActive
         isPushToTalk -> colors.onButtonVariant
         isMicEnabled -> colors.onButton
         else -> colors.onButtonMediaOff
@@ -685,9 +685,12 @@ private fun MeetCircleButton(
     onClick: () -> Unit,
     icon: ImageVector,
     contentDescription: String,
-    containerColor: Color,
+    isActive: Boolean,
     badge: String? = null,
 ) {
+    // The fill and the icon change together, so a lit button never keeps the unlit icon colour.
+    val containerColor = if (isActive) colors.buttonActive else colors.button
+    val contentColor = if (isActive) colors.onButtonActive else colors.onButton
     val button = @Composable {
         // The circle is 44dp by design, but the thing a finger aims at must still be the
         // accessibility floor: a 44dp clickable measured exactly 44dp, and a tap landing a few
@@ -723,7 +726,7 @@ private fun MeetCircleButton(
                     Icon(
                         imageVector = icon,
                         contentDescription = contentDescription,
-                        tint = colors.onButton,
+                        tint = contentColor,
                         modifier = Modifier.size(Dimens.meetingBarIconSm),
                     )
                 }

@@ -22,7 +22,7 @@ import com.bedrud.app.ui.screens.settings.AppLanguage
  * The full Material 3 role set is specified (containers, surface-tonal levels, inverse, scrim)
  * so components that reach for any role get an on-brand value instead of an M3 default.
  */
-private val LightColorScheme = lightColorScheme(
+internal val LightColorScheme = lightColorScheme(
     primary = Rose600,
     onPrimary = Neutral0,
     primaryContainer = Rose100,
@@ -67,7 +67,7 @@ private val LightColorScheme = lightColorScheme(
     surfaceContainerHighest = Neutral200,
 )
 
-private val DarkColorScheme = darkColorScheme(
+internal val DarkColorScheme = darkColorScheme(
     primary = Rose400,
     onPrimary = Rose950,
     primaryContainer = Rose800,
