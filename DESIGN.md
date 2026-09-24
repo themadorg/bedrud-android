@@ -124,14 +124,16 @@ search placeholder 8px below its own field, out of line with the icon beside it.
 `lineHeightStyle` of `Center`/`Trim.None` on the scale was measured too and changes nothing — it is
 already what these styles do.
 
-**`BedrudTextField` deliberately opts out.** Its placeholder is a `Text` that could be corrected, but
-the value the user types is drawn inside `OutlinedTextField` where no modifier reaches it. Correcting
-the reachable half would put the hint at a different height from the text that replaces it, which is
-worse than the fault being fixed. Both halves stay uncorrected so they agree with each other. The
-two fields built on `BasicTextField` — the custom server address and the chat composer — draw both
-halves themselves, so both are corrected, by the same amount. The app's `Snackbar` opts out for the
-same reason as `BedrudTextField`: Material draws its message and its action button, and neither can
-be reached.
+**`BedrudTextField` corrects its label and nothing else.** The label is a label like any other and
+takes `typeCentered` in its own current style; it never shares its place with typed text, because it
+rests inside the field only while the field is empty and unfocused, and floats to the outline first.
+The placeholder deliberately opts out. It is replaced in place by the value the user types, which is
+drawn inside `OutlinedTextField` where no modifier reaches it, so correcting only the placeholder would
+make the text jump on the first keystroke — worse than the fault being fixed. Placeholder and value
+both stay uncorrected so they agree with each other. The two fields built on `BasicTextField` — the
+custom server address and the chat composer — draw both halves themselves, so both are corrected, by
+the same amount. The app's `Snackbar` opts out for the same reason as the placeholder: Material draws
+its message and its action button, and neither can be reached.
 
 ## Shape (`Shape.kt`)
 
