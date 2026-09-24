@@ -84,6 +84,7 @@ import com.bedrud.app.core.meeting.chat.ChatPoll
 import com.bedrud.app.core.meeting.chat.clustered
 import com.bedrud.app.core.meeting.chat.rows
 import com.bedrud.app.ui.components.ChatImageLightbox
+import com.bedrud.app.ui.components.LeftToRight
 import com.bedrud.app.ui.theme.Alpha
 import com.bedrud.app.ui.theme.BedrudShapeTokens
 import com.bedrud.app.ui.theme.Dimens
@@ -359,11 +360,15 @@ fun MeetingChatPanel(
                     // only once the text genuinely runs out of it. The controls own their insets
                     // instead: send carries the 12dp bottom the row no longer provides, and the
                     // "+" centres, so at one line nothing sits differently than it did.
+                    //
+                    // The same order in every language, like the call bar it swaps with, so send
+                    // stays at hang-up's end. Only the placing is absolute: the field still writes
+                    // and aligns in the writer's direction, and the "+" menu reads in the app's.
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = Dimens.meetingBarPaddingH),
-                        horizontalArrangement = Arrangement.spacedBy(Dimens.meetingBarItemGap),
+                        horizontalArrangement = Arrangement.Absolute.spacedBy(Dimens.meetingBarItemGap),
                         // Bottom, so a grown field keeps the controls beside the line being written
                         // rather than floating them against the middle of a block of text.
                         verticalAlignment = Alignment.Bottom,
@@ -691,20 +696,23 @@ private fun DockSendButton(
             // but stops announcing the composer's primary action as a button.
             .semantics { role = Role.Button },
     ) {
-        Box(contentAlignment = Alignment.Center) {
-            Icon(
-                imageVector = Icons.AutoMirrored.Rounded.Send,
-                contentDescription = stringResource(R.string.meeting_contentDescription_send),
-                tint = if (enabled) colors.onAccent else colors.onButtonVariant.copy(alpha = Alpha.disabled),
-                modifier = Modifier
-                    // The plane is left-heavy — wide tail, sharp tip — and its ink centroid sits
-                    // about 3dp behind its box's centre (measured on a device capture), so
-                    // geometrically centred it reads as sitting off towards the tail. Nudged half
-                    // the imbalance towards the tip; `offset` follows the layout direction, so the
-                    // correction mirrors exactly as the icon does in RTL.
-                    .offset(x = Dimens.meetingSendIconNudge)
-                    .size(Dimens.meetingBarIconLg),
-            )
+        // Drawn left-to-right in every language, like the bar it ends: at the bar's right end the
+        // plane points on out of it, and the nudge below moves with it.
+        LeftToRight {
+            Box(contentAlignment = Alignment.Center) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Rounded.Send,
+                    contentDescription = stringResource(R.string.meeting_contentDescription_send),
+                    tint = if (enabled) colors.onAccent else colors.onButtonVariant.copy(alpha = Alpha.disabled),
+                    modifier = Modifier
+                        // The plane is left-heavy — wide tail, sharp tip — and its ink centroid
+                        // sits about 3dp behind its box's centre (measured on a device capture),
+                        // so geometrically centred it reads as sitting off towards the tail.
+                        // Nudged half the imbalance towards the tip.
+                        .offset(x = Dimens.meetingSendIconNudge)
+                        .size(Dimens.meetingBarIconLg),
+                )
+            }
         }
     }
 }
