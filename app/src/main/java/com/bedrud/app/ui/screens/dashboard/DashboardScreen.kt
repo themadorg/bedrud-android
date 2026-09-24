@@ -501,33 +501,19 @@ fun DashboardContent(
     }
 
     pendingServerSwitch?.let { pending ->
-        AlertDialog(
-            onDismissRequest = { pendingServerSwitch = null },
-            title = { Text(stringResource(R.string.dashboard_dialog_switchServerTitle)) },
-            text = { Text(stringResource(R.string.dashboard_dialog_switchServerMessage, pending.instance.displayName)) },
-            confirmButton = {
-                BedrudButton(
-                    text = stringResource(R.string.dashboard_button_switchAndJoin),
-                    variant = BedrudButtonVariant.TONAL,
-                    onClick = {
-                        instanceManager.switchTo(pending.instance.id)
-                        pendingServerSwitch = null
-                        quickJoinText = ""
-                        onJoinRoom(pending.roomName)
-                    },
-                )
+        ConfirmDialog(
+            title = stringResource(R.string.dashboard_dialog_switchServerTitle),
+            message = stringResource(R.string.dashboard_dialog_switchServerMessage, pending.instance.displayName),
+            confirmLabel = stringResource(R.string.dashboard_button_switchAndJoin),
+            // Switching loses nothing, so the confirm is tonal rather than destructive.
+            confirmVariant = BedrudButtonVariant.TONAL,
+            onDismiss = { pendingServerSwitch = null },
+            onConfirm = {
+                instanceManager.switchTo(pending.instance.id)
+                pendingServerSwitch = null
+                quickJoinText = ""
+                onJoinRoom(pending.roomName)
             },
-            dismissButton = {
-                TextButton(onClick = { pendingServerSwitch = null }) {
-                    // Corrected like the BedrudButton beside it, or the two labels in this dialog
-                    // sit at different heights.
-                    val cancelStyle = LocalTextStyle.current
-                    Text(
-                        stringResource(R.string.common_button_cancel),
-                        modifier = Modifier.typeCentered(cancelStyle),
-                    )
-                }
-            }
         )
     }
 
