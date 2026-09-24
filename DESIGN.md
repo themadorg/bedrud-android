@@ -210,6 +210,15 @@ with its error, a list of switch rows) scrolls, since the keyboard, landscape or
 little room. A field's error belongs to the field: `isError` plus `supportingText`, as on the sign-in
 forms, not a separate line under it. The input's action key runs the confirm.
 
+**An action that hurts someone else or cannot be taken back asks first**, through `ConfirmDialog`:
+deleting a room (dashboard and admin), kicking and banning in a call, and in admin banning a user and
+deleting an invite token. The message names what it acts on — the room, the person — so a stray
+tap on the wrong row is caught by reading it. What only restores something or touches this device
+alone stays one tap: unbanning, removing a recent from local history. A dialog whose save goes to
+the server holds still while it does, as the create-room dialog does: the confirm shows its spinner
+and takes no more taps, and neither Cancel nor the scrim can close it, so a double tap cannot send
+the change twice.
+
 The chat image viewer is a full-screen `Dialog` rather than an alert, drawn on `colorScheme.scrim` at
 `Alpha.lightboxScrim`, with its controls in `bedrudColors.onScrim` — the scrim is black in both themes,
 so what sits on it is white in both — and its notice in the inverse pair a snackbar uses.
