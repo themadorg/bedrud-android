@@ -216,6 +216,7 @@
   <string name="settings_label_accountId">アカウントID</string>
   <string name="settings_label_signInMethod">サインイン方法</string>
   <string name="settings_provider_email">メール</string>
+  <string name="settings_provider_passkey">パスキー</string>
   <string name="settings_label_role">ロール</string>
   <string name="settings_role_admin">管理者</string>
   <string name="settings_role_user">ユーザー</string>

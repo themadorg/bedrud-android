@@ -218,6 +218,7 @@
   <string name="settings_label_accountId">Hesap Kimliği</string>
   <string name="settings_label_signInMethod">Giriş yöntemi</string>
   <string name="settings_provider_email">E-posta</string>
+  <string name="settings_provider_passkey">Anahtar</string>
   <string name="settings_label_role">Rol</string>
   <string name="settings_role_admin">Yönetici</string>
   <string name="settings_role_user">Kullanıcı</string>

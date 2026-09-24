@@ -215,6 +215,7 @@
   <string name="settings_label_accountId">شناسه حساب</string>
   <string name="settings_label_signInMethod">روش ورود</string>
   <string name="settings_provider_email">ایمیل</string>
+  <string name="settings_provider_passkey">Passkey</string>
   <string name="settings_label_role">نقش</string>
   <string name="settings_role_admin">مدیر</string>
   <string name="settings_role_user">کاربر</string>

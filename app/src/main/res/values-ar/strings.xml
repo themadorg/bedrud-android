@@ -226,6 +226,7 @@
   <string name="settings_label_accountId">معرف الحساب</string>
   <string name="settings_label_signInMethod">طريقة تسجيل الدخول</string>
   <string name="settings_provider_email">البريد الإلكتروني</string>
+  <string name="settings_provider_passkey">المفتاح</string>
   <string name="settings_label_role">الدور</string>
   <string name="settings_role_admin">مشرف</string>
   <string name="settings_role_user">مستخدم</string>

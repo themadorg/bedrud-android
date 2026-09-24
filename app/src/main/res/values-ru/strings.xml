@@ -222,6 +222,7 @@
   <string name="settings_label_accountId">ID аккаунта</string>
   <string name="settings_label_signInMethod">Способ входа</string>
   <string name="settings_provider_email">Эл. почта</string>
+  <string name="settings_provider_passkey">Ключ</string>
   <string name="settings_label_role">Роль</string>
   <string name="settings_role_admin">Администратор</string>
   <string name="settings_role_user">Пользователь</string>

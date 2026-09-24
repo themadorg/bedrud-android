@@ -216,6 +216,7 @@
   <string name="settings_label_accountId">账户ID</string>
   <string name="settings_label_signInMethod">登录方式</string>
   <string name="settings_provider_email">邮箱</string>
+  <string name="settings_provider_passkey">密钥</string>
   <string name="settings_label_role">角色</string>
   <string name="settings_role_admin">管理员</string>
   <string name="settings_role_user">用户</string>

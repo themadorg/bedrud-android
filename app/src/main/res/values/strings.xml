@@ -223,6 +223,7 @@
   <string name="settings_label_accountId">Account ID</string>
   <string name="settings_label_signInMethod">Sign-in method</string>
   <string name="settings_provider_email">Email</string>
+  <string name="settings_provider_passkey">Passkey</string>
   <string name="settings_label_role">Role</string>
   <string name="settings_role_admin">Admin</string>
   <string name="settings_role_user">User</string>

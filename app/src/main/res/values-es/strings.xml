@@ -218,6 +218,7 @@
   <string name="settings_label_accountId">ID de cuenta</string>
   <string name="settings_label_signInMethod">Método de inicio de sesión</string>
   <string name="settings_provider_email">Correo electrónico</string>
+  <string name="settings_provider_passkey">Passkey</string>
   <string name="settings_label_role">Rol</string>
   <string name="settings_role_admin">Administrador</string>
   <string name="settings_role_user">Usuario</string>
