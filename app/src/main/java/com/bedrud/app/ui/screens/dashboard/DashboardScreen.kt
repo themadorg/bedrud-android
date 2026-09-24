@@ -1046,7 +1046,12 @@ private fun RoomCard(
 
     SwipeableRoomRow(action = swipeAction, modifier = modifier.fillMaxWidth()) {
         RoomCardScaffold(onClick = onJoin) {
-            Column(modifier = Modifier.weight(1f)) {
+            // The card's height is fixed, so without a gap here all its spare room lands above and
+            // below the two lines and the name sits pressed against its status line.
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(Dimens.space4),
+            ) {
                 RoomTitleLine(title = title)
                 if (metaText != null) {
                     Text(
@@ -1112,7 +1117,11 @@ private fun RecentRoomCard(
 
     SwipeableRoomRow(action = swipeAction, modifier = modifier.fillMaxWidth()) {
         RoomCardScaffold(onClick = onJoin) {
-            Column(modifier = Modifier.weight(1f)) {
+            // Same gap as the server-backed card, so the two kinds read alike in one list.
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(Dimens.space4),
+            ) {
                 RoomTitleLine(title = recent.roomName)
                 if (presence != null) {
                     Text(
