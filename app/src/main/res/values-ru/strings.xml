@@ -102,6 +102,8 @@
   <string name="meeting_action_disableVideo">Отключить видео</string>
   <string name="meeting_action_enableVideo">Включить видео</string>
   <string name="meeting_action_kick">Выгнать</string>
+  <string name="meeting_dialog_banTitle">Заблокировать участника</string>
+  <string name="meeting_dialog_banMessage">Вы уверены, что хотите заблокировать <xliff:g id="participantName" example="John Doe">%1$s</xliff:g> в этой комнате?</string>
   <string name="meeting_action_ban">Заблокировать</string>
   <string name="meeting_panel_participants">Участники (<xliff:g id="count" example="5">%1$d</xliff:g>)</string>
   <string name="meeting_panel_chat">Чат</string>

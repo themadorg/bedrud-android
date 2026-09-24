@@ -76,6 +76,7 @@ fun MeetingParticipantSheet(
     val kickFailedMessage = stringResource(R.string.meeting_error_kickFailed)
     val banFailedMessage = stringResource(R.string.meeting_error_banFailed)
     var showKickConfirm by remember { mutableStateOf(false) }
+    var showBanConfirm by remember { mutableStateOf(false) }
 
     // The slider writes through immediately but keeps its own state so dragging stays smooth
     // even though the backing StateFlow only changes in coarse steps.
@@ -94,6 +95,24 @@ fun MeetingParticipantSheet(
                 onDismiss()
             },
             onDismiss = { showKickConfirm = false },
+        )
+    }
+
+    // Banning asks first, as kicking does: it removes the person and keeps them out, and a stray
+    // tap on the row below kick used to do that at once.
+    if (showBanConfirm) {
+        ConfirmDialog(
+            title = stringResource(R.string.meeting_dialog_banTitle),
+            message = stringResource(R.string.meeting_dialog_banMessage, name),
+            confirmLabel = stringResource(R.string.meeting_action_ban),
+            onConfirm = {
+                showBanConfirm = false
+                moderate(scope, snackbarHostState, banFailedMessage) {
+                    roomApi?.banParticipant(roomId, identity)
+                }
+                onDismiss()
+            },
+            onDismiss = { showBanConfirm = false },
         )
     }
 
@@ -215,12 +234,7 @@ fun MeetingParticipantSheet(
                 icon = Icons.Default.PersonOff,
                 title = stringResource(R.string.meeting_action_ban),
                 contentColor = MaterialTheme.colorScheme.error,
-                onClick = {
-                    moderate(scope, snackbarHostState, banFailedMessage) {
-                        roomApi?.banParticipant(roomId, identity)
-                    }
-                    onDismiss()
-                },
+                onClick = { showBanConfirm = true },
             )
 
             // Moderation that still needs server endpoints — dev builds only (#108). Neutral, not

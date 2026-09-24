@@ -102,6 +102,8 @@
   <string name="meeting_action_disableVideo">Videoyu Devre Dışı Bırak</string>
   <string name="meeting_action_enableVideo">Videoyu Etkinleştir</string>
   <string name="meeting_action_kick">At</string>
+  <string name="meeting_dialog_banTitle">Katılımcıyı Yasakla</string>
+  <string name="meeting_dialog_banMessage"><xliff:g id="participantName" example="John Doe">%1$s</xliff:g> kişisini odadan yasaklamak istediğinize emin misiniz?</string>
   <string name="meeting_action_ban">Yasakla</string>
   <string name="meeting_panel_participants">Katılımcılar (<xliff:g id="count" example="5">%1$d</xliff:g>)</string>
   <string name="meeting_panel_chat">Sohbet</string>
