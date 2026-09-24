@@ -69,7 +69,6 @@ import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.LineHeightStyle
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.PopupProperties
 import com.bedrud.app.R
 import com.bedrud.app.core.BidiUtils
@@ -283,6 +282,8 @@ fun MeetingChatPanel(
                         }
                     },
                     modifier = Modifier.align(Alignment.BottomEnd).padding(Dimens.space8),
+                    // Round like the dashboard's create button: the pill token is the FAB shape.
+                    shape = BedrudShapeTokens.pill,
                     containerColor = MaterialTheme.colorScheme.primaryContainer,
                     elevation = FlatFabElevation,
                 ) {
@@ -774,8 +775,8 @@ private const val ChatDockMaxLines = 3
 /** The scroll-to-latest button sits on the message list, not above it — so it casts no shadow. */
 private val FlatFabElevation
     @Composable get() = FloatingActionButtonDefaults.elevation(
-        defaultElevation = 0.dp,
-        pressedElevation = 0.dp,
-        focusedElevation = 0.dp,
-        hoveredElevation = 0.dp,
+        defaultElevation = Elevation.level0,
+        pressedElevation = Elevation.level0,
+        focusedElevation = Elevation.level0,
+        hoveredElevation = Elevation.level0,
     )
