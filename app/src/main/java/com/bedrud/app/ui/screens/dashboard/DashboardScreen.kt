@@ -28,9 +28,9 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.NavigateNext
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
@@ -1198,8 +1198,10 @@ private fun RoomTitleLine(title: String) {
 
 @Composable
 private fun TrailingChevron() {
+    // Auto-mirrored so it points toward the card's end edge in an RTL locale too; the glyph is the
+    // same chevron as ChevronRight, which has no mirrored variant.
     Icon(
-        Icons.Default.ChevronRight,
+        Icons.AutoMirrored.Filled.NavigateNext,
         contentDescription = null,
         modifier = Modifier
             .padding(end = Dimens.space6)
