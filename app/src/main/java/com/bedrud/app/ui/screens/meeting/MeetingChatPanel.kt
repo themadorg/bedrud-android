@@ -639,7 +639,9 @@ private fun ComposerAddButton(
                         onAttach()
                     },
                 )
-                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                // The call's own hairline: outlineVariant is two values from this surface in dark
+                // theme.
+                HorizontalDivider(color = meetingChromeColors().divider)
             }
             ChatMessageAction(
                 label = stringResource(R.string.meeting_chat_poll_new),
