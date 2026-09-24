@@ -57,6 +57,8 @@ import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -1280,6 +1282,14 @@ private fun SwipeableRoomRow(
         positionalThreshold = { totalDistance -> totalDistance * SwipeCommitFraction },
     )
     val scope = rememberCoroutineScope()
+    val haptics = LocalHapticFeedback.current
+    // One tick as the swipe crosses the point where letting go commits, the platform's own cue
+    // for a gesture threshold; the panel's colour change says the same thing to the eye.
+    LaunchedEffect(state.targetValue) {
+        if (state.targetValue == SwipeToDismissBoxValue.EndToStart) {
+            haptics.performHapticFeedback(HapticFeedbackType.GestureThresholdActivate)
+        }
+    }
     LaunchedEffect(held) {
         if (!held && state.currentValue != SwipeToDismissBoxValue.Settled) state.reset()
     }
