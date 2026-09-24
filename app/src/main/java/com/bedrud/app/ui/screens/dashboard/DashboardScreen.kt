@@ -1,5 +1,8 @@
 package com.bedrud.app.ui.screens.dashboard
 
+import android.icu.text.DisplayContext
+import android.icu.text.RelativeDateTimeFormatter
+import android.icu.util.ULocale
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
@@ -82,6 +85,7 @@ import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
@@ -106,10 +110,12 @@ import com.bedrud.app.core.deeplink.BedrudURLParser
 import com.bedrud.app.core.instance.InstanceManager
 import com.bedrud.app.core.recent.RecentRoom
 import com.bedrud.app.core.recent.RecentRoomsStore
-import com.bedrud.app.core.recent.formatRecentRoomTimeAgo
 import com.bedrud.app.core.recent.recentRoomsNotInApiList
 import com.bedrud.app.core.rooms.DeletedRoomTombstones
+import com.bedrud.app.core.rooms.RoomActivityAge
+import com.bedrud.app.core.rooms.RoomActivityUnit
 import com.bedrud.app.core.rooms.resolveRoomActivityAt
+import com.bedrud.app.core.rooms.roomActivityAge
 import com.bedrud.app.core.rooms.sortByActivity
 import com.bedrud.app.core.api.apiAction
 import com.bedrud.app.core.api.apiBody
@@ -148,7 +154,7 @@ private const val AUTO_REFRESH_INTERVAL_MS = 60_000L
 // so a flaky request doesn't leave the list stale for a minute.
 private const val FAILED_FETCH_RETRY_MS = 5_000L
 
-// Cadence of the ticking clock that keeps the "Xm ago" recent-room labels advancing.
+// Cadence of the ticking clock that keeps the "5 minutes ago" recent-room labels advancing.
 private const val NOW_TICK_INTERVAL_MS = 60_000L
 
 // Ignore a silent refresh request that arrives within this window of the last fetch, so rapid tab
@@ -211,7 +217,7 @@ fun DashboardContent(
         )
     }
     // Active-server recents keyed by room name, so a server-backed card can tell when the user was
-    // last in that room -- driving the Live / "Xm ago" presence label without a scan per card.
+    // last in that room -- driving the Live / "5 minutes ago" presence label without a scan per card.
     val activeRecentByName = remember(recentRooms, activeInstanceId) {
         recentRooms.filter { it.instanceId == activeInstanceId }.associateBy { it.roomName }
     }
@@ -259,7 +265,7 @@ fun DashboardContent(
     // is true immediately from pre-existing rooms, well before the async refetch includes it.
     var pendingScrollToTopFor by rememberSaveable { mutableStateOf<String?>(null) }
 
-    // Drives the "Xm ago" labels on recent-room cards. Compose only recomposes on state
+    // Drives the "5 minutes ago" labels on recent-room cards. Compose only recomposes on state
     // change, so without an explicit ticking clock those labels freeze at whatever they
     // read on the last recomposition instead of advancing with real time.
     var nowTickMs by remember { mutableLongStateOf(System.currentTimeMillis()) }
@@ -1139,6 +1145,40 @@ private data class Presence(val text: String, val isLive: Boolean)
 // the call; after that we show how long ago it was last active.
 private const val LIVE_WINDOW_MS = 60_000L
 
+private fun RoomActivityUnit.toRelativeUnit(): RelativeDateTimeFormatter.RelativeUnit = when (this) {
+    RoomActivityUnit.MINUTES -> RelativeDateTimeFormatter.RelativeUnit.MINUTES
+    RoomActivityUnit.HOURS -> RelativeDateTimeFormatter.RelativeUnit.HOURS
+    RoomActivityUnit.DAYS -> RelativeDateTimeFormatter.RelativeUnit.DAYS
+    RoomActivityUnit.WEEKS -> RelativeDateTimeFormatter.RelativeUnit.WEEKS
+}
+
+// The whole phrase comes from ICU's CLDR data for the app's language — "3 hours ago", "vor 3
+// Stunden", "۳ ساعت پیش" — because the number, the unit, its plural form and the word order all
+// change together between languages, and CLDR already has every one of them right.
+@Composable
+private fun roomActivityAgeText(age: RoomActivityAge): String {
+    val locale = LocalConfiguration.current.locales[0]
+    val formatter = remember(locale) {
+        RelativeDateTimeFormatter.getInstance(
+            ULocale.forLocale(locale),
+            null,
+            RelativeDateTimeFormatter.Style.LONG,
+            DisplayContext.CAPITALIZATION_FOR_BEGINNING_OF_SENTENCE,
+        )
+    }
+    return when (age) {
+        RoomActivityAge.JustNow -> formatter.format(
+            RelativeDateTimeFormatter.Direction.PLAIN,
+            RelativeDateTimeFormatter.AbsoluteUnit.NOW,
+        )
+        is RoomActivityAge.Ago -> formatter.format(
+            age.count.toDouble(),
+            RelativeDateTimeFormatter.Direction.LAST,
+            age.unit.toRelativeUnit(),
+        )
+    }
+}
+
 // Two presence states only. Null means nothing is known about this room's activity — neither the
 // server nor local history — and such a card shows no presence line at all.
 @Composable
@@ -1147,8 +1187,7 @@ private fun presenceFor(isOngoing: Boolean, lastActivityAtMs: Long?, now: Long):
     return when {
         isLive -> Presence(stringResource(R.string.dashboard_status_live), isLive = true)
         lastActivityAtMs != null -> Presence(
-            // "%1$s ago" — the connective is localized; the compact duration ("12m", "3h") is not.
-            stringResource(R.string.dashboard_status_timeAgo, formatRecentRoomTimeAgo(lastActivityAtMs, now)),
+            roomActivityAgeText(roomActivityAge(lastActivityAtMs, now)),
             isLive = false,
         )
         else -> null
