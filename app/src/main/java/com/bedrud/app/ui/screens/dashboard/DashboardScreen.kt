@@ -1282,25 +1282,42 @@ private fun SwipeableRoomRow(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun SwipeActionBackground(action: SwipeAction, state: SwipeToDismissBoxState) {
-    // Only paint the panel while it's the gesture's target — a settled row shows nothing behind it.
-    val revealed = state.targetValue == SwipeToDismissBoxValue.EndToStart
-    val container = if (revealed) action.containerColor else Color.Transparent
+    // Material's own SwipeToDismissBox pattern: the panel is there from the first pixel of the
+    // swipe in a neutral tone, and eases into the action's colour once letting go would commit.
+    // It used to be absent until the threshold and then appear at full colour in a single frame,
+    // with the action's icon and label floating on the bare page until it did.
+    val isArmed = state.targetValue == SwipeToDismissBoxValue.EndToStart
+    val colorAnimation = tween<Color>(Motion.durationShort, easing = Motion.standardEasing)
+    val armedContainer by animateColorAsState(
+        targetValue = if (isArmed) action.containerColor else MaterialTheme.colorScheme.surfaceContainerHighest,
+        animationSpec = colorAnimation,
+        label = "swipePanel",
+    )
+    val armedContent by animateColorAsState(
+        targetValue = if (isArmed) action.contentColor else MaterialTheme.colorScheme.onSurfaceVariant,
+        animationSpec = colorAnimation,
+        label = "swipePanelContent",
+    )
+    // Unpainted while the card rests over it, so no edge of it can show around the card's corners.
+    val isMoved = state.dismissDirection != SwipeToDismissBoxValue.Settled
     Box(
         modifier = Modifier
             .fillMaxSize()
             .clip(BedrudShapeTokens.card)
-            .background(container)
+            .background(if (isMoved) armedContainer else Color.Transparent)
             .padding(horizontal = Dimens.space20),
         contentAlignment = Alignment.CenterEnd,
     ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(Dimens.space8),
-        ) {
-            // Centred against the icon beside it rather than against other text.
-            val labelStyle = MaterialTheme.typography.labelLarge
-            Text(action.label, style = labelStyle, color = action.contentColor, modifier = Modifier.typeCentered(labelStyle))
-            Icon(action.icon, contentDescription = null, tint = action.contentColor, modifier = Modifier.size(Dimens.iconSm))
+        if (isMoved) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(Dimens.space8),
+            ) {
+                // Centred against the icon beside it rather than against other text.
+                val labelStyle = MaterialTheme.typography.labelLarge
+                Text(action.label, style = labelStyle, color = armedContent, modifier = Modifier.typeCentered(labelStyle))
+                Icon(action.icon, contentDescription = null, tint = armedContent, modifier = Modifier.size(Dimens.iconSm))
+            }
         }
     }
 }
