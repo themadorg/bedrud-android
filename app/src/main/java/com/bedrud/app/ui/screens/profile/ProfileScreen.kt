@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -48,12 +49,12 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.bedrud.app.R
 import com.bedrud.app.core.instance.InstanceManager
 import com.bedrud.app.ui.components.InitialsAvatar
 import com.bedrud.app.ui.screens.instance.InstanceSwitcherSheet
+import com.bedrud.app.ui.theme.BedrudShapeTokens
 import com.bedrud.app.ui.theme.Dimens
 import com.bedrud.app.ui.theme.OnInstanceColor
 import com.bedrud.app.ui.theme.parseInstanceColor
@@ -222,19 +223,25 @@ fun ProfileContent(
             // in another format.
 
             // Sign Out
+            // Kept a plain text button for its error colour, which BedrudButton's ghost does not
+            // carry; the shape is the shared button token so it presses like every other button.
             TextButton(
                 onClick = onLogout,
+                shape = BedrudShapeTokens.button,
                 colors = ButtonDefaults.textButtonColors(
                     contentColor = MaterialTheme.colorScheme.error
                 ),
-                modifier = Modifier.fillMaxWidth()
+                // A text button's own floor is 40dp; every other button in the app is 48.
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = Dimens.buttonHeight)
             ) {
                 Icon(
                     Icons.AutoMirrored.Filled.Logout,
                     contentDescription = null,
-                    modifier = Modifier.size(18.dp)
+                    modifier = Modifier.size(Dimens.iconSm)
                 )
-                Spacer(modifier = Modifier.width(8.dp))
+                Spacer(modifier = Modifier.width(Dimens.space8))
                 // Centred against the icon beside it, like every other label paired with one.
                 val signOutStyle = MaterialTheme.typography.labelLarge
                 Text(

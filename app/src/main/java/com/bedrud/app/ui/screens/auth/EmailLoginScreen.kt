@@ -44,6 +44,7 @@ import com.bedrud.app.ui.components.BedrudButton
 import com.bedrud.app.ui.components.BedrudButtonVariant
 import com.bedrud.app.ui.components.BedrudPasswordField
 import com.bedrud.app.ui.components.BedrudTextField
+import com.bedrud.app.ui.theme.BedrudShapeTokens
 import com.bedrud.app.ui.theme.Dimens
 import com.bedrud.app.ui.theme.typeCentered
 import kotlinx.coroutines.launch
@@ -179,6 +180,7 @@ fun EmailLoginScreen(
         TextButton(
             onClick = { showResetSheet = true },
             enabled = !isLoading,
+            shape = BedrudShapeTokens.button,
             contentPadding = PaddingValues(
                 horizontal = Dimens.space8,
                 vertical = Dimens.space8
