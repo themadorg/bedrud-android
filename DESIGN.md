@@ -135,7 +135,13 @@ disabled state reads as merely deselected.
   leading stripe + colored "on {server}" tag).
 - **Rooms cards** — an outlined card with a per-server accent stripe on the leading edge; swiped left
   (M3 `SwipeToDismissBox`) for a contextual action — **Remove** a recent from local history (instant),
-  or **Delete** a room you own (routed through a confirm dialog).
+  or **Delete** a room you own (routed through a confirm dialog). The room name is pinned left-to-right
+  so a slug's dashes keep their order, but it is laid out at its own width rather than filling the
+  row: an LTR paragraph that fills the row aligns to its own left edge, whereas one at its own width
+  is placed by the column, at the layout's start — the right edge in Persian and Arabic. The trailing
+  chevron is the auto-mirrored `NavigateNext` for the same reason. The name and its status line sit
+  `space4` apart, since the card's fixed height would otherwise push all its spare room above and
+  below them.
 - **`DevOnly` / `DevHintBadge`** — see below.
 
 ## Bottom sheets (`BedrudBottomSheet`)
