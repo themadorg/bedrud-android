@@ -1,5 +1,6 @@
 package com.bedrud.app.ui.screens.meeting
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -16,6 +17,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import com.bedrud.app.ui.theme.BedrudShapeTokens
 import com.bedrud.app.ui.theme.Dimens
+import com.bedrud.app.ui.theme.Elevation
 import com.bedrud.app.R
 import com.bedrud.app.ui.theme.typeCentered
 
@@ -46,9 +48,13 @@ fun MeetingRecordingBanner(
     onAcknowledge: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    // Lifted and outlined like every other surface floating over the call — the menus, the
+    // controls bar — so it separates from video behind it instead of sitting flat on it.
     Surface(
         shape = BedrudShapeTokens.card,
         color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        shadowElevation = Elevation.level3,
+        border = BorderStroke(Dimens.borderThin, meetingChromeColors().divider),
         modifier = modifier.fillMaxWidth(),
     ) {
         Column(
