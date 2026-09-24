@@ -185,6 +185,28 @@ disabled state reads as merely deselected.
   or **Delete** a room you own (routed through a confirm dialog).
 - **`DevOnly` / `DevHintBadge`** — see below.
 
+## Dialogs
+
+Every alert dialog is Material's `AlertDialog` with its own shape, colour, title and body styles
+untouched, and the same two buttons:
+
+- **Confirm** — `BedrudButton`, `DESTRUCTIVE` when the action cannot be taken back (delete a room,
+  remove a participant), `TONAL` otherwise (create, save, switch server).
+- **Cancel** — `BedrudButton` `GHOST`. Never Material's `TextButton` directly: that is a 40dp pill
+  beside a 48dp, `BedrudShapeTokens.button` confirm, so the pair disagreed on height, corners and
+  padding.
+
+`ConfirmDialog` is that dialog for a title and a one-line message, with the confirm variant as a
+parameter; anything with its own content — the create-room field, the room settings switches — is a
+bespoke `AlertDialog` built from the same two buttons. A body that can outgrow the dialog (a field
+with its error, four switch rows) scrolls, since the keyboard, landscape or a large font size leave it
+little room. A field's error belongs to the field: `isError` plus `supportingText`, as on the sign-in
+forms, not a separate line under it. The input's action key runs the confirm.
+
+The chat image viewer is a full-screen `Dialog` rather than an alert, drawn on `colorScheme.scrim` at
+`Alpha.lightboxScrim`, with its controls in `bedrudColors.onScrim` — the scrim is black in both themes,
+so what sits on it is white in both — and its notice in the inverse pair a snackbar uses.
+
 ## Bottom sheets (`BedrudBottomSheet`)
 
 Every sheet in the app goes through **`BedrudBottomSheet`** so they share one container, one drag
