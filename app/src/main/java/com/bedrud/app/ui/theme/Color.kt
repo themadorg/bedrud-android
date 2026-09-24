@@ -96,3 +96,10 @@ val Mauve900 = Color(0xFF3A1721)
 val MauveDark300 = Color(0xFFE5B0BA)
 val MauveDark700 = Color(0xFF6E3B46)
 val MauveDark900 = Color(0xFF55232E)
+
+// ── System bar scrims ──────────────────────────────────────────────────────
+// The navigation bar's backdrop on API 28 and below, where the system draws no contrast scrim of
+// its own for three-button navigation. The values are the ones androidx's enableEdgeToEdge
+// defaults to; they are spelled out only because that default cannot follow the in-app theme.
+val SystemBarLightScrim = Color(0xE6FFFFFF)
+val SystemBarDarkScrim = Color(0x801B1B1B)
