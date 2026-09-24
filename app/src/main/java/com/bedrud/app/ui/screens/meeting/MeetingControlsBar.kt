@@ -73,7 +73,9 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.style.TextOverflow
 import com.bedrud.app.R
+import com.bedrud.app.core.appLocale
 import com.bedrud.app.core.audio.MeetingInputMode
+import com.bedrud.app.core.formatCount
 import com.bedrud.app.core.audio.MeetingVoiceAlert
 import com.bedrud.app.core.livekit.ConnectionState
 import com.bedrud.app.ui.theme.BedrudShapeTokens
@@ -168,7 +170,13 @@ internal fun MeetingCallControlsRow(
                     contentDescription = stringResource(R.string.meeting_contentDescription_toggleChat),
                     containerColor = if (showChat) colors.buttonActive else colors.button,
                     badge = if (unreadCount > 0) {
-                        if (unreadCount > 9) "9+" else unreadCount.toString()
+                        // In the app's own digits, so Persian and Arabic read «۹+» rather than "9+".
+                        val locale = appLocale()
+                        if (unreadCount > UnreadBadgeMax) {
+                            formatCount(UnreadBadgeMax, locale) + UnreadBadgeOverflow
+                        } else {
+                            formatCount(unreadCount, locale)
+                        }
                     } else {
                         null
                     },
@@ -528,6 +536,11 @@ private const val MicPillPressedScale = 0.96f
 
 /** One full turn, for the pill outline's corner arcs. */
 private const val TwoPi = (2.0 * PI).toFloat()
+
+/** The largest unread count the chat badge spells out; anything above reads as this plus [UnreadBadgeOverflow]. */
+private const val UnreadBadgeMax = 9
+
+private const val UnreadBadgeOverflow = "+"
 
 @Composable
 private fun PillContent(
