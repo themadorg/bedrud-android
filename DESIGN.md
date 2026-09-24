@@ -43,6 +43,15 @@ so any component that reaches for a role gets an on-brand value instead of an M3
 `dynamicColor` is **off** by default so the brand is preserved; Material You can be opted into per-call
 via `BedrudTheme(dynamicColor = true)`.
 
+**The system bars follow the app's appearance, not the phone's.** `enableEdgeToEdge()` on its own
+picks light or dark status-bar icons from the system's night mode, which the in-app Light/Dark
+setting overrides — so a Light app on a phone in Dark mode drew white icons over a white screen, and
+the reverse drew dark on dark. `MainActivity` re-applies it whenever the resolved theme changes,
+answering `SystemBarStyle.auto`'s dark-mode question with the app's own `darkTheme`. The navigation
+bar's backdrop below API 29, where the system draws no contrast scrim of its own, is
+`SystemBarLightScrim` / `SystemBarDarkScrim` in `Color.kt`: androidx's own defaults, spelled out only
+because the default cannot follow the app.
+
 ### Accessibility (non-negotiable)
 
 - **Color is never the only signal** — pair status with an icon, label, ring, or shape (e.g. a selected
