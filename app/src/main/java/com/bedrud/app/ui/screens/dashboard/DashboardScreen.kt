@@ -5,6 +5,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -42,9 +43,12 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LocalTextStyle
+import androidx.compose.material3.MenuDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHostState
@@ -90,6 +94,8 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.CustomAccessibilityAction
+import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontFamily
@@ -135,6 +141,7 @@ import com.bedrud.app.ui.components.ConfirmDialog
 import com.bedrud.app.ui.screens.instance.InstanceSwitcherSheet
 import com.bedrud.app.ui.theme.BedrudShapeTokens
 import com.bedrud.app.ui.theme.Dimens
+import com.bedrud.app.ui.theme.Elevation
 import com.bedrud.app.ui.theme.Motion
 import com.bedrud.app.ui.theme.typeCentered
 import kotlinx.coroutines.delay
@@ -1071,8 +1078,16 @@ private fun RoomCard(
         )
     } else null
 
+    // The card's other actions, and the swipe's, again in its long-press menu.
+    val settingsLabel = stringResource(R.string.dashboard_contentDescription_settings)
+    val deleteLabel = stringResource(R.string.common_button_delete)
+    val menuItems = buildList {
+        if (onSettings != null) add(RoomCardMenuItem(settingsLabel, Icons.Default.Settings, onClick = onSettings))
+        if (isOwner) add(RoomCardMenuItem(deleteLabel, Icons.Default.Delete, isDestructive = true, onClick = onDelete))
+    }
+
     SwipeableRoomRow(action = swipeAction, held = isDeleteHeld, modifier = modifier.fillMaxWidth()) {
-        RoomCardScaffold(onClick = onJoin) {
+        RoomCardScaffold(onClick = onJoin, menuItems = menuItems) {
             RoomCardText(title = title, status = metaText, statusColor = statusTint)
 
             if (onSettings != null) {
@@ -1126,8 +1141,11 @@ private fun RecentRoomCard(
         onTriggered = { onRemove(); true },
     )
 
+    // The swipe's action again in the card's long-press menu.
+    val menuItems = listOf(RoomCardMenuItem(swipeAction.label, swipeAction.icon, onClick = onRemove))
+
     SwipeableRoomRow(action = swipeAction, modifier = modifier.fillMaxWidth()) {
-        RoomCardScaffold(onClick = onJoin) {
+        RoomCardScaffold(onClick = onJoin, menuItems = menuItems) {
             RoomCardText(title = recent.roomName, status = presence?.text, statusColor = statusTint)
 
             TrailingChevron()
@@ -1162,27 +1180,105 @@ private fun presenceFor(isOngoing: Boolean, lastActivityAtMs: Long?, now: Long):
 
 // ── Shared card pieces ─────────────────────────────────────────────────────────
 
-/** Plain outlined card holding one room row. */
+/**
+ * One thing a card offers besides opening its room. [isDestructive] draws it in the error colour,
+ * kept for what cannot be taken back.
+ */
+private data class RoomCardMenuItem(
+    val label: String,
+    val icon: ImageVector,
+    val isDestructive: Boolean = false,
+    val onClick: () -> Unit,
+)
+
+/**
+ * A card's long-press menu: the swipe's action and the card's other actions, one tap away for
+ * anyone who does not or cannot swipe. It wears the app's menu chrome, as the chat's menus and the
+ * language picker do.
+ */
+@Composable
+private fun RoomCardMenu(
+    items: List<RoomCardMenuItem>,
+    expanded: Boolean,
+    onDismiss: () -> Unit,
+) {
+    DropdownMenu(
+        expanded = expanded,
+        onDismissRequest = onDismiss,
+        shape = BedrudShapeTokens.card,
+        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+        tonalElevation = Elevation.level2,
+        shadowElevation = Elevation.level3,
+    ) {
+        items.forEach { item ->
+            val color = if (item.isDestructive) MaterialTheme.colorScheme.error
+            else MaterialTheme.colorScheme.onSurface
+            DropdownMenuItem(
+                text = { Text(item.label, modifier = Modifier.typeCentered(LocalTextStyle.current)) },
+                leadingIcon = { Icon(item.icon, contentDescription = null) },
+                colors = MenuDefaults.itemColors(textColor = color, leadingIconColor = color),
+                onClick = {
+                    onDismiss()
+                    item.onClick()
+                },
+            )
+        }
+    }
+}
+
+/** Plain outlined card holding one room row, with its long-press menu when it has one. */
 @Composable
 private fun RoomCardScaffold(
     onClick: () -> Unit,
+    menuItems: List<RoomCardMenuItem> = emptyList(),
     content: @Composable RowScope.() -> Unit,
 ) {
-    BedrudOutlinedCard(
-        onClick = onClick,
-        shape = BedrudShapeTokens.card,
-        modifier = Modifier.fillMaxWidth(),
-    ) {
-        Row(
+    var isMenuOpen by remember { mutableStateOf(false) }
+    val hasMenu = menuItems.isNotEmpty()
+    val menuLabel = stringResource(R.string.meeting_contentDescription_moreOptions)
+    Box {
+        BedrudOutlinedCard(
+            shape = BedrudShapeTokens.card,
             modifier = Modifier
                 .fillMaxWidth()
-                // Uniform card height whether or not the card carries a trailing 48dp control
-                // (the settings button would otherwise inflate owned cards).
-                .heightIn(min = Dimens.roomCardMinHeight)
-                .padding(start = Dimens.space16, end = Dimens.space4, top = Dimens.space12, bottom = Dimens.space12),
-            verticalAlignment = Alignment.CenterVertically,
-            content = content,
-        )
+                // Clipped before it clicks, so the press ripple keeps the card's corners.
+                .clip(BedrudShapeTokens.card)
+                .combinedClickable(
+                    onClick = onClick,
+                    onLongClick = if (hasMenu) ({ isMenuOpen = true }) else null,
+                    onLongClickLabel = if (hasMenu) menuLabel else null,
+                )
+                // The swipe's action, and the rest of the menu, as TalkBack actions: a gesture
+                // must never be the only way to an action (Material's list accessibility guidance).
+                .semantics {
+                    if (hasMenu) {
+                        customActions = menuItems.map { item ->
+                            CustomAccessibilityAction(item.label) {
+                                item.onClick()
+                                true
+                            }
+                        }
+                    }
+                },
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    // Uniform card height whether or not the card carries a trailing 48dp control
+                    // (the settings button would otherwise inflate owned cards).
+                    .heightIn(min = Dimens.roomCardMinHeight)
+                    .padding(start = Dimens.space16, end = Dimens.space4, top = Dimens.space12, bottom = Dimens.space12),
+                verticalAlignment = Alignment.CenterVertically,
+                content = content,
+            )
+        }
+        if (hasMenu) {
+            RoomCardMenu(
+                items = menuItems,
+                expanded = isMenuOpen,
+                onDismiss = { isMenuOpen = false },
+            )
+        }
     }
 }
 
