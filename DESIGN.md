@@ -173,6 +173,20 @@ than standing at full strength beside a greyed-out one.
   (`defaultMinSize(buttonHeight)`, so callers can grow it, e.g. `height(buttonHeightLarge)` for a full CTA),
   shape (`BedrudShapeTokens.button`), and padding. Built-in `loading` state.
 - **`BedrudCard` / `BedrudOutlinedCard`** — outline-first cards, tonal surface, minimal elevation.
+  `BedrudOutlinedCard`'s corners default to `BedrudShapeTokens.card`, the one card radius in the
+  app; a card never passes its own. The default used to be 12dp while every caller but one passed
+  16dp, so the one that did not (the admin stat card) sat with smaller corners beside the rest.
+- **`BedrudBadge`** — a short label in a `pill` on `tertiaryContainer` beside what it describes:
+  "Recommended" on a server choice, "Admin" beside a name. One badge wherever a label like that
+  appears.
+- **Menus** — anything that drops open (the chat's two menus, the settings language picker) wears
+  the same chrome: `BedrudShapeTokens.card` corners, `surfaceContainerHigh`, `Elevation.level2`
+  tonal and `Elevation.level3` shadow. Material's default menu is a 4dp, flatter surface, which
+  read as a different kind of thing from the menus next to it.
+- **Pressable rows and cards clip before they click.** `.clip(shape)` goes before `.clickable` or
+  `.selectable`, so the press ripple keeps the element's corners instead of flashing as a
+  rectangle past them — the room cards, the server chooser's cards and the server switcher's rows
+  all do it.
 - **`BedrudCompactTopBar`** — compact status-bar-aware header. Takes either a `title: String` or a
   slot `title` composable (the rooms header uses the slot for its "{server} rooms" name, in a single
   neutral tone, with a trailing chevron marking it as the server switcher's entry point), plus an
@@ -221,7 +235,8 @@ the change twice.
 
 The chat image viewer is a full-screen `Dialog` rather than an alert, drawn on `colorScheme.scrim` at
 `Alpha.lightboxScrim`, with its controls in `bedrudColors.onScrim` — the scrim is black in both themes,
-so what sits on it is white in both — and its notice in the inverse pair a snackbar uses.
+so what sits on it is white in both — and its notice in the inverse pair a snackbar uses, with a
+snackbar's `BedrudShapeTokens.snackbar` corners.
 
 ## Bottom sheets (`BedrudBottomSheet`)
 
