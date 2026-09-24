@@ -206,6 +206,7 @@
   <string name="settings_theme_light">Claro</string>
   <string name="settings_theme_dark">Oscuro</string>
   <string name="settings_label_language">Idioma</string>
+  <string name="settings_language_system">Sistema</string>
   <string name="settings_section_notifications">Notificaciones</string>
   <string name="settings_label_enableNotifications">Activar notificaciones</string>
   <string name="settings_section_account">Cuenta</string>

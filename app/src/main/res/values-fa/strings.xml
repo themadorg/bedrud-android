@@ -203,6 +203,7 @@
   <string name="settings_theme_light">روشن</string>
   <string name="settings_theme_dark">تاریک</string>
   <string name="settings_label_language">زبان</string>
+  <string name="settings_language_system">سیستم</string>
   <string name="settings_section_notifications">اعلان‌ها</string>
   <string name="settings_label_enableNotifications">فعال کردن اعلان‌ها</string>
   <string name="settings_section_account">حساب</string>

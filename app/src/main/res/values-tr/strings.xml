@@ -206,6 +206,7 @@
   <string name="settings_theme_light">Açık</string>
   <string name="settings_theme_dark">Koyu</string>
   <string name="settings_label_language">Dil</string>
+  <string name="settings_language_system">Sistem</string>
   <string name="settings_section_notifications">Bildirimler</string>
   <string name="settings_label_enableNotifications">Bildirimleri Etkinleştir</string>
   <string name="settings_section_account">Hesap</string>

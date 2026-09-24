@@ -211,6 +211,7 @@
   <string name="settings_theme_light">Light</string>
   <string name="settings_theme_dark">Dark</string>
   <string name="settings_label_language">Language</string>
+  <string name="settings_language_system">System</string>
   <string name="settings_section_notifications">Notifications</string>
   <string name="settings_label_enableNotifications">Enable Notifications</string>
   <string name="settings_section_account">Account</string>

@@ -65,6 +65,9 @@ import com.bedrud.app.core.api.apiAction
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 
+@Composable
+private fun AppLanguage.displayName(): String = labelResId?.let { stringResource(it) } ?: label
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsContent(
@@ -138,7 +141,7 @@ fun SettingsContent(
                         onExpandedChange = { languageExpanded = it }
                     ) {
                         BedrudTextField(
-                            value = language.label,
+                            value = language.displayName(),
                             onValueChange = {},
                             readOnly = true,
                             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = languageExpanded) },
@@ -150,7 +153,7 @@ fun SettingsContent(
                         ) {
                             AppLanguage.entries.forEach { lang ->
                                 DropdownMenuItem(
-                                    text = { Text(lang.label) },
+                                    text = { Text(lang.displayName()) },
                                     onClick = {
                                         settingsStore.setLanguage(lang)
                                         languageExpanded = false

@@ -22,8 +22,18 @@ enum class AppAppearance(val label: String, @param:StringRes val stringResId: In
     DARK("Dark", R.string.settings_theme_dark);
 }
 
-enum class AppLanguage(val localeTag: String, val label: String, val isRtl: Boolean = false) {
-    SYSTEM("", "System"),
+/**
+ * A language the app can be shown in. [label] is each language's name in its own script, which is
+ * how a language picker lists them; System is the one entry that is not a language, so it names
+ * itself through [labelResId] in the reader's current language instead.
+ */
+enum class AppLanguage(
+    val localeTag: String,
+    val label: String,
+    val isRtl: Boolean = false,
+    @param:StringRes val labelResId: Int? = null,
+) {
+    SYSTEM("", "System", labelResId = R.string.settings_language_system),
     ENGLISH("en", "English"),
     PERSIAN("fa", "فارسی", isRtl = true),
     ARABIC("ar", "العربية", isRtl = true),

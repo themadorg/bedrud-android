@@ -214,6 +214,7 @@
   <string name="settings_theme_light">فاتح</string>
   <string name="settings_theme_dark">داكن</string>
   <string name="settings_label_language">اللغة</string>
+  <string name="settings_language_system">النظام</string>
   <string name="settings_section_notifications">الإشعارات</string>
   <string name="settings_label_enableNotifications">تفعيل الإشعارات</string>
   <string name="settings_section_account">الحساب</string>
