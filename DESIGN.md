@@ -379,7 +379,8 @@ the `meeting*` tokens in `Dimens.kt`, timing in `Motion.meetingChromeAutoHideDel
   the finger. The send plane is **nudged `meetingSendIconNudge` towards its tip**: the glyph's ink
   centroid sits about 3dp behind its box's centre (wide tail, sharp tip — measured on a device
   capture), so a geometrically centred plane reads as sitting off towards the tail; half the
-  imbalance corrects it without overshooting, and `offset` mirrors with the icon in RTL.
+  imbalance corrects it without overshooting; the plane and its nudge are drawn left-to-right in
+  every language, like the bar they end (see Internationalization).
   A **long press opens the message menu** (`MeetingChatMessageMenu`), which straddles the bubble:
   the quick reactions as a pill above it, what can be done with the message — **who reacted**, Copy
   and Share — as a card below, and the message itself readable between them. One box containing
@@ -650,6 +651,27 @@ zh) — **not** inline in composables. Every string must be translated in all lo
 lint fails CI on `MissingTranslation`, so shipping English-only is not an option. RTL is fully supported:
 `LocaleHelper` and `BedrudTheme` set the layout direction from the active `AppLanguage`, while the
 typeface does not vary by locale at all — see [Typography](#typography-typekt).
+
+**What does not mirror.** Mirroring is for what follows the reading direction: rows of content,
+arrows that point where navigation goes (back, a card's chevron), sign-out's arrow out. Two things
+stay as drawn in every language:
+
+- **The call's two bars.** The controls bar and the chat bar keep one left-to-right order —
+  hang-up and send at the right end, the "+" at the left — because they are a set of controls in
+  fixed places, like a player's, and they swap in place with each other. They place their children
+  with `Arrangement.Absolute` and `AbsoluteAlignment`, which fix only the placing: the chat field
+  still writes and aligns in the writer's direction, the "+" menu and the mic pill's label read in
+  the app's language, and the rest of the call screen, top bar included, mirrors as usual. The
+  bars' icons and the unread count's corner are drawn left-to-right with them.
+- **Pictures, not directions.** A speaker faces one way in every language: the top bar's output
+  button, the output picker's rows, and the speakers at the ends of the volume sliders, whose
+  sliders still run in the reading direction.
+
+Both are drawn through `LeftToRight` (`ui/components/LeftToRight.kt`), which lays its content out
+left-to-right — the layout direction is what Material mirrors an auto-mirrored icon by — and
+`BedrudSheetActionRow` takes `mirrorIcon = false` for a row whose icon is such a picture.
+Material's non-mirrored `Volume*` icons are deprecated in favour of the auto-mirrored ones, so the
+icons stay the auto-mirrored ones and the direction they are drawn in decides.
 
 **Content direction is separate from layout direction.** What someone types is not governed by the
 language they chose the app in: a Persian message written in the English build is still a
