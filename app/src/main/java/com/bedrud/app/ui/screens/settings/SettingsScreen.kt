@@ -105,7 +105,7 @@ fun SettingsContent(
             Spacer(modifier = Modifier.height(0.dp))
 
             // Appearance
-            BedrudOutlinedCard(shape = BedrudShapeTokens.card) {
+            BedrudOutlinedCard {
                 Column(modifier = Modifier.padding(16.dp)) {
                     CardSectionHeader(stringResource(R.string.settings_section_appearance))
                     Spacer(modifier = Modifier.height(12.dp))
@@ -171,7 +171,7 @@ fun SettingsContent(
             }
 
             // Notifications
-            BedrudOutlinedCard(shape = BedrudShapeTokens.card) {
+            BedrudOutlinedCard {
                 Column {
                     CardSectionHeader(
                         stringResource(R.string.settings_section_notifications),
@@ -197,7 +197,7 @@ fun SettingsContent(
 
             // Account Info
             if (currentUser != null) {
-                BedrudOutlinedCard(shape = BedrudShapeTokens.card) {
+                BedrudOutlinedCard {
                     Column {
                         Row(
                             modifier = Modifier.padding(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 8.dp),
@@ -262,7 +262,7 @@ fun SettingsContent(
 
             // Change Password
             val isLocalAccount = currentUser?.provider.let { it == null || it == "local" || it == "passkey" }
-            BedrudOutlinedCard(shape = BedrudShapeTokens.card) {
+            BedrudOutlinedCard {
                 Column(modifier = Modifier.padding(16.dp)) {
                     CardSectionHeader(stringResource(R.string.settings_section_security))
                     Spacer(modifier = Modifier.height(12.dp))
@@ -338,7 +338,7 @@ fun SettingsContent(
             }
 
             // About
-            BedrudOutlinedCard(shape = BedrudShapeTokens.card) {
+            BedrudOutlinedCard {
                 Column {
                     CardSectionHeader(
                         stringResource(R.string.settings_section_about),

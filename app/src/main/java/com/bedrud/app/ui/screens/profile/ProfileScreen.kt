@@ -102,7 +102,7 @@ fun ProfileContent(
             Spacer(modifier = Modifier.height(0.dp))
 
             // User section
-            BedrudOutlinedCard(shape = BedrudShapeTokens.card) {
+            BedrudOutlinedCard {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -179,7 +179,7 @@ fun ProfileContent(
             }
 
             // Server section
-            BedrudOutlinedCard(shape = BedrudShapeTokens.card) {
+            BedrudOutlinedCard {
                 Column {
                     CardSectionHeader(
                         stringResource(R.string.profile_section_server),
@@ -237,7 +237,7 @@ fun ProfileContent(
             }
 
             // Account section
-            BedrudOutlinedCard(shape = BedrudShapeTokens.card) {
+            BedrudOutlinedCard {
                 Column {
                     CardSectionHeader(
                         stringResource(R.string.profile_section_account),
