@@ -305,8 +305,9 @@ Release builds use minification + resource shrinking. Rules in `app/proguard-rul
 Parsed in `BedrudURLParser`, handled in `MainActivity.handleDeepLink()`.
 
 No way into a meeting navigates to it directly. A deep link, the call notification, a call still
-running when the activity is recreated, and every join from `MainScreen` (a room card, a new room,
-the quick-join box, including its switch to another server) all hold the room in `PendingRoom`
+running when the activity is recreated, every join from `MainScreen` (a room card, a new room,
+the quick-join box, including its switch to another server), and a room link followed from a call's
+chat all hold the room in `PendingRoom`
 (`core/rooms/PendingRoom.kt`), together with the server that was active when it was asked for.
 `BedrudNavHost` opens it once somebody is signed in on that server, and that is the only place the
 app navigates to `Routes.MEETING`.
@@ -328,7 +329,8 @@ and telecom refuses to place a second call over an unholdable one. `resolveChatL
 in, or a room on one of the reader's own servers, matched by whole base URL as the dashboard's quick
 join does — and a room only opens after the reader confirms leaving this call. The call then ends
 through `CallService.stop`, the same teardown as the leave button; the app switches server if the room
-is on another one; and `navigateToMeeting` opens the room in the old one's place.
+is on another one; and the room is held in `PendingRoom` like every other way in, so it opens in the
+old one's place — after the sign-in, when nobody is signed in on that server yet.
 
 The next room's screen appears while the call being left is still tearing down, so two things must
 hold for anything that touches the meeting screen:

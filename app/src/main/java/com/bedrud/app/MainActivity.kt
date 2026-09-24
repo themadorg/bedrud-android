@@ -19,7 +19,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
-import androidx.navigation.NavController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -194,17 +193,6 @@ object Routes {
     fun meeting(roomName: String): String = "meeting/$roomName"
 }
 
-/**
- * Opens a room's meeting in place of any meeting already on the stack, so at most one is ever
- * there: joining from the dashboard, from a deep link, or from a room link in another room's chat.
- */
-private fun NavController.navigateToMeeting(roomName: String) {
-    navigate(Routes.meeting(roomName)) {
-        launchSingleTop = true
-        popUpTo(Routes.MEETING) { inclusive = true }
-    }
-}
-
 @Composable
 fun BedrudNavHost(
     instanceManager: InstanceManager,
@@ -274,6 +262,8 @@ fun BedrudNavHost(
         ) ?: return@LaunchedEffect
         // The recent is recorded once the call actually starts (MeetingScreen), not on the way
         // in: a link to a room the server has deleted must not leave a card behind for it.
+        // In place of any meeting already on the stack, so at most one is ever there: a room link
+        // followed from a call's chat opens its room where the room just left used to be.
         navController.navigate(Routes.meeting(roomName)) {
             launchSingleTop = true
             popUpTo(Routes.MEETING) { inclusive = true }
@@ -396,7 +386,12 @@ fun BedrudNavHost(
                         navController.popBackStack()
                     }
                 },
-                onJoinRoom = { nextRoomName -> navController.navigateToMeeting(nextRoomName) },
+                // Held like every other way in. The meeting screen switches server before asking,
+                // so the room is held for the server it lives on, and a room there that needs a
+                // sign-in first opens after it rather than being lost with the back stack.
+                onJoinRoom = { nextRoomName ->
+                    pendingRoom.hold(nextRoomName, instanceManager.store.activeInstanceId.value)
+                },
             )
         }
     }
