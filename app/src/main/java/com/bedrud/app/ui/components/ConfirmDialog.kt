@@ -8,9 +8,13 @@ import androidx.compose.ui.res.stringResource
 import com.bedrud.app.R
 
 /**
- * The app's destructive-confirmation dialog: title, message, a destructive filled confirm button,
- * and a plain cancel. Used for delete-room and kick-participant; anything needing a richer layout
- * (extra buttons, custom content) stays a bespoke AlertDialog.
+ * The app's confirmation dialog: title, message, a filled confirm button, and a plain cancel. Used
+ * for delete-room and kick-participant; anything needing a richer layout (extra buttons, custom
+ * content) stays a bespoke AlertDialog.
+ *
+ * The confirm is destructive by default, since most of what needs confirming cannot be undone. A
+ * choice that can be — leaving one call for another, which the reader can rejoin — passes
+ * [confirmVariant] instead: the destructive colour is kept for what is actually lost.
  */
 @Composable
 fun ConfirmDialog(
@@ -19,6 +23,7 @@ fun ConfirmDialog(
     confirmLabel: String,
     onConfirm: () -> Unit,
     onDismiss: () -> Unit,
+    confirmVariant: BedrudButtonVariant = BedrudButtonVariant.DESTRUCTIVE,
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -27,7 +32,7 @@ fun ConfirmDialog(
         confirmButton = {
             BedrudButton(
                 text = confirmLabel,
-                variant = BedrudButtonVariant.DESTRUCTIVE,
+                variant = confirmVariant,
                 onClick = onConfirm,
             )
         },

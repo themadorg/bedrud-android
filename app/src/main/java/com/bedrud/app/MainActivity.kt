@@ -19,6 +19,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.navigation.NavController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -191,6 +192,17 @@ object Routes {
     const val MEETING = "meeting/{roomName}"
 
     fun meeting(roomName: String): String = "meeting/$roomName"
+}
+
+/**
+ * Opens a room's meeting in place of any meeting already on the stack, so at most one is ever
+ * there: joining from the dashboard, from a deep link, or from a room link in another room's chat.
+ */
+private fun NavController.navigateToMeeting(roomName: String) {
+    navigate(Routes.meeting(roomName)) {
+        launchSingleTop = true
+        popUpTo(Routes.MEETING) { inclusive = true }
+    }
 }
 
 @Composable
@@ -375,12 +387,16 @@ fun BedrudNavHost(
                     // Leaving can be triggered twice for one action (e.g. the
                     // button handler pops immediately, then the connection-state
                     // watcher pops again once the async disconnect lands). Only
-                    // pop while the meeting screen is still the current entry so
-                    // the second call can't pop past it and empty the back stack.
-                    if (navController.currentDestination?.route == Routes.MEETING) {
+                    // pop while this entry is still the current one, so the second
+                    // call can't pop past it and empty the back stack. The entry,
+                    // not the route: after following a room link the next room is
+                    // a meeting too, and the room just left, still on screen while
+                    // it animates out, must not close it.
+                    if (navController.currentBackStackEntry?.id == backStackEntry.id) {
                         navController.popBackStack()
                     }
-                }
+                },
+                onJoinRoom = { nextRoomName -> navController.navigateToMeeting(nextRoomName) },
             )
         }
     }
