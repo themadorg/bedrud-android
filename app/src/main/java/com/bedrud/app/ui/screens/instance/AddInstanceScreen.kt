@@ -68,6 +68,7 @@ import com.bedrud.app.BuildConfig
 import com.bedrud.app.R
 import com.bedrud.app.core.instance.InstanceManager
 import com.bedrud.app.core.instance.ServerUrlCanonicalizer
+import com.bedrud.app.ui.components.BedrudBadge
 import com.bedrud.app.ui.components.BedrudButton
 import com.bedrud.app.ui.components.BedrudScaffoldContentInsets
 import com.bedrud.app.ui.components.BedrudSnackbarHost
@@ -429,31 +430,13 @@ private fun ServerChoiceCard(
                             .typeCentered(titleStyle)
                     )
                     if (badge != null) {
-                        CardBadge(badge)
+                        BedrudBadge(badge)
                     }
                 }
                 Spacer(Modifier.height(Dimens.space8))
                 content(selected)
             }
         }
-    }
-}
-
-@Composable
-private fun CardBadge(text: String) {
-    Surface(
-        shape = BedrudShapeTokens.pill,
-        color = MaterialTheme.colorScheme.tertiaryContainer,
-        contentColor = MaterialTheme.colorScheme.onTertiaryContainer
-    ) {
-        val badgeStyle = MaterialTheme.typography.labelSmall
-        Text(
-            text = text,
-            style = badgeStyle,
-            modifier = Modifier
-                .padding(horizontal = Dimens.space8, vertical = Dimens.space2)
-                .typeCentered(badgeStyle)
-        )
     }
 }
 

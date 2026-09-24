@@ -1,6 +1,5 @@
 package com.bedrud.app.ui.screens.profile
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -14,13 +13,13 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material3.ButtonDefaults
 
+import com.bedrud.app.ui.components.BedrudBadge
 import com.bedrud.app.ui.components.BedrudOutlinedCard
 import com.bedrud.app.ui.components.CardSectionHeader
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -47,7 +46,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.layout.ContentScale
@@ -57,8 +55,6 @@ import com.bedrud.app.R
 import com.bedrud.app.core.instance.InstanceManager
 import com.bedrud.app.ui.components.InitialsAvatar
 import com.bedrud.app.ui.screens.instance.InstanceSwitcherSheet
-import com.bedrud.app.ui.theme.BedrudRadius
-import com.bedrud.app.ui.theme.BedrudShapeTokens
 import com.bedrud.app.ui.theme.OnInstanceColor
 import com.bedrud.app.ui.theme.parseInstanceColor
 import com.bedrud.app.ui.theme.rememberTypeCenteringOffset
@@ -146,26 +142,13 @@ fun ProfileContent(
                                 style = nameStyle
                             )
                             if (user?.isAdmin == true) {
-                                val badgeStyle = MaterialTheme.typography.labelSmall.copy(
-                                    fontWeight = FontWeight.Bold
-                                )
                                 // The block moved the name as it stands, so its letters still sit
                                 // above its own box's centre. The badge is raised by the name's
                                 // correction to meet them, rather than the name lowered to meet it.
                                 val nameCorrection = rememberTypeCenteringOffset(nameStyle)
-                                Text(
-                                    stringResource(R.string.profile_badge_admin),
-                                    style = badgeStyle,
-                                    color = MaterialTheme.colorScheme.onPrimary,
-                                    modifier = Modifier
-                                        .offset(y = -nameCorrection)
-                                        .background(
-                                            MaterialTheme.colorScheme.primary,
-                                            RoundedCornerShape(BedrudRadius.xs)
-                                        )
-                                        .padding(horizontal = 6.dp, vertical = 2.dp)
-                                        // After the background, so the letters move inside the badge.
-                                        .typeCentered(badgeStyle)
+                                BedrudBadge(
+                                    text = stringResource(R.string.profile_badge_admin),
+                                    modifier = Modifier.offset(y = -nameCorrection),
                                 )
                             }
                         }
