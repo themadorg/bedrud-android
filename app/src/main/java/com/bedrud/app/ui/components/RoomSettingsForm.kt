@@ -11,11 +11,13 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.Dp
 import com.bedrud.app.R
 import com.bedrud.app.models.RoomSettings
+import com.bedrud.app.ui.theme.Alpha
 import com.bedrud.app.ui.theme.Dimens
 import com.bedrud.app.ui.theme.typeCentered
 
@@ -96,12 +98,15 @@ private fun RoomSettingToggleRow(
         verticalAlignment = Alignment.CenterVertically
     ) {
         val labelStyle = MaterialTheme.typography.bodyLarge
+        // The switch dims itself when disabled; its label is the app's own text, so it takes the
+        // same disabled opacity rather than staying full strength beside a greyed-out switch.
         Text(
             text = label,
             color = contentColor,
             style = labelStyle,
             modifier = Modifier
                 .weight(1f)
+                .alpha(if (enabled) 1f else Alpha.disabled)
                 .typeCentered(labelStyle)
         )
         Switch(checked = checked, onCheckedChange = onCheckedChange, enabled = enabled)
