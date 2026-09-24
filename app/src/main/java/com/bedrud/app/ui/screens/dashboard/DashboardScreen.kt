@@ -943,7 +943,7 @@ internal fun QuickJoinBar(
         BedrudTextField(
             value = value,
             onValueChange = onValueChange,
-            placeholder = stringResource(R.string.dashboard_placeholder_search),
+            placeholder = stringResource(R.string.dashboard_placeholder_joinRoom),
             // A link, not a magnifier: the field joins the room it is given and searches nothing,
             // and a search icon had the hint translated as "search rooms".
             leadingIcon = { Icon(Icons.Default.Link, contentDescription = null, modifier = Modifier.size(Dimens.iconSm)) },

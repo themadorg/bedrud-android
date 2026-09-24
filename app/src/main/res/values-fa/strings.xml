@@ -74,7 +74,7 @@
   <string name="instance_contentDescription_scanQr">اسکن کد QR</string>
   <string name="instance_note_insecure">این اتصال رمزگذاری نخواهد شد.</string>
   <string name="dashboard_title_rooms">اتاق‌ها</string>
-  <string name="dashboard_placeholder_search">جستجوی اتاق…</string>
+  <string name="dashboard_placeholder_joinRoom">نام یا پیوند اتاق را وارد کنید…</string>
   <string name="dashboard_join_invalidInput">نام یک اتاق یا یک پیوند جلسه معتبر وارد کنید.</string>
   <string name="dashboard_join_unknownServer">ابتدا سرور این پیوند را اضافه کنید.</string>
   <string name="dashboard_dialog_createTitle">ایجاد اتاق</string>

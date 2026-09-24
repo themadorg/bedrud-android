@@ -76,7 +76,7 @@
   <string name="instance_contentDescription_scanQr">Escanear código QR</string>
   <string name="instance_note_insecure">Esta conexión no estará cifrada.</string>
   <string name="dashboard_title_rooms">Salas</string>
-  <string name="dashboard_placeholder_search">Introduce el nombre o enlace de la sala…</string>
+  <string name="dashboard_placeholder_joinRoom">Introduce el nombre o enlace de la sala…</string>
   <string name="dashboard_join_invalidInput">Introduce el nombre de una sala o un enlace de reunión válido.</string>
   <string name="dashboard_join_unknownServer">Agrega primero el servidor de este enlace.</string>
   <string name="dashboard_dialog_createTitle">Crear sala</string>
