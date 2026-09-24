@@ -192,12 +192,12 @@ than standing at full strength beside a greyed-out one.
   (`defaultMinSize(buttonHeight)`, so callers can grow it, e.g. `height(buttonHeightLarge)` for a full CTA),
   shape (`BedrudShapeTokens.button`), and padding. Built-in `loading` state.
   Every button in the app is a `BedrudButton`, in the call as much as outside it — the call's accent
-  *is* `colorScheme.primary`, so the call needs no button of its own. Three stay Material's
+  *is* `colorScheme.primary`, so the call needs no button of its own. Two stay Material's
   `TextButton`, each for a reason the ghost variant cannot meet, and each still takes
   `BedrudShapeTokens.button` so it presses with the same corners: the sign-in hub's "Sign up", which
-  finishes the prompt beside it and would drift from it at the ghost's padding; the "Forgot
-  password?" link, flush with the field's edge above it; and Profile's "Sign out", for its error
-  colour, held to `buttonHeight` like the rest.
+  finishes the prompt beside it and would drift from it at the ghost's padding; and the "Forgot
+  password?" link, flush with the field's edge above it. Profile's "Sign out" is the ghost variant,
+  not the error colour: signing out is neither an error nor irreversible.
 - **`BedrudCard` / `BedrudOutlinedCard`** — outline-first cards, tonal surface, minimal elevation.
   `BedrudOutlinedCard`'s corners default to `BedrudShapeTokens.card`, the one card radius in the
   app; a card never passes its own. The default used to be 12dp while every caller but one passed
