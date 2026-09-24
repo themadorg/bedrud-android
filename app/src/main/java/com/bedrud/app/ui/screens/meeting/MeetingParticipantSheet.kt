@@ -84,7 +84,7 @@ fun MeetingParticipantSheet(
     if (showKickConfirm) {
         ConfirmDialog(
             title = stringResource(R.string.meeting_dialog_kickTitle),
-            message = stringResource(R.string.meeting_dialog_kickMessage),
+            message = stringResource(R.string.meeting_dialog_kickMessage, name),
             confirmLabel = stringResource(R.string.meeting_action_kick),
             onConfirm = {
                 showKickConfirm = false
