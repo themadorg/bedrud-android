@@ -198,6 +198,10 @@
   <string name="admin_error_loadSettingsFailed">Einstellungen konnten nicht geladen werden</string>
   <string name="admin_error_saveSettingsFailed">Einstellungen konnten nicht gespeichert werden</string>
   <string name="admin_error_createTokenFailed">Einladungstoken konnte nicht erstellt werden</string>
+  <string name="admin_dialog_banTitle">Benutzer bannen?</string>
+  <string name="admin_dialog_banMessage">Sind Sie sicher, dass Sie <xliff:g id="userName" example="John Doe">%1$s</xliff:g> bannen möchten?</string>
+  <string name="admin_dialog_deleteTokenTitle">Einladungstoken löschen?</string>
+  <string name="admin_dialog_deleteTokenMessage">Sind Sie sicher, dass Sie dieses Einladungstoken löschen möchten? Das kann nicht rückgängig gemacht werden.</string>
   <string name="admin_error_deleteTokenFailed">Einladungstoken konnte nicht gelöscht werden</string>
   <string name="common_action_copy">Kopieren</string>
   <string name="common_action_share">Teilen</string>

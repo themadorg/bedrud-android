@@ -198,6 +198,10 @@
   <string name="admin_error_loadSettingsFailed">Impossible de charger les paramètres</string>
   <string name="admin_error_saveSettingsFailed">Impossible d\'enregistrer les paramètres</string>
   <string name="admin_error_createTokenFailed">Impossible de créer le jeton d\'invitation</string>
+  <string name="admin_dialog_banTitle">Bannir l\'utilisateur ?</string>
+  <string name="admin_dialog_banMessage">Voulez-vous vraiment bannir <xliff:g id="userName" example="John Doe">%1$s</xliff:g> ?</string>
+  <string name="admin_dialog_deleteTokenTitle">Supprimer le jeton d\'invitation ?</string>
+  <string name="admin_dialog_deleteTokenMessage">Voulez-vous vraiment supprimer ce jeton d\'invitation ? Cette action est irréversible.</string>
   <string name="admin_error_deleteTokenFailed">Impossible de supprimer le jeton d\'invitation</string>
   <string name="common_action_copy">Copier</string>
   <string name="common_action_share">Partager</string>

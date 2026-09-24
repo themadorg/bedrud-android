@@ -196,6 +196,10 @@
   <string name="admin_error_loadSettingsFailed">設定を読み込めませんでした</string>
   <string name="admin_error_saveSettingsFailed">設定を保存できませんでした</string>
   <string name="admin_error_createTokenFailed">招待トークンを作成できませんでした</string>
+  <string name="admin_dialog_banTitle">ユーザーをBANしますか？</string>
+  <string name="admin_dialog_banMessage"><xliff:g id="userName" example="John Doe">%1$s</xliff:g> をBANしてもよろしいですか？</string>
+  <string name="admin_dialog_deleteTokenTitle">招待トークンを削除しますか？</string>
+  <string name="admin_dialog_deleteTokenMessage">この招待トークンを削除してもよろしいですか？この操作は元に戻せません。</string>
   <string name="admin_error_deleteTokenFailed">招待トークンを削除できませんでした</string>
   <string name="common_action_copy">コピー</string>
   <string name="common_action_share">共有</string>

@@ -198,6 +198,10 @@
   <string name="admin_error_loadSettingsFailed">No se pudo cargar la configuración</string>
   <string name="admin_error_saveSettingsFailed">No se pudo guardar la configuración</string>
   <string name="admin_error_createTokenFailed">No se pudo crear el token de invitación</string>
+  <string name="admin_dialog_banTitle">¿Bloquear usuario?</string>
+  <string name="admin_dialog_banMessage">¿Seguro que quieres bloquear a <xliff:g id="userName" example="John Doe">%1$s</xliff:g>?</string>
+  <string name="admin_dialog_deleteTokenTitle">¿Eliminar token de invitación?</string>
+  <string name="admin_dialog_deleteTokenMessage">¿Seguro que quieres eliminar este token de invitación? Esta acción no se puede deshacer.</string>
   <string name="admin_error_deleteTokenFailed">No se pudo eliminar el token de invitación</string>
   <string name="common_action_copy">Copiar</string>
   <string name="common_action_share">Compartir</string>

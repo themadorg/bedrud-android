@@ -46,6 +46,7 @@ import androidx.compose.material3.IconButton
 import com.bedrud.app.ui.components.BedrudCompactTopBar
 import com.bedrud.app.ui.components.BedrudTabScaffoldContentInsets
 import com.bedrud.app.ui.components.CardSectionHeader
+import com.bedrud.app.ui.components.ConfirmDialog
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.LocalTextStyle
@@ -386,6 +387,39 @@ private fun AdminUsersContent(
         else users.filter { it.name.contains(search, true) || it.email.contains(search, true) }
     }
 
+    fun setUserActive(user: AdminUser, isActive: Boolean) {
+        scope.launch {
+            // The row flips only on a 2xx. Flipping first showed the ban as done while the
+            // server had refused it.
+            val updated = apiAction(
+                updateUserFailedMessage,
+                { snackbarHostState.showSnackbar(it) },
+                { it.toUserMessage(context) },
+            ) {
+                adminApi.setUserStatus(user.id, mapOf("active" to isActive))
+            }
+            if (updated) {
+                users = users.map { if (it.id == user.id) it.copy(isActive = isActive) else it }
+            }
+        }
+    }
+
+    // Banning asks first, as every other destructive action in the app does; unbanning only
+    // restores access, so it stays a single tap.
+    var userToBan by remember { mutableStateOf<AdminUser?>(null) }
+    userToBan?.let { user ->
+        ConfirmDialog(
+            title = stringResource(R.string.admin_dialog_banTitle),
+            message = stringResource(R.string.admin_dialog_banMessage, user.name),
+            confirmLabel = stringResource(R.string.admin_contentDescription_ban),
+            onConfirm = {
+                userToBan = null
+                setUserActive(user, isActive = false)
+            },
+            onDismiss = { userToBan = null },
+        )
+    }
+
     AdminTabScaffold(
         title = stringResource(R.string.admin_users),
         snackbarHostState = snackbarHostState,
@@ -452,24 +486,8 @@ private fun AdminUsersContent(
                         trailingContent = {
                             Row {
                                 IconButton(onClick = {
-                                    scope.launch {
-                                        // The row flips only on a 2xx. Flipping first showed the
-                                        // ban as done while the server had refused it.
-                                        val updated = apiAction(
-                                            updateUserFailedMessage,
-                                            { snackbarHostState.showSnackbar(it) },
-                                            { it.toUserMessage(context) },
-                                        ) {
-                                            adminApi.setUserStatus(
-                                                user.id,
-                                                mapOf("active" to !user.isActive)
-                                            )
-                                        }
-                                        if (updated) {
-                                            users =
-                                                users.map { if (it.id == user.id) it.copy(isActive = !user.isActive) else it }
-                                        }
-                                    }
+                                    if (user.isActive) userToBan = user
+                                    else setUserActive(user, isActive = true)
                                 }) {
                                     Icon(
                                         if (user.isActive) Icons.Default.Block else Icons.Default.Check,
@@ -512,6 +530,34 @@ private fun AdminRoomsContent(
         }?.rooms ?: emptyList()
         isLoading = false
         failure?.let { snackbarHostState.showSnackbar(it) }
+    }
+
+    // The dashboard's own delete dialog: the same room, the same irreversible delete.
+    var roomToDelete by remember { mutableStateOf<AdminRoom?>(null) }
+    roomToDelete?.let { room ->
+        ConfirmDialog(
+            title = stringResource(R.string.dashboard_dialog_deleteTitle),
+            message = stringResource(R.string.dashboard_dialog_deleteMessage, room.name.ifBlank { room.id }),
+            confirmLabel = stringResource(R.string.common_button_delete),
+            onConfirm = {
+                roomToDelete = null
+                scope.launch {
+                    // The row goes only on a 2xx, so a refused delete leaves the room where it
+                    // is rather than hiding a room that still exists.
+                    val deleted = apiAction(
+                        deleteRoomFailedMessage,
+                        { snackbarHostState.showSnackbar(it) },
+                        { it.toUserMessage(context) },
+                    ) {
+                        adminApi.deleteRoom(room.id)
+                    }
+                    if (deleted) {
+                        rooms = rooms.filter { it.id != room.id }
+                    }
+                }
+            },
+            onDismiss = { roomToDelete = null },
+        )
     }
 
     AdminTabScaffold(
@@ -567,22 +613,7 @@ private fun AdminRoomsContent(
                             )
                         },
                         trailingContent = {
-                            IconButton(onClick = {
-                                scope.launch {
-                                    // The row goes only on a 2xx, so a refused delete leaves the
-                                    // room where it is rather than hiding a room that still exists.
-                                    val deleted = apiAction(
-                                        deleteRoomFailedMessage,
-                                        { snackbarHostState.showSnackbar(it) },
-                                        { it.toUserMessage(context) },
-                                    ) {
-                                        adminApi.deleteRoom(room.id)
-                                    }
-                                    if (deleted) {
-                                        rooms = rooms.filter { it.id != room.id }
-                                    }
-                                }
-                            }) {
+                            IconButton(onClick = { roomToDelete = room }) {
                                 Icon(
                                             Icons.Default.Delete, contentDescription = stringResource(R.string.common_button_delete),
                                     tint = MaterialTheme.colorScheme.error
@@ -633,6 +664,32 @@ private fun AdminSettingsContent(
         }?.tokens ?: emptyList()
         isLoading = false
         failure?.let { snackbarHostState.showSnackbar(it) }
+    }
+
+    // A deleted token stops working for whoever it was sent to, so it asks first.
+    var tokenToDelete by remember { mutableStateOf<InviteToken?>(null) }
+    tokenToDelete?.let { token ->
+        ConfirmDialog(
+            title = stringResource(R.string.admin_dialog_deleteTokenTitle),
+            message = stringResource(R.string.admin_dialog_deleteTokenMessage),
+            confirmLabel = stringResource(R.string.common_button_delete),
+            onConfirm = {
+                tokenToDelete = null
+                scope.launch {
+                    val removed = apiAction(
+                        deleteTokenFailedMessage,
+                        { snackbarHostState.showSnackbar(it) },
+                        { it.toUserMessage(context) },
+                    ) {
+                        adminApi.deleteInviteToken(token.id)
+                    }
+                    if (removed) {
+                        tokens = tokens.filter { it.id != token.id }
+                    }
+                }
+            },
+            onDismiss = { tokenToDelete = null },
+        )
     }
 
     AdminTabScaffold(
@@ -830,20 +887,7 @@ private fun AdminSettingsContent(
                                             modifier = Modifier.size(18.dp)
                                         )
                                     }
-                                    IconButton(onClick = {
-                                        scope.launch {
-                                            val removed = apiAction(
-                                                deleteTokenFailedMessage,
-                                                { snackbarHostState.showSnackbar(it) },
-                                                { it.toUserMessage(context) },
-                                            ) {
-                                                adminApi.deleteInviteToken(tok.id)
-                                            }
-                                            if (removed) {
-                                                tokens = tokens.filter { it.id != tok.id }
-                                            }
-                                        }
-                                    }) {
+                                    IconButton(onClick = { tokenToDelete = tok }) {
                                         Icon(
                                             Icons.Default.Delete, contentDescription = stringResource(R.string.common_button_delete),
                                             tint = MaterialTheme.colorScheme.error,

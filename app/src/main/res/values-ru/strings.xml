@@ -202,6 +202,10 @@
   <string name="admin_error_loadSettingsFailed">Не удалось загрузить настройки</string>
   <string name="admin_error_saveSettingsFailed">Не удалось сохранить настройки</string>
   <string name="admin_error_createTokenFailed">Не удалось создать пригласительный код</string>
+  <string name="admin_dialog_banTitle">Заблокировать пользователя?</string>
+  <string name="admin_dialog_banMessage">Вы уверены, что хотите заблокировать <xliff:g id="userName" example="John Doe">%1$s</xliff:g>?</string>
+  <string name="admin_dialog_deleteTokenTitle">Удалить пригласительный код?</string>
+  <string name="admin_dialog_deleteTokenMessage">Вы уверены, что хотите удалить этот пригласительный код? Это действие нельзя отменить.</string>
   <string name="admin_error_deleteTokenFailed">Не удалось удалить пригласительный код</string>
   <string name="common_action_copy">Копировать</string>
   <string name="common_action_share">Поделиться</string>

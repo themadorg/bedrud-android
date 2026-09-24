@@ -198,6 +198,10 @@
   <string name="admin_error_loadSettingsFailed">Ayarlar yüklenemedi</string>
   <string name="admin_error_saveSettingsFailed">Ayarlar kaydedilemedi</string>
   <string name="admin_error_createTokenFailed">Davet kodu oluşturulamadı</string>
+  <string name="admin_dialog_banTitle">Kullanıcı yasaklansın mı?</string>
+  <string name="admin_dialog_banMessage"><xliff:g id="userName" example="John Doe">%1$s</xliff:g> kişisini yasaklamak istediğinize emin misiniz?</string>
+  <string name="admin_dialog_deleteTokenTitle">Davet kodu silinsin mi?</string>
+  <string name="admin_dialog_deleteTokenMessage">Bu davet kodunu silmek istediğinize emin misiniz? Bu geri alınamaz.</string>
   <string name="admin_error_deleteTokenFailed">Davet kodu silinemedi</string>
   <string name="common_action_copy">Kopyala</string>
   <string name="common_action_share">Paylaş</string>

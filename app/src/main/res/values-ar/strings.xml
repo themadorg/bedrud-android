@@ -206,6 +206,10 @@
   <string name="admin_error_loadSettingsFailed">تعذّر تحميل الإعدادات</string>
   <string name="admin_error_saveSettingsFailed">تعذّر حفظ الإعدادات</string>
   <string name="admin_error_createTokenFailed">تعذّر إنشاء رمز الدعوة</string>
+  <string name="admin_dialog_banTitle">حظر المستخدم؟</string>
+  <string name="admin_dialog_banMessage">هل أنت متأكد من رغبتك في حظر <xliff:g id="userName" example="John Doe">%1$s</xliff:g>؟</string>
+  <string name="admin_dialog_deleteTokenTitle">حذف رمز الدعوة؟</string>
+  <string name="admin_dialog_deleteTokenMessage">هل أنت متأكد من حذف رمز الدعوة هذا؟ لا يمكن التراجع عن ذلك.</string>
   <string name="admin_error_deleteTokenFailed">تعذّر حذف رمز الدعوة</string>
   <string name="common_action_copy">نسخ</string>
   <string name="common_action_share">مشاركة</string>
