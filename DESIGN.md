@@ -614,8 +614,8 @@ wrapping in its `attachBaseContext` — the application, `MainActivity`, and the
 (`CallService`, `CallConnectionService`) — because the system hands each its own context in the
 device's language; without it the call notification spoke the device's language inside a Persian
 app. The QR scanner is ZXing's `CaptureActivity`, a library screen that is not wrapped, so its own
-prompt follows the device. The System entry is the one language-picker label drawn from `strings.xml`; every other entry is
-the language's own name in its own script.
+prompt follows the device. The System entry is the one language-picker label drawn from
+`strings.xml`; every other entry is the language's own name in its own script.
 
 **Content direction is separate from layout direction.** What someone types is not governed by the
 language they chose the app in: a Persian message written in the English build is still a
