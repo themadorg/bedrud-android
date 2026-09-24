@@ -5,6 +5,8 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -52,7 +54,6 @@ import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.SwipeToDismissBoxState
 import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
@@ -1477,14 +1478,20 @@ private fun CreateRoomDialog(
     isCreating: Boolean,
 ) {
     var roomName by remember { mutableStateOf("") }
+    // Surrounding spaces are never part of a room's name; a blank result still asks the server
+    // for a generated one.
+    fun submit() {
+        if (!isCreating) onCreate(roomName.trim())
+    }
 
     AlertDialog(
         onDismissRequest = { if (!isCreating) onDismiss() },
         title = { Text(stringResource(R.string.dashboard_dialog_createTitle)) },
         text = {
-            Column {
-                Text(stringResource(R.string.dashboard_dialog_createDescription),
-                    style = MaterialTheme.typography.bodyMedium)
+            // Scrolls so the field and its error stay reachable when the keyboard leaves the
+            // dialog little room, as it does in landscape or at a large font size.
+            Column(modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState())) {
+                Text(stringResource(R.string.dashboard_dialog_createDescription))
                 Spacer(modifier = Modifier.height(Dimens.space16))
                 BedrudTextField(
                     value = roomName,
@@ -1493,37 +1500,32 @@ private fun CreateRoomDialog(
                         if (errorMessage != null) onErrorCleared()
                     },
                     label = stringResource(R.string.dashboard_label_roomName),
-                    textStyle = MaterialTheme.typography.bodyMedium,
-                    textDirection = TextDirection.Ltr
+                    // The error belongs to the field, as on the sign-in forms: the outline and
+                    // label turn to the error colour, and the message sits under the field inset
+                    // like any supporting text.
+                    isError = errorMessage != null,
+                    supportingText = errorMessage?.let { message -> { Text(message) } },
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                    keyboardActions = KeyboardActions(onDone = { submit() }),
+                    textDirection = TextDirection.Ltr,
                 )
-                if (errorMessage != null) {
-                    Spacer(modifier = Modifier.height(Dimens.space8))
-                    Text(
-                        text = errorMessage,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.error
-                    )
-                }
             }
         },
         confirmButton = {
             BedrudButton(
                 text = stringResource(R.string.common_button_create),
                 variant = BedrudButtonVariant.TONAL,
-                onClick = { onCreate(roomName) },
+                onClick = { submit() },
                 loading = isCreating,
             )
         },
         dismissButton = {
-            TextButton(onClick = onDismiss, enabled = !isCreating) {
-                // Corrected like the BedrudButton beside it, or the two labels in this dialog sit
-                // at different heights — measured 5px apart before this was applied.
-                val cancelStyle = LocalTextStyle.current
-                Text(
-                    stringResource(R.string.common_button_cancel),
-                    modifier = Modifier.typeCentered(cancelStyle),
-                )
-            }
+            BedrudButton(
+                text = stringResource(R.string.common_button_cancel),
+                variant = BedrudButtonVariant.GHOST,
+                onClick = onDismiss,
+                enabled = !isCreating,
+            )
         }
     )
 }
