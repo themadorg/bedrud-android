@@ -270,9 +270,6 @@
   <string name="profile_badge_admin">Admin</string>
   <string name="profile_section_server">Servidor</string>
   <string name="profile_button_switch">Cambiar</string>
-  <string name="profile_section_account">Cuenta</string>
-  <string name="profile_label_userId">ID de usuario</string>
-  <string name="profile_label_provider">Proveedor</string>
   <string name="profile_button_signOut">Cerrar sesión</string>
 
   <string name="meeting_stage_screenSharePresenting"><xliff:g id="name" example="Alex">%1$s</xliff:g> está presentando</string>

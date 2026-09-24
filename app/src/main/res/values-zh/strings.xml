@@ -268,9 +268,6 @@
   <string name="profile_badge_admin">管理员</string>
   <string name="profile_section_server">服务器</string>
   <string name="profile_button_switch">切换</string>
-  <string name="profile_section_account">账户</string>
-  <string name="profile_label_userId">用户ID</string>
-  <string name="profile_label_provider">提供商</string>
   <string name="profile_button_signOut">退出登录</string>
 
   <string name="meeting_stage_screenSharePresenting"><xliff:g id="name" example="Alex">%1$s</xliff:g> 正在演示</string>

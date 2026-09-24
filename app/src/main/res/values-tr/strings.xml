@@ -270,9 +270,6 @@
   <string name="profile_badge_admin">Yönetici</string>
   <string name="profile_section_server">Sunucu</string>
   <string name="profile_button_switch">Değiştir</string>
-  <string name="profile_section_account">Hesap</string>
-  <string name="profile_label_userId">Kullanıcı Kimliği</string>
-  <string name="profile_label_provider">Sağlayıcı</string>
   <string name="profile_button_signOut">Çıkış Yap</string>
 
   <string name="meeting_stage_screenSharePresenting"><xliff:g id="name" example="Alex">%1$s</xliff:g> sunum yapıyor</string>

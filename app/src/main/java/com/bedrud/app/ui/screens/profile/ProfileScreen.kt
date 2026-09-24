@@ -23,7 +23,6 @@ import com.bedrud.app.ui.components.BedrudOutlinedCard
 import com.bedrud.app.ui.components.CardSectionHeader
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import com.bedrud.app.ui.components.BedrudCompactTopBar
 import androidx.compose.material3.ListItem
@@ -218,61 +217,9 @@ fun ProfileContent(
                 }
             }
 
-            // Account section
-            BedrudOutlinedCard {
-                Column {
-                    CardSectionHeader(
-                        stringResource(R.string.profile_section_account),
-                        modifier = Modifier.padding(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 8.dp)
-                    )
-
-                    if (user != null) {
-                        ListItem(
-                            headlineContent = {
-                                Text(
-                                    stringResource(R.string.profile_label_userId),
-                                    modifier = Modifier.typeCentered(LocalTextStyle.current)
-                                )
-                            },
-                            trailingContent = {
-                                val valueStyle = MaterialTheme.typography.bodyMedium
-                                Text(
-                                    user!!.id.take(8) + "...",
-                                    style = valueStyle,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.typeCentered(valueStyle)
-                                )
-                            },
-                            colors = ListItemDefaults.colors(containerColor = Color.Transparent)
-                        )
-
-                        if (user?.provider != null) {
-                            HorizontalDivider(
-                                modifier = Modifier.padding(horizontal = 16.dp),
-                                color = MaterialTheme.colorScheme.outlineVariant
-                            )
-                            ListItem(
-                                headlineContent = {
-                                    Text(
-                                        stringResource(R.string.profile_label_provider),
-                                        modifier = Modifier.typeCentered(LocalTextStyle.current)
-                                    )
-                                },
-                                trailingContent = {
-                                    val valueStyle = MaterialTheme.typography.bodyMedium
-                                    Text(
-                                        user!!.provider!!.replaceFirstChar { it.uppercase() },
-                                        style = valueStyle,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        modifier = Modifier.typeCentered(valueStyle)
-                                    )
-                                },
-                                colors = ListItemDefaults.colors(containerColor = Color.Transparent)
-                            )
-                        }
-                    }
-                }
-            }
+            // The account's details (ID, sign-in method, role) live in Settings' Account card
+            // alone. Profile showed the same ID and method a second time, under other labels and
+            // in another format.
 
             // Sign Out
             TextButton(
