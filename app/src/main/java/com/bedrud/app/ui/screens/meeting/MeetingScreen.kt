@@ -1102,10 +1102,11 @@ fun MeetingScreen(
                             Spacer(modifier = Modifier.height(Dimens.space16))
                             val errorCopiedMessage = stringResource(R.string.meeting_toast_errorCopied)
                             val copyDescription = stringResource(R.string.common_action_copy)
+                            // The message's own inset, so the box's edges line up under its text.
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(horizontal = Dimens.space24)
+                                    .padding(horizontal = Dimens.meetingStatePadding)
                                     .clip(BedrudShapeTokens.chip)
                                     .background(MaterialTheme.colorScheme.surfaceVariant),
                                 verticalAlignment = Alignment.Top,
