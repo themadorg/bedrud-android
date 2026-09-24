@@ -64,7 +64,10 @@ fun BedrudTextField(
         .let { if (autofill != null) it.autofillType(autofill) else it }
     // Placeholder must match the input's own text style: M3 otherwise renders the placeholder at
     // its default bodyLarge regardless of [textStyle], so a compact field (e.g. bodyMedium) shows a
-    // hint larger than the text the user types. Reuse the exact merged style for both.
+    // hint larger than the text the user types. It takes the same size, but not [textDirection]:
+    // that pins the value typed in, while the hint is written in the app's language and reads in
+    // its direction, as the label does. Laid out left-to-right, a Persian hint's closing "…" went
+    // in front of its first word.
     val mergedTextStyle = textStyle.copy(textDirection = textDirection)
     // A single-line field keeps its hint to one line as well. A hint that wrapped at a large font
     // size made the empty field taller than the one line it takes once typed in, so the field
@@ -78,7 +81,7 @@ fun BedrudTextField(
             {
                 Text(
                     it,
-                    style = mergedTextStyle,
+                    style = textStyle,
                     maxLines = placeholderMaxLines,
                     overflow = TextOverflow.Ellipsis,
                 )
