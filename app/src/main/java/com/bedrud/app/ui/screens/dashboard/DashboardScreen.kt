@@ -8,6 +8,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -49,9 +50,12 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LocalTextStyle
+import androidx.compose.material3.MenuDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHostState
@@ -63,6 +67,8 @@ import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -95,6 +101,8 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.CustomAccessibilityAction
+import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontFamily
@@ -141,6 +149,7 @@ import com.bedrud.app.ui.components.ConfirmDialog
 import com.bedrud.app.ui.screens.instance.InstanceSwitcherSheet
 import com.bedrud.app.ui.theme.BedrudShapeTokens
 import com.bedrud.app.ui.theme.Dimens
+import com.bedrud.app.ui.theme.Elevation
 import com.bedrud.app.ui.theme.Motion
 import com.bedrud.app.ui.theme.typeCentered
 import kotlinx.coroutines.delay
@@ -251,6 +260,9 @@ fun DashboardContent(
     var roomToEdit by remember { mutableStateOf<UserRoomResponse?>(null) }
     var isSavingSettings by remember { mutableStateOf(false) }
     var roomToDelete by remember { mutableStateOf<UserRoomResponse?>(null) }
+    var deletingRoomId by remember { mutableStateOf<String?>(null) }
+    // A room's card stays swiped out from the moment its delete is asked for until the answer is in.
+    fun isDeleteHeld(room: UserRoomResponse) = roomToDelete?.id == room.id || deletingRoomId == room.id
     var pendingServerSwitch by remember { mutableStateOf<PendingServerSwitch?>(null) }
     var activeFilter by rememberSaveable { mutableStateOf(RoomFilter.ALL) }
     var quickJoinText by remember { mutableStateOf("") }
@@ -450,6 +462,7 @@ fun DashboardContent(
             onConfirm = {
                 val deleting = room
                 roomToDelete = null
+                deletingRoomId = deleting.id
                 scope.launch {
                     val deleted = apiAction(
                         deleteRoomFailedMsg,
@@ -458,6 +471,9 @@ fun DashboardContent(
                     ) {
                         roomApi.deleteRoom(deleting.id)
                     }
+                    // Released either way: a deleted room's card is gone by the time this is read,
+                    // and a refused one slides back into place.
+                    deletingRoomId = null
                     if (deleted) {
                         // Keep refreshes from resurrecting it while the server's
                         // async delete catches up...
@@ -771,6 +787,7 @@ fun DashboardContent(
                                                 now = nowTickMs,
                                                 onJoin = { onJoinRoom(entry.room.name) },
                                                 onDelete = { roomToDelete = entry.room },
+                                                isDeleteHeld = isDeleteHeld(entry.room),
                                                 onSettings = if (entry.room.createdBy == currentUser?.id) {
                                                     { roomToEdit = entry.room }
                                                 } else null,
@@ -802,6 +819,7 @@ fun DashboardContent(
                                             now = nowTickMs,
                                             onJoin = { onJoinRoom(room.name) },
                                             onDelete = { roomToDelete = room },
+                                            isDeleteHeld = isDeleteHeld(room),
                                             onSettings = if (room.createdBy == currentUser?.id) {
                                                 { roomToEdit = room }
                                             } else null,
@@ -1031,6 +1049,8 @@ private fun RoomCard(
     now: Long,
     onJoin: () -> Unit,
     onDelete: () -> Unit,
+    // True while this room's delete is being asked about or is on its way to the server.
+    isDeleteHeld: Boolean,
     onSettings: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
@@ -1059,13 +1079,22 @@ private fun RoomCard(
             icon = Icons.Default.Delete,
             containerColor = MaterialTheme.colorScheme.errorContainer,
             contentColor = MaterialTheme.colorScheme.onErrorContainer,
-            // Route through the confirm dialog (destructive), so put the row back rather than dismiss.
-            onTriggered = { onDelete(); false },
+            // Asks first through the confirm dialog; the row stays swiped out, held by
+            // isDeleteHeld, until the question is answered.
+            onTriggered = { onDelete(); true },
         )
     } else null
 
-    SwipeableRoomRow(action = swipeAction, modifier = modifier.fillMaxWidth()) {
-        RoomCardScaffold(onClick = onJoin) {
+    // The card's other actions, and the swipe's, again in its long-press menu.
+    val settingsLabel = stringResource(R.string.dashboard_contentDescription_settings)
+    val deleteLabel = stringResource(R.string.common_button_delete)
+    val menuItems = buildList {
+        if (onSettings != null) add(RoomCardMenuItem(settingsLabel, Icons.Default.Settings, onClick = onSettings))
+        if (isOwner) add(RoomCardMenuItem(deleteLabel, Icons.Default.Delete, isDestructive = true, onClick = onDelete))
+    }
+
+    SwipeableRoomRow(action = swipeAction, held = isDeleteHeld, modifier = modifier.fillMaxWidth()) {
+        RoomCardScaffold(onClick = onJoin, menuItems = menuItems) {
             RoomCardText(title = title, status = metaText, statusColor = statusTint)
 
             if (onSettings != null) {
@@ -1120,8 +1149,11 @@ private fun RecentRoomCard(
         onTriggered = { onRemove(); true },
     )
 
+    // The swipe's action again in the card's long-press menu.
+    val menuItems = listOf(RoomCardMenuItem(swipeAction.label, swipeAction.icon, onClick = onRemove))
+
     SwipeableRoomRow(action = swipeAction, modifier = modifier.fillMaxWidth()) {
-        RoomCardScaffold(onClick = onJoin) {
+        RoomCardScaffold(onClick = onJoin, menuItems = menuItems) {
             RoomCardText(title = recent.roomName, status = presence?.text, statusColor = statusTint)
 
             TrailingChevron()
@@ -1189,26 +1221,104 @@ private fun presenceFor(isOngoing: Boolean, lastActivityAtMs: Long?, now: Long):
 
 // ── Shared card pieces ─────────────────────────────────────────────────────────
 
-/** Plain outlined card holding one room row. */
+/**
+ * One thing a card offers besides opening its room. [isDestructive] draws it in the error colour,
+ * kept for what cannot be taken back.
+ */
+private data class RoomCardMenuItem(
+    val label: String,
+    val icon: ImageVector,
+    val isDestructive: Boolean = false,
+    val onClick: () -> Unit,
+)
+
+/**
+ * A card's long-press menu: the swipe's action and the card's other actions, one tap away for
+ * anyone who does not or cannot swipe. It wears the app's menu chrome, as the chat's menus and the
+ * language picker do.
+ */
+@Composable
+private fun RoomCardMenu(
+    items: List<RoomCardMenuItem>,
+    expanded: Boolean,
+    onDismiss: () -> Unit,
+) {
+    DropdownMenu(
+        expanded = expanded,
+        onDismissRequest = onDismiss,
+        shape = BedrudShapeTokens.card,
+        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+        tonalElevation = Elevation.level2,
+        shadowElevation = Elevation.level3,
+    ) {
+        items.forEach { item ->
+            val color = if (item.isDestructive) MaterialTheme.colorScheme.error
+            else MaterialTheme.colorScheme.onSurface
+            DropdownMenuItem(
+                text = { Text(item.label, modifier = Modifier.typeCentered(LocalTextStyle.current)) },
+                leadingIcon = { Icon(item.icon, contentDescription = null) },
+                colors = MenuDefaults.itemColors(textColor = color, leadingIconColor = color),
+                onClick = {
+                    onDismiss()
+                    item.onClick()
+                },
+            )
+        }
+    }
+}
+
+/** Plain outlined card holding one room row, with its long-press menu when it has one. */
 @Composable
 private fun RoomCardScaffold(
     onClick: () -> Unit,
+    menuItems: List<RoomCardMenuItem> = emptyList(),
     content: @Composable RowScope.() -> Unit,
 ) {
-    BedrudOutlinedCard(
-        onClick = onClick,
-        modifier = Modifier.fillMaxWidth(),
-    ) {
-        Row(
+    var isMenuOpen by remember { mutableStateOf(false) }
+    val hasMenu = menuItems.isNotEmpty()
+    val menuLabel = stringResource(R.string.meeting_contentDescription_moreOptions)
+    Box {
+        BedrudOutlinedCard(
             modifier = Modifier
                 .fillMaxWidth()
-                // Uniform card height whether or not the card carries a trailing 48dp control
-                // (the settings button would otherwise inflate owned cards).
-                .heightIn(min = Dimens.roomCardMinHeight)
-                .padding(start = Dimens.space16, end = Dimens.space4, top = Dimens.space12, bottom = Dimens.space12),
-            verticalAlignment = Alignment.CenterVertically,
-            content = content,
-        )
+                // Clipped before it clicks, so the press ripple keeps the card's corners.
+                .clip(BedrudShapeTokens.card)
+                .combinedClickable(
+                    onClick = onClick,
+                    onLongClick = if (hasMenu) ({ isMenuOpen = true }) else null,
+                    onLongClickLabel = if (hasMenu) menuLabel else null,
+                )
+                // The swipe's action, and the rest of the menu, as TalkBack actions: a gesture
+                // must never be the only way to an action (Material's list accessibility guidance).
+                .semantics {
+                    if (hasMenu) {
+                        customActions = menuItems.map { item ->
+                            CustomAccessibilityAction(item.label) {
+                                item.onClick()
+                                true
+                            }
+                        }
+                    }
+                },
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    // Uniform card height whether or not the card carries a trailing 48dp control
+                    // (the settings button would otherwise inflate owned cards).
+                    .heightIn(min = Dimens.roomCardMinHeight)
+                    .padding(start = Dimens.space16, end = Dimens.space4, top = Dimens.space12, bottom = Dimens.space12),
+                verticalAlignment = Alignment.CenterVertically,
+                content = content,
+            )
+        }
+        if (hasMenu) {
+            RoomCardMenu(
+                items = menuItems,
+                expanded = isMenuOpen,
+                onDismiss = { isMenuOpen = false },
+            )
+        }
     }
 }
 
@@ -1274,31 +1384,60 @@ private fun TrailingChevron() {
 
 // ── Swipe-to-action ────────────────────────────────────────────────────────────
 
+/**
+ * How far across its card a swipe must travel before letting go commits it: half the card.
+ *
+ * Material's list guidance has a full swipe trigger the action. The component's own default is a
+ * fixed 56dp, a fraction of a phone-width card, so a short sideways drag while scrolling committed.
+ */
+private const val SwipeCommitFraction = 0.5f
+
 private data class SwipeAction(
     val label: String,
     val icon: ImageVector,
     val containerColor: Color,
     val contentColor: Color,
-    // Returns true to leave the row dismissed (instant action), false to put it back
-    // (deferred/confirmed — the action opens a dialog, so the row should still be there
-    // behind it).
+    // Returns true to leave the row swiped out, false to put it back at once. An action that asks
+    // first returns true and holds the row out through SwipeableRoomRow's `held` until answered.
     val onTriggered: () -> Boolean,
 )
 
-/** Wraps a card in a leading-edge swipe gesture that reveals [action]; no swipe when it's null. */
+/**
+ * Wraps a card in a leading-edge swipe gesture that reveals [action]; no swipe when it's null.
+ *
+ * While [held] the row stays swiped out, its action's panel showing, and when it stops being held
+ * with the row still there it slides back. An action that asks for confirmation uses this: the
+ * row stays out while the question is open, slides back if it is cancelled or refused, and is
+ * simply gone if the action goes through — rather than flying off and returning behind the dialog
+ * before the question has been answered.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun SwipeableRoomRow(
     action: SwipeAction?,
     modifier: Modifier = Modifier,
+    held: Boolean = false,
     content: @Composable () -> Unit,
 ) {
     if (action == null) {
         Box(modifier = modifier) { content() }
         return
     }
-    val state = rememberSwipeToDismissBoxState()
+    val state = rememberSwipeToDismissBoxState(
+        positionalThreshold = { totalDistance -> totalDistance * SwipeCommitFraction },
+    )
     val scope = rememberCoroutineScope()
+    val haptics = LocalHapticFeedback.current
+    // One tick as the swipe crosses the point where letting go commits, the platform's own cue
+    // for a gesture threshold; the panel's colour change says the same thing to the eye.
+    LaunchedEffect(state.targetValue) {
+        if (state.targetValue == SwipeToDismissBoxValue.EndToStart) {
+            haptics.performHapticFeedback(HapticFeedbackType.GestureThresholdActivate)
+        }
+    }
+    LaunchedEffect(held) {
+        if (!held && state.currentValue != SwipeToDismissBoxValue.Settled) state.reset()
+    }
     SwipeToDismissBox(
         state = state,
         modifier = modifier,
@@ -1321,25 +1460,42 @@ private fun SwipeableRoomRow(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun SwipeActionBackground(action: SwipeAction, state: SwipeToDismissBoxState) {
-    // Only paint the panel while it's the gesture's target — a settled row shows nothing behind it.
-    val revealed = state.targetValue == SwipeToDismissBoxValue.EndToStart
-    val container = if (revealed) action.containerColor else Color.Transparent
+    // Material's own SwipeToDismissBox pattern: the panel is there from the first pixel of the
+    // swipe in a neutral tone, and eases into the action's colour once letting go would commit.
+    // It used to be absent until the threshold and then appear at full colour in a single frame,
+    // with the action's icon and label floating on the bare page until it did.
+    val isArmed = state.targetValue == SwipeToDismissBoxValue.EndToStart
+    val colorAnimation = tween<Color>(Motion.durationShort, easing = Motion.standardEasing)
+    val armedContainer by animateColorAsState(
+        targetValue = if (isArmed) action.containerColor else MaterialTheme.colorScheme.surfaceContainerHighest,
+        animationSpec = colorAnimation,
+        label = "swipePanel",
+    )
+    val armedContent by animateColorAsState(
+        targetValue = if (isArmed) action.contentColor else MaterialTheme.colorScheme.onSurfaceVariant,
+        animationSpec = colorAnimation,
+        label = "swipePanelContent",
+    )
+    // Unpainted while the card rests over it, so no edge of it can show around the card's corners.
+    val isMoved = state.dismissDirection != SwipeToDismissBoxValue.Settled
     Box(
         modifier = Modifier
             .fillMaxSize()
             .clip(BedrudShapeTokens.card)
-            .background(container)
+            .background(if (isMoved) armedContainer else Color.Transparent)
             .padding(horizontal = Dimens.space20),
         contentAlignment = Alignment.CenterEnd,
     ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(Dimens.space8),
-        ) {
-            // Centred against the icon beside it rather than against other text.
-            val labelStyle = MaterialTheme.typography.labelLarge
-            Text(action.label, style = labelStyle, color = action.contentColor, modifier = Modifier.typeCentered(labelStyle))
-            Icon(action.icon, contentDescription = null, tint = action.contentColor, modifier = Modifier.size(Dimens.iconSm))
+        if (isMoved) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(Dimens.space8),
+            ) {
+                // Centred against the icon beside it rather than against other text.
+                val labelStyle = MaterialTheme.typography.labelLarge
+                Text(action.label, style = labelStyle, color = armedContent, modifier = Modifier.typeCentered(labelStyle))
+                Icon(action.icon, contentDescription = null, tint = armedContent, modifier = Modifier.size(Dimens.iconSm))
+            }
         }
     }
 }
