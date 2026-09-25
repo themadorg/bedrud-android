@@ -578,6 +578,15 @@ the `meeting*` tokens in `Dimens.kt`, timing in `Motion.meetingChromeAutoHideDel
   cause; the reach check needs at least one remote participant, since an empty room has no reason
   to report a speaker and no one to miss you.
 
+  Whether you are talking at all is judged against **your own microphone**, not a fixed level:
+  `SpeechLevelTracker` takes the lowest level of the last two seconds as the room's floor, keeps
+  one floor for muted capture and one for live, and counts a level 9 dB above it as speech. The
+  same answer drives the speaking bridge on your own tile, so the tile and the ring never disagree
+  about it. The reach check is stricter, because the server names a speaker only above a fixed
+  level of its own (`VoiceReachMonitor.RoomSpeakerLevel`, LiveKit's default `active_level`): the
+  room is blamed only for speech loud enough that it would have reported it. A quiet voice still
+  gets "muted", but never "the room can't hear you".
+
   Both states share the colour because they are the same news, so **motion carries the cause**: a
   reconnect sends a single arc travelling around the outline (a dashed stroke whose phase moves,
   which follows the pill's rounded corners where a rotated gradient would squash them), while
