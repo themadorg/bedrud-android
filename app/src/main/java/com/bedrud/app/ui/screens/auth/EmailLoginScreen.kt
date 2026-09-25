@@ -46,6 +46,7 @@ import com.bedrud.app.ui.components.BedrudButtonVariant
 import com.bedrud.app.ui.components.BedrudPasswordField
 import com.bedrud.app.ui.components.BedrudTextField
 import com.bedrud.app.ui.theme.Dimens
+import com.bedrud.app.ui.theme.typeCentered
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 
@@ -185,9 +186,12 @@ fun EmailLoginScreen(
             ),
             modifier = Modifier.align(Alignment.End)
         ) {
+            // Corrected like every other button label, so it stays level with the field above.
+            val linkStyle = MaterialTheme.typography.labelLarge
             Text(
                 text = stringResource(R.string.auth_forgot_link),
-                style = MaterialTheme.typography.labelLarge
+                style = linkStyle,
+                modifier = Modifier.typeCentered(linkStyle),
             )
         }
 

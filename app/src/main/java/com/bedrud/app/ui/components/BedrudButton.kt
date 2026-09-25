@@ -20,6 +20,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.bedrud.app.ui.theme.BedrudShapeTokens
 import com.bedrud.app.ui.theme.Dimens
+import com.bedrud.app.ui.theme.typeCentered
 
 enum class BedrudButtonVariant {
     PRIMARY,
@@ -157,9 +158,15 @@ private fun ButtonContent(
         }
     }
 
+    val labelStyle = MaterialTheme.typography.labelLarge
     Text(
         text = text,
-        style = MaterialTheme.typography.labelLarge
+        style = labelStyle,
+        // A button is a fixed-height container, and with a leading or trailing icon the label is
+        // also centred against something that is not text. Corrected per style rather than per
+        // string, so two buttons side by side keep one baseline even when only one of their
+        // labels has a descender.
+        modifier = Modifier.typeCentered(labelStyle),
     )
 
     trailingIcon?.let {
