@@ -8,11 +8,13 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -936,15 +938,20 @@ private fun ProfileAvatarButton(user: User?, onClick: () -> Unit) {
 // ── Quick join bar ────────────────────────────────────────────────────────────
 
 @Composable
-private fun QuickJoinBar(
+internal fun QuickJoinBar(
     value: String,
     onValueChange: (String) -> Unit,
     onJoin: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Row(modifier = modifier, verticalAlignment = Alignment.CenterVertically) {
-        // Both the field and the button sit at the compact 48dp control height with the shared
-        // corner token, so the row reads as one control without dominating the header area.
+    // The row is as tall as its tallest child, and both children fill it, so the field and the
+    // button stay one control at every font size the reader picks.
+    Row(
+        modifier = modifier.height(IntrinsicSize.Min),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        // The field keeps Material's own height, which grows with the font. Pinning it to the
+        // 48dp button height clipped the text as soon as the reader raised their font size.
         BedrudTextField(
             value = value,
             onValueChange = onValueChange,
@@ -961,7 +968,7 @@ private fun QuickJoinBar(
             ),
             keyboardActions = KeyboardActions(onGo = { onJoin() }),
             textDirection = TextDirection.Ltr,
-            modifier = Modifier.weight(1f).height(Dimens.buttonHeight)
+            modifier = Modifier.weight(1f).fillMaxHeight()
         )
         Spacer(modifier = Modifier.width(Dimens.space8))
         BedrudButton(
@@ -969,6 +976,7 @@ private fun QuickJoinBar(
             onClick = onJoin,
             variant = BedrudButtonVariant.TONAL,
             enabled = value.isNotBlank(),
+            modifier = Modifier.fillMaxHeight(),
         )
     }
 }
