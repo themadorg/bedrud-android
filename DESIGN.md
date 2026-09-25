@@ -15,7 +15,7 @@ so there are no magic values scattered through screens.
 | `Color.kt`          | Reference palette — the raw rose/teal/neutral/red/amber tonal ramps                | Never read directly from UI             |
 | `Theme.kt`          | `BedrudTheme` + the light/dark `ColorScheme` role mapping (full M3 role set)       | UI reads `MaterialTheme.colorScheme.*`  |
 | `ExtendedColors.kt` | Non-M3 semantic colors (e.g. `warning`) via `LocalBedrudColors`                    | UI reads `MaterialTheme.bedrudColors.*` |
-| `Type.kt`           | `Typography` (M3 type scale) + RTL font families                                   | UI reads `MaterialTheme.typography.*`   |
+| `Type.kt`           | `Typography` (M3 type scale) + the one font family and its fallback chain          | UI reads `MaterialTheme.typography.*`   |
 | `Shape.kt`          | `BedrudShapes` (M3 scale) + `BedrudShapeTokens` (semantic: card/field/button/pill) | No raw `RoundedCornerShape(n.dp)`       |
 | `Dimens.kt`         | Spacing scale (4dp grid) + component sizes/heights/icon sizes                      | No raw `n.dp` for spacing/sizing        |
 | `Elevation.kt`      | Tonal elevation levels                                                             | Surfaces stay low (outline-first)       |
@@ -43,6 +43,15 @@ so any component that reaches for a role gets an on-brand value instead of an M3
 `dynamicColor` is **off** by default so the brand is preserved; Material You can be opted into per-call
 via `BedrudTheme(dynamicColor = true)`.
 
+**The system bars follow the app's appearance, not the phone's.** `enableEdgeToEdge()` on its own
+picks light or dark status-bar icons from the system's night mode, which the in-app Light/Dark
+setting overrides — so a Light app on a phone in Dark mode drew white icons over a white screen, and
+the reverse drew dark on dark. `MainActivity` re-applies it whenever the resolved theme changes,
+answering `SystemBarStyle.auto`'s dark-mode question with the app's own `darkTheme`. The navigation
+bar's backdrop below API 29, where the system draws no contrast scrim of its own, is
+`SystemBarLightScrim` / `SystemBarDarkScrim` in `Color.kt`: androidx's own defaults, spelled out only
+because the default cannot follow the app.
+
 ### Accessibility (non-negotiable)
 
 - **Color is never the only signal** — pair status with an icon, label, ring, or shape (e.g. a selected
@@ -54,9 +63,9 @@ via `BedrudTheme(dynamicColor = true)`.
 ## Typography (`Type.kt`)
 
 Material 3 type scale on **Vazirmatn, applied unconditionally** — the typeface is never selected
-from the interface language. It covers the Latin and Arabic scripts, which is every locale the app
-ships except Russian, Japanese and Chinese; those fall to the platform's fallback chain (see the
-end of this section, tracked in #118).
+from the interface language. It covers the Latin and Arabic scripts. Cyrillic and Greek come from a
+bundled cut of Roboto that Android falls back to letter by letter, and Japanese and Chinese from the
+platform (see the end of this section).
 
 The font used to be picked from `AppLanguage`: Persian got Shabnam, other RTL languages got
 Vazirmatn, everyone else got `FontFamily.SansSerif`. That confuses the language someone *reads*
@@ -72,12 +81,33 @@ axis rather than four files — which is also what Shabnam could not do: it was 
 upstream, and registered under four weights that all loaded the same Regular face, so Persian UI
 had no weight hierarchy at all.
 
-**The boundary.** Vazirmatn carries no Cyrillic, Greek or CJK, so Russian, Japanese and Chinese
-resolve through the platform's fallback chain. That is not a regression — those three resolved the
-same way before Vazirmatn became the base font — but it does mean the app draws a different
-typeface for them than for everyone else, and on a device whose owner has themed the system font
-it will not even be the same one twice. Verified rendering cleanly on a Samsung SM-S928B in all
-three; the open question is only whether to bundle a companion face. Tracked in #118.
+**Cyrillic and Greek: a bundled companion.** Vazirmatn carries neither, so Russian, and a Cyrillic
+or Greek name in any interface language, used to take whatever the platform fell back to: stock
+Roboto on one device, an owner's themed system font on the next. From API 29 the app builds its own
+fallback chain with `Typeface.CustomFallbackBuilder` — Vazirmatn, then
+`res/font/roboto_cyrillic_greek.ttf`, then the platform's `sans-serif` — and Android walks it per
+character, so mixed-script text takes each letter from the face that has it.
+
+- **Roboto, not Noto Sans.** Vazirmatn's Latin already is Roboto, so a Latin word inside Russian
+  text stays in one design, and a stock device draws Russian in the same design as before. Noto
+  Sans is a different design, and its variable file is four times the size of Roboto's.
+- **Cut down by [`tools/fonts/build-companion-font.sh`](tools/fonts/build-companion-font.sh)** from
+  Google Fonts' variable Roboto, pinned to one commit and checked against its hash: width fixed at
+  normal, weight limited to 400–700, and only Cyrillic, Cyrillic Supplement, Greek and the combining
+  marks Roboto has. The marks matter because Android keeps a mark in its letter's font only when
+  that font carries it; without them a stress mark on a Cyrillic vowel is drawn by Vazirmatn instead.
+  A rerun produces a byte-identical file. It is 109,404 bytes and adds 66,212 to the APK.
+- **Weights stay real.** Each of the scale's four weights is its own chain, with both fonts read at
+  the same `wght`. Handing Compose a single platform typeface through `FontFamily(Typeface)` does not
+  work: Compose returns that typeface unchanged for every weight it is asked for.
+- **Below API 29** Android offers no way to add an app font to the fallback chain, so Android 9 keeps
+  Vazirmatn alone and resolves Cyrillic and Greek through the platform, as before.
+- **Japanese and Chinese stay on the platform.** Google Fonts' variable Noto Sans is 9.6 MB for
+  Japanese and 17.8 MB for Simplified Chinese — too much for two locales in an APK this size. Those
+  two still take the device's own face, and follow a themed system font.
+- **Tested from both ends.** `TypeTest` checks the bundled file's coverage and weight axis in CI.
+  `TypeRenderTest` (instrumented, API 31+) asks Android's text shaper which font drew each glyph, at
+  which weight.
 
 **Rejected: keeping the platform sans for Latin.** `Typeface.CustomFallbackBuilder` (API 29+) can
 leave the system font drawing Latin and hand Vazirmatn only the Arabic-script runs, which would
@@ -148,6 +178,18 @@ as two unrelated systems rather than one.
 `buttonHeightLarge 56`, `fieldMinHeight 56`, `minTouchTarget 48`, `borderThin 1`, `borderStrong 2`,
 icon sizes `iconXs 16 · iconSm 18 · iconMd 24 · iconLg 32`, `avatar 40`, `brandMark 72`.
 
+**Text sets a floor, not a height.** A container that holds text takes a minimum height —
+`heightIn(min = …)`, or the component's own `defaultMinSize` — never a fixed `height(…)`. Text grows
+with the reader's font-size setting, up to 2× since Android 14, and a fixed box clips it: the rooms
+search field, the full-width sign-in buttons and the poll answers all did. Text fields are the
+sharpest case: M3's field pads 16dp above and below its line, so the 48dp the search field was
+pinned to left its 20sp line 16dp and cut it before the font was even raised. A growing
+container also has to hold its size while its content changes: `BedrudTextField` keeps a
+single-line field's placeholder to one line, because a hint that wrapped made the empty field
+taller than the typed one, and everything under it jumped on the first keystroke. Keep fixed
+heights for what does not scale with the font (icons, handles, slider tracks), and check a text
+container at font scale 1.0, 1.5 and 2.0.
+
 ## Elevation (`Elevation.kt`) & Motion (`Motion.kt`)
 
 Elevation is tonal and light — the app leans on outlines + tonal surfaces over shadows; most surfaces
@@ -170,8 +212,10 @@ than standing at full strength beside a greyed-out one.
 ## Components (`ui/components/`)
 
 - **`BedrudButton`** — 6 variants (PRIMARY, SECONDARY, TONAL, OUTLINE, GHOST, DESTRUCTIVE). Token-driven height
-  (`defaultMinSize(buttonHeight)`, so callers can grow it, e.g. `height(buttonHeightLarge)` for a full CTA),
-  shape (`BedrudShapeTokens.button`), and padding. Built-in `loading` state.
+  (`defaultMinSize(buttonHeight)`, so callers can grow it, e.g. `heightIn(min = buttonHeightLarge)` for a full CTA),
+  shape (`BedrudShapeTokens.button`), and padding — `space24` across, `space8` above and below; the
+  vertical half only shows once a label outgrows the minimum height, and keeps a wrapped label off
+  the edges. Built-in `loading` state.
 - **`BedrudCard` / `BedrudOutlinedCard`** — outline-first cards, tonal surface, minimal elevation.
   `BedrudOutlinedCard`'s corners default to `BedrudShapeTokens.card`, the one card radius in the
   app; a card never passes its own. The default used to be 12dp while every caller but one passed
@@ -203,7 +247,13 @@ than standing at full strength beside a greyed-out one.
   `InitialsAvatar` defaults its initial to that role's own on-colour.
 - **Rooms cards** — an outlined card; swiped toward its start edge
   (M3 `SwipeToDismissBox`) for a contextual action — **Remove** a recent from local history (instant),
-  or **Delete** a room you own (routed through a confirm dialog).
+  or **Delete** a room you own (routed through a confirm dialog). The room name is pinned left-to-right
+  so a slug's dashes keep their order, but it is laid out at its own width rather than filling the
+  row: an LTR paragraph that fills the row aligns to its own left edge, whereas one at its own width
+  is placed by the column, at the layout's start — the right edge in Persian and Arabic. The trailing
+  chevron is the auto-mirrored `NavigateNext` for the same reason. The name and its status line sit
+  `space4` apart, since the card's fixed height would otherwise push all its spare room above and
+  below them.
 - **`DevOnly` / `DevHintBadge`** — see below.
 
 ## Dialogs
@@ -628,6 +678,15 @@ reconnecting ring — one state, one colour. Hairlines inside the call's menus a
   cause; the reach check needs at least one remote participant, since an empty room has no reason
   to report a speaker and no one to miss you.
 
+  Whether you are talking at all is judged against **your own microphone**, not a fixed level:
+  `SpeechLevelTracker` takes the lowest level of the last two seconds as the room's floor, keeps
+  one floor for muted capture and one for live, and counts a level 9 dB above it as speech. The
+  same answer drives the speaking bridge on your own tile, so the tile and the ring never disagree
+  about it. The reach check is stricter, because the server names a speaker only above a fixed
+  level of its own (`VoiceReachMonitor.RoomSpeakerLevel`, LiveKit's default `active_level`): the
+  room is blamed only for speech loud enough that it would have reported it. A quiet voice still
+  gets "muted", but never "the room can't hear you".
+
   Both states share the colour because they are the same news, so **motion carries the cause**: a
   reconnect sends a single arc travelling around the outline (a dashed stroke whose phase moves,
   which follows the pill's rounded corners where a rotated gradient would squash them), while
@@ -714,6 +773,30 @@ zh) — **not** inline in composables. Every string must be translated in all lo
 lint fails CI on `MissingTranslation`, so shipping English-only is not an option. RTL is fully supported:
 `LocaleHelper` and `BedrudTheme` set the layout direction from the active `AppLanguage`, while the
 typeface does not vary by locale at all — see [Typography](#typography-typekt).
+
+**Which language, and when.** A first run follows the device, because nothing has been picked yet and
+`AppLanguage.SYSTEM` is the default; a pick in Settings holds from that moment on, and picking System
+again hands the choice back to the device. The device's language is read from
+`Resources.getSystem()` (`deviceLocale()` in `LocaleHelper`), never from `Locale.getDefault()`:
+applying a language overwrites that default, so after one pick "System" used to keep answering with
+the language just left behind until the process died. Each of the app's own components gets the same
+wrapping in its `attachBaseContext` — the application, `MainActivity`, and the two call services
+(`CallService`, `CallConnectionService`) — because the system hands each its own context in the
+device's language; without it the call notification spoke the device's language inside a Persian
+app. The QR scanner is ZXing's `CaptureActivity`, a library screen that is not wrapped, so its own
+prompt follows the device. The System entry is the one language-picker label drawn from
+`strings.xml`; every other entry is the language's own name in its own script.
+
+**Numbers are written in the language's own digits** — `۱۲` in Persian — wherever they are
+something to read rather than something to copy. A number inside a sentence goes through its string
+resource as a number (`%1$d`, or a `<plurals>` when a word agrees with it), which the resources
+format in the app's language; one standing alone — a badge, a reaction tally, a stat, a poll share —
+goes through `formatCount` / `formatPercent` in `core/LocalizedNumbers.kt`. `toString()` and string
+templates are what left these in Latin digits, and a `"$value%"` template also gets the sign wrong
+wherever it moves (`%25` in Turkish, `25 %` in French, `۲۵٪` in Persian). Machine-shaped text keeps
+Latin digits in every language: room slugs, IDs, server addresses, the app version, invite tokens and
+an HTTP status code in an error, which is formatted with `Locale.ROOT` because people search for and
+report it as it is.
 
 **Content direction is separate from layout direction.** What someone types is not governed by the
 language they chose the app in: a Persian message written in the English build is still a

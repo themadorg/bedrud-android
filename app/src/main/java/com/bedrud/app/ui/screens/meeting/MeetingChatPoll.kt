@@ -6,13 +6,12 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.CheckCircle
@@ -30,6 +29,8 @@ import androidx.compose.ui.text.style.LineBreak
 import androidx.compose.ui.text.style.TextDirection
 import com.bedrud.app.R
 import com.bedrud.app.core.BidiUtils
+import com.bedrud.app.core.appLocale
+import com.bedrud.app.core.formatPercent
 import com.bedrud.app.core.meeting.chat.ChatPoll
 import com.bedrud.app.core.meeting.chat.results
 import com.bedrud.app.core.meeting.chat.totalVotes
@@ -156,33 +157,42 @@ private fun PollAnswer(
     isMine: Boolean,
     onClick: (() -> Unit)?,
 ) {
+    // A floor, not a fixed height: an answer that wraps, or a reader's larger font, grows the row
+    // instead of having its text cut off.
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .height(Dimens.chatPollOption)
+            .heightIn(min = Dimens.chatPollOption)
             .clip(BedrudShapeTokens.chip)
             // A shade *lighter* than the bubble, never darker. The track was the panel's own surface
             // back when the bubble could be the accent colour; against the neutral bubble that reads
             // as a hole cut in the card rather than as a row waiting to be tapped.
             .background(MaterialTheme.colorScheme.surfaceContainerHighest)
             .let { base -> if (onClick == null) base else base.clickable(onClick = onClick) },
+        contentAlignment = Alignment.CenterStart,
     ) {
         if (showShare && percent > 0) {
+            // The row only sets a minimum height, which leaves nothing for fillMaxHeight to fill, so
+            // the bar takes the row's measured size instead.
             Box(
                 modifier = Modifier
-                    .fillMaxHeight()
+                    .matchParentSize()
+                    .wrapContentWidth(Alignment.Start)
                     .fillMaxWidth(percent / PercentPerWhole)
                     .background(MaterialTheme.colorScheme.primary.copy(alpha = PollBarAlpha)),
             )
         }
         Row(
             modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = Dimens.space8),
+                .fillMaxWidth()
+                .padding(horizontal = Dimens.space8, vertical = Dimens.space6),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween,
+            horizontalArrangement = Arrangement.spacedBy(Dimens.space8),
         ) {
+            // The answer takes whatever the share leaves, so a long answer wraps beside the share
+            // instead of pushing it out of the row.
             Row(
+                modifier = Modifier.weight(1f),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(Dimens.space4),
             ) {
@@ -208,7 +218,7 @@ private fun PollAnswer(
             if (showShare) {
                 val shareStyle = MaterialTheme.typography.labelSmall
                 Text(
-                    text = "$percent$PercentSign",
+                    text = formatPercent(percent, appLocale()),
                     style = shareStyle,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.typeCentered(shareStyle),
@@ -292,7 +302,6 @@ fun ChatPollResultsSheet(
 
 /** How much of an answer row the bar covers at 100%, since the share is counted in whole percent. */
 private const val PercentPerWhole = 100f
-private const val PercentSign = "%"
 
 /** How far the winning bar tints its row: readable behind the label, not a block of colour. */
 private const val PollBarAlpha = 0.35f

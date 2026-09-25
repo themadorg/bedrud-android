@@ -82,6 +82,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.bedrud.app.R
 import com.bedrud.app.core.api.apiAction
+import com.bedrud.app.core.appLocale
+import com.bedrud.app.core.formatCount
 import com.bedrud.app.core.api.apiBody
 import com.bedrud.app.core.instance.InstanceManager
 import com.bedrud.app.core.toUserMessage
@@ -311,7 +313,7 @@ private fun StatCard(@StringRes labelResId: Int, value: Int, icon: ImageVector) 
                 tint = MaterialTheme.colorScheme.primary
             )
             Spacer(modifier = Modifier.height(6.dp))
-            Text(value.toString(), style = MaterialTheme.typography.titleLarge)
+            Text(formatCount(value, appLocale()), style = MaterialTheme.typography.titleLarge)
             Text(
                 stringResource(labelResId), style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,

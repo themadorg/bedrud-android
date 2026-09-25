@@ -39,7 +39,10 @@
   <string name="auth_hint_passwordMinLength">حداقل %1$d نویسه</string>
   <string name="auth_error_emailInvalid">یک ایمیل معتبر وارد کنید</string>
   <string name="auth_error_guestFailed">پیوستن به‌عنوان مهمان ممکن نشد. لطفاً دوباره تلاش کنید.</string>
-  <string name="auth_error_nameTooShort">لطفاً حداقل ۲ نویسه وارد کنید.</string>
+  <plurals name="auth_error_nameTooShort">
+    <item quantity="one">لطفاً حداقل %1$d نویسه وارد کنید.</item>
+    <item quantity="other">لطفاً حداقل %1$d نویسه وارد کنید.</item>
+  </plurals>
   <string name="auth_error_generic">مشکلی پیش آمد. لطفاً دوباره تلاش کنید.</string>
   <string name="auth_error_registrationFailed">ثبت‌نام ناموفق بود. لطفاً دوباره تلاش کنید.</string>
   <string name="auth_error_signInFailed">ورود ناموفق بود. لطفاً دوباره تلاش کنید.</string>
@@ -95,6 +98,10 @@
   <string name="meeting_button_goBack">بازگشت</string>
   <string name="meeting_dialog_kickTitle">اخراج شرکت‌کننده</string>
   <string name="meeting_dialog_kickMessage">آیا مطمئن هستید که می‌خواهید <xliff:g id="participantName" example="John Doe">%1$s</xliff:g> را از اتاق اخراج کنید؟</string>
+  <string name="meeting_dialog_followRoomTitle">از این تماس خارج می‌شوید؟</string>
+  <string name="meeting_dialog_followRoomMessage">از <xliff:g id="currentRoom" example="obd-hzpi-dfv">%1$s</xliff:g> خارج می‌شوید و به <xliff:g id="nextRoom" example="oqc-qpka-bvw">%2$s</xliff:g> می‌پیوندید.</string>
+  <string name="meeting_dialog_followRoomOnServerMessage">از <xliff:g id="currentRoom" example="obd-hzpi-dfv">%1$s</xliff:g> خارج می‌شوید و در <xliff:g id="serverName" example="Bedrud">%3$s</xliff:g> به <xliff:g id="nextRoom" example="oqc-qpka-bvw">%2$s</xliff:g> می‌پیوندید.</string>
+  <string name="meeting_button_leaveAndJoin">خروج و پیوستن</string>
   <string name="meeting_action_mute">قطع صدا</string>
   <string name="meeting_action_unmute">فعال کردن صدا</string>
   <string name="meeting_action_disableVideo">غیرفعال کردن ویدئو</string>
@@ -137,6 +144,7 @@
   <string name="meeting_chat_reactions">واکنش‌ها</string>
   <string name="meeting_chat_shareChooser">هم‌رسانی پیام</string>
   <string name="meeting_chat_linkUnopenable">هیچ برنامه‌ای نمی‌تواند آن پیوند را باز کند</string>
+  <string name="meeting_chat_linkCurrentRoom">شما هم‌اکنون در این اتاق هستید</string>
   <plurals name="meeting_chat_reactionCount">
     <item quantity="one">%1$d واکنش</item>
     <item quantity="other">%1$d واکنش</item>
@@ -209,6 +217,7 @@
   <string name="settings_theme_light">روشن</string>
   <string name="settings_theme_dark">تاریک</string>
   <string name="settings_label_language">زبان</string>
+  <string name="settings_language_system">سیستم</string>
   <string name="settings_section_notifications">اعلان‌ها</string>
   <string name="settings_label_enableNotifications">فعال کردن اعلان‌ها</string>
   <string name="settings_section_account">حساب</string>
@@ -244,7 +253,6 @@
   <string name="dashboard_stat_live">زنده</string>
   <string name="dashboard_stat_private">خصوصی</string>
   <string name="dashboard_status_live">● Live</string>
-  <string name="dashboard_status_timeAgo">%1$s پیش</string>
   <string name="dashboard_empty_noRooms">هنوز اتاقی وجود ندارد</string>
   <string name="dashboard_feature_chat">چت</string>
   <string name="dashboard_feature_video">ویدئو</string>

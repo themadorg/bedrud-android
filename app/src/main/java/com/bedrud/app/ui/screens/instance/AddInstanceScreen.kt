@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
@@ -319,7 +320,7 @@ fun AddInstanceScreen(
                     onClick = { submit() },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(Dimens.buttonHeightLarge),
+                        .heightIn(min = Dimens.buttonHeightLarge),
                     enabled = resolvedUrl != null,
                     loading = isChecking
                 )

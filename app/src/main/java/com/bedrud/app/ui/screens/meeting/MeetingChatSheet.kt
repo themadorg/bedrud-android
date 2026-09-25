@@ -27,6 +27,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.unit.dp
+import com.bedrud.app.core.deeplink.ChatLinkTarget
 import com.bedrud.app.core.livekit.ChatAttachment
 import com.bedrud.app.core.livekit.ChatMessage
 import com.bedrud.app.core.meeting.chat.ChatPoll
@@ -69,7 +70,8 @@ fun MeetingChatSheet(
     onClose: () -> Unit,
     imageContext: ChatImageContext?,
     @StringRes sendDisabledReason: Int?,
-    knownHosts: Set<String>,
+    resolveLink: (String) -> ChatLinkTarget,
+    onFollowRoom: (ChatLinkTarget.Room) -> Unit,
     onVisibleChange: (Boolean) -> Unit = {},
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = false)
@@ -155,7 +157,8 @@ fun MeetingChatSheet(
                     resolveName = resolveName,
                     imageContext = imageContext,
                     sendDisabledReason = sendDisabledReason,
-                    knownHosts = knownHosts,
+                    resolveLink = resolveLink,
+                    onFollowRoom = onFollowRoom,
                     modifier = Modifier.weight(1f),
                 )
             }
