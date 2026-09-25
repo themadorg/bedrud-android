@@ -7,12 +7,14 @@ import androidx.compose.ui.res.stringResource
 import com.bedrud.app.R
 
 /**
- * The app's confirmation dialog: title, message, a filled confirm button, and a ghost cancel.
+ * The app's confirmation dialog: title, message, a filled confirm button, and a ghost cancel. Used
+ * for delete-room and kick-participant; anything needing a richer layout (extra buttons, custom
+ * content) stays a bespoke AlertDialog, built from the same two buttons.
  *
- * The confirm button is destructive by default, for delete-room and kick-participant; a
- * confirmation that loses nothing, like switching servers, passes [BedrudButtonVariant.TONAL].
- * Anything needing a richer layout (extra buttons, custom content) stays a bespoke AlertDialog,
- * built from the same two buttons.
+ * The confirm is destructive by default, since most of what needs confirming cannot be undone. A
+ * choice that loses nothing — leaving one call for another, which the reader can rejoin, or
+ * switching servers — passes [confirmVariant] instead: the destructive colour is kept for what is
+ * actually lost.
  */
 @Composable
 fun ConfirmDialog(

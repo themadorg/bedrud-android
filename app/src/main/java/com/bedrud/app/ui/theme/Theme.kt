@@ -39,7 +39,9 @@ internal val LightColorScheme = lightColorScheme(
     tertiaryContainer = Teal100,
     onTertiaryContainer = Teal900,
 
-    error = Red600,
+    // A step darker than the red the ramp starts at, so the error role clears the rose primary.
+    // Rose and red share a hue family, so lightness is what separates them here.
+    error = Red700,
     onError = Neutral0,
     errorContainer = Red100,
     onErrorContainer = Red900,
@@ -84,8 +86,11 @@ internal val DarkColorScheme = darkColorScheme(
     tertiaryContainer = Teal800,
     onTertiaryContainer = Teal100,
 
-    error = Red400,
-    onError = Red950,
+    // A step darker than the rose primary sits at, so the error role reads as its own color
+    // rather than as the brand. Red950 no longer clears AA on this fill, so the label that sits
+    // on it drops to the page's own background instead.
+    error = Red500,
+    onError = Stone950,
     errorContainer = Red900,
     onErrorContainer = Red100,
 

@@ -2,6 +2,12 @@ package com.bedrud.app.core.rooms
 
 import java.time.OffsetDateTime
 import java.time.format.DateTimeParseException
+import kotlin.time.Duration.Companion.days
+import kotlin.time.Duration.Companion.hours
+import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Duration.Companion.minutes
+
+private const val DAYS_PER_WEEK = 7
 
 /**
  * Reads one of the server's RFC 3339 timestamps as epoch milliseconds.
@@ -41,4 +47,36 @@ fun resolveRoomActivityAt(serverLastActivityAt: String?, localVisitAtMs: Long?):
 fun <T> sortByActivity(items: List<T>, activityAtMs: (T) -> Long?): List<T> {
     val (dated, undated) = items.partition { item -> activityAtMs(item) != null }
     return dated.sortedByDescending { item -> activityAtMs(item) } + undated
+}
+
+/** The units a room's age is counted in, smallest first. Weeks are the largest. */
+enum class RoomActivityUnit { MINUTES, HOURS, DAYS, WEEKS }
+
+/**
+ * How long ago a room was last active, as a count of the largest unit that fits.
+ *
+ * Deliberately words-free: the UI turns it into a sentence in the reader's own language, so the
+ * grammar of "3 hours ago" — plural forms, word order, digits — is never decided here.
+ */
+sealed interface RoomActivityAge {
+    data object JustNow : RoomActivityAge
+    data class Ago(val count: Long, val unit: RoomActivityUnit) : RoomActivityAge
+}
+
+/**
+ * Buckets the time between [activityAtMs] and [nowMs] into a [RoomActivityAge].
+ *
+ * Every count is truncated, never rounded, so a room reads "59 minutes" right up until the hour
+ * is complete. A timestamp from the future — a server clock running ahead of this device's —
+ * reads as just now rather than as a negative age.
+ */
+fun roomActivityAge(activityAtMs: Long, nowMs: Long): RoomActivityAge {
+    val elapsed = (nowMs - activityAtMs).coerceAtLeast(0L).milliseconds
+    return when {
+        elapsed < 1.minutes -> RoomActivityAge.JustNow
+        elapsed < 1.hours -> RoomActivityAge.Ago(elapsed.inWholeMinutes, RoomActivityUnit.MINUTES)
+        elapsed < 1.days -> RoomActivityAge.Ago(elapsed.inWholeHours, RoomActivityUnit.HOURS)
+        elapsed < DAYS_PER_WEEK.days -> RoomActivityAge.Ago(elapsed.inWholeDays, RoomActivityUnit.DAYS)
+        else -> RoomActivityAge.Ago(elapsed.inWholeDays / DAYS_PER_WEEK, RoomActivityUnit.WEEKS)
+    }
 }
