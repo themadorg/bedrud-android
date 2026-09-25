@@ -205,6 +205,10 @@ sign-in method — M3's own answer is the normal colors at reduced opacity, so a
 enough on its own: that is also what an unselected-but-selectable element looks like, so the
 disabled state reads as merely deselected.
 
+The same holds for the app's own text beside a disabled M3 control: a locked row in the room
+settings form keeps its label colour and takes `Alpha.disabled`, so it dims with its switch rather
+than standing at full strength beside a greyed-out one.
+
 ## Components (`ui/components/`)
 
 - **`BedrudButton`** — 6 variants (PRIMARY, SECONDARY, TONAL, OUTLINE, GHOST, DESTRUCTIVE). Token-driven height
@@ -222,9 +226,12 @@ disabled state reads as merely deselected.
 - **Selectable cards** (e.g. the server chooser) — a `selectableGroup()` of `Surface`s marked
   `selectable(role = RadioButton)`, selection shown by a radio **and** a primary border.
 - **Per-server color** — `parseInstanceColor("#RRGGBB")` in `ui/theme/InstanceColor.kt` is the single
-  source of truth for an instance's accent color (server header, profile row, and each rooms card's
-  leading stripe + colored "on {server}" tag).
-- **Rooms cards** — an outlined card with a per-server accent stripe on the leading edge; swiped left
+  source of truth for an instance's accent color (the sign-in server header, the profile's server
+  row and the server switcher). The initial on it is always `OnInstanceColor`, a dark tone: every
+  server color is a mid-tone, and white fell to 2.2:1 on the lightest of them while dark clears
+  4.5:1 on all (`InstanceColorTest`). A person's avatar, by contrast, stands on a theme role, and
+  `InitialsAvatar` defaults its initial to that role's own on-colour.
+- **Rooms cards** — an outlined card; swiped toward its start edge
   (M3 `SwipeToDismissBox`) for a contextual action — **Remove** a recent from local history (instant),
   or **Delete** a room you own (routed through a confirm dialog). The room name is pinned left-to-right
   so a slug's dashes keep their order, but it is laid out at its own width rather than filling the
@@ -301,7 +308,18 @@ surface, give it an explicit colour with real contrast.
 ## Meeting chrome
 
 The in-call screen has its own chrome standard (palette via `meetingChromeColors()`, metrics under
-the `meeting*` tokens in `Dimens.kt`, timing in `Motion.meetingChromeAutoHideDelayMs`):
+the `meeting*` tokens in `Dimens.kt`, timing in `Motion.meetingChromeAutoHideDelayMs`).
+
+**Every fill in the palette comes with the content colour Material pairs with it**, and a control
+that changes fill changes its content colour in the same step. A lit button — screen share or chat
+while open, push-to-talk while held — fills with `buttonActive` (secondary) and draws its icon in
+`onButtonActive` (onSecondary). It used to keep `onButton`, the unlit colour, which measured 1.7:1
+on the lit fill in dark theme; `MeetingChromeTest` holds every pair in the palette to 3:1 in both
+themes. The unread count on the chat button is the call's `accent`, not Material's default error
+red: a new message is news, and red there sat beside hang-up and the media-failure dot. The same
+goes for the reconnecting dot in the top bar, which is the warning role like the mic pill's
+reconnecting ring — one state, one colour. Hairlines inside the call's menus and sheets use
+`divider`, never `outlineVariant` (see the raised-surface trap above).
 
 - **Top bar** (`MeetingTopBar`): invite/participants entry at the start; the room name centered,
   with a reconnecting dot when applicable; camera flip (**only while the local camera is live**) and audio output at

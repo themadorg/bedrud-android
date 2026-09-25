@@ -813,8 +813,8 @@ private fun AdminSettingsContent(
                                 Text(
                                     if (tok.used) stringResource(R.string.admin_token_status_used) else tok.email ?: stringResource(R.string.admin_token_status_noEmail),
                                     style = statusStyle,
-                                    color = if (tok.used) MaterialTheme.colorScheme.error
-                                    else MaterialTheme.colorScheme.onSurfaceVariant,
+                                    // A spent token is a status, not a failure, so it is not red.
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     modifier = Modifier.typeCentered(firstLine = tokenStyle, lastLine = statusStyle)
                                 )
                             },

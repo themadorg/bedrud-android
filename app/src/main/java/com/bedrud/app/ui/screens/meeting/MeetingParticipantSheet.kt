@@ -223,26 +223,27 @@ fun MeetingParticipantSheet(
                 },
             )
 
-            // Moderation that still needs server endpoints — dev builds only (#108)
+            // Moderation that still needs server endpoints — dev builds only (#108). Neutral, not
+            // red: each of these is undone as easily as it is done, unlike removing someone.
             DevOnly {
                 BedrudSheetActionRow(
                     icon = Icons.Default.MicOff,
                     title = stringResource(R.string.meeting_action_roomMute),
-                    contentColor = MaterialTheme.colorScheme.error,
+                    contentColor = colors.onButton,
                     trailing = { DevHintBadge(stringResource(R.string.common_hint_comingSoon)) },
                     onClick = {},
                 )
                 BedrudSheetActionRow(
                     icon = Icons.Default.HeadsetOff,
                     title = stringResource(R.string.meeting_action_roomDeafen),
-                    contentColor = MaterialTheme.colorScheme.error,
+                    contentColor = colors.onButton,
                     trailing = { DevHintBadge(stringResource(R.string.common_hint_comingSoon)) },
                     onClick = {},
                 )
                 BedrudSheetActionRow(
                     icon = Icons.AutoMirrored.Filled.Chat,
                     title = stringResource(R.string.meeting_action_chatMute),
-                    contentColor = MaterialTheme.colorScheme.error,
+                    contentColor = colors.onButton,
                     trailing = { DevHintBadge(stringResource(R.string.common_hint_comingSoon)) },
                     onClick = {},
                 )
