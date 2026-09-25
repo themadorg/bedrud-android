@@ -224,6 +224,7 @@
   <string name="settings_label_accountId">شناسه حساب</string>
   <string name="settings_label_signInMethod">روش ورود</string>
   <string name="settings_provider_email">ایمیل</string>
+  <string name="settings_provider_passkey">Passkey</string>
   <string name="settings_label_role">نقش</string>
   <string name="settings_role_admin">مدیر</string>
   <string name="settings_role_user">کاربر</string>
@@ -237,7 +238,7 @@
   <string name="settings_password_changeFailed">تغییر رمز عبور ناموفق بود</string>
   <string name="settings_section_about">درباره</string>
   <string name="settings_label_version">نسخه</string>
-  <string name="settings_label_build">Build</string>
+  <string name="settings_label_build">ساخت</string>
   <string name="call_channel_name">تماس‌های فعال</string>
   <string name="call_channel_description">اعلان‌های تماس جاری</string>
   <string name="call_action_mute">قطع صدا</string>
@@ -274,9 +275,6 @@
   <string name="profile_badge_admin">مدیریت</string>
   <string name="profile_section_server">سرور</string>
   <string name="profile_button_switch">تغییر</string>
-  <string name="profile_section_account">حساب</string>
-  <string name="profile_label_userId">شناسه کاربر</string>
-  <string name="profile_label_provider">ارائه‌دهنده</string>
   <string name="profile_button_signOut">خروج</string>
 
   <string name="meeting_stage_screenSharePresenting"><xliff:g id="name" example="Alex">%1$s</xliff:g> در حال ارائه است</string>

@@ -239,6 +239,7 @@
   <string name="settings_label_accountId">معرف الحساب</string>
   <string name="settings_label_signInMethod">طريقة تسجيل الدخول</string>
   <string name="settings_provider_email">البريد الإلكتروني</string>
+  <string name="settings_provider_passkey">المفتاح</string>
   <string name="settings_label_role">الدور</string>
   <string name="settings_role_admin">مشرف</string>
   <string name="settings_role_user">مستخدم</string>
@@ -289,9 +290,6 @@
   <string name="profile_badge_admin">مشرف</string>
   <string name="profile_section_server">الخادم</string>
   <string name="profile_button_switch">تبديل</string>
-  <string name="profile_section_account">الحساب</string>
-  <string name="profile_label_userId">معرف المستخدم</string>
-  <string name="profile_label_provider">المزود</string>
   <string name="profile_button_signOut">تسجيل الخروج</string>
 
   <string name="meeting_stage_screenSharePresenting"><xliff:g id="name" example="Alex">%1$s</xliff:g> يعرض الآن</string>

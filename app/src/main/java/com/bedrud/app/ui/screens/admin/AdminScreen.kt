@@ -4,8 +4,6 @@ import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -93,6 +91,7 @@ import com.bedrud.app.models.AdminUser
 import com.bedrud.app.models.CreateInviteTokenRequest
 import com.bedrud.app.models.InviteToken
 import com.bedrud.app.ui.theme.BedrudRadius
+import com.bedrud.app.ui.theme.Dimens
 import com.bedrud.app.ui.theme.rememberTypeCenteringOffset
 import com.bedrud.app.ui.theme.typeCentered
 import kotlinx.coroutines.delay
@@ -180,7 +179,7 @@ fun AdminScreen(
 
 // ── Overview ──────────────────────────────────────────────────────────────────
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun AdminOverviewContent(
     modifier: Modifier = Modifier,
@@ -243,28 +242,29 @@ private fun AdminOverviewContent(
                 .fillMaxSize()
                 .padding(padding)
                 .verticalScroll(rememberScrollState())
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+                .padding(Dimens.screenPaddingCompact),
+            verticalArrangement = Arrangement.spacedBy(Dimens.space16)
         ) {
             if (isLoading) {
                 AdminLoadingIndicator()
             } else {
-                // Stats grid
-                FlowRow(
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    maxItemsInEachRow = 3
-                ) {
-                    StatCard(R.string.admin_stat_users, users.size, Icons.Default.Person)
-                    StatCard(R.string.admin_stat_activeRooms, rooms.count { it.isActive }, Icons.Default.MeetingRoom)
-                    StatCard(R.string.admin_stat_onlineNow, onlineCount, Icons.Default.Group)
+                // The three stats share the row's width equally, so none is cut short and they
+                // never wrap into a second row that touches the first.
+                Row(horizontalArrangement = Arrangement.spacedBy(Dimens.space12)) {
+                    StatCard(R.string.admin_stat_users, users.size, Icons.Default.Person, Modifier.weight(1f))
+                    StatCard(R.string.admin_stat_activeRooms, rooms.count { it.isActive }, Icons.Default.MeetingRoom, Modifier.weight(1f))
+                    StatCard(R.string.admin_stat_onlineNow, onlineCount, Icons.Default.Group, Modifier.weight(1f))
                 }
 
-                // Recent users
+                // Recent users. Only the header is padded: the rows are list items, which carry
+                // their own inset, so padding the whole card set them twice as far in.
                 BedrudOutlinedCard {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        CardSectionHeader(stringResource(R.string.admin_section_recentSignups))
-                        Spacer(modifier = Modifier.height(8.dp))
-                        val nameStyle = MaterialTheme.typography.bodyMedium.copy(textDirection = TextDirection.Content)
+                    Column {
+                        CardSectionHeader(
+                            stringResource(R.string.admin_section_recentSignups),
+                            modifier = Modifier.padding(start = Dimens.cardPadding, top = Dimens.cardPadding, end = Dimens.cardPadding, bottom = Dimens.space8)
+                        )
+                        val nameStyle = MaterialTheme.typography.bodyLarge.copy(textDirection = TextDirection.Content)
                         val emailStyle = MaterialTheme.typography.bodySmall.copy(textDirection = TextDirection.Ltr)
                         users.takeLast(5).reversed().forEach { user ->
                             // Both lines take the block's correction, so they move as one.
@@ -302,17 +302,19 @@ private fun AdminOverviewContent(
 }
 
 @Composable
-private fun StatCard(@StringRes labelResId: Int, value: Int, icon: ImageVector) {
-    BedrudOutlinedCard(modifier = Modifier.width(100.dp)) {
+private fun StatCard(@StringRes labelResId: Int, value: Int, icon: ImageVector, modifier: Modifier = Modifier) {
+    BedrudOutlinedCard(modifier = modifier) {
         Column(
-            modifier = Modifier.padding(12.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(Dimens.space12),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Icon(
-                icon, contentDescription = null, modifier = Modifier.size(24.dp),
+                icon, contentDescription = null, modifier = Modifier.size(Dimens.iconMd),
                 tint = MaterialTheme.colorScheme.primary
             )
-            Spacer(modifier = Modifier.height(6.dp))
+            Spacer(modifier = Modifier.height(Dimens.space6))
             Text(formatCount(value, appLocale()), style = MaterialTheme.typography.titleLarge)
             Text(
                 stringResource(labelResId), style = MaterialTheme.typography.labelSmall,
@@ -430,13 +432,13 @@ private fun AdminUsersContent(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding),
-            contentPadding = PaddingValues(bottom = 16.dp)
+            contentPadding = PaddingValues(bottom = Dimens.space16)
         ) {
             item {
                 BedrudTextField(
                     value = search, onValueChange = { search = it },
                     placeholder = stringResource(R.string.admin_placeholder_searchUsers),
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                    modifier = Modifier.padding(horizontal = Dimens.space16, vertical = Dimens.space8)
                 )
             }
             if (isLoading) {
@@ -448,13 +450,13 @@ private fun AdminUsersContent(
                     // Both lines take the block's correction, so they move as one; the admin icon
                     // is then raised by the name's own correction to meet the name's letters, as
                     // the profile card's admin badge is.
-                    val nameStyle = MaterialTheme.typography.bodyMedium.copy(textDirection = TextDirection.Content)
+                    val nameStyle = MaterialTheme.typography.bodyLarge.copy(textDirection = TextDirection.Content)
                     val emailStyle = MaterialTheme.typography.bodySmall.copy(textDirection = TextDirection.Ltr)
                     ListItem(
                         headlineContent = {
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                horizontalArrangement = Arrangement.spacedBy(Dimens.space8),
                                 modifier = Modifier.typeCentered(firstLine = nameStyle, lastLine = emailStyle)
                             ) {
                                 Text(user.name, maxLines = 1, overflow = TextOverflow.Ellipsis, style = nameStyle)
@@ -464,7 +466,7 @@ private fun AdminUsersContent(
                                         contentDescription = stringResource(R.string.admin_contentDescription_admin),
                                         modifier = Modifier
                                             .offset(y = -rememberTypeCenteringOffset(nameStyle))
-                                            .size(14.dp),
+                                            .size(Dimens.iconXs),
                                         tint = MaterialTheme.colorScheme.primary
                                     )
                                 }
@@ -570,7 +572,7 @@ private fun AdminRoomsContent(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding),
-            contentPadding = PaddingValues(bottom = 16.dp)
+            contentPadding = PaddingValues(bottom = Dimens.space16)
         ) {
             if (isLoading) {
                 item {
@@ -592,7 +594,7 @@ private fun AdminRoomsContent(
                         },
                         supportingContent = {
                             Row(
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                horizontalArrangement = Arrangement.spacedBy(Dimens.space8),
                                 modifier = Modifier.typeCentered(firstLine = roomNameStyle, lastLine = detailStyle)
                             ) {
                                 Text(
@@ -703,8 +705,8 @@ private fun AdminSettingsContent(
                 .fillMaxSize()
                 .padding(padding)
                 .verticalScroll(rememberScrollState())
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+                .padding(Dimens.screenPaddingCompact),
+            verticalArrangement = Arrangement.spacedBy(Dimens.space16)
         ) {
             settings?.let { s ->
                 // Registration settings
@@ -713,10 +715,10 @@ private fun AdminSettingsContent(
                         CardSectionHeader(
                             stringResource(R.string.admin_section_registration),
                             modifier = Modifier.padding(
-                                start = 16.dp,
-                                top = 16.dp,
-                                end = 16.dp,
-                                bottom = 8.dp
+                                start = Dimens.cardPadding,
+                                top = Dimens.cardPadding,
+                                end = Dimens.cardPadding,
+                                bottom = Dimens.space8
                             )
                         )
                         ListItem(
@@ -748,7 +750,7 @@ private fun AdminSettingsContent(
                             },
                             colors = ListItemDefaults.colors(containerColor = Color.Transparent)
                         )
-                        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+                        HorizontalDivider(modifier = Modifier.padding(horizontal = Dimens.space16))
                         ListItem(
                             headlineContent = {
                                 Text(
@@ -779,22 +781,26 @@ private fun AdminSettingsContent(
                 }
             }
 
-            // Invite tokens
+            // Invite tokens. The header and the form are padded on their own, as in the
+            // registration card above; the token rows are list items with their own inset.
             BedrudOutlinedCard {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    CardSectionHeader(stringResource(R.string.admin_section_inviteTokens))
-                    Spacer(modifier = Modifier.height(8.dp))
+                Column {
+                    CardSectionHeader(
+                        stringResource(R.string.admin_section_inviteTokens),
+                        modifier = Modifier.padding(start = Dimens.cardPadding, top = Dimens.cardPadding, end = Dimens.cardPadding, bottom = Dimens.space8)
+                    )
 
                     // New token generated highlight
                     newToken?.let { tok ->
                         BedrudOutlinedCard(
+                            modifier = Modifier.padding(horizontal = Dimens.cardPadding),
                             shape = RoundedCornerShape(BedrudRadius.sm),
                             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
                         ) {
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(12.dp),
+                                    .padding(Dimens.space12),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 val tokenStyle = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace)
@@ -811,10 +817,13 @@ private fun AdminSettingsContent(
                                 }
                             }
                         }
-                        Spacer(modifier = Modifier.height(8.dp))
+                        Spacer(modifier = Modifier.height(Dimens.space8))
                     }
 
-                    Row(verticalAlignment = Alignment.CenterVertically) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = Dimens.cardPadding),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
                         BedrudTextField(
                             value = tokenEmail, onValueChange = { tokenEmail = it },
                             placeholder = stringResource(R.string.admin_placeholder_email),
@@ -822,7 +831,7 @@ private fun AdminSettingsContent(
                             textStyle = MaterialTheme.typography.bodyMedium,
                             textDirection = TextDirection.Ltr
                         )
-                        Spacer(modifier = Modifier.width(8.dp))
+                        Spacer(modifier = Modifier.width(Dimens.space8))
                         Button(onClick = {
                             scope.launch {
                                 val body = CreateInviteTokenRequest(
@@ -851,11 +860,11 @@ private fun AdminSettingsContent(
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(Dimens.space8))
 
                     val tokenStyle = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace)
                     val statusStyle = MaterialTheme.typography.bodySmall.copy(textDirection = TextDirection.Ltr)
-                    tokens.forEach { tok ->
+                    tokens.forEachIndexed { index, tok ->
                         // Both lines take the block's correction, so they move as one.
                         ListItem(
                             headlineContent = {
@@ -885,21 +894,24 @@ private fun AdminSettingsContent(
                                     IconButton(onClick = { scope.launch { clipboard.setPlainText(clipLabel, tok.token) } }) {
                                         Icon(
                                             Icons.Default.ContentCopy, contentDescription = stringResource(R.string.common_action_copy),
-                                            modifier = Modifier.size(18.dp)
+                                            modifier = Modifier.size(Dimens.iconMd)
                                         )
                                     }
                                     IconButton(onClick = { tokenToDelete = tok }) {
                                         Icon(
                                             Icons.Default.Delete, contentDescription = stringResource(R.string.common_button_delete),
                                             tint = MaterialTheme.colorScheme.error,
-                                            modifier = Modifier.size(18.dp)
+                                            modifier = Modifier.size(Dimens.iconMd)
                                         )
                                     }
                                 }
                             },
                             colors = ListItemDefaults.colors(containerColor = Color.Transparent)
                         )
-                        HorizontalDivider()
+                        // Inset and only between rows, like every other list inside a card.
+                        if (index < tokens.lastIndex) {
+                            HorizontalDivider(modifier = Modifier.padding(horizontal = Dimens.space16))
+                        }
                     }
                 }
             }

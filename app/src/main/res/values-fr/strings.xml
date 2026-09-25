@@ -228,6 +228,7 @@
   <string name="settings_label_accountId">ID du compte</string>
   <string name="settings_label_signInMethod">Méthode de connexion</string>
   <string name="settings_provider_email">E-mail</string>
+  <string name="settings_provider_passkey">Passkey</string>
   <string name="settings_label_role">Rôle</string>
   <string name="settings_role_admin">Administrateur</string>
   <string name="settings_role_user">Utilisateur</string>
@@ -278,9 +279,6 @@
   <string name="profile_badge_admin">Admin</string>
   <string name="profile_section_server">Serveur</string>
   <string name="profile_button_switch">Changer</string>
-  <string name="profile_section_account">Compte</string>
-  <string name="profile_label_userId">ID utilisateur</string>
-  <string name="profile_label_provider">Fournisseur</string>
   <string name="profile_button_signOut">Déconnexion</string>
 
   <string name="meeting_stage_screenSharePresenting"><xliff:g id="name" example="Alex">%1$s</xliff:g> présente</string>

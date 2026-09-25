@@ -60,6 +60,8 @@ object Dimens {
     val iconXl = 56.dp                 // empty-state illustrations
     val avatar = 40.dp
     val avatarLg = 44.dp               // top-bar profile avatar circle (inside a 48dp touch target)
+    // The profile card's own avatar, the one place a person's picture leads a whole card.
+    val avatarXl = 56.dp
 
     // ── Brand ──
     val brandMark = 72.dp

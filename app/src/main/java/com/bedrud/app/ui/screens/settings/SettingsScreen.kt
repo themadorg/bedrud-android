@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -49,6 +50,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 
@@ -56,10 +58,12 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
 import com.bedrud.app.R
+import com.bedrud.app.core.auth.SignInMethod
+import com.bedrud.app.core.auth.signInMethodOf
 import com.bedrud.app.core.instance.InstanceManager
 import com.bedrud.app.ui.theme.BedrudShapeTokens
+import com.bedrud.app.ui.theme.Dimens
 import com.bedrud.app.ui.theme.Elevation
 import com.bedrud.app.models.ChangePasswordRequest
 import com.bedrud.app.core.api.apiAction
@@ -69,6 +73,14 @@ import org.koin.compose.koinInject
 
 @Composable
 private fun AppLanguage.displayName(): String = labelResId?.let { stringResource(it) } ?: label
+
+/** The sign-in method in the app's language, or an identity provider by its own name. */
+@Composable
+private fun signInMethodLabel(method: SignInMethod): String = when (method) {
+    SignInMethod.Email -> stringResource(R.string.settings_provider_email)
+    SignInMethod.Passkey -> stringResource(R.string.settings_provider_passkey)
+    is SignInMethod.Provider -> method.name
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -86,6 +98,7 @@ fun SettingsContent(
     val authApi = instanceManager.authApi.collectAsState().value
     val authManager = instanceManager.authManager.collectAsState().value
     val currentUser by (authManager?.currentUser ?: kotlinx.coroutines.flow.MutableStateFlow(null)).collectAsState()
+    val signInMethod = signInMethodOf(currentUser?.provider)
 
     var currentPassword by remember { mutableStateOf("") }
     var newPassword by remember { mutableStateOf("") }
@@ -102,21 +115,20 @@ fun SettingsContent(
                 .fillMaxSize()
                 .padding(innerPadding)
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+                // The same page padding and card gap on every tab.
+                .padding(Dimens.screenPaddingCompact),
+            verticalArrangement = Arrangement.spacedBy(Dimens.space16)
         ) {
-            Spacer(modifier = Modifier.height(0.dp))
-
             // Appearance
             BedrudOutlinedCard {
-                Column(modifier = Modifier.padding(16.dp)) {
+                Column(modifier = Modifier.padding(Dimens.cardPadding)) {
                     CardSectionHeader(stringResource(R.string.settings_section_appearance))
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(Dimens.space12))
                     Text(
                         stringResource(R.string.settings_label_theme),
                         style = MaterialTheme.typography.bodyLarge
                     )
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(Dimens.space8))
                     SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
                         AppAppearance.entries.forEachIndexed { index, option ->
                             SegmentedButton(
@@ -134,12 +146,12 @@ fun SettingsContent(
                             }
                         }
                     }
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(Dimens.space12))
                     Text(
                         stringResource(R.string.settings_label_language),
                         style = MaterialTheme.typography.bodyLarge
                     )
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(Dimens.space8))
                     var languageExpanded by remember { mutableStateOf(false) }
                     ExposedDropdownMenuBox(
                         expanded = languageExpanded,
@@ -187,7 +199,7 @@ fun SettingsContent(
                 Column {
                     CardSectionHeader(
                         stringResource(R.string.settings_section_notifications),
-                        modifier = Modifier.padding(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 8.dp)
+                        modifier = Modifier.padding(start = Dimens.cardPadding, top = Dimens.cardPadding, end = Dimens.cardPadding, bottom = Dimens.space8)
                     )
                     ListItem(
                         headlineContent = {
@@ -211,14 +223,25 @@ fun SettingsContent(
             if (currentUser != null) {
                 BedrudOutlinedCard {
                     Column {
+                        // The admin mark sits centred on the header's letters, at the small icon
+                        // size a mark beside a label takes elsewhere; it used to hang from the top
+                        // of the row at full icon size.
                         Row(
-                            modifier = Modifier.padding(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 8.dp),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            modifier = Modifier.padding(start = Dimens.cardPadding, top = Dimens.cardPadding, end = Dimens.cardPadding, bottom = Dimens.space8),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(Dimens.space8)
                         ) {
-                            CardSectionHeader(stringResource(R.string.settings_section_account))
+                            CardSectionHeader(
+                                stringResource(R.string.settings_section_account),
+                                modifier = Modifier.typeCentered(MaterialTheme.typography.labelLarge)
+                            )
                             if (currentUser?.isAdmin == true) {
-                                Icon(Icons.Default.AdminPanelSettings, contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.primary)
+                                Icon(
+                                    Icons.Default.AdminPanelSettings,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(Dimens.iconXs)
+                                )
                             }
                         }
                         ListItem(
@@ -228,15 +251,17 @@ fun SettingsContent(
                                     modifier = Modifier.typeCentered(LocalTextStyle.current)
                                 )
                             },
+                            // Every value in the card at one size, one colour; the ID alone keeps a
+                            // monospace face, as the app's other machine-made names do.
                             trailingContent = {
-                                val idStyle = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace)
+                                val idStyle = MaterialTheme.typography.bodyMedium.copy(fontFamily = FontFamily.Monospace)
                                 Text(currentUser?.id?.take(8) ?: "", style = idStyle,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     modifier = Modifier.typeCentered(idStyle))
                             },
                             colors = ListItemDefaults.colors(containerColor = Color.Transparent)
                         )
-                        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp),
+                        HorizontalDivider(modifier = Modifier.padding(horizontal = Dimens.space16),
                             color = MaterialTheme.colorScheme.outlineVariant)
                         ListItem(
                             headlineContent = {
@@ -246,13 +271,15 @@ fun SettingsContent(
                                 )
                             },
                             trailingContent = {
-                                Text(currentUser?.provider?.replaceFirstChar { it.uppercase() } ?: stringResource(R.string.settings_provider_email),
+                                val valueStyle = MaterialTheme.typography.bodyMedium
+                                Text(signInMethodLabel(signInMethod),
+                                    style = valueStyle,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.typeCentered(LocalTextStyle.current))
+                                    modifier = Modifier.typeCentered(valueStyle))
                             },
                             colors = ListItemDefaults.colors(containerColor = Color.Transparent)
                         )
-                        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp),
+                        HorizontalDivider(modifier = Modifier.padding(horizontal = Dimens.space16),
                             color = MaterialTheme.colorScheme.outlineVariant)
                         ListItem(
                             headlineContent = {
@@ -262,9 +289,11 @@ fun SettingsContent(
                                 )
                             },
                             trailingContent = {
+                                val valueStyle = MaterialTheme.typography.bodyMedium
                                 Text(if (currentUser?.isAdmin == true) stringResource(R.string.settings_role_admin) else stringResource(R.string.settings_role_user),
+                                    style = valueStyle,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.typeCentered(LocalTextStyle.current))
+                                    modifier = Modifier.typeCentered(valueStyle))
                             },
                             colors = ListItemDefaults.colors(containerColor = Color.Transparent)
                         )
@@ -273,14 +302,13 @@ fun SettingsContent(
             }
 
             // Change Password
-            val isLocalAccount = currentUser?.provider.let { it == null || it == "local" || it == "passkey" }
             BedrudOutlinedCard {
-                Column(modifier = Modifier.padding(16.dp)) {
+                Column(modifier = Modifier.padding(Dimens.cardPadding)) {
                     CardSectionHeader(stringResource(R.string.settings_section_security))
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(Dimens.space12))
 
-                    if (!isLocalAccount) {
-                        Text(stringResource(R.string.settings_password_unavailable, currentUser?.provider?.replaceFirstChar { it.uppercase() } ?: ""),
+                    if (!signInMethod.hasPassword) {
+                        Text(stringResource(R.string.settings_password_unavailable, signInMethodLabel(signInMethod)),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant)
                     } else {
@@ -289,19 +317,19 @@ fun SettingsContent(
                             onValueChange = { currentPassword = it },
                             label = stringResource(R.string.settings_label_currentPassword)
                         )
-                        Spacer(modifier = Modifier.height(8.dp))
+                        Spacer(modifier = Modifier.height(Dimens.space8))
                         BedrudPasswordField(
                             value = newPassword,
                             onValueChange = { newPassword = it },
                             label = stringResource(R.string.settings_label_newPassword)
                         )
-                        Spacer(modifier = Modifier.height(8.dp))
+                        Spacer(modifier = Modifier.height(Dimens.space8))
                         BedrudPasswordField(
                             value = confirmPassword,
                             onValueChange = { confirmPassword = it },
                             label = stringResource(R.string.settings_label_confirmNewPassword)
                         )
-                        Spacer(modifier = Modifier.height(12.dp))
+                        Spacer(modifier = Modifier.height(Dimens.space12))
                         val passwordTooShortMessage =
                             stringResource(R.string.auth_hint_passwordMinLength, PasswordPolicy.MIN_LENGTH)
                         val passwordMismatchMessage = stringResource(R.string.auth_error_passwordMismatch)
@@ -354,7 +382,7 @@ fun SettingsContent(
                 Column {
                     CardSectionHeader(
                         stringResource(R.string.settings_section_about),
-                        modifier = Modifier.padding(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 8.dp)
+                        modifier = Modifier.padding(start = Dimens.cardPadding, top = Dimens.cardPadding, end = Dimens.cardPadding, bottom = Dimens.space8)
                     )
 
                     val packageInfo = try {
@@ -383,7 +411,7 @@ fun SettingsContent(
                     )
 
                     HorizontalDivider(
-                        modifier = Modifier.padding(horizontal = 16.dp),
+                        modifier = Modifier.padding(horizontal = Dimens.space16),
                         color = MaterialTheme.colorScheme.outlineVariant
                     )
 
@@ -407,8 +435,6 @@ fun SettingsContent(
                     )
                 }
             }
-
-            Spacer(modifier = Modifier.height(16.dp))
         }
     }
 }

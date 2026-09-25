@@ -14,7 +14,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.dp
+import com.bedrud.app.ui.theme.Dimens
 import com.bedrud.app.ui.theme.inkCentered
 
 /**
@@ -34,7 +34,7 @@ import com.bedrud.app.ui.theme.inkCentered
 fun InitialsAvatar(
     name: String?,
     modifier: Modifier = Modifier,
-    size: Dp = 36.dp,
+    size: Dp = Dimens.avatar,
     textStyle: TextStyle = MaterialTheme.typography.labelMedium,
     containerColor: Color = MaterialTheme.colorScheme.primary,
     contentColor: Color = contentColorFor(containerColor),

@@ -224,6 +224,7 @@
   <string name="settings_label_accountId">アカウントID</string>
   <string name="settings_label_signInMethod">サインイン方法</string>
   <string name="settings_provider_email">メール</string>
+  <string name="settings_provider_passkey">パスキー</string>
   <string name="settings_label_role">ロール</string>
   <string name="settings_role_admin">管理者</string>
   <string name="settings_role_user">ユーザー</string>
@@ -274,9 +275,6 @@
   <string name="profile_badge_admin">管理者</string>
   <string name="profile_section_server">サーバー</string>
   <string name="profile_button_switch">切り替え</string>
-  <string name="profile_section_account">アカウント</string>
-  <string name="profile_label_userId">ユーザーID</string>
-  <string name="profile_label_provider">プロバイダー</string>
   <string name="profile_button_signOut">サインアウト</string>
 
   <string name="meeting_stage_screenSharePresenting"><xliff:g id="name" example="Alex">%1$s</xliff:g> が共有中</string>

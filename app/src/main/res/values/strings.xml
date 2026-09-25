@@ -232,6 +232,7 @@
   <string name="settings_label_accountId">Account ID</string>
   <string name="settings_label_signInMethod">Sign-in method</string>
   <string name="settings_provider_email">Email</string>
+  <string name="settings_provider_passkey">Passkey</string>
   <string name="settings_label_role">Role</string>
   <string name="settings_role_admin">Admin</string>
   <string name="settings_role_user">User</string>
@@ -319,9 +320,6 @@
   <string name="profile_badge_admin">Admin</string>
   <string name="profile_section_server">Server</string>
   <string name="profile_button_switch">Switch</string>
-  <string name="profile_section_account">Account</string>
-  <string name="profile_label_userId">User ID</string>
-  <string name="profile_label_provider">Provider</string>
   <string name="profile_button_signOut">Sign Out</string>
 
   <!-- Generic error messages (network/exception classification) -->

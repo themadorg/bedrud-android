@@ -233,6 +233,7 @@
   <string name="settings_label_accountId">ID аккаунта</string>
   <string name="settings_label_signInMethod">Способ входа</string>
   <string name="settings_provider_email">Эл. почта</string>
+  <string name="settings_provider_passkey">Ключ</string>
   <string name="settings_label_role">Роль</string>
   <string name="settings_role_admin">Администратор</string>
   <string name="settings_role_user">Пользователь</string>
@@ -283,9 +284,6 @@
   <string name="profile_badge_admin">Администратор</string>
   <string name="profile_section_server">Сервер</string>
   <string name="profile_button_switch">Сменить</string>
-  <string name="profile_section_account">Аккаунт</string>
-  <string name="profile_label_userId">ID пользователя</string>
-  <string name="profile_label_provider">Провайдер</string>
   <string name="profile_button_signOut">Выйти</string>
 
   <string name="meeting_stage_screenSharePresenting"><xliff:g id="name" example="Alex">%1$s</xliff:g> демонстрирует экран</string>

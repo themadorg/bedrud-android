@@ -98,7 +98,6 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
@@ -845,9 +844,9 @@ private fun RoomsHeaderTitle(serverName: String?, onClick: () -> Unit) {
     val switchServerLabel = stringResource(R.string.dashboard_contentDescription_switchServer)
     // Two-tier hierarchy so the server name reads as the headline and "rooms" as a lighter,
     // secondary label -- clearer than one flat run of text, without color-coding by server
-    // (that was tried and dropped for this header; see DESIGN.md).
+    // (that was tried and dropped for this header; see DESIGN.md). The name keeps the headline's
+    // own weight, as every other tab's title does; size and colour carry the hierarchy.
     val nameStyle = MaterialTheme.typography.headlineSmall.toSpanStyle().copy(
-        fontWeight = FontWeight.Bold,
         color = MaterialTheme.colorScheme.onSurface,
     )
     val suffixStyle = MaterialTheme.typography.titleMedium.toSpanStyle().copy(
@@ -1072,7 +1071,8 @@ private fun RoomCard(
                     Icon(
                         Icons.Default.Settings,
                         contentDescription = stringResource(R.string.dashboard_contentDescription_settings),
-                        modifier = Modifier.size(Dimens.iconSm),
+                        // A list row's action at the list icon size, level with the chevron beside it.
+                        modifier = Modifier.size(Dimens.iconMd),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
@@ -1221,7 +1221,8 @@ private fun RowScope.RoomCardText(title: String, status: String?, statusColor: C
         fontFamily = FontFamily.Monospace,
         textDirection = TextDirection.Ltr,
     )
-    val statusStyle = MaterialTheme.typography.labelSmall
+    // bodySmall, the supporting-line style of every other list in the app.
+    val statusStyle = MaterialTheme.typography.bodySmall
     // The card's height is fixed, so without a gap here all its spare room lands above and below the
     // two lines and the name sits pressed against its status line.
     Column(

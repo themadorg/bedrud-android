@@ -176,7 +176,26 @@ as two unrelated systems rather than one.
 4dp base grid (`space2…space56`). Layout: `screenPadding 24`, `screenPaddingCompact 16`,
 `maxContentWidth 480` (keeps forms readable on tablets/foldables). Components: `buttonHeight 48`,
 `buttonHeightLarge 56`, `fieldMinHeight 56`, `minTouchTarget 48`, `borderThin 1`, `borderStrong 2`,
-icon sizes `iconXs 16 · iconSm 18 · iconMd 24 · iconLg 32`, `avatar 40`, `brandMark 72`.
+icon sizes `iconXs 16 · iconSm 18 · iconMd 24 · iconLg 32`, `avatar 40`, `avatarXl 56`, `brandMark 72`.
+
+The tab pages (Settings, Profile, Admin) share one rhythm: the page is padded
+`screenPaddingCompact` all round and its cards sit `space16` apart, with no spacer before the first
+card or after the last. A card built from list items pads only its header (`cardPadding` on three
+sides, `space8` below) and leaves the rows alone, since `ListItem` carries its own 16dp inset —
+padding the whole card set its rows twice as far in as every other list. Dividers between those rows
+are inset `space16` and drawn between rows only.
+
+One size per role: an avatar in a list row is `avatar` (40, `InitialsAvatar`'s default), and only
+the profile card's own picture is `avatarXl`. An action icon in a list row is `iconMd`, the size of
+the chevron beside it; `iconSm` is for an icon inside a button. A mark beside a label, like the admin
+shield, is `iconXs`. A list's supporting line is `bodySmall`, a person's name in a list `bodyLarge`,
+and a sheet's title `titleMedium`.
+
+The account's details — its ID, sign-in method and role — are shown once, in Settings. The sign-in
+method is read through `signInMethodOf` (`core/auth/SignInMethod.kt`), never printed as the server
+stores it: the server calls an email-and-password account "local", which is not a word for anyone to
+read, so the app's two methods are named in the app's language and an identity provider by its own
+name.
 
 **Text sets a floor, not a height.** A container that holds text takes a minimum height —
 `heightIn(min = …)`, or the component's own `defaultMinSize` — never a fixed `height(…)`. Text grows
