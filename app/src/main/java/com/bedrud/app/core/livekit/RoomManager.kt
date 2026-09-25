@@ -14,6 +14,7 @@ import com.bedrud.app.core.audio.MeetingSound
 import com.bedrud.app.core.audio.MeetingSounds
 import com.bedrud.app.core.audio.MeetingVoiceAlert
 import com.bedrud.app.core.audio.NoiseSuppressionMode
+import com.bedrud.app.core.audio.SpeechLevelTracker
 import com.bedrud.app.core.audio.VoiceGateProcessor
 import com.bedrud.app.core.audio.VoiceReachMonitor
 import com.bedrud.app.core.call.CallConnectionService
@@ -222,7 +223,10 @@ class RoomManager(
     private var isChatVisible = false
     private var lastMessageSoundAtMillis = 0L
 
-    // Why the room is not hearing this participant, when it plainly should be.
+    // Why the room is not hearing this participant, when it plainly should be. Whether they are
+    // talking at all is judged against their own microphone's floor, and that one answer feeds both
+    // the warning and the bridge on their own tile, so the two never disagree about it.
+    private val speechLevelTracker = SpeechLevelTracker()
     private val voiceReachMonitor = VoiceReachMonitor()
     private val _voiceAlert = MutableStateFlow(MeetingVoiceAlert.None)
     val voiceAlert: StateFlow<MeetingVoiceAlert> = _voiceAlert.asStateFlow()
@@ -364,12 +368,15 @@ class RoomManager(
                 // The gate only writes its level when a frame arrives, and capture stops while
                 // muted — so a level whose frame counter has not moved since the last sample is a
                 // stale reading, not silence at that volume. Reporting it as-is left the warning
-                // lit forever after a mute mid-sentence.
+                // lit forever after a mute mid-sentence, and reporting it as zero would teach the
+                // speech tracker a floor of nothing, so it is reported as no reading at all.
                 val frames = voiceGate.frameCount
                 val capturing = frames != lastFrameCount
                 lastFrameCount = frames
                 val now = SystemClock.elapsedRealtime()
-                val micLevel = if (capturing) voiceGate.level else 0f
+                val micLevel = if (capturing) voiceGate.level else null
+                val isMicEnabled = _isMicEnabled.value
+                val isSpeech = speechLevelTracker.isSpeech(micLevel, isMicEnabled)
 
                 // Bridge the gaps in the server's reporting for our own tile — but only while the
                 // room has recently confirmed hearing us, and never while muted, so the ring still
@@ -379,7 +386,7 @@ class RoomManager(
                 // Speech dips below the bar between every pair of words, so the bridge holds past
                 // the last loud frame exactly as the voice warning does. Without the hold it
                 // flickers at word granularity and bridges nothing at all.
-                if (micLevel >= VoiceReachMonitor.TalkingLevel) {
+                if (isSpeech && micLevel != null) {
                     bridgeLoudAtMillis = now
                     bridgeLoudLevel = micLevel
                 }
@@ -398,7 +405,8 @@ class RoomManager(
                 _voiceAlert.value = voiceReachMonitor.sample(
                     nowMillis = now,
                     micLevel = micLevel,
-                    isMicEnabled = _isMicEnabled.value,
+                    isSpeech = isSpeech,
+                    isMicEnabled = isMicEnabled,
                     isPushToTalk = _inputMode.value == MeetingInputMode.PUSH_TO_TALK,
                     isGateOpen = voiceGate.gateOpen,
                     roomHearsMe = localIdentity != null &&
@@ -850,6 +858,7 @@ class RoomManager(
         bridgeLoudAtMillis = null
         bridgeLoudLevel = 0f
         speakingTracker.clear()
+        speechLevelTracker.reset()
         voiceReachMonitor.reset()
         _speakingLevels.value = emptyMap()
         _voiceAlert.value = MeetingVoiceAlert.None

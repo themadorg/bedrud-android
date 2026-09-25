@@ -1,5 +1,8 @@
 package com.bedrud.app.core.rooms
 
+import kotlin.time.Duration.Companion.days
+import kotlin.time.Duration.Companion.hours
+import kotlin.time.Duration.Companion.minutes
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
@@ -126,4 +129,88 @@ class RoomActivityTest {
     fun `sortByActivity returns an empty list unchanged`() {
         assertEquals(emptyList<Pair<String, Long?>>(), sortByActivity(emptyList<Pair<String, Long?>>()) { null })
     }
+
+    @Test
+    fun `roomActivityAge reads anything under a minute as just now`() {
+        assertEquals(
+            RoomActivityAge.JustNow,
+            roomActivityAge(activityAtMs = now - 1.minutes.inWholeMilliseconds + 1, nowMs = now),
+        )
+    }
+
+    @Test
+    fun `roomActivityAge reads a timestamp from the future as just now`() {
+        // A server clock running ahead of this device's must not produce a negative age.
+        assertEquals(
+            RoomActivityAge.JustNow,
+            roomActivityAge(activityAtMs = now + 5.minutes.inWholeMilliseconds, nowMs = now),
+        )
+    }
+
+    @Test
+    fun `roomActivityAge switches to minutes at exactly one minute`() {
+        assertEquals(
+            RoomActivityAge.Ago(1, RoomActivityUnit.MINUTES),
+            roomActivityAge(activityAtMs = now - 1.minutes.inWholeMilliseconds, nowMs = now),
+        )
+    }
+
+    @Test
+    fun `roomActivityAge stays in minutes until the hour is complete`() {
+        assertEquals(
+            RoomActivityAge.Ago(59, RoomActivityUnit.MINUTES),
+            roomActivityAge(activityAtMs = now - 1.hours.inWholeMilliseconds + 1, nowMs = now),
+        )
+    }
+
+    @Test
+    fun `roomActivityAge switches to hours at exactly one hour`() {
+        assertEquals(
+            RoomActivityAge.Ago(1, RoomActivityUnit.HOURS),
+            roomActivityAge(activityAtMs = now - 1.hours.inWholeMilliseconds, nowMs = now),
+        )
+    }
+
+    @Test
+    fun `roomActivityAge stays in hours until the day is complete`() {
+        assertEquals(
+            RoomActivityAge.Ago(23, RoomActivityUnit.HOURS),
+            roomActivityAge(activityAtMs = now - 1.days.inWholeMilliseconds + 1, nowMs = now),
+        )
+    }
+
+    @Test
+    fun `roomActivityAge switches to days at exactly one day`() {
+        assertEquals(
+            RoomActivityAge.Ago(1, RoomActivityUnit.DAYS),
+            roomActivityAge(activityAtMs = now - 1.days.inWholeMilliseconds, nowMs = now),
+        )
+    }
+
+    @Test
+    fun `roomActivityAge stays in days until the week is complete`() {
+        assertEquals(
+            RoomActivityAge.Ago(6, RoomActivityUnit.DAYS),
+            roomActivityAge(activityAtMs = now - 7.days.inWholeMilliseconds + 1, nowMs = now),
+        )
+    }
+
+    @Test
+    fun `roomActivityAge switches to weeks at exactly one week`() {
+        assertEquals(
+            RoomActivityAge.Ago(1, RoomActivityUnit.WEEKS),
+            roomActivityAge(activityAtMs = now - 7.days.inWholeMilliseconds, nowMs = now),
+        )
+    }
+
+    @Test
+    fun `roomActivityAge keeps counting in weeks past a year`() {
+        // Weeks are the largest unit, as they were before the label was localized.
+        assertEquals(
+            RoomActivityAge.Ago(60, RoomActivityUnit.WEEKS),
+            roomActivityAge(activityAtMs = now - (60 * 7).days.inWholeMilliseconds, nowMs = now),
+        )
+    }
+
+    private val now = 1_758_189_600_000L
 }

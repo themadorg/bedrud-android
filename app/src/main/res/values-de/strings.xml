@@ -39,7 +39,10 @@
   <string name="auth_hint_passwordMinLength">Mindestens %1$d Zeichen</string>
   <string name="auth_error_emailInvalid">Geben Sie eine gültige E-Mail-Adresse ein</string>
   <string name="auth_error_guestFailed">Beitritt als Gast nicht möglich. Bitte versuchen Sie es erneut.</string>
-  <string name="auth_error_nameTooShort">Bitte geben Sie mindestens 2 Zeichen ein.</string>
+  <plurals name="auth_error_nameTooShort">
+    <item quantity="one">Bitte geben Sie mindestens %1$d Zeichen ein.</item>
+    <item quantity="other">Bitte geben Sie mindestens %1$d Zeichen ein.</item>
+  </plurals>
   <string name="auth_error_generic">Etwas ist schiefgelaufen. Bitte versuchen Sie es erneut.</string>
   <string name="auth_error_registrationFailed">Registrierung fehlgeschlagen. Bitte versuchen Sie es erneut.</string>
   <string name="auth_error_signInFailed">Anmeldung fehlgeschlagen. Bitte versuchen Sie es erneut.</string>
@@ -97,6 +100,10 @@
   <string name="meeting_button_goBack">Zurück</string>
   <string name="meeting_dialog_kickTitle">Teilnehmer kicken</string>
   <string name="meeting_dialog_kickMessage">Sind Sie sicher, dass Sie <xliff:g id="participantName" example="John Doe">%1$s</xliff:g> aus dem Raum kicken möchten?</string>
+  <string name="meeting_dialog_followRoomTitle">Diesen Anruf verlassen?</string>
+  <string name="meeting_dialog_followRoomMessage">Sie verlassen <xliff:g id="currentRoom" example="obd-hzpi-dfv">%1$s</xliff:g> und treten <xliff:g id="nextRoom" example="oqc-qpka-bvw">%2$s</xliff:g> bei.</string>
+  <string name="meeting_dialog_followRoomOnServerMessage">Sie verlassen <xliff:g id="currentRoom" example="obd-hzpi-dfv">%1$s</xliff:g> und treten <xliff:g id="nextRoom" example="oqc-qpka-bvw">%2$s</xliff:g> auf <xliff:g id="serverName" example="Bedrud">%3$s</xliff:g> bei.</string>
+  <string name="meeting_button_leaveAndJoin">Verlassen und beitreten</string>
   <string name="meeting_action_mute">Stummschalten</string>
   <string name="meeting_action_unmute">Stummschaltung aufheben</string>
   <string name="meeting_action_disableVideo">Video deaktivieren</string>
@@ -139,6 +146,7 @@
   <string name="meeting_chat_reactions">Reaktionen</string>
   <string name="meeting_chat_shareChooser">Nachricht teilen</string>
   <string name="meeting_chat_linkUnopenable">Keine App kann diesen Link öffnen</string>
+  <string name="meeting_chat_linkCurrentRoom">Sie sind bereits in diesem Raum</string>
   <plurals name="meeting_chat_reactionCount">
     <item quantity="one">%1$d Reaktion</item>
     <item quantity="other">%1$d Reaktionen</item>
@@ -212,6 +220,7 @@
   <string name="settings_theme_light">Hell</string>
   <string name="settings_theme_dark">Dunkel</string>
   <string name="settings_label_language">Sprache</string>
+  <string name="settings_language_system">System</string>
   <string name="settings_section_notifications">Benachrichtigungen</string>
   <string name="settings_label_enableNotifications">Benachrichtigungen aktivieren</string>
   <string name="settings_section_account">Konto</string>
@@ -248,7 +257,6 @@
   <string name="dashboard_stat_live">Live</string>
   <string name="dashboard_stat_private">Privat</string>
   <string name="dashboard_status_live">● Live</string>
-  <string name="dashboard_status_timeAgo">vor %1$s</string>
   <string name="dashboard_empty_noRooms">Noch keine Räume</string>
   <string name="dashboard_feature_chat">Chat</string>
   <string name="dashboard_feature_video">Video</string>

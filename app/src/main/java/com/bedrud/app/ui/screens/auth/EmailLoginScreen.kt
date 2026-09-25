@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -204,7 +205,7 @@ fun EmailLoginScreen(
             loading = isLoading,
             modifier = Modifier
                 .fillMaxWidth()
-                .height(Dimens.buttonHeightLarge)
+                .heightIn(min = Dimens.buttonHeightLarge)
         )
     }
 
@@ -329,7 +330,7 @@ private fun ForgotPasswordSheet(
                 loading = isSending,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(Dimens.buttonHeightLarge)
+                    .heightIn(min = Dimens.buttonHeightLarge)
             )
         }
     }
