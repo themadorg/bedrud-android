@@ -32,7 +32,8 @@ data class HealthResponse(
     val version: String? = null
 )
 
-private fun randomColor(): String {
-    val colors = listOf("#3B82F6", "#EF4444", "#10B981", "#F59E0B", "#8B5CF6", "#EC4899", "#06B6D4", "#F97316")
-    return colors.random()
-}
+/** The colors a new server is given one of at random, as `#RRGGBB`. */
+internal val InstanceColorPalette =
+    listOf("#3B82F6", "#EF4444", "#10B981", "#F59E0B", "#8B5CF6", "#EC4899", "#06B6D4", "#F97316")
+
+private fun randomColor(): String = InstanceColorPalette.random()

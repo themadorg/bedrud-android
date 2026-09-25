@@ -25,10 +25,10 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
 import com.bedrud.app.R
 import com.bedrud.app.core.instance.InstanceManager
 import com.bedrud.app.models.Instance
@@ -36,7 +36,9 @@ import com.bedrud.app.ui.components.BedrudBottomSheet
 import com.bedrud.app.ui.components.BedrudSheetActionRow
 import com.bedrud.app.ui.components.BedrudSheetTitle
 import com.bedrud.app.ui.components.InitialsAvatar
+import com.bedrud.app.ui.theme.BedrudShapeTokens
 import com.bedrud.app.ui.theme.Dimens
+import com.bedrud.app.ui.theme.OnInstanceColor
 import com.bedrud.app.ui.theme.parseInstanceColor
 import com.bedrud.app.ui.theme.typeCentered
 
@@ -92,6 +94,8 @@ private fun SwitcherRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            // The action row's corners too, so both rows press the same shape.
+            .clip(BedrudShapeTokens.card)
             .clickable(onClick = onSelect)
             .defaultMinSize(minHeight = Dimens.sheetRowHeightTwoLine)
             .padding(horizontal = Dimens.space12),
@@ -104,8 +108,8 @@ private fun SwitcherRow(
         ) {
             InitialsAvatar(
                 name = instance.displayName,
-                size = SwitcherAvatar,
-                containerColor = parseInstanceColor(instance.iconColorHex)
+                containerColor = parseInstanceColor(instance.iconColorHex),
+                contentColor = OnInstanceColor,
             )
 
             Spacer(modifier = Modifier.width(Dimens.space16))
@@ -144,6 +148,3 @@ private fun SwitcherRow(
         }
     }
 }
-
-// The server avatar is this sheet's own leading element, not a shared size.
-private val SwitcherAvatar = 32.dp

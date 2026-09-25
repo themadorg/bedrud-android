@@ -206,6 +206,8 @@ private fun ChatMessageActions(
     // neither — the wire carries the image as a URL the receiving app could not resolve anyway.
     val hasText = text.isNotEmpty()
     if (reactionCount == 0 && !hasText) return
+    // The call's own hairline: outlineVariant is two values from this surface in dark theme.
+    val dividerColor = meetingChromeColors().divider
 
     Surface(
         shape = BedrudShapeTokens.card,
@@ -230,7 +232,7 @@ private fun ChatMessageActions(
                     onClick = onShowReactions,
                 )
                 if (hasText) {
-                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                    HorizontalDivider(color = dividerColor)
                 }
             }
             if (hasText) {
@@ -239,6 +241,8 @@ private fun ChatMessageActions(
                     icon = Icons.Rounded.ContentCopy,
                     onClick = onCopy,
                 )
+                // A hairline between every row, as the composer's "+" menu draws them.
+                HorizontalDivider(color = dividerColor)
                 ChatMessageAction(
                     label = stringResource(R.string.common_action_share),
                     icon = Icons.Rounded.Share,

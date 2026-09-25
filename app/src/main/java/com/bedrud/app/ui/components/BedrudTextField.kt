@@ -25,6 +25,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextDirection
+import androidx.compose.ui.text.style.TextOverflow
 import com.bedrud.app.R
 import com.bedrud.app.ui.theme.BedrudShapeTokens
 import com.bedrud.app.ui.theme.typeCentered
@@ -76,11 +77,24 @@ fun BedrudTextField(
     // only the placeholder would make the text jump on the first keystroke. Both stay uncorrected so
     // they agree with each other.
     val mergedTextStyle = textStyle.copy(textDirection = textDirection)
+    // A single-line field keeps its hint to one line as well. A hint that wrapped at a large font
+    // size made the empty field taller than the one line it takes once typed in, so the field
+    // shrank on the first keystroke and everything under it jumped.
+    val placeholderMaxLines = if (singleLine) 1 else Int.MAX_VALUE
     OutlinedTextField(
         value = value,
         onValueChange = onValueChange,
         label = label?.let { { Text(it, modifier = Modifier.typeCentered(LocalTextStyle.current)) } },
-        placeholder = placeholder?.let { { Text(it, style = mergedTextStyle) } },
+        placeholder = placeholder?.let {
+            {
+                Text(
+                    it,
+                    style = mergedTextStyle,
+                    maxLines = placeholderMaxLines,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+        },
         leadingIcon = leadingIcon,
         trailingIcon = trailingIcon,
         supportingText = supportingText,

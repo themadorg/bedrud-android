@@ -51,6 +51,7 @@ val Red50 = Color(0xFFFEF2F2)
 val Red100 = Color(0xFFFEE2E2)
 val Red200 = Color(0xFFFECACA)
 val Red400 = Color(0xFFF87171)
+val Red500 = Color(0xFFEF4444)
 val Red600 = Color(0xFFDC2626)
 val Red700 = Color(0xFFB91C1C)
 val Red900 = Color(0xFF7F1D1D)
@@ -96,3 +97,10 @@ val Mauve900 = Color(0xFF3A1721)
 val MauveDark300 = Color(0xFFE5B0BA)
 val MauveDark700 = Color(0xFF6E3B46)
 val MauveDark900 = Color(0xFF55232E)
+
+// ── System bar scrims ──────────────────────────────────────────────────────
+// The navigation bar's backdrop on API 28 and below, where the system draws no contrast scrim of
+// its own for three-button navigation. The values are the ones androidx's enableEdgeToEdge
+// defaults to; they are spelled out only because that default cannot follow the in-app theme.
+val SystemBarLightScrim = Color(0xE6FFFFFF)
+val SystemBarDarkScrim = Color(0x801B1B1B)

@@ -39,7 +39,9 @@
   <string name="auth_hint_passwordMinLength">至少 %1$d 个字符</string>
   <string name="auth_error_emailInvalid">请输入有效的邮箱地址</string>
   <string name="auth_error_guestFailed">无法以访客身份加入。请重试。</string>
-  <string name="auth_error_nameTooShort">请至少输入 2 个字符。</string>
+  <plurals name="auth_error_nameTooShort">
+    <item quantity="other">请至少输入 %1$d 个字符。</item>
+  </plurals>
   <string name="auth_error_generic">出错了。请重试。</string>
   <string name="auth_error_registrationFailed">注册失败。请重试。</string>
   <string name="auth_error_signInFailed">登录失败。请重试。</string>
@@ -97,11 +99,17 @@
   <string name="meeting_button_goBack">返回</string>
   <string name="meeting_dialog_kickTitle">移出参与者</string>
   <string name="meeting_dialog_kickMessage">确定要将 <xliff:g id="participantName" example="John Doe">%1$s</xliff:g> 移出此房间吗？</string>
+  <string name="meeting_dialog_followRoomTitle">离开此通话？</string>
+  <string name="meeting_dialog_followRoomMessage">您将离开 <xliff:g id="currentRoom" example="obd-hzpi-dfv">%1$s</xliff:g> 并加入 <xliff:g id="nextRoom" example="oqc-qpka-bvw">%2$s</xliff:g>。</string>
+  <string name="meeting_dialog_followRoomOnServerMessage">您将离开 <xliff:g id="currentRoom" example="obd-hzpi-dfv">%1$s</xliff:g> 并加入 <xliff:g id="serverName" example="Bedrud">%3$s</xliff:g> 上的 <xliff:g id="nextRoom" example="oqc-qpka-bvw">%2$s</xliff:g>。</string>
+  <string name="meeting_button_leaveAndJoin">离开并加入</string>
   <string name="meeting_action_mute">静音</string>
   <string name="meeting_action_unmute">取消静音</string>
   <string name="meeting_action_disableVideo">关闭视频</string>
   <string name="meeting_action_enableVideo">开启视频</string>
   <string name="meeting_action_kick">移出</string>
+  <string name="meeting_dialog_banTitle">封禁参与者</string>
+  <string name="meeting_dialog_banMessage">确定要在此房间封禁 <xliff:g id="participantName" example="John Doe">%1$s</xliff:g> 吗？</string>
   <string name="meeting_action_ban">封禁</string>
   <string name="meeting_panel_participants">参与者 (<xliff:g id="count" example="5">%1$d</xliff:g>)</string>
   <string name="meeting_panel_chat">聊天</string>
@@ -136,6 +144,7 @@
   <string name="meeting_chat_reactions">回应</string>
   <string name="meeting_chat_shareChooser">分享消息</string>
   <string name="meeting_chat_linkUnopenable">没有应用可以打开该链接</string>
+  <string name="meeting_chat_linkCurrentRoom">您已在此房间中</string>
   <plurals name="meeting_chat_reactionCount">
     <item quantity="other">%1$d 个回应</item>
   </plurals>
@@ -194,6 +203,10 @@
   <string name="admin_error_loadSettingsFailed">无法加载设置</string>
   <string name="admin_error_saveSettingsFailed">无法保存设置</string>
   <string name="admin_error_createTokenFailed">无法创建邀请令牌</string>
+  <string name="admin_dialog_banTitle">封禁用户？</string>
+  <string name="admin_dialog_banMessage">确定要封禁 <xliff:g id="userName" example="John Doe">%1$s</xliff:g> 吗？</string>
+  <string name="admin_dialog_deleteTokenTitle">删除邀请令牌？</string>
+  <string name="admin_dialog_deleteTokenMessage">确定要删除此邀请令牌吗？此操作无法撤销。</string>
   <string name="admin_error_deleteTokenFailed">无法删除邀请令牌</string>
   <string name="common_action_copy">复制</string>
   <string name="common_action_share">分享</string>
@@ -204,12 +217,14 @@
   <string name="settings_theme_light">浅色</string>
   <string name="settings_theme_dark">深色</string>
   <string name="settings_label_language">语言</string>
+  <string name="settings_language_system">系统</string>
   <string name="settings_section_notifications">通知</string>
   <string name="settings_label_enableNotifications">启用通知</string>
   <string name="settings_section_account">账户</string>
   <string name="settings_label_accountId">账户ID</string>
   <string name="settings_label_signInMethod">登录方式</string>
   <string name="settings_provider_email">邮箱</string>
+  <string name="settings_provider_passkey">密钥</string>
   <string name="settings_label_role">角色</string>
   <string name="settings_role_admin">管理员</string>
   <string name="settings_role_user">用户</string>
@@ -239,7 +254,6 @@
   <string name="dashboard_stat_live">直播中</string>
   <string name="dashboard_stat_private">私密</string>
   <string name="dashboard_status_live">● 直播中</string>
-  <string name="dashboard_status_timeAgo">%1$s前</string>
   <string name="dashboard_empty_noRooms">暂无房间</string>
   <string name="dashboard_feature_chat">聊天</string>
   <string name="dashboard_feature_video">视频</string>
@@ -261,9 +275,6 @@
   <string name="profile_badge_admin">管理员</string>
   <string name="profile_section_server">服务器</string>
   <string name="profile_button_switch">切换</string>
-  <string name="profile_section_account">账户</string>
-  <string name="profile_label_userId">用户ID</string>
-  <string name="profile_label_provider">提供商</string>
   <string name="profile_button_signOut">退出登录</string>
 
   <string name="meeting_stage_screenSharePresenting"><xliff:g id="name" example="Alex">%1$s</xliff:g> 正在演示</string>

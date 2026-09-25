@@ -39,7 +39,12 @@
   <string name="auth_hint_passwordMinLength">Не менее %1$d символов</string>
   <string name="auth_error_emailInvalid">Введите действительный адрес электронной почты</string>
   <string name="auth_error_guestFailed">Не удалось присоединиться как гость. Попробуйте снова.</string>
-  <string name="auth_error_nameTooShort">Введите не менее 2 символов.</string>
+  <plurals name="auth_error_nameTooShort">
+    <item quantity="one">Введите не менее %1$d символа.</item>
+    <item quantity="few">Введите не менее %1$d символов.</item>
+    <item quantity="many">Введите не менее %1$d символов.</item>
+    <item quantity="other">Введите не менее %1$d символа.</item>
+  </plurals>
   <string name="auth_error_generic">Что-то пошло не так. Попробуйте снова.</string>
   <string name="auth_error_registrationFailed">Не удалось зарегистрироваться. Попробуйте снова.</string>
   <string name="auth_error_signInFailed">Не удалось войти. Попробуйте снова.</string>
@@ -97,11 +102,17 @@
   <string name="meeting_button_goBack">Назад</string>
   <string name="meeting_dialog_kickTitle">Выгнать участника</string>
   <string name="meeting_dialog_kickMessage">Вы уверены, что хотите выгнать <xliff:g id="participantName" example="John Doe">%1$s</xliff:g> из комнаты?</string>
+  <string name="meeting_dialog_followRoomTitle">Покинуть этот звонок?</string>
+  <string name="meeting_dialog_followRoomMessage">Вы покинете <xliff:g id="currentRoom" example="obd-hzpi-dfv">%1$s</xliff:g> и присоединитесь к <xliff:g id="nextRoom" example="oqc-qpka-bvw">%2$s</xliff:g>.</string>
+  <string name="meeting_dialog_followRoomOnServerMessage">Вы покинете <xliff:g id="currentRoom" example="obd-hzpi-dfv">%1$s</xliff:g> и присоединитесь к <xliff:g id="nextRoom" example="oqc-qpka-bvw">%2$s</xliff:g> на <xliff:g id="serverName" example="Bedrud">%3$s</xliff:g>.</string>
+  <string name="meeting_button_leaveAndJoin">Выйти и присоединиться</string>
   <string name="meeting_action_mute">Отключить звук</string>
   <string name="meeting_action_unmute">Включить звук</string>
   <string name="meeting_action_disableVideo">Отключить видео</string>
   <string name="meeting_action_enableVideo">Включить видео</string>
   <string name="meeting_action_kick">Выгнать</string>
+  <string name="meeting_dialog_banTitle">Заблокировать участника</string>
+  <string name="meeting_dialog_banMessage">Вы уверены, что хотите заблокировать <xliff:g id="participantName" example="John Doe">%1$s</xliff:g> в этой комнате?</string>
   <string name="meeting_action_ban">Заблокировать</string>
   <string name="meeting_panel_participants">Участники (<xliff:g id="count" example="5">%1$d</xliff:g>)</string>
   <string name="meeting_panel_chat">Чат</string>
@@ -139,6 +150,7 @@
   <string name="meeting_chat_reactions">Реакции</string>
   <string name="meeting_chat_shareChooser">Поделиться сообщением</string>
   <string name="meeting_chat_linkUnopenable">Нет приложения, способного открыть эту ссылку</string>
+  <string name="meeting_chat_linkCurrentRoom">Вы уже в этой комнате</string>
   <plurals name="meeting_chat_reactionCount">
     <item quantity="one">%1$d реакция</item>
     <item quantity="few">%1$d реакции</item>
@@ -200,6 +212,10 @@
   <string name="admin_error_loadSettingsFailed">Не удалось загрузить настройки</string>
   <string name="admin_error_saveSettingsFailed">Не удалось сохранить настройки</string>
   <string name="admin_error_createTokenFailed">Не удалось создать пригласительный код</string>
+  <string name="admin_dialog_banTitle">Заблокировать пользователя?</string>
+  <string name="admin_dialog_banMessage">Вы уверены, что хотите заблокировать <xliff:g id="userName" example="John Doe">%1$s</xliff:g>?</string>
+  <string name="admin_dialog_deleteTokenTitle">Удалить пригласительный код?</string>
+  <string name="admin_dialog_deleteTokenMessage">Вы уверены, что хотите удалить этот пригласительный код? Это действие нельзя отменить.</string>
   <string name="admin_error_deleteTokenFailed">Не удалось удалить пригласительный код</string>
   <string name="common_action_copy">Копировать</string>
   <string name="common_action_share">Поделиться</string>
@@ -210,12 +226,14 @@
   <string name="settings_theme_light">Светлая</string>
   <string name="settings_theme_dark">Тёмная</string>
   <string name="settings_label_language">Язык</string>
+  <string name="settings_language_system">Системный</string>
   <string name="settings_section_notifications">Уведомления</string>
   <string name="settings_label_enableNotifications">Включить уведомления</string>
   <string name="settings_section_account">Аккаунт</string>
   <string name="settings_label_accountId">ID аккаунта</string>
   <string name="settings_label_signInMethod">Способ входа</string>
   <string name="settings_provider_email">Эл. почта</string>
+  <string name="settings_provider_passkey">Ключ</string>
   <string name="settings_label_role">Роль</string>
   <string name="settings_role_admin">Администратор</string>
   <string name="settings_role_user">Пользователь</string>
@@ -245,7 +263,6 @@
   <string name="dashboard_stat_live">В эфире</string>
   <string name="dashboard_stat_private">Закрытая</string>
   <string name="dashboard_status_live">● В эфире</string>
-  <string name="dashboard_status_timeAgo">%1$s назад</string>
   <string name="dashboard_empty_noRooms">Пока нет комнат</string>
   <string name="dashboard_feature_chat">Чат</string>
   <string name="dashboard_feature_video">Видео</string>
@@ -267,9 +284,6 @@
   <string name="profile_badge_admin">Администратор</string>
   <string name="profile_section_server">Сервер</string>
   <string name="profile_button_switch">Сменить</string>
-  <string name="profile_section_account">Аккаунт</string>
-  <string name="profile_label_userId">ID пользователя</string>
-  <string name="profile_label_provider">Провайдер</string>
   <string name="profile_button_signOut">Выйти</string>
 
   <string name="meeting_stage_screenSharePresenting"><xliff:g id="name" example="Alex">%1$s</xliff:g> демонстрирует экран</string>

@@ -187,7 +187,8 @@ class MeetingChatPanelRenderTest {
             resolveName = { it },
             imageContext = null,
             sendDisabledReason = sendDisabledReason,
-            knownHosts = emptySet(),
+            resolveLink = { com.bedrud.app.core.deeplink.ChatLinkTarget.Page },
+            onFollowRoom = {},
             modifier = Modifier.fillMaxSize(),
         )
       }

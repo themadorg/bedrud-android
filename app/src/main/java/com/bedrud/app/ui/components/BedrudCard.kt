@@ -16,11 +16,18 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.unit.dp
 import com.bedrud.app.ui.theme.BedrudRadius
+import com.bedrud.app.ui.theme.BedrudShapeTokens
+import com.bedrud.app.ui.theme.Dimens
+import com.bedrud.app.ui.theme.Elevation
 
+/**
+ * The app's card: outlined, flat, on the surface colour. Its corners default to
+ * [BedrudShapeTokens.card], the one card radius every screen uses.
+ */
 @Composable
 fun BedrudOutlinedCard(
     modifier: Modifier = Modifier,
-    shape: Shape = RoundedCornerShape(BedrudRadius.md),
+    shape: Shape = BedrudShapeTokens.card,
     colors: CardColors = CardDefaults.cardColors(
         containerColor = MaterialTheme.colorScheme.surface,
         contentColor = MaterialTheme.colorScheme.onSurface
@@ -28,8 +35,8 @@ fun BedrudOutlinedCard(
     onClick: (() -> Unit)? = null,
     content: @Composable ColumnScope.() -> Unit
 ) {
-    val border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
-    val elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+    val border = BorderStroke(Dimens.borderThin, MaterialTheme.colorScheme.outline)
+    val elevation = CardDefaults.cardElevation(defaultElevation = Elevation.level0)
 
     if (onClick != null) {
         Card(
