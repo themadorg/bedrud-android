@@ -266,7 +266,7 @@ internal fun ParticipantTile(
             !avatarUrl.isNullOrBlank() -> {
                 AsyncImage(
                     model = avatarUrl,
-                    contentDescription = stringResource(R.string.meeting_contentDescription_participantAvatar),
+                    contentDescription = stringResource(R.string.meeting_contentDescription_participantAvatar, name),
                     modifier = Modifier
                         .size(Dimens.meetingTileAvatar)
                         .clip(CircleShape),

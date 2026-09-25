@@ -52,6 +52,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import coil.compose.AsyncImage
 import com.bedrud.app.R
 import com.bedrud.app.ui.components.BedrudBottomSheet
+import com.bedrud.app.ui.components.BedrudSheetTitle
 import com.bedrud.app.ui.components.InitialsAvatar
 import com.bedrud.app.ui.theme.BedrudShapeTokens
 import com.bedrud.app.ui.theme.Dimens
@@ -96,11 +97,9 @@ fun MeetingInviteSheet(
     var showQr by remember { mutableStateOf(false) }
 
     BedrudBottomSheet(onDismiss = onDismiss) {
-        Text(
+        BedrudSheetTitle(
             text = stringResource(R.string.meeting_panel_participants, participants.size),
             color = colors.onButton,
-            style = MaterialTheme.typography.titleMedium,
-            modifier = Modifier.padding(horizontal = Dimens.space4, vertical = Dimens.space8),
         )
 
         LazyVerticalGrid(

@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
@@ -68,6 +69,7 @@ import com.bedrud.app.BuildConfig
 import com.bedrud.app.R
 import com.bedrud.app.core.instance.InstanceManager
 import com.bedrud.app.core.instance.ServerUrlCanonicalizer
+import com.bedrud.app.ui.components.BedrudBadge
 import com.bedrud.app.ui.components.BedrudButton
 import com.bedrud.app.ui.components.BedrudScaffoldContentInsets
 import com.bedrud.app.ui.components.BedrudSnackbarHost
@@ -318,7 +320,7 @@ fun AddInstanceScreen(
                     onClick = { submit() },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(Dimens.buttonHeightLarge),
+                        .heightIn(min = Dimens.buttonHeightLarge),
                     enabled = resolvedUrl != null,
                     loading = isChecking
                 )
@@ -377,9 +379,10 @@ private fun ServerChoiceCard(
     modifier: Modifier = Modifier,
     content: @Composable (selected: Boolean) -> Unit
 ) {
+    // Unselected, the card has the same outline as every other card in the app.
     val borderColor by animateColorAsState(
         targetValue = if (selected) MaterialTheme.colorScheme.primary
-        else MaterialTheme.colorScheme.outlineVariant,
+        else MaterialTheme.colorScheme.outline,
         animationSpec = tween(Motion.durationMedium, easing = Motion.standardEasing),
         label = "cardBorder"
     )
@@ -388,6 +391,8 @@ private fun ServerChoiceCard(
     Surface(
         modifier = modifier
             .fillMaxWidth()
+            // Clipped before selectable, so the press ripple keeps to the card's corners.
+            .clip(BedrudShapeTokens.card)
             .selectable(
                 selected = selected,
                 role = Role.RadioButton,
@@ -429,31 +434,13 @@ private fun ServerChoiceCard(
                             .typeCentered(titleStyle)
                     )
                     if (badge != null) {
-                        CardBadge(badge)
+                        BedrudBadge(badge)
                     }
                 }
                 Spacer(Modifier.height(Dimens.space8))
                 content(selected)
             }
         }
-    }
-}
-
-@Composable
-private fun CardBadge(text: String) {
-    Surface(
-        shape = BedrudShapeTokens.pill,
-        color = MaterialTheme.colorScheme.tertiaryContainer,
-        contentColor = MaterialTheme.colorScheme.onTertiaryContainer
-    ) {
-        val badgeStyle = MaterialTheme.typography.labelSmall
-        Text(
-            text = text,
-            style = badgeStyle,
-            modifier = Modifier
-                .padding(horizontal = Dimens.space8, vertical = Dimens.space2)
-                .typeCentered(badgeStyle)
-        )
     }
 }
 

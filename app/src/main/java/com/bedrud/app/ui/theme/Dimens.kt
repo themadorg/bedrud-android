@@ -60,6 +60,8 @@ object Dimens {
     val iconXl = 56.dp                 // empty-state illustrations
     val avatar = 40.dp
     val avatarLg = 44.dp               // top-bar profile avatar circle (inside a 48dp touch target)
+    // The profile card's own avatar, the one place a person's picture leads a whole card.
+    val avatarXl = 56.dp
 
     // ── Brand ──
     val brandMark = 72.dp
@@ -164,7 +166,7 @@ object Dimens {
     // controls bar's tokens (meetingBarPaddingH/V, meetingMediaButtonHeight, meetingEndCallWidth),
     // so the two bars cannot drift apart again. See DESIGN.md, "Meeting chrome".
     val chatPollWidth = 220.dp           // a poll sets its own width, so its bars are comparable between messages
-    val chatPollOption = 36.dp           // one answer row, tall enough to tap without reading as a button
+    val chatPollOption = 36.dp           // an answer row's minimum, tall enough to tap without reading as a button
 
     // ── Meeting: invite sheet ──
     val inviteGridMaxHeight = 280.dp     // participant avatar grid scrolls beyond this
