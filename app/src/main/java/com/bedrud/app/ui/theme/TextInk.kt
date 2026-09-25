@@ -125,10 +125,10 @@ fun rememberInkCenteringOffset(text: String, style: TextStyle): Dp {
         val ink = Rect().also { paint.getTextBounds(text, 0, text.length, it) }
         if (ink.isEmpty) return@remember 0.dp
         // The box has to come from the layout rather than from the typeface, because a line takes
-        // its height from every font that ends up on it. Vazirmatn carries no Cyrillic, Greek or
-        // CJK, so those arrive from the platform's fallback — and where that fallback is the taller
-        // of the two, as Noto Sans CJK is, it is the fallback that sets the box. Asking the
-        // typeface alone put an ideograph 6px low in a 147px circle.
+        // its height from every font that ends up on it. Neither Vazirmatn nor its Cyrillic and
+        // Greek companion carries CJK, so it arrives from the platform's fallback — and where that
+        // fallback is the taller font, as Noto Sans CJK is, it is the fallback that sets the box.
+        // Asking the typeface alone put an ideograph 6px low in a 147px circle.
         val layout = measurer.measure(text, style)
         val offsetPx = inkCenteringOffsetPx(
             boxHeightPx = layout.size.height.toFloat(),
