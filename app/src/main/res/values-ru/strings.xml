@@ -111,6 +111,8 @@
   <string name="meeting_action_disableVideo">Отключить видео</string>
   <string name="meeting_action_enableVideo">Включить видео</string>
   <string name="meeting_action_kick">Выгнать</string>
+  <string name="meeting_dialog_banTitle">Заблокировать участника</string>
+  <string name="meeting_dialog_banMessage">Вы уверены, что хотите заблокировать <xliff:g id="participantName" example="John Doe">%1$s</xliff:g> в этой комнате?</string>
   <string name="meeting_action_ban">Заблокировать</string>
   <string name="meeting_panel_participants">Участники (<xliff:g id="count" example="5">%1$d</xliff:g>)</string>
   <string name="meeting_panel_chat">Чат</string>
@@ -210,6 +212,10 @@
   <string name="admin_error_loadSettingsFailed">Не удалось загрузить настройки</string>
   <string name="admin_error_saveSettingsFailed">Не удалось сохранить настройки</string>
   <string name="admin_error_createTokenFailed">Не удалось создать пригласительный код</string>
+  <string name="admin_dialog_banTitle">Заблокировать пользователя?</string>
+  <string name="admin_dialog_banMessage">Вы уверены, что хотите заблокировать <xliff:g id="userName" example="John Doe">%1$s</xliff:g>?</string>
+  <string name="admin_dialog_deleteTokenTitle">Удалить пригласительный код?</string>
+  <string name="admin_dialog_deleteTokenMessage">Вы уверены, что хотите удалить этот пригласительный код? Это действие нельзя отменить.</string>
   <string name="admin_error_deleteTokenFailed">Не удалось удалить пригласительный код</string>
   <string name="common_action_copy">Копировать</string>
   <string name="common_action_share">Поделиться</string>

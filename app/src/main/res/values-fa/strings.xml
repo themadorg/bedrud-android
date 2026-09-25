@@ -107,6 +107,8 @@
   <string name="meeting_action_disableVideo">غیرفعال کردن ویدئو</string>
   <string name="meeting_action_enableVideo">فعال کردن ویدئو</string>
   <string name="meeting_action_kick">اخراج</string>
+  <string name="meeting_dialog_banTitle">ممنوع کردن شرکت‌کننده</string>
+  <string name="meeting_dialog_banMessage">آیا مطمئن هستید که می‌خواهید ورود <xliff:g id="participantName" example="John Doe">%1$s</xliff:g> به اتاق را ممنوع کنید؟</string>
   <string name="meeting_action_ban">ممنوع کردن</string>
   <string name="meeting_panel_participants">شرکت‌کنندگان (<xliff:g id="count" example="5">%1$d</xliff:g>)</string>
   <string name="meeting_panel_chat">چت</string>
@@ -201,6 +203,10 @@
   <string name="admin_error_loadSettingsFailed">بارگذاری تنظیمات ممکن نشد</string>
   <string name="admin_error_saveSettingsFailed">ذخیره تنظیمات ممکن نشد</string>
   <string name="admin_error_createTokenFailed">ساخت توکن دعوت ممکن نشد</string>
+  <string name="admin_dialog_banTitle">کاربر ممنوع شود؟</string>
+  <string name="admin_dialog_banMessage">آیا مطمئن هستید که می‌خواهید <xliff:g id="userName" example="John Doe">%1$s</xliff:g> را ممنوع کنید؟</string>
+  <string name="admin_dialog_deleteTokenTitle">توکن دعوت حذف شود؟</string>
+  <string name="admin_dialog_deleteTokenMessage">آیا مطمئن هستید که می‌خواهید این توکن دعوت را حذف کنید؟ این کار قابل بازگشت نیست.</string>
   <string name="admin_error_deleteTokenFailed">حذف توکن دعوت ممکن نشد</string>
   <string name="common_action_copy">کپی</string>
   <string name="common_action_share">هم‌رسانی</string>

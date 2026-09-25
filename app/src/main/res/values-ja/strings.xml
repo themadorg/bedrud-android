@@ -108,6 +108,8 @@
   <string name="meeting_action_disableVideo">ビデオを無効にする</string>
   <string name="meeting_action_enableVideo">ビデオを有効にする</string>
   <string name="meeting_action_kick">キック</string>
+  <string name="meeting_dialog_banTitle">参加者をBAN</string>
+  <string name="meeting_dialog_banMessage"><xliff:g id="participantName" example="John Doe">%1$s</xliff:g> をルームからBANしてもよろしいですか？</string>
   <string name="meeting_action_ban">BAN</string>
   <string name="meeting_panel_participants">参加者 (<xliff:g id="count" example="5">%1$d</xliff:g>)</string>
   <string name="meeting_panel_chat">チャット</string>
@@ -201,6 +203,10 @@
   <string name="admin_error_loadSettingsFailed">設定を読み込めませんでした</string>
   <string name="admin_error_saveSettingsFailed">設定を保存できませんでした</string>
   <string name="admin_error_createTokenFailed">招待トークンを作成できませんでした</string>
+  <string name="admin_dialog_banTitle">ユーザーをBANしますか？</string>
+  <string name="admin_dialog_banMessage"><xliff:g id="userName" example="John Doe">%1$s</xliff:g> をBANしてもよろしいですか？</string>
+  <string name="admin_dialog_deleteTokenTitle">招待トークンを削除しますか？</string>
+  <string name="admin_dialog_deleteTokenMessage">この招待トークンを削除してもよろしいですか？この操作は元に戻せません。</string>
   <string name="admin_error_deleteTokenFailed">招待トークンを削除できませんでした</string>
   <string name="common_action_copy">コピー</string>
   <string name="common_action_share">共有</string>

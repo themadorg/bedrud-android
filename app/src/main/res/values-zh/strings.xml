@@ -108,6 +108,8 @@
   <string name="meeting_action_disableVideo">关闭视频</string>
   <string name="meeting_action_enableVideo">开启视频</string>
   <string name="meeting_action_kick">移出</string>
+  <string name="meeting_dialog_banTitle">封禁参与者</string>
+  <string name="meeting_dialog_banMessage">确定要在此房间封禁 <xliff:g id="participantName" example="John Doe">%1$s</xliff:g> 吗？</string>
   <string name="meeting_action_ban">封禁</string>
   <string name="meeting_panel_participants">参与者 (<xliff:g id="count" example="5">%1$d</xliff:g>)</string>
   <string name="meeting_panel_chat">聊天</string>
@@ -201,6 +203,10 @@
   <string name="admin_error_loadSettingsFailed">无法加载设置</string>
   <string name="admin_error_saveSettingsFailed">无法保存设置</string>
   <string name="admin_error_createTokenFailed">无法创建邀请令牌</string>
+  <string name="admin_dialog_banTitle">封禁用户？</string>
+  <string name="admin_dialog_banMessage">确定要封禁 <xliff:g id="userName" example="John Doe">%1$s</xliff:g> 吗？</string>
+  <string name="admin_dialog_deleteTokenTitle">删除邀请令牌？</string>
+  <string name="admin_dialog_deleteTokenMessage">确定要删除此邀请令牌吗？此操作无法撤销。</string>
   <string name="admin_error_deleteTokenFailed">无法删除邀请令牌</string>
   <string name="common_action_copy">复制</string>
   <string name="common_action_share">分享</string>

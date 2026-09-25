@@ -250,6 +250,7 @@ fun DashboardContent(
     var createRoomError by remember { mutableStateOf<String?>(null) }
     var isCreatingRoom by remember { mutableStateOf(false) }
     var roomToEdit by remember { mutableStateOf<UserRoomResponse?>(null) }
+    var isSavingSettings by remember { mutableStateOf(false) }
     var roomToDelete by remember { mutableStateOf<UserRoomResponse?>(null) }
     var pendingServerSwitch by remember { mutableStateOf<PendingServerSwitch?>(null) }
     var activeFilter by rememberSaveable { mutableStateOf(RoomFilter.ALL) }
@@ -479,9 +480,11 @@ fun DashboardContent(
     roomToEdit?.let { room ->
         RoomSettingsDialog(
             room = room,
+            isSaving = isSavingSettings,
             onDismiss = { roomToEdit = null },
             onSave = { isPublic, settings ->
                 scope.launch {
+                    isSavingSettings = true
                     val saved = apiAction(
                         saveSettingsFailedMsg,
                         { snackbarHostState.showSnackbar(it) },
@@ -492,6 +495,7 @@ fun DashboardContent(
                             UpdateRoomSettingsRequest(isPublic = isPublic, settings = settings)
                         )
                     }
+                    isSavingSettings = false
                     if (saved) {
                         // Apply locally before the async loadRooms() refetch lands, so
                         // reopening this room's settings (or reading its card) right away

@@ -109,6 +109,8 @@
   <string name="meeting_action_disableVideo">Disable Video</string>
   <string name="meeting_action_enableVideo">Enable Video</string>
   <string name="meeting_action_kick">Kick</string>
+  <string name="meeting_dialog_banTitle">Ban Participant</string>
+  <string name="meeting_dialog_banMessage">Are you sure you want to ban <xliff:g id="participantName" example="John Doe">%1$s</xliff:g> from the room?</string>
   <string name="meeting_action_ban">Ban</string>
   <string name="meeting_panel_participants">Participants (<xliff:g id="count" example="5">%1$d</xliff:g>)</string>
   <string name="meeting_panel_chat">Chat</string>
@@ -209,6 +211,10 @@
   <string name="admin_error_loadSettingsFailed">Couldn\'t load settings</string>
   <string name="admin_error_saveSettingsFailed">Couldn\'t save settings</string>
   <string name="admin_error_createTokenFailed">Couldn\'t create the invite token</string>
+  <string name="admin_dialog_banTitle">Ban user?</string>
+  <string name="admin_dialog_banMessage">Are you sure you want to ban <xliff:g id="userName" example="John Doe">%1$s</xliff:g>?</string>
+  <string name="admin_dialog_deleteTokenTitle">Delete invite token?</string>
+  <string name="admin_dialog_deleteTokenMessage">Are you sure you want to delete this invite token? This cannot be undone.</string>
   <string name="admin_error_deleteTokenFailed">Couldn\'t delete the invite token</string>
   <string name="common_action_copy">Copy</string>
   <string name="common_action_share">Share</string>
