@@ -26,7 +26,9 @@ For the server, web app, and other platforms, see the [main Bedrud project](http
 - **In-meeting chat** over the LiveKit data channel — messages grouped by sender, emoji reactions
   with a breakdown of who reacted, tappable links, copying or sharing a message to any other app,
   polls to vote in, and image sharing with any received picture savable to the gallery; a room's
-  owner can switch chat off for it from the room's settings, on the dashboard or during the call
+  owner can switch chat off for it from the room's settings, on the dashboard or during the call.
+  A link to a room on any server you have added switches the call to that room, once you confirm
+  leaving this one
 - **Meeting sounds** — a chime when someone joins or leaves and a pop when a message arrives, played
   on the call's own audio route
 - **Push to talk & voice sensitivity** — hold-to-talk input mode, a manual voice gate for voice activity, per-person volume, and device noise suppression
