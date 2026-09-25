@@ -174,6 +174,13 @@ androidComponents {
     }
 }
 
+// TypeTest reads the bundled fonts straight out of res/font at run time, which Gradle cannot see
+// on its own. Declaring the directory as an input makes a rebuilt font rerun the test, instead of
+// replaying a result recorded against the old file, locally or from a build cache.
+tasks.withType<Test>().configureEach {
+    inputs.dir("src/main/res/font").withPathSensitivity(PathSensitivity.RELATIVE)
+}
+
 // Because minSdk is 28, AGP defaults to storing both the .so files and the dex uncompressed
 // in the APK, on the assumption the APK is delivered as a Play App Bundle where the store
 // handles compression on the wire. Bedrud ships raw APKs off a GitHub Release instead, so
@@ -269,6 +276,8 @@ dependencies {
     testImplementation("org.json:json:20260814")
     androidTestImplementation(composeBom)
     androidTestImplementation("androidx.test.ext:junit:1.3.0")
+    // For @SdkSuppress, which lint requires over @RequiresApi on a test that needs a newer API.
+    androidTestImplementation("androidx.test:runner:1.7.0")
     androidTestImplementation("androidx.compose.ui:ui-test-junit4")
     debugImplementation("androidx.compose.ui:ui-tooling")
     debugImplementation("androidx.compose.ui:ui-test-manifest")

@@ -1,18 +1,26 @@
 package com.bedrud.app.ui.screens.dashboard
 
+import android.icu.text.DisplayContext
+import android.icu.text.RelativeDateTimeFormatter
+import android.icu.util.ULocale
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -28,23 +36,26 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.NavigateNext
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.MeetingRoom
-import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LocalTextStyle
+import androidx.compose.material3.MenuDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHostState
@@ -52,11 +63,12 @@ import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.SwipeToDismissBoxState
 import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -83,15 +95,17 @@ import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.CustomAccessibilityAction
+import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
@@ -107,10 +121,12 @@ import com.bedrud.app.core.deeplink.BedrudURLParser
 import com.bedrud.app.core.instance.InstanceManager
 import com.bedrud.app.core.recent.RecentRoom
 import com.bedrud.app.core.recent.RecentRoomsStore
-import com.bedrud.app.core.recent.formatRecentRoomTimeAgo
 import com.bedrud.app.core.recent.recentRoomsNotInApiList
 import com.bedrud.app.core.rooms.DeletedRoomTombstones
+import com.bedrud.app.core.rooms.RoomActivityAge
+import com.bedrud.app.core.rooms.RoomActivityUnit
 import com.bedrud.app.core.rooms.resolveRoomActivityAt
+import com.bedrud.app.core.rooms.roomActivityAge
 import com.bedrud.app.core.rooms.sortByActivity
 import com.bedrud.app.core.api.apiAction
 import com.bedrud.app.core.api.apiBody
@@ -133,6 +149,7 @@ import com.bedrud.app.ui.components.ConfirmDialog
 import com.bedrud.app.ui.screens.instance.InstanceSwitcherSheet
 import com.bedrud.app.ui.theme.BedrudShapeTokens
 import com.bedrud.app.ui.theme.Dimens
+import com.bedrud.app.ui.theme.Elevation
 import com.bedrud.app.ui.theme.Motion
 import com.bedrud.app.ui.theme.typeCentered
 import kotlinx.coroutines.delay
@@ -150,7 +167,7 @@ private const val AUTO_REFRESH_INTERVAL_MS = 60_000L
 // so a flaky request doesn't leave the list stale for a minute.
 private const val FAILED_FETCH_RETRY_MS = 5_000L
 
-// Cadence of the ticking clock that keeps the "Xm ago" recent-room labels advancing.
+// Cadence of the ticking clock that keeps the "5 minutes ago" recent-room labels advancing.
 private const val NOW_TICK_INTERVAL_MS = 60_000L
 
 // Ignore a silent refresh request that arrives within this window of the last fetch, so rapid tab
@@ -178,7 +195,6 @@ private data class PendingServerSwitch(val instance: Instance, val roomName: Str
 fun DashboardContent(
     modifier: Modifier = Modifier,
     onJoinRoom: (String) -> Unit,
-    onJoinRecent: (RecentRoom) -> Unit,
     onOpenProfile: () -> Unit,
     onNavigateToAddInstance: () -> Unit,
     instanceManager: InstanceManager = koinInject(),
@@ -213,7 +229,7 @@ fun DashboardContent(
         )
     }
     // Active-server recents keyed by room name, so a server-backed card can tell when the user was
-    // last in that room -- driving the Live / "Xm ago" presence label without a scan per card.
+    // last in that room -- driving the Live / "5 minutes ago" presence label without a scan per card.
     val activeRecentByName = remember(recentRooms, activeInstanceId) {
         recentRooms.filter { it.instanceId == activeInstanceId }.associateBy { it.roomName }
     }
@@ -242,7 +258,11 @@ fun DashboardContent(
     var createRoomError by remember { mutableStateOf<String?>(null) }
     var isCreatingRoom by remember { mutableStateOf(false) }
     var roomToEdit by remember { mutableStateOf<UserRoomResponse?>(null) }
+    var isSavingSettings by remember { mutableStateOf(false) }
     var roomToDelete by remember { mutableStateOf<UserRoomResponse?>(null) }
+    var deletingRoomId by remember { mutableStateOf<String?>(null) }
+    // A room's card stays swiped out from the moment its delete is asked for until the answer is in.
+    fun isDeleteHeld(room: UserRoomResponse) = roomToDelete?.id == room.id || deletingRoomId == room.id
     var pendingServerSwitch by remember { mutableStateOf<PendingServerSwitch?>(null) }
     var activeFilter by rememberSaveable { mutableStateOf(RoomFilter.ALL) }
     var quickJoinText by remember { mutableStateOf("") }
@@ -261,7 +281,7 @@ fun DashboardContent(
     // is true immediately from pre-existing rooms, well before the async refetch includes it.
     var pendingScrollToTopFor by rememberSaveable { mutableStateOf<String?>(null) }
 
-    // Drives the "Xm ago" labels on recent-room cards. Compose only recomposes on state
+    // Drives the "5 minutes ago" labels on recent-room cards. Compose only recomposes on state
     // change, so without an explicit ticking clock those labels freeze at whatever they
     // read on the last recomposition instead of advancing with real time.
     var nowTickMs by remember { mutableLongStateOf(System.currentTimeMillis()) }
@@ -442,6 +462,7 @@ fun DashboardContent(
             onConfirm = {
                 val deleting = room
                 roomToDelete = null
+                deletingRoomId = deleting.id
                 scope.launch {
                     val deleted = apiAction(
                         deleteRoomFailedMsg,
@@ -450,6 +471,9 @@ fun DashboardContent(
                     ) {
                         roomApi.deleteRoom(deleting.id)
                     }
+                    // Released either way: a deleted room's card is gone by the time this is read,
+                    // and a refused one slides back into place.
+                    deletingRoomId = null
                     if (deleted) {
                         // Keep refreshes from resurrecting it while the server's
                         // async delete catches up...
@@ -471,9 +495,11 @@ fun DashboardContent(
     roomToEdit?.let { room ->
         RoomSettingsDialog(
             room = room,
+            isSaving = isSavingSettings,
             onDismiss = { roomToEdit = null },
             onSave = { isPublic, settings ->
                 scope.launch {
+                    isSavingSettings = true
                     val saved = apiAction(
                         saveSettingsFailedMsg,
                         { snackbarHostState.showSnackbar(it) },
@@ -484,6 +510,7 @@ fun DashboardContent(
                             UpdateRoomSettingsRequest(isPublic = isPublic, settings = settings)
                         )
                     }
+                    isSavingSettings = false
                     if (saved) {
                         // Apply locally before the async loadRooms() refetch lands, so
                         // reopening this room's settings (or reading its card) right away
@@ -501,33 +528,19 @@ fun DashboardContent(
     }
 
     pendingServerSwitch?.let { pending ->
-        AlertDialog(
-            onDismissRequest = { pendingServerSwitch = null },
-            title = { Text(stringResource(R.string.dashboard_dialog_switchServerTitle)) },
-            text = { Text(stringResource(R.string.dashboard_dialog_switchServerMessage, pending.instance.displayName)) },
-            confirmButton = {
-                BedrudButton(
-                    text = stringResource(R.string.dashboard_button_switchAndJoin),
-                    variant = BedrudButtonVariant.TONAL,
-                    onClick = {
-                        instanceManager.switchTo(pending.instance.id)
-                        pendingServerSwitch = null
-                        quickJoinText = ""
-                        onJoinRoom(pending.roomName)
-                    },
-                )
+        ConfirmDialog(
+            title = stringResource(R.string.dashboard_dialog_switchServerTitle),
+            message = stringResource(R.string.dashboard_dialog_switchServerMessage, pending.instance.displayName),
+            confirmLabel = stringResource(R.string.dashboard_button_switchAndJoin),
+            // Switching loses nothing, so the confirm is tonal rather than destructive.
+            confirmVariant = BedrudButtonVariant.TONAL,
+            onDismiss = { pendingServerSwitch = null },
+            onConfirm = {
+                instanceManager.switchTo(pending.instance.id)
+                pendingServerSwitch = null
+                quickJoinText = ""
+                onJoinRoom(pending.roomName)
             },
-            dismissButton = {
-                TextButton(onClick = { pendingServerSwitch = null }) {
-                    // Corrected like the BedrudButton beside it, or the two labels in this dialog
-                    // sit at different heights.
-                    val cancelStyle = LocalTextStyle.current
-                    Text(
-                        stringResource(R.string.common_button_cancel),
-                        modifier = Modifier.typeCentered(cancelStyle),
-                    )
-                }
-            }
         )
     }
 
@@ -774,6 +787,7 @@ fun DashboardContent(
                                                 now = nowTickMs,
                                                 onJoin = { onJoinRoom(entry.room.name) },
                                                 onDelete = { roomToDelete = entry.room },
+                                                isDeleteHeld = isDeleteHeld(entry.room),
                                                 onSettings = if (entry.room.createdBy == currentUser?.id) {
                                                     { roomToEdit = entry.room }
                                                 } else null,
@@ -782,7 +796,9 @@ fun DashboardContent(
                                             is RoomListEntry.FromRecent -> RecentRoomCard(
                                                 recent = entry.recent,
                                                 now = nowTickMs,
-                                                onJoin = { onJoinRecent(entry.recent) },
+                                                // Only the active server's recents are listed, so a
+                                                // recent joins like any other card, with no switch.
+                                                onJoin = { onJoinRoom(entry.recent.roomName) },
                                                 onRemove = {
                                                     recentRoomsStore.remove(
                                                         entry.recent.roomName,
@@ -803,6 +819,7 @@ fun DashboardContent(
                                             now = nowTickMs,
                                             onJoin = { onJoinRoom(room.name) },
                                             onDelete = { roomToDelete = room },
+                                            isDeleteHeld = isDeleteHeld(room),
                                             onSettings = if (room.createdBy == currentUser?.id) {
                                                 { roomToEdit = room }
                                             } else null,
@@ -845,9 +862,9 @@ private fun RoomsHeaderTitle(serverName: String?, onClick: () -> Unit) {
     val switchServerLabel = stringResource(R.string.dashboard_contentDescription_switchServer)
     // Two-tier hierarchy so the server name reads as the headline and "rooms" as a lighter,
     // secondary label -- clearer than one flat run of text, without color-coding by server
-    // (that was tried and dropped for this header; see DESIGN.md).
+    // (that was tried and dropped for this header; see DESIGN.md). The name keeps the headline's
+    // own weight, as every other tab's title does; size and colour carry the hierarchy.
     val nameStyle = MaterialTheme.typography.headlineSmall.toSpanStyle().copy(
-        fontWeight = FontWeight.Bold,
         color = MaterialTheme.colorScheme.onSurface,
     )
     val suffixStyle = MaterialTheme.typography.titleMedium.toSpanStyle().copy(
@@ -936,20 +953,27 @@ private fun ProfileAvatarButton(user: User?, onClick: () -> Unit) {
 // ── Quick join bar ────────────────────────────────────────────────────────────
 
 @Composable
-private fun QuickJoinBar(
+internal fun QuickJoinBar(
     value: String,
     onValueChange: (String) -> Unit,
     onJoin: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Row(modifier = modifier, verticalAlignment = Alignment.CenterVertically) {
-        // Both the field and the button sit at the compact 48dp control height with the shared
-        // corner token, so the row reads as one control without dominating the header area.
+    // The row is as tall as its tallest child, and both children fill it, so the field and the
+    // button stay one control at every font size the reader picks.
+    Row(
+        modifier = modifier.height(IntrinsicSize.Min),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        // The field keeps Material's own height, which grows with the font. Pinning it to the
+        // 48dp button height clipped the text as soon as the reader raised their font size.
         BedrudTextField(
             value = value,
             onValueChange = onValueChange,
-            placeholder = stringResource(R.string.dashboard_placeholder_search),
-            leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, modifier = Modifier.size(Dimens.iconSm)) },
+            placeholder = stringResource(R.string.dashboard_placeholder_joinRoom),
+            // A link, not a magnifier: the field joins the room it is given and searches nothing,
+            // and a search icon had the hint translated as "search rooms".
+            leadingIcon = { Icon(Icons.Default.Link, contentDescription = null, modifier = Modifier.size(Dimens.iconSm)) },
             textStyle = MaterialTheme.typography.bodyMedium,
             // Room slugs and links are lowercase, no spaces — suppress auto-capitalize/correct and
             // use the URL keyboard. The "Go" key joins (and, on success, the navigation dismisses it).
@@ -961,7 +985,7 @@ private fun QuickJoinBar(
             ),
             keyboardActions = KeyboardActions(onGo = { onJoin() }),
             textDirection = TextDirection.Ltr,
-            modifier = Modifier.weight(1f).height(Dimens.buttonHeight)
+            modifier = Modifier.weight(1f).fillMaxHeight()
         )
         Spacer(modifier = Modifier.width(Dimens.space8))
         BedrudButton(
@@ -969,6 +993,7 @@ private fun QuickJoinBar(
             onClick = onJoin,
             variant = BedrudButtonVariant.TONAL,
             enabled = value.isNotBlank(),
+            modifier = Modifier.fillMaxHeight(),
         )
     }
 }
@@ -1024,6 +1049,8 @@ private fun RoomCard(
     now: Long,
     onJoin: () -> Unit,
     onDelete: () -> Unit,
+    // True while this room's delete is being asked about or is on its way to the server.
+    isDeleteHeld: Boolean,
     onSettings: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
@@ -1052,13 +1079,22 @@ private fun RoomCard(
             icon = Icons.Default.Delete,
             containerColor = MaterialTheme.colorScheme.errorContainer,
             contentColor = MaterialTheme.colorScheme.onErrorContainer,
-            // Route through the confirm dialog (destructive), so put the row back rather than dismiss.
-            onTriggered = { onDelete(); false },
+            // Asks first through the confirm dialog; the row stays swiped out, held by
+            // isDeleteHeld, until the question is answered.
+            onTriggered = { onDelete(); true },
         )
     } else null
 
-    SwipeableRoomRow(action = swipeAction, modifier = modifier.fillMaxWidth()) {
-        RoomCardScaffold(onClick = onJoin) {
+    // The card's other actions, and the swipe's, again in its long-press menu.
+    val settingsLabel = stringResource(R.string.dashboard_contentDescription_settings)
+    val deleteLabel = stringResource(R.string.common_button_delete)
+    val menuItems = buildList {
+        if (onSettings != null) add(RoomCardMenuItem(settingsLabel, Icons.Default.Settings, onClick = onSettings))
+        if (isOwner) add(RoomCardMenuItem(deleteLabel, Icons.Default.Delete, isDestructive = true, onClick = onDelete))
+    }
+
+    SwipeableRoomRow(action = swipeAction, held = isDeleteHeld, modifier = modifier.fillMaxWidth()) {
+        RoomCardScaffold(onClick = onJoin, menuItems = menuItems) {
             RoomCardText(title = title, status = metaText, statusColor = statusTint)
 
             if (onSettings != null) {
@@ -1066,7 +1102,8 @@ private fun RoomCard(
                     Icon(
                         Icons.Default.Settings,
                         contentDescription = stringResource(R.string.dashboard_contentDescription_settings),
-                        modifier = Modifier.size(Dimens.iconSm),
+                        // A list row's action at the list icon size, level with the chevron beside it.
+                        modifier = Modifier.size(Dimens.iconMd),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
@@ -1112,8 +1149,11 @@ private fun RecentRoomCard(
         onTriggered = { onRemove(); true },
     )
 
+    // The swipe's action again in the card's long-press menu.
+    val menuItems = listOf(RoomCardMenuItem(swipeAction.label, swipeAction.icon, onClick = onRemove))
+
     SwipeableRoomRow(action = swipeAction, modifier = modifier.fillMaxWidth()) {
-        RoomCardScaffold(onClick = onJoin) {
+        RoomCardScaffold(onClick = onJoin, menuItems = menuItems) {
             RoomCardText(title = recent.roomName, status = presence?.text, statusColor = statusTint)
 
             TrailingChevron()
@@ -1130,6 +1170,40 @@ private data class Presence(val text: String, val isLive: Boolean)
 // the call; after that we show how long ago it was last active.
 private const val LIVE_WINDOW_MS = 60_000L
 
+private fun RoomActivityUnit.toRelativeUnit(): RelativeDateTimeFormatter.RelativeUnit = when (this) {
+    RoomActivityUnit.MINUTES -> RelativeDateTimeFormatter.RelativeUnit.MINUTES
+    RoomActivityUnit.HOURS -> RelativeDateTimeFormatter.RelativeUnit.HOURS
+    RoomActivityUnit.DAYS -> RelativeDateTimeFormatter.RelativeUnit.DAYS
+    RoomActivityUnit.WEEKS -> RelativeDateTimeFormatter.RelativeUnit.WEEKS
+}
+
+// The whole phrase comes from ICU's CLDR data for the app's language — "3 hours ago", "vor 3
+// Stunden", "۳ ساعت پیش" — because the number, the unit, its plural form and the word order all
+// change together between languages, and CLDR already has every one of them right.
+@Composable
+private fun roomActivityAgeText(age: RoomActivityAge): String {
+    val locale = LocalConfiguration.current.locales[0]
+    val formatter = remember(locale) {
+        RelativeDateTimeFormatter.getInstance(
+            ULocale.forLocale(locale),
+            null,
+            RelativeDateTimeFormatter.Style.LONG,
+            DisplayContext.CAPITALIZATION_FOR_BEGINNING_OF_SENTENCE,
+        )
+    }
+    return when (age) {
+        RoomActivityAge.JustNow -> formatter.format(
+            RelativeDateTimeFormatter.Direction.PLAIN,
+            RelativeDateTimeFormatter.AbsoluteUnit.NOW,
+        )
+        is RoomActivityAge.Ago -> formatter.format(
+            age.count.toDouble(),
+            RelativeDateTimeFormatter.Direction.LAST,
+            age.unit.toRelativeUnit(),
+        )
+    }
+}
+
 // Two presence states only. Null means nothing is known about this room's activity — neither the
 // server nor local history — and such a card shows no presence line at all.
 @Composable
@@ -1138,8 +1212,7 @@ private fun presenceFor(isOngoing: Boolean, lastActivityAtMs: Long?, now: Long):
     return when {
         isLive -> Presence(stringResource(R.string.dashboard_status_live), isLive = true)
         lastActivityAtMs != null -> Presence(
-            // "%1$s ago" — the connective is localized; the compact duration ("12m", "3h") is not.
-            stringResource(R.string.dashboard_status_timeAgo, formatRecentRoomTimeAgo(lastActivityAtMs, now)),
+            roomActivityAgeText(roomActivityAge(lastActivityAtMs, now)),
             isLive = false,
         )
         else -> null
@@ -1148,27 +1221,104 @@ private fun presenceFor(isOngoing: Boolean, lastActivityAtMs: Long?, now: Long):
 
 // ── Shared card pieces ─────────────────────────────────────────────────────────
 
-/** Plain outlined card holding one room row. */
+/**
+ * One thing a card offers besides opening its room. [isDestructive] draws it in the error colour,
+ * kept for what cannot be taken back.
+ */
+private data class RoomCardMenuItem(
+    val label: String,
+    val icon: ImageVector,
+    val isDestructive: Boolean = false,
+    val onClick: () -> Unit,
+)
+
+/**
+ * A card's long-press menu: the swipe's action and the card's other actions, one tap away for
+ * anyone who does not or cannot swipe. It wears the app's menu chrome, as the chat's menus and the
+ * language picker do.
+ */
+@Composable
+private fun RoomCardMenu(
+    items: List<RoomCardMenuItem>,
+    expanded: Boolean,
+    onDismiss: () -> Unit,
+) {
+    DropdownMenu(
+        expanded = expanded,
+        onDismissRequest = onDismiss,
+        shape = BedrudShapeTokens.card,
+        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+        tonalElevation = Elevation.level2,
+        shadowElevation = Elevation.level3,
+    ) {
+        items.forEach { item ->
+            val color = if (item.isDestructive) MaterialTheme.colorScheme.error
+            else MaterialTheme.colorScheme.onSurface
+            DropdownMenuItem(
+                text = { Text(item.label, modifier = Modifier.typeCentered(LocalTextStyle.current)) },
+                leadingIcon = { Icon(item.icon, contentDescription = null) },
+                colors = MenuDefaults.itemColors(textColor = color, leadingIconColor = color),
+                onClick = {
+                    onDismiss()
+                    item.onClick()
+                },
+            )
+        }
+    }
+}
+
+/** Plain outlined card holding one room row, with its long-press menu when it has one. */
 @Composable
 private fun RoomCardScaffold(
     onClick: () -> Unit,
+    menuItems: List<RoomCardMenuItem> = emptyList(),
     content: @Composable RowScope.() -> Unit,
 ) {
-    BedrudOutlinedCard(
-        onClick = onClick,
-        shape = BedrudShapeTokens.card,
-        modifier = Modifier.fillMaxWidth(),
-    ) {
-        Row(
+    var isMenuOpen by remember { mutableStateOf(false) }
+    val hasMenu = menuItems.isNotEmpty()
+    val menuLabel = stringResource(R.string.meeting_contentDescription_moreOptions)
+    Box {
+        BedrudOutlinedCard(
             modifier = Modifier
                 .fillMaxWidth()
-                // Uniform card height whether or not the card carries a trailing 48dp control
-                // (the settings button would otherwise inflate owned cards).
-                .heightIn(min = Dimens.roomCardMinHeight)
-                .padding(start = Dimens.space16, end = Dimens.space4, top = Dimens.space12, bottom = Dimens.space12),
-            verticalAlignment = Alignment.CenterVertically,
-            content = content,
-        )
+                // Clipped before it clicks, so the press ripple keeps the card's corners.
+                .clip(BedrudShapeTokens.card)
+                .combinedClickable(
+                    onClick = onClick,
+                    onLongClick = if (hasMenu) ({ isMenuOpen = true }) else null,
+                    onLongClickLabel = if (hasMenu) menuLabel else null,
+                )
+                // The swipe's action, and the rest of the menu, as TalkBack actions: a gesture
+                // must never be the only way to an action (Material's list accessibility guidance).
+                .semantics {
+                    if (hasMenu) {
+                        customActions = menuItems.map { item ->
+                            CustomAccessibilityAction(item.label) {
+                                item.onClick()
+                                true
+                            }
+                        }
+                    }
+                },
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    // Uniform card height whether or not the card carries a trailing 48dp control
+                    // (the settings button would otherwise inflate owned cards).
+                    .heightIn(min = Dimens.roomCardMinHeight)
+                    .padding(start = Dimens.space16, end = Dimens.space4, top = Dimens.space12, bottom = Dimens.space12),
+                verticalAlignment = Alignment.CenterVertically,
+                content = content,
+            )
+        }
+        if (hasMenu) {
+            RoomCardMenu(
+                items = menuItems,
+                expanded = isMenuOpen,
+                onDismiss = { isMenuOpen = false },
+            )
+        }
     }
 }
 
@@ -1183,7 +1333,10 @@ private fun RowScope.RoomCardText(title: String, status: String?, statusColor: C
         fontFamily = FontFamily.Monospace,
         textDirection = TextDirection.Ltr,
     )
-    val statusStyle = MaterialTheme.typography.labelSmall
+    // bodySmall, the supporting-line style of every other list in the app.
+    val statusStyle = MaterialTheme.typography.bodySmall
+    // The card's height is fixed, so without a gap here all its spare room lands above and below the
+    // two lines and the name sits pressed against its status line.
     Column(
         modifier = Modifier
             .weight(1f)
@@ -1191,13 +1344,17 @@ private fun RowScope.RoomCardText(title: String, status: String?, statusColor: C
                 firstLine = titleStyle,
                 lastLine = if (status != null) statusStyle else titleStyle,
             ),
+        verticalArrangement = Arrangement.spacedBy(Dimens.space4),
     ) {
+        // The slug is pinned LTR so its dashes keep their order, and an LTR paragraph aligns to its
+        // own left edge. Wrapping the text to its width instead of filling the row hands placement
+        // back to the parent Column, which puts it at the layout's start edge: the right one in an
+        // RTL locale.
         Text(
             text = title,
             style = titleStyle,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.fillMaxWidth(),
         )
         if (status != null) {
             Text(
@@ -1213,8 +1370,10 @@ private fun RowScope.RoomCardText(title: String, status: String?, statusColor: C
 
 @Composable
 private fun TrailingChevron() {
+    // Auto-mirrored so it points toward the card's end edge in an RTL locale too; the glyph is the
+    // same chevron as ChevronRight, which has no mirrored variant.
     Icon(
-        Icons.Default.ChevronRight,
+        Icons.AutoMirrored.Filled.NavigateNext,
         contentDescription = null,
         modifier = Modifier
             .padding(end = Dimens.space6)
@@ -1225,31 +1384,60 @@ private fun TrailingChevron() {
 
 // ── Swipe-to-action ────────────────────────────────────────────────────────────
 
+/**
+ * How far across its card a swipe must travel before letting go commits it: half the card.
+ *
+ * Material's list guidance has a full swipe trigger the action. The component's own default is a
+ * fixed 56dp, a fraction of a phone-width card, so a short sideways drag while scrolling committed.
+ */
+private const val SwipeCommitFraction = 0.5f
+
 private data class SwipeAction(
     val label: String,
     val icon: ImageVector,
     val containerColor: Color,
     val contentColor: Color,
-    // Returns true to leave the row dismissed (instant action), false to put it back
-    // (deferred/confirmed — the action opens a dialog, so the row should still be there
-    // behind it).
+    // Returns true to leave the row swiped out, false to put it back at once. An action that asks
+    // first returns true and holds the row out through SwipeableRoomRow's `held` until answered.
     val onTriggered: () -> Boolean,
 )
 
-/** Wraps a card in a leading-edge swipe gesture that reveals [action]; no swipe when it's null. */
+/**
+ * Wraps a card in a leading-edge swipe gesture that reveals [action]; no swipe when it's null.
+ *
+ * While [held] the row stays swiped out, its action's panel showing, and when it stops being held
+ * with the row still there it slides back. An action that asks for confirmation uses this: the
+ * row stays out while the question is open, slides back if it is cancelled or refused, and is
+ * simply gone if the action goes through — rather than flying off and returning behind the dialog
+ * before the question has been answered.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun SwipeableRoomRow(
     action: SwipeAction?,
     modifier: Modifier = Modifier,
+    held: Boolean = false,
     content: @Composable () -> Unit,
 ) {
     if (action == null) {
         Box(modifier = modifier) { content() }
         return
     }
-    val state = rememberSwipeToDismissBoxState()
+    val state = rememberSwipeToDismissBoxState(
+        positionalThreshold = { totalDistance -> totalDistance * SwipeCommitFraction },
+    )
     val scope = rememberCoroutineScope()
+    val haptics = LocalHapticFeedback.current
+    // One tick as the swipe crosses the point where letting go commits, the platform's own cue
+    // for a gesture threshold; the panel's colour change says the same thing to the eye.
+    LaunchedEffect(state.targetValue) {
+        if (state.targetValue == SwipeToDismissBoxValue.EndToStart) {
+            haptics.performHapticFeedback(HapticFeedbackType.GestureThresholdActivate)
+        }
+    }
+    LaunchedEffect(held) {
+        if (!held && state.currentValue != SwipeToDismissBoxValue.Settled) state.reset()
+    }
     SwipeToDismissBox(
         state = state,
         modifier = modifier,
@@ -1272,25 +1460,42 @@ private fun SwipeableRoomRow(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun SwipeActionBackground(action: SwipeAction, state: SwipeToDismissBoxState) {
-    // Only paint the panel while it's the gesture's target — a settled row shows nothing behind it.
-    val revealed = state.targetValue == SwipeToDismissBoxValue.EndToStart
-    val container = if (revealed) action.containerColor else Color.Transparent
+    // Material's own SwipeToDismissBox pattern: the panel is there from the first pixel of the
+    // swipe in a neutral tone, and eases into the action's colour once letting go would commit.
+    // It used to be absent until the threshold and then appear at full colour in a single frame,
+    // with the action's icon and label floating on the bare page until it did.
+    val isArmed = state.targetValue == SwipeToDismissBoxValue.EndToStart
+    val colorAnimation = tween<Color>(Motion.durationShort, easing = Motion.standardEasing)
+    val armedContainer by animateColorAsState(
+        targetValue = if (isArmed) action.containerColor else MaterialTheme.colorScheme.surfaceContainerHighest,
+        animationSpec = colorAnimation,
+        label = "swipePanel",
+    )
+    val armedContent by animateColorAsState(
+        targetValue = if (isArmed) action.contentColor else MaterialTheme.colorScheme.onSurfaceVariant,
+        animationSpec = colorAnimation,
+        label = "swipePanelContent",
+    )
+    // Unpainted while the card rests over it, so no edge of it can show around the card's corners.
+    val isMoved = state.dismissDirection != SwipeToDismissBoxValue.Settled
     Box(
         modifier = Modifier
             .fillMaxSize()
             .clip(BedrudShapeTokens.card)
-            .background(container)
+            .background(if (isMoved) armedContainer else Color.Transparent)
             .padding(horizontal = Dimens.space20),
         contentAlignment = Alignment.CenterEnd,
     ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(Dimens.space8),
-        ) {
-            // Centred against the icon beside it rather than against other text.
-            val labelStyle = MaterialTheme.typography.labelLarge
-            Text(action.label, style = labelStyle, color = action.contentColor, modifier = Modifier.typeCentered(labelStyle))
-            Icon(action.icon, contentDescription = null, tint = action.contentColor, modifier = Modifier.size(Dimens.iconSm))
+        if (isMoved) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(Dimens.space8),
+            ) {
+                // Centred against the icon beside it rather than against other text.
+                val labelStyle = MaterialTheme.typography.labelLarge
+                Text(action.label, style = labelStyle, color = armedContent, modifier = Modifier.typeCentered(labelStyle))
+                Icon(action.icon, contentDescription = null, tint = armedContent, modifier = Modifier.size(Dimens.iconSm))
+            }
         }
     }
 }
@@ -1491,14 +1696,20 @@ private fun CreateRoomDialog(
     isCreating: Boolean,
 ) {
     var roomName by remember { mutableStateOf("") }
+    // Surrounding spaces are never part of a room's name; a blank result still asks the server
+    // for a generated one.
+    fun submit() {
+        if (!isCreating) onCreate(roomName.trim())
+    }
 
     AlertDialog(
         onDismissRequest = { if (!isCreating) onDismiss() },
         title = { Text(stringResource(R.string.dashboard_dialog_createTitle)) },
         text = {
-            Column {
-                Text(stringResource(R.string.dashboard_dialog_createDescription),
-                    style = MaterialTheme.typography.bodyMedium)
+            // Scrolls so the field and its error stay reachable when the keyboard leaves the
+            // dialog little room, as it does in landscape or at a large font size.
+            Column(modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState())) {
+                Text(stringResource(R.string.dashboard_dialog_createDescription))
                 Spacer(modifier = Modifier.height(Dimens.space16))
                 BedrudTextField(
                     value = roomName,
@@ -1507,37 +1718,32 @@ private fun CreateRoomDialog(
                         if (errorMessage != null) onErrorCleared()
                     },
                     label = stringResource(R.string.dashboard_label_roomName),
-                    textStyle = MaterialTheme.typography.bodyMedium,
-                    textDirection = TextDirection.Ltr
+                    // The error belongs to the field, as on the sign-in forms: the outline and
+                    // label turn to the error colour, and the message sits under the field inset
+                    // like any supporting text.
+                    isError = errorMessage != null,
+                    supportingText = errorMessage?.let { message -> { Text(message) } },
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                    keyboardActions = KeyboardActions(onDone = { submit() }),
+                    textDirection = TextDirection.Ltr,
                 )
-                if (errorMessage != null) {
-                    Spacer(modifier = Modifier.height(Dimens.space8))
-                    Text(
-                        text = errorMessage,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.error
-                    )
-                }
             }
         },
         confirmButton = {
             BedrudButton(
                 text = stringResource(R.string.common_button_create),
                 variant = BedrudButtonVariant.TONAL,
-                onClick = { onCreate(roomName) },
+                onClick = { submit() },
                 loading = isCreating,
             )
         },
         dismissButton = {
-            TextButton(onClick = onDismiss, enabled = !isCreating) {
-                // Corrected like the BedrudButton beside it, or the two labels in this dialog sit
-                // at different heights — measured 5px apart before this was applied.
-                val cancelStyle = LocalTextStyle.current
-                Text(
-                    stringResource(R.string.common_button_cancel),
-                    modifier = Modifier.typeCentered(cancelStyle),
-                )
-            }
+            BedrudButton(
+                text = stringResource(R.string.common_button_cancel),
+                variant = BedrudButtonVariant.GHOST,
+                onClick = onDismiss,
+                enabled = !isCreating,
+            )
         }
     )
 }

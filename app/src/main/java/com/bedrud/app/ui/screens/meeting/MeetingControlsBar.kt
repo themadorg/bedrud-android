@@ -74,7 +74,9 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.style.TextOverflow
 import com.bedrud.app.R
+import com.bedrud.app.core.appLocale
 import com.bedrud.app.core.audio.MeetingInputMode
+import com.bedrud.app.core.formatCount
 import com.bedrud.app.core.audio.MeetingVoiceAlert
 import com.bedrud.app.core.livekit.ConnectionState
 import com.bedrud.app.ui.components.LeftToRight
@@ -148,7 +150,7 @@ internal fun MeetingCallControlsRow(
                     icon = if (isScreenShareEnabled) Icons.AutoMirrored.Filled.StopScreenShare
                     else Icons.AutoMirrored.Filled.ScreenShare,
                     contentDescription = stringResource(R.string.meeting_contentDescription_toggleScreenShare),
-                    containerColor = if (isScreenShareEnabled) colors.buttonActive else colors.button,
+                    isActive = isScreenShareEnabled,
                 )
             }
         }
@@ -174,9 +176,15 @@ internal fun MeetingCallControlsRow(
                     onClick = onToggleChat,
                     icon = Icons.AutoMirrored.Filled.Chat,
                     contentDescription = stringResource(R.string.meeting_contentDescription_toggleChat),
-                    containerColor = if (showChat) colors.buttonActive else colors.button,
+                    isActive = showChat,
                     badge = if (unreadCount > 0) {
-                        if (unreadCount > 9) "9+" else unreadCount.toString()
+                        // In the app's own digits, so Persian and Arabic read «۹+» rather than "9+".
+                        val locale = appLocale()
+                        if (unreadCount > UnreadBadgeMax) {
+                            formatCount(UnreadBadgeMax, locale) + UnreadBadgeOverflow
+                        } else {
+                            formatCount(unreadCount, locale)
+                        }
                     } else {
                         null
                     },
@@ -242,7 +250,7 @@ private fun MicPill(
         else -> colors.buttonMediaOff
     }
     val contentColor = when {
-        transmitting -> colors.onButton
+        transmitting -> colors.onButtonActive
         isPushToTalk -> colors.onButtonVariant
         isMicEnabled -> colors.onButton
         else -> colors.onButtonMediaOff
@@ -537,6 +545,11 @@ private const val MicPillPressedScale = 0.96f
 /** One full turn, for the pill outline's corner arcs. */
 private const val TwoPi = (2.0 * PI).toFloat()
 
+/** The largest unread count the chat badge spells out; anything above reads as this plus [UnreadBadgeOverflow]. */
+private const val UnreadBadgeMax = 9
+
+private const val UnreadBadgeOverflow = "+"
+
 @Composable
 private fun PillContent(
     contentColor: Color,
@@ -693,9 +706,12 @@ private fun MeetCircleButton(
     onClick: () -> Unit,
     icon: ImageVector,
     contentDescription: String,
-    containerColor: Color,
+    isActive: Boolean,
     badge: String? = null,
 ) {
+    // The fill and the icon change together, so a lit button never keeps the unlit icon colour.
+    val containerColor = if (isActive) colors.buttonActive else colors.button
+    val contentColor = if (isActive) colors.onButtonActive else colors.onButton
     val button = @Composable {
         // The circle is 44dp by design, but the thing a finger aims at must still be the
         // accessibility floor: a 44dp clickable measured exactly 44dp, and a tap landing a few
@@ -731,7 +747,7 @@ private fun MeetCircleButton(
                     Icon(
                         imageVector = icon,
                         contentDescription = contentDescription,
-                        tint = colors.onButton,
+                        tint = contentColor,
                         modifier = Modifier.size(Dimens.meetingBarIconSm),
                     )
                 }
@@ -745,8 +761,12 @@ private fun MeetCircleButton(
         if (badge != null) {
             BadgedBox(
                 badge = {
-                    // A count alone in its dot, so its own digits are measured.
-                    Badge { Text(badge, modifier = Modifier.inkCentered(badge, LocalTextStyle.current)) }
+                    // The call's accent rather than Material's default error red: an unread count is
+                    // news, not a failure, and red here sat beside hang-up and the media-failure dot.
+                    Badge(containerColor = colors.accent, contentColor = colors.onAccent) {
+                        // A count alone in its dot, so its own digits are measured.
+                        Text(badge, modifier = Modifier.inkCentered(badge, LocalTextStyle.current))
+                    }
                 },
             ) {
                 button()

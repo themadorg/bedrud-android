@@ -39,6 +39,7 @@ import com.bedrud.app.ui.components.BedrudScaffoldContentInsets
 import com.bedrud.app.ui.components.InitialsAvatar
 import com.bedrud.app.core.instance.InstanceManager
 import com.bedrud.app.models.Instance
+import com.bedrud.app.ui.theme.OnInstanceColor
 import com.bedrud.app.ui.theme.parseInstanceColor
 import org.koin.compose.koinInject
 
@@ -122,7 +123,8 @@ private fun InstanceRow(
             InitialsAvatar(
                 name = instance.displayName,
                 textStyle = MaterialTheme.typography.titleSmall,
-                containerColor = parseInstanceColor(instance.iconColorHex)
+                containerColor = parseInstanceColor(instance.iconColorHex),
+                contentColor = OnInstanceColor,
             )
 
             Spacer(modifier = Modifier.width(12.dp))

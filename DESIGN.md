@@ -15,7 +15,7 @@ so there are no magic values scattered through screens.
 | `Color.kt`          | Reference palette — the raw rose/teal/neutral/red/amber tonal ramps                | Never read directly from UI             |
 | `Theme.kt`          | `BedrudTheme` + the light/dark `ColorScheme` role mapping (full M3 role set)       | UI reads `MaterialTheme.colorScheme.*`  |
 | `ExtendedColors.kt` | Non-M3 semantic colors (e.g. `warning`) via `LocalBedrudColors`                    | UI reads `MaterialTheme.bedrudColors.*` |
-| `Type.kt`           | `Typography` (M3 type scale) + RTL font families                                   | UI reads `MaterialTheme.typography.*`   |
+| `Type.kt`           | `Typography` (M3 type scale) + the one font family and its fallback chain          | UI reads `MaterialTheme.typography.*`   |
 | `Shape.kt`          | `BedrudShapes` (M3 scale) + `BedrudShapeTokens` (semantic: card/field/button/pill) | No raw `RoundedCornerShape(n.dp)`       |
 | `Dimens.kt`         | Spacing scale (4dp grid) + component sizes/heights/icon sizes                      | No raw `n.dp` for spacing/sizing        |
 | `Elevation.kt`      | Tonal elevation levels                                                             | Surfaces stay low (outline-first)       |
@@ -43,6 +43,15 @@ so any component that reaches for a role gets an on-brand value instead of an M3
 `dynamicColor` is **off** by default so the brand is preserved; Material You can be opted into per-call
 via `BedrudTheme(dynamicColor = true)`.
 
+**The system bars follow the app's appearance, not the phone's.** `enableEdgeToEdge()` on its own
+picks light or dark status-bar icons from the system's night mode, which the in-app Light/Dark
+setting overrides — so a Light app on a phone in Dark mode drew white icons over a white screen, and
+the reverse drew dark on dark. `MainActivity` re-applies it whenever the resolved theme changes,
+answering `SystemBarStyle.auto`'s dark-mode question with the app's own `darkTheme`. The navigation
+bar's backdrop below API 29, where the system draws no contrast scrim of its own, is
+`SystemBarLightScrim` / `SystemBarDarkScrim` in `Color.kt`: androidx's own defaults, spelled out only
+because the default cannot follow the app.
+
 ### Accessibility (non-negotiable)
 
 - **Color is never the only signal** — pair status with an icon, label, ring, or shape (e.g. a selected
@@ -54,9 +63,9 @@ via `BedrudTheme(dynamicColor = true)`.
 ## Typography (`Type.kt`)
 
 Material 3 type scale on **Vazirmatn, applied unconditionally** — the typeface is never selected
-from the interface language. It covers the Latin and Arabic scripts, which is every locale the app
-ships except Russian, Japanese and Chinese; those fall to the platform's fallback chain (see the
-end of this section, tracked in #118).
+from the interface language. It covers the Latin and Arabic scripts. Cyrillic and Greek come from a
+bundled cut of Roboto that Android falls back to letter by letter, and Japanese and Chinese from the
+platform (see the end of this section).
 
 The font used to be picked from `AppLanguage`: Persian got Shabnam, other RTL languages got
 Vazirmatn, everyone else got `FontFamily.SansSerif`. That confuses the language someone *reads*
@@ -72,12 +81,33 @@ axis rather than four files — which is also what Shabnam could not do: it was 
 upstream, and registered under four weights that all loaded the same Regular face, so Persian UI
 had no weight hierarchy at all.
 
-**The boundary.** Vazirmatn carries no Cyrillic, Greek or CJK, so Russian, Japanese and Chinese
-resolve through the platform's fallback chain. That is not a regression — those three resolved the
-same way before Vazirmatn became the base font — but it does mean the app draws a different
-typeface for them than for everyone else, and on a device whose owner has themed the system font
-it will not even be the same one twice. Verified rendering cleanly on a Samsung SM-S928B in all
-three; the open question is only whether to bundle a companion face. Tracked in #118.
+**Cyrillic and Greek: a bundled companion.** Vazirmatn carries neither, so Russian, and a Cyrillic
+or Greek name in any interface language, used to take whatever the platform fell back to: stock
+Roboto on one device, an owner's themed system font on the next. From API 29 the app builds its own
+fallback chain with `Typeface.CustomFallbackBuilder` — Vazirmatn, then
+`res/font/roboto_cyrillic_greek.ttf`, then the platform's `sans-serif` — and Android walks it per
+character, so mixed-script text takes each letter from the face that has it.
+
+- **Roboto, not Noto Sans.** Vazirmatn's Latin already is Roboto, so a Latin word inside Russian
+  text stays in one design, and a stock device draws Russian in the same design as before. Noto
+  Sans is a different design, and its variable file is four times the size of Roboto's.
+- **Cut down by [`tools/fonts/build-companion-font.sh`](tools/fonts/build-companion-font.sh)** from
+  Google Fonts' variable Roboto, pinned to one commit and checked against its hash: width fixed at
+  normal, weight limited to 400–700, and only Cyrillic, Cyrillic Supplement, Greek and the combining
+  marks Roboto has. The marks matter because Android keeps a mark in its letter's font only when
+  that font carries it; without them a stress mark on a Cyrillic vowel is drawn by Vazirmatn instead.
+  A rerun produces a byte-identical file. It is 109,404 bytes and adds 66,212 to the APK.
+- **Weights stay real.** Each of the scale's four weights is its own chain, with both fonts read at
+  the same `wght`. Handing Compose a single platform typeface through `FontFamily(Typeface)` does not
+  work: Compose returns that typeface unchanged for every weight it is asked for.
+- **Below API 29** Android offers no way to add an app font to the fallback chain, so Android 9 keeps
+  Vazirmatn alone and resolves Cyrillic and Greek through the platform, as before.
+- **Japanese and Chinese stay on the platform.** Google Fonts' variable Noto Sans is 9.6 MB for
+  Japanese and 17.8 MB for Simplified Chinese — too much for two locales in an APK this size. Those
+  two still take the device's own face, and follow a themed system font.
+- **Tested from both ends.** `TypeTest` checks the bundled file's coverage and weight axis in CI.
+  `TypeRenderTest` (instrumented, API 31+) asks Android's text shaper which font drew each glyph, at
+  which weight.
 
 **Rejected: keeping the platform sans for Latin.** `Typeface.CustomFallbackBuilder` (API 29+) can
 leave the system font drawing Latin and hand Vazirmatn only the Arabic-script runs, which would
@@ -124,14 +154,16 @@ search placeholder 8px below its own field, out of line with the icon beside it.
 `lineHeightStyle` of `Center`/`Trim.None` on the scale was measured too and changes nothing — it is
 already what these styles do.
 
-**`BedrudTextField` deliberately opts out.** Its placeholder is a `Text` that could be corrected, but
-the value the user types is drawn inside `OutlinedTextField` where no modifier reaches it. Correcting
-the reachable half would put the hint at a different height from the text that replaces it, which is
-worse than the fault being fixed. Both halves stay uncorrected so they agree with each other. The
-two fields built on `BasicTextField` — the custom server address and the chat composer — draw both
-halves themselves, so both are corrected, by the same amount. The app's `Snackbar` opts out for the
-same reason as `BedrudTextField`: Material draws its message and its action button, and neither can
-be reached.
+**`BedrudTextField` corrects its label and nothing else.** The label is a label like any other and
+takes `typeCentered` in its own current style; it never shares its place with typed text, because it
+rests inside the field only while the field is empty and unfocused, and floats to the outline first.
+The placeholder deliberately opts out. It is replaced in place by the value the user types, which is
+drawn inside `OutlinedTextField` where no modifier reaches it, so correcting only the placeholder would
+make the text jump on the first keystroke — worse than the fault being fixed. Placeholder and value
+both stay uncorrected so they agree with each other. The two fields built on `BasicTextField` — the
+custom server address and the chat composer — draw both halves themselves, so both are corrected, by
+the same amount. The app's `Snackbar` opts out for the same reason as the placeholder: Material draws
+its message and its action button, and neither can be reached.
 
 ## Shape (`Shape.kt`)
 
@@ -146,13 +178,70 @@ as two unrelated systems rather than one.
 4dp base grid (`space2…space56`). Layout: `screenPadding 24`, `screenPaddingCompact 16`,
 `maxContentWidth 480` (keeps forms readable on tablets/foldables). Components: `buttonHeight 48`,
 `buttonHeightLarge 56`, `fieldMinHeight 56`, `minTouchTarget 48`, `borderThin 1`, `borderStrong 2`,
-icon sizes `iconXs 16 · iconSm 18 · iconMd 24 · iconLg 32`, `avatar 40`, `brandMark 72`.
+icon sizes `iconXs 16 · iconSm 18 · iconMd 24 · iconLg 32`, `avatar 40`, `avatarXl 56`, `brandMark 72`.
+
+The tab pages (Settings, Profile, Admin) share one rhythm: the page is padded
+`screenPaddingCompact` all round and its cards sit `space16` apart, with no spacer before the first
+card or after the last. A card built from list items pads only its header (`cardPadding` on three
+sides, `space8` below) and leaves the rows alone, since `ListItem` carries its own 16dp inset —
+padding the whole card set its rows twice as far in as every other list. Dividers between those rows
+are inset `space16` and drawn between rows only.
+
+One size per role: an avatar in a list row is `avatar` (40, `InitialsAvatar`'s default), and only
+the profile card's own picture is `avatarXl`. An action icon in a list row is `iconMd`, the size of
+the chevron beside it; `iconSm` is for an icon inside a button. A mark beside a label, like the admin
+shield, is `iconXs`. A list's supporting line is `bodySmall`, a person's name in a list `bodyLarge`,
+and a sheet's title `titleMedium`.
+
+The account's details — its ID, sign-in method and role — are shown once, in Settings. The sign-in
+method is read through `signInMethodOf` (`core/auth/SignInMethod.kt`), never printed as the server
+stores it: the server calls an email-and-password account "local", which is not a word for anyone to
+read, so the app's two methods are named in the app's language and an identity provider by its own
+name.
+
+**Text sets a floor, not a height.** A container that holds text takes a minimum height —
+`heightIn(min = …)`, or the component's own `defaultMinSize` — never a fixed `height(…)`. Text grows
+with the reader's font-size setting, up to 2× since Android 14, and a fixed box clips it: the rooms
+search field, the full-width sign-in buttons and the poll answers all did. Text fields are the
+sharpest case: M3's field pads 16dp above and below its line, so the 48dp the search field was
+pinned to left its 20sp line 16dp and cut it before the font was even raised. A growing
+container also has to hold its size while its content changes: `BedrudTextField` keeps a
+single-line field's placeholder to one line, because a hint that wrapped made the empty field
+taller than the typed one, and everything under it jumped on the first keystroke. Keep fixed
+heights for what does not scale with the font (icons, handles, slider tracks), and check a text
+container at font scale 1.0, 1.5 and 2.0.
+
+**A field's direction pins its value, not its hint.** `BedrudTextField`'s `textDirection` exists for
+machine-shaped values — a link, an email, a room slug — which read left-to-right in every language.
+The placeholder takes the field's size but not that pin: it is written in the app's language, so it
+reads in that language's direction, as the label does. Pinned with the value, a Persian hint was laid
+out left-to-right and its closing "…" landed in front of its first word.
+
+**A field's hint and icon say what the field does.** The rooms dashboard's field joins the room
+named or linked in it and filters nothing, so it leads with a link icon and its hint asks for a room
+name or link (`dashboard_placeholder_joinRoom`). It used to carry a magnifier and a key named
+`…_search`, and its Persian hint had been translated as "search rooms".
 
 ## Elevation (`Elevation.kt`) & Motion (`Motion.kt`)
 
 Elevation is tonal and light — the app leans on outlines + tonal surfaces over shadows; most surfaces
 sit at level 0–1. Motion uses shared duration tokens (`durationShort/Medium/Long`) + `standardEasing`;
 drive `animate*AsState` with `tween(Motion.durationMedium, easing = Motion.standardEasing)`.
+
+**Swiping a room card** follows Material's own `SwipeToDismissBox` pattern and its list guidance: a
+single action at the end edge, committed by a full swipe — past half the card
+(`SwipeCommitFraction`), where the component's own default of 56dp let a short sideways drag while
+scrolling commit. The action's panel is there from the first pixel of the swipe in a neutral tone and eases into the
+action's colour over `Motion.durationShort` once letting go would commit, with one
+`GestureThresholdActivate` haptic tick at that moment. An action that asks first (Delete) keeps its
+card swiped out, its panel showing, while the dialog is open and while the delete is on its way;
+Cancel, or a refused delete, slides the card back, and a completed one removes it. The card used to
+fly off, come back behind the dialog, and leave the question about a card that was already in place.
+
+A swipe is never the only way to its action, as Material's list accessibility guidance requires.
+**Long-pressing a card** opens its menu (`RoomCardMenu`) with the same action — Delete, in the
+error colour, on your own rooms, beside Settings; Remove on a recent — and TalkBack offers each
+menu item as a custom action on the card.
 
 ## Disabled state (`Alpha.kt`)
 
@@ -163,12 +252,39 @@ sign-in method — M3's own answer is the normal colors at reduced opacity, so a
 enough on its own: that is also what an unselected-but-selectable element looks like, so the
 disabled state reads as merely deselected.
 
+The same holds for the app's own text beside a disabled M3 control: a locked row in the room
+settings form keeps its label colour and takes `Alpha.disabled`, so it dims with its switch rather
+than standing at full strength beside a greyed-out one.
+
 ## Components (`ui/components/`)
 
 - **`BedrudButton`** — 6 variants (PRIMARY, SECONDARY, TONAL, OUTLINE, GHOST, DESTRUCTIVE). Token-driven height
-  (`defaultMinSize(buttonHeight)`, so callers can grow it, e.g. `height(buttonHeightLarge)` for a full CTA),
-  shape (`BedrudShapeTokens.button`), and padding. Built-in `loading` state.
+  (`defaultMinSize(buttonHeight)`, so callers can grow it, e.g. `heightIn(min = buttonHeightLarge)` for a full CTA),
+  shape (`BedrudShapeTokens.button`), and padding — `space24` across, `space8` above and below; the
+  vertical half only shows once a label outgrows the minimum height, and keeps a wrapped label off
+  the edges. Built-in `loading` state.
+  Every button in the app is a `BedrudButton`, in the call as much as outside it — the call's accent
+  *is* `colorScheme.primary`, so the call needs no button of its own. Two stay Material's
+  `TextButton`, each for a reason the ghost variant cannot meet, and each still takes
+  `BedrudShapeTokens.button` so it presses with the same corners: the sign-in hub's "Sign up", which
+  finishes the prompt beside it and would drift from it at the ghost's padding; and the "Forgot
+  password?" link, flush with the field's edge above it. Profile's "Sign out" is the ghost variant,
+  not the error colour: signing out is neither an error nor irreversible.
 - **`BedrudCard` / `BedrudOutlinedCard`** — outline-first cards, tonal surface, minimal elevation.
+  `BedrudOutlinedCard`'s corners default to `BedrudShapeTokens.card`, the one card radius in the
+  app; a card never passes its own. The default used to be 12dp while every caller but one passed
+  16dp, so the one that did not (the admin stat card) sat with smaller corners beside the rest.
+- **`BedrudBadge`** — a short label in a `pill` on `tertiaryContainer` beside what it describes:
+  "Recommended" on a server choice, "Admin" beside a name. One badge wherever a label like that
+  appears.
+- **Menus** — anything that drops open (the chat's two menus, the settings language picker) wears
+  the same chrome: `BedrudShapeTokens.card` corners, `surfaceContainerHigh`, `Elevation.level2`
+  tonal and `Elevation.level3` shadow. Material's default menu is a 4dp, flatter surface, which
+  read as a different kind of thing from the menus next to it.
+- **Pressable rows and cards clip before they click.** `.clip(shape)` goes before `.clickable` or
+  `.selectable`, so the press ripple keeps the element's corners instead of flashing as a
+  rectangle past them — the room cards, the server chooser's cards and the server switcher's rows
+  all do it.
 - **`BedrudCompactTopBar`** — compact status-bar-aware header. Takes either a `title: String` or a
   slot `title` composable (the rooms header uses the slot for its "{server} rooms" name, in a single
   neutral tone, with a trailing chevron marking it as the server switcher's entry point), plus an
@@ -178,12 +294,53 @@ disabled state reads as merely deselected.
 - **Selectable cards** (e.g. the server chooser) — a `selectableGroup()` of `Surface`s marked
   `selectable(role = RadioButton)`, selection shown by a radio **and** a primary border.
 - **Per-server color** — `parseInstanceColor("#RRGGBB")` in `ui/theme/InstanceColor.kt` is the single
-  source of truth for an instance's accent color (server header, profile row, and each rooms card's
-  leading stripe + colored "on {server}" tag).
-- **Rooms cards** — an outlined card with a per-server accent stripe on the leading edge; swiped left
+  source of truth for an instance's accent color (the sign-in server header, the profile's server
+  row and the server switcher). The initial on it is always `OnInstanceColor`, a dark tone: every
+  server color is a mid-tone, and white fell to 2.2:1 on the lightest of them while dark clears
+  4.5:1 on all (`InstanceColorTest`). A person's avatar, by contrast, stands on a theme role, and
+  `InitialsAvatar` defaults its initial to that role's own on-colour.
+- **Rooms cards** — an outlined card; swiped toward its start edge
   (M3 `SwipeToDismissBox`) for a contextual action — **Remove** a recent from local history (instant),
-  or **Delete** a room you own (routed through a confirm dialog).
+  or **Delete** a room you own (routed through a confirm dialog). The room name is pinned left-to-right
+  so a slug's dashes keep their order, but it is laid out at its own width rather than filling the
+  row: an LTR paragraph that fills the row aligns to its own left edge, whereas one at its own width
+  is placed by the column, at the layout's start — the right edge in Persian and Arabic. The trailing
+  chevron is the auto-mirrored `NavigateNext` for the same reason. The name and its status line sit
+  `space4` apart, since the card's fixed height would otherwise push all its spare room above and
+  below them.
 - **`DevOnly` / `DevHintBadge`** — see below.
+
+## Dialogs
+
+Every alert dialog is Material's `AlertDialog` with its own shape, colour, title and body styles
+untouched, and the same two buttons:
+
+- **Confirm** — `BedrudButton`, `DESTRUCTIVE` when the action cannot be taken back (delete a room,
+  remove a participant), `TONAL` otherwise (create, save, switch server).
+- **Cancel** — `BedrudButton` `GHOST`. Never Material's `TextButton` directly: that is a 40dp pill
+  beside a 48dp, `BedrudShapeTokens.button` confirm, so the pair disagreed on height, corners and
+  padding.
+
+`ConfirmDialog` is that dialog for a title and a one-line message, with the confirm variant as a
+parameter; anything with its own content — the create-room field, the room settings switches — is a
+bespoke `AlertDialog` built from the same two buttons. A body that can outgrow the dialog (a field
+with its error, a list of switch rows) scrolls, since the keyboard, landscape or a large font size leave it
+little room. A field's error belongs to the field: `isError` plus `supportingText`, as on the sign-in
+forms, not a separate line under it. The input's action key runs the confirm.
+
+**An action that hurts someone else or cannot be taken back asks first**, through `ConfirmDialog`:
+deleting a room (dashboard and admin), kicking and banning in a call, and in admin banning a user and
+deleting an invite token. The message names what it acts on — the room, the person — so a stray
+tap on the wrong row is caught by reading it. What only restores something or touches this device
+alone stays one tap: unbanning, removing a recent from local history. A dialog whose save goes to
+the server holds still while it does, as the create-room dialog does: the confirm shows its spinner
+and takes no more taps, and neither Cancel nor the scrim can close it, so a double tap cannot send
+the change twice.
+
+The chat image viewer is a full-screen `Dialog` rather than an alert, drawn on `colorScheme.scrim` at
+`Alpha.lightboxScrim`, with its controls in `bedrudColors.onScrim` — the scrim is black in both themes,
+so what sits on it is white in both — and its notice in the inverse pair a snackbar uses, with a
+snackbar's `BedrudShapeTokens.snackbar` corners.
 
 ## Bottom sheets (`BedrudBottomSheet`)
 
@@ -229,7 +386,18 @@ surface, give it an explicit colour with real contrast.
 ## Meeting chrome
 
 The in-call screen has its own chrome standard (palette via `meetingChromeColors()`, metrics under
-the `meeting*` tokens in `Dimens.kt`, timing in `Motion.meetingChromeAutoHideDelayMs`):
+the `meeting*` tokens in `Dimens.kt`, timing in `Motion.meetingChromeAutoHideDelayMs`).
+
+**Every fill in the palette comes with the content colour Material pairs with it**, and a control
+that changes fill changes its content colour in the same step. A lit button — screen share or chat
+while open, push-to-talk while held — fills with `buttonActive` (secondary) and draws its icon in
+`onButtonActive` (onSecondary). It used to keep `onButton`, the unlit colour, which measured 1.7:1
+on the lit fill in dark theme; `MeetingChromeTest` holds every pair in the palette to 3:1 in both
+themes. The unread count on the chat button is the call's `accent`, not Material's default error
+red: a new message is news, and red there sat beside hang-up and the media-failure dot. The same
+goes for the reconnecting dot in the top bar, which is the warning role like the mic pill's
+reconnecting ring — one state, one colour. Hairlines inside the call's menus and sheets use
+`divider`, never `outlineVariant` (see the raised-surface trap above).
 
 - **Top bar** (`MeetingTopBar`): invite/participants entry at the start; the room name centered,
   with a reconnecting dot when applicable; camera flip (**only while the local camera is live**) and audio output at
@@ -565,6 +733,15 @@ the `meeting*` tokens in `Dimens.kt`, timing in `Motion.meetingChromeAutoHideDel
   cause; the reach check needs at least one remote participant, since an empty room has no reason
   to report a speaker and no one to miss you.
 
+  Whether you are talking at all is judged against **your own microphone**, not a fixed level:
+  `SpeechLevelTracker` takes the lowest level of the last two seconds as the room's floor, keeps
+  one floor for muted capture and one for live, and counts a level 9 dB above it as speech. The
+  same answer drives the speaking bridge on your own tile, so the tile and the ring never disagree
+  about it. The reach check is stricter, because the server names a speaker only above a fixed
+  level of its own (`VoiceReachMonitor.RoomSpeakerLevel`, LiveKit's default `active_level`): the
+  room is blamed only for speech loud enough that it would have reported it. A quiet voice still
+  gets "muted", but never "the room can't hear you".
+
   Both states share the colour because they are the same news, so **motion carries the cause**: a
   reconnect sends a single arc travelling around the outline (a dashed stroke whose phase moves,
   which follows the pill's rounded corners where a rotated gradient would squash them), while
@@ -651,6 +828,30 @@ zh) — **not** inline in composables. Every string must be translated in all lo
 lint fails CI on `MissingTranslation`, so shipping English-only is not an option. RTL is fully supported:
 `LocaleHelper` and `BedrudTheme` set the layout direction from the active `AppLanguage`, while the
 typeface does not vary by locale at all — see [Typography](#typography-typekt).
+
+**Which language, and when.** A first run follows the device, because nothing has been picked yet and
+`AppLanguage.SYSTEM` is the default; a pick in Settings holds from that moment on, and picking System
+again hands the choice back to the device. The device's language is read from
+`Resources.getSystem()` (`deviceLocale()` in `LocaleHelper`), never from `Locale.getDefault()`:
+applying a language overwrites that default, so after one pick "System" used to keep answering with
+the language just left behind until the process died. Each of the app's own components gets the same
+wrapping in its `attachBaseContext` — the application, `MainActivity`, and the two call services
+(`CallService`, `CallConnectionService`) — because the system hands each its own context in the
+device's language; without it the call notification spoke the device's language inside a Persian
+app. The QR scanner is ZXing's `CaptureActivity`, a library screen that is not wrapped, so its own
+prompt follows the device. The System entry is the one language-picker label drawn from
+`strings.xml`; every other entry is the language's own name in its own script.
+
+**Numbers are written in the language's own digits** — `۱۲` in Persian — wherever they are
+something to read rather than something to copy. A number inside a sentence goes through its string
+resource as a number (`%1$d`, or a `<plurals>` when a word agrees with it), which the resources
+format in the app's language; one standing alone — a badge, a reaction tally, a stat, a poll share —
+goes through `formatCount` / `formatPercent` in `core/LocalizedNumbers.kt`. `toString()` and string
+templates are what left these in Latin digits, and a `"$value%"` template also gets the sign wrong
+wherever it moves (`%25` in Turkish, `25 %` in French, `۲۵٪` in Persian). Machine-shaped text keeps
+Latin digits in every language: room slugs, IDs, server addresses, the app version, invite tokens and
+an HTTP status code in an error, which is formatted with `Locale.ROOT` because people search for and
+report it as it is.
 
 **What does not mirror.** Mirroring is for what follows the reading direction: rows of content,
 arrows that point where navigation goes (back, a card's chevron), sign-out's arrow out. Two things

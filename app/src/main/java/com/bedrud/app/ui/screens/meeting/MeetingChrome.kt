@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.GraphicEq
+import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -50,6 +51,7 @@ data class MeetingChromeColors(
     val bar: Color,
     val button: Color,
     val buttonActive: Color,
+    val onButtonActive: Color,
     val buttonMediaOff: Color,
     val onButtonMediaOff: Color,
     val onButton: Color,
@@ -97,13 +99,16 @@ fun MeetingBarSurface(
     )
 }
 
-@Composable
-fun meetingChromeColors(): MeetingChromeColors {
-    val scheme = MaterialTheme.colorScheme
-    return MeetingChromeColors(
+/**
+ * Maps [scheme]'s roles onto the chrome palette. Every fill is paired with the on-role Material
+ * defines for it, so an icon never keeps the colour of a fill it is no longer drawn on.
+ */
+internal fun meetingChromeColors(scheme: ColorScheme): MeetingChromeColors =
+    MeetingChromeColors(
         bar = scheme.surfaceContainerHigh,
         button = scheme.surfaceVariant,
         buttonActive = scheme.secondary,
+        onButtonActive = scheme.onSecondary,
         buttonMediaOff = scheme.surfaceContainerHighest,
         onButtonMediaOff = scheme.onSurfaceVariant,
         onButton = scheme.onSurface,
@@ -117,7 +122,9 @@ fun meetingChromeColors(): MeetingChromeColors {
         endCall = scheme.error,
         onEndCall = scheme.onError,
     )
-}
+
+@Composable
+fun meetingChromeColors(): MeetingChromeColors = meetingChromeColors(MaterialTheme.colorScheme)
 
 /**
  * The room-hears-you ring, drawn inside [shape] on any surface that stands for a participant.

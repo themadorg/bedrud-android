@@ -35,6 +35,7 @@ import com.bedrud.app.core.livekit.ConnectionState
 import com.bedrud.app.ui.components.DevOnly
 import com.bedrud.app.ui.components.LeftToRight
 import com.bedrud.app.ui.theme.Dimens
+import com.bedrud.app.ui.theme.bedrudColors
 import com.bedrud.app.ui.theme.typeCentered
 
 /**
@@ -181,7 +182,8 @@ private fun ReconnectingDot() {
         modifier = Modifier
             .size(Dimens.meetingIndicatorDot)
             .clip(CircleShape)
-            .background(MaterialTheme.colorScheme.tertiary)
+            // The warning role, like the mic pill's reconnecting ring: one state, one colour.
+            .background(MaterialTheme.bedrudColors.warning)
             .semantics { contentDescription = description },
     )
 }
