@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -24,6 +25,7 @@ import com.bedrud.app.ui.components.BedrudSheetTitle
 import com.bedrud.app.ui.components.RoomSettingsForm
 import com.bedrud.app.ui.components.withFormEdits
 import com.bedrud.app.ui.theme.Dimens
+import com.bedrud.app.ui.theme.typeCentered
 import kotlinx.coroutines.launch
 
 // In-room mirror of RoomSettingsDialog (dashboard) — same room-level toggles, same
@@ -91,7 +93,11 @@ fun MeetingRoomSettingsSheet(
                 .fillMaxWidth()
                 .padding(top = Dimens.space4),
         ) {
-            Text(stringResource(R.string.common_button_save))
+            val labelStyle = LocalTextStyle.current
+            Text(
+                stringResource(R.string.common_button_save),
+                modifier = Modifier.typeCentered(labelStyle),
+            )
         }
     }
 }

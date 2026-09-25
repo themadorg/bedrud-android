@@ -54,6 +54,8 @@ import com.bedrud.app.ui.components.BedrudTextField
 import com.bedrud.app.ui.theme.BedrudShapeTokens
 import com.bedrud.app.ui.theme.Alpha
 import com.bedrud.app.ui.theme.Dimens
+import com.bedrud.app.ui.theme.inkCentered
+import com.bedrud.app.ui.theme.typeCentered
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 
@@ -287,18 +289,24 @@ fun LoginScreen(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.Center
         ) {
+            // The prompt and the button's label are corrected together: correcting only the label
+            // moved it below the prompt it completes.
+            val promptStyle = MaterialTheme.typography.bodyMedium
             Text(
                 text = stringResource(R.string.auth_prompt_noAccount),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                style = promptStyle,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.typeCentered(promptStyle)
             )
             TextButton(
                 onClick = onNavigateToRegister,
                 enabled = !isBusy && registrationEnabled
             ) {
+                val signUpStyle = MaterialTheme.typography.labelLarge
                 Text(
                     text = stringResource(R.string.auth_button_signUp),
-                    style = MaterialTheme.typography.labelLarge
+                    style = signUpStyle,
+                    modifier = Modifier.typeCentered(signUpStyle),
                 )
             }
         }
@@ -365,11 +373,17 @@ private fun OrDivider() {
         verticalAlignment = Alignment.CenterVertically
     ) {
         HorizontalDivider(modifier = Modifier.weight(1f))
+        // One short word alone between two rules, so its own ink is measured: a capital's centre
+        // would put a lowercase "or" visibly below the line.
+        val dividerWord = stringResource(R.string.auth_divider_or)
+        val dividerStyle = MaterialTheme.typography.bodySmall
         Text(
-            text = stringResource(R.string.auth_divider_or),
-            style = MaterialTheme.typography.bodySmall,
+            text = dividerWord,
+            style = dividerStyle,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(horizontal = Dimens.space16)
+            modifier = Modifier
+                .padding(horizontal = Dimens.space16)
+                .inkCentered(dividerWord, dividerStyle)
         )
         HorizontalDivider(modifier = Modifier.weight(1f))
     }

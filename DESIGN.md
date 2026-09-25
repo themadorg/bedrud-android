@@ -76,7 +76,7 @@ had no weight hierarchy at all.
 resolve through the platform's fallback chain. That is not a regression — those three resolved the
 same way before Vazirmatn became the base font — but it does mean the app draws a different
 typeface for them than for everyone else, and on a device whose owner has themed the system font
-it will not even be the same one twice. Verified rendering cleanly on a Samsung SM-S928B in all
+it will not even be the same one twice. Verified rendering cleanly on a physical device in all
 three; the open question is only whether to bundle a companion face. Tracked in #118.
 
 **Rejected: keeping the platform sans for Latin.** `Typeface.CustomFallbackBuilder` (API 29+) can
@@ -85,6 +85,53 @@ respect an owner's themed system font. It was turned down because it reintroduce
 change removed — text whose typeface depends on where it happens to be rendered — and because a
 design system that pins spacing, shape, elevation and colour has no reason to leave the typeface
 to the OEM. Revisit only if themed-font users complain.
+
+### Centring text on its letters (`TextInk.kt`)
+
+Centring a `Text` centres the box its font asks for, and Vazirmatn's box is a poor stand-in for the
+letters inside it: its ascent reserves room for Arabic marks and its descent for Persian tails, so a
+Latin capital, a digit or an emoji sits **0.156em above the box's centre**. Roboto's equivalent error
+is 0.014em — a fraction of a pixel, which is why "centre the layout box" is the usual advice and why
+it is usually right. Ours is eleven times that: measured 4px on the dashboard's Join button.
+
+Three forms correct it, and which one a site uses is not a matter of taste:
+
+| | when | why |
+|---|---|---|
+| `Modifier.typeCentered(style)` | **one line** of text centred against something that is **not text** — a button label in its fixed-height container, a navigation label under its icon, a chip's or a badge's label, a list item's line beside its switch, a top bar's title beside its actions, a label paired with an icon | one number per text style, so peer labels keep a shared baseline |
+| `Modifier.typeCentered(firstLine, lastLine)` | **a block of lines centred as one** — a title over its supporting line beside an icon or avatar. The same call goes on every line of the block, or once on the column holding them | only the room above the first line's capitals and below the last line's baseline decide where the block's letters sit. Correcting each line by its own style adds together corrections that should partly cancel: 22sp over 14sp on the profile card measured 4px low that way, 0.5px as a block |
+| `Modifier.inkCentered(text, style)` | **one glyph or short word alone in a shape** — an avatar's initial, a reaction's emoji, the `!` in an error dot, a count in a badge, the "or" between two rules | that string's own ink is the whole of what must look centred, and it may be nothing like a capital |
+
+**`typeCentered` must be applied to every such site, not the convenient ones.** Its only real risk is
+partiality: a corrected `BedrudButton` label measured 5px below the plain `TextButton` beside it in
+the same dialog — two controls that had agreed with each other until one of them was improved. The
+sign-in screen's "No account yet?" sat 5px above the "Sign Up" beside it for the same reason, until
+the prompt was corrected along with the button.
+
+**A line with a shape beside it inside a block** — the profile card's name and its admin badge — moves
+with the block, and the shape is raised by that line's own correction to meet its letters, rather
+than the line lowered to meet the shape. Lowering the line would move it out of the block.
+
+**Never `inkCentered` on text with text beside it.** The per-string correction depends on the string:
+a word with a descender has its ink centre lower and asks for less of one. Applied to the bottom
+navigation it put "Settings" 4px off the baseline "Rooms" and "Profile" sat on.
+
+**Rejected: putting the correction on the type scale.** A `BaselineShift` on every style in
+`Type.kt` would need no call sites at all, and it was measured and turned down. It moves ink inside a
+box each container has already placed, so every container compensates differently: it aligned a
+dialog's two buttons, corrected only a quarter of the navigation's error, and pushed the dashboard's
+search placeholder 8px below its own field, out of line with the icon beside it. A
+`lineHeightStyle` of `Center`/`Trim.None` on the scale was measured too and changes nothing — it is
+already what these styles do.
+
+**`BedrudTextField` deliberately opts out.** Its placeholder is a `Text` that could be corrected, but
+the value the user types is drawn inside `OutlinedTextField` where no modifier reaches it. Correcting
+the reachable half would put the hint at a different height from the text that replaces it, which is
+worse than the fault being fixed. Both halves stay uncorrected so they agree with each other. The
+two fields built on `BasicTextField` — the custom server address and the chat composer — draw both
+halves themselves, so both are corrected, by the same amount. The app's `Snackbar` opts out for the
+same reason as `BedrudTextField`: Material draws its message and its action button, and neither can
+be reached.
 
 ## Shape (`Shape.kt`)
 

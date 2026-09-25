@@ -18,6 +18,7 @@ import androidx.compose.ui.unit.dp
 import com.bedrud.app.core.DevFlags
 import com.bedrud.app.ui.theme.BedrudShapeTokens
 import com.bedrud.app.ui.theme.Dimens
+import com.bedrud.app.ui.theme.typeCentered
 
 /**
  * Renders [content] only on dev/debug builds (gated by [DevFlags.hintsEnabled]); a no-op on
@@ -55,7 +56,9 @@ fun DevHintBadge(
                     modifier = Modifier.size(Dimens.iconXs),
                 )
                 Spacer(Modifier.width(Dimens.space4))
-                Text(text, style = MaterialTheme.typography.labelSmall)
+                // Centred against the icon beside it, not against other text.
+                val labelStyle = MaterialTheme.typography.labelSmall
+                Text(text, style = labelStyle, modifier = Modifier.typeCentered(labelStyle))
             }
         }
     }

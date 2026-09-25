@@ -27,6 +27,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import com.bedrud.app.ui.theme.Alpha
 import com.bedrud.app.ui.theme.BedrudShapeTokens
 import com.bedrud.app.ui.theme.Dimens
+import com.bedrud.app.ui.theme.typeCentered
 
 /**
  * The app's bottom sheet. Every sheet in the app is one of these.
@@ -146,17 +147,27 @@ fun BedrudSheetActionRow(
                 tint = contentColor,
                 modifier = Modifier.size(Dimens.iconMd),
             )
-            Column(modifier = Modifier.weight(1f)) {
+            // The title and its supporting line are centred on the icon as one block.
+            val titleStyle = MaterialTheme.typography.bodyLarge
+            val supportingStyle = MaterialTheme.typography.bodyMedium
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .typeCentered(
+                        firstLine = titleStyle,
+                        lastLine = if (supportingText != null) supportingStyle else titleStyle,
+                    ),
+            ) {
                 Text(
                     text = title,
                     color = contentColor,
-                    style = MaterialTheme.typography.bodyLarge,
+                    style = titleStyle,
                 )
                 if (supportingText != null) {
                     Text(
                         text = supportingText,
                         color = supportingColor,
-                        style = MaterialTheme.typography.bodyMedium,
+                        style = supportingStyle,
                     )
                 }
             }

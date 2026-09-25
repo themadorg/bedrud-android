@@ -1,6 +1,7 @@
 package com.bedrud.app.ui.screens.dashboard
 
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -8,6 +9,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import com.bedrud.app.R
 import com.bedrud.app.models.RoomSettings
@@ -16,6 +18,7 @@ import com.bedrud.app.ui.components.BedrudButton
 import com.bedrud.app.ui.components.BedrudButtonVariant
 import com.bedrud.app.ui.components.RoomSettingsForm
 import com.bedrud.app.ui.components.withFormEdits
+import com.bedrud.app.ui.theme.typeCentered
 
 @Composable
 fun RoomSettingsDialog(
@@ -50,7 +53,13 @@ fun RoomSettingsDialog(
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.common_button_cancel))
+                // Corrected like the BedrudButton beside it, or the two labels in this dialog sit
+                // at different heights.
+                val labelStyle = LocalTextStyle.current
+                Text(
+                    stringResource(R.string.common_button_cancel),
+                    modifier = Modifier.typeCentered(labelStyle),
+                )
             }
         }
     )

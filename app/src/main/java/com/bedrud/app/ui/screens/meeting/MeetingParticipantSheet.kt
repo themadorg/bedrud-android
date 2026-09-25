@@ -41,6 +41,7 @@ import com.bedrud.app.ui.components.ConfirmDialog
 import com.bedrud.app.ui.components.DevHintBadge
 import com.bedrud.app.ui.components.DevOnly
 import com.bedrud.app.ui.theme.Dimens
+import com.bedrud.app.ui.theme.typeCentered
 import kotlinx.coroutines.launch
 
 /**
@@ -114,10 +115,12 @@ fun MeetingParticipantSheet(
                     tint = colors.onButtonVariant,
                     modifier = Modifier.size(Dimens.iconSm),
                 )
+                val noteStyle = MaterialTheme.typography.bodySmall
                 Text(
                     text = stringResource(R.string.meeting_participant_deafened),
-                    style = MaterialTheme.typography.bodySmall,
+                    style = noteStyle,
                     color = colors.onButtonVariant,
+                    modifier = Modifier.typeCentered(noteStyle),
                 )
             }
         }
