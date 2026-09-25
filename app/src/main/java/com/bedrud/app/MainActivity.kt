@@ -4,10 +4,12 @@ import android.app.PictureInPictureParams
 import android.content.Context
 import android.content.Intent
 import android.content.res.Configuration
+import android.graphics.Color
 import android.os.Build
 import android.os.Bundle
 import android.util.Rational
 import androidx.activity.ComponentActivity
+import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -15,10 +17,12 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.toArgb
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -42,6 +46,8 @@ import com.bedrud.app.ui.screens.meeting.MeetingScreen
 import com.bedrud.app.ui.screens.settings.AppAppearance
 import com.bedrud.app.ui.screens.settings.SettingsStore
 import com.bedrud.app.ui.theme.BedrudTheme
+import com.bedrud.app.ui.theme.SystemBarDarkScrim
+import com.bedrud.app.ui.theme.SystemBarLightScrim
 import kotlinx.coroutines.flow.MutableStateFlow
 import org.koin.android.ext.android.inject
 import org.koin.compose.koinInject
@@ -102,6 +108,24 @@ class MainActivity : ComponentActivity() {
                 AppAppearance.LIGHT -> false
                 AppAppearance.DARK -> true
                 AppAppearance.SYSTEM -> isSystemInDarkTheme()
+            }
+
+            // enableEdgeToEdge's default picks light or dark bar icons from the system's night mode,
+            // which the in-app appearance setting overrides. Left alone, a Light app on a phone in
+            // Dark mode drew white status icons over a white screen, and the reverse drew dark on
+            // dark. Re-applying it whenever the resolved theme changes keeps the bars in step.
+            DisposableEffect(darkTheme) {
+                enableEdgeToEdge(
+                    statusBarStyle = SystemBarStyle.auto(
+                        Color.TRANSPARENT,
+                        Color.TRANSPARENT,
+                    ) { darkTheme },
+                    navigationBarStyle = SystemBarStyle.auto(
+                        SystemBarLightScrim.toArgb(),
+                        SystemBarDarkScrim.toArgb(),
+                    ) { darkTheme },
+                )
+                onDispose {}
             }
 
             val language by settingsStore.language.collectAsState()
