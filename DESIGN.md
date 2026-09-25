@@ -15,7 +15,7 @@ so there are no magic values scattered through screens.
 | `Color.kt`          | Reference palette — the raw rose/teal/neutral/red/amber tonal ramps                | Never read directly from UI             |
 | `Theme.kt`          | `BedrudTheme` + the light/dark `ColorScheme` role mapping (full M3 role set)       | UI reads `MaterialTheme.colorScheme.*`  |
 | `ExtendedColors.kt` | Non-M3 semantic colors (e.g. `warning`) via `LocalBedrudColors`                    | UI reads `MaterialTheme.bedrudColors.*` |
-| `Type.kt`           | `Typography` (M3 type scale) + RTL font families                                   | UI reads `MaterialTheme.typography.*`   |
+| `Type.kt`           | `Typography` (M3 type scale) + the one font family and its fallback chain          | UI reads `MaterialTheme.typography.*`   |
 | `Shape.kt`          | `BedrudShapes` (M3 scale) + `BedrudShapeTokens` (semantic: card/field/button/pill) | No raw `RoundedCornerShape(n.dp)`       |
 | `Dimens.kt`         | Spacing scale (4dp grid) + component sizes/heights/icon sizes                      | No raw `n.dp` for spacing/sizing        |
 | `Elevation.kt`      | Tonal elevation levels                                                             | Surfaces stay low (outline-first)       |
@@ -54,9 +54,9 @@ via `BedrudTheme(dynamicColor = true)`.
 ## Typography (`Type.kt`)
 
 Material 3 type scale on **Vazirmatn, applied unconditionally** — the typeface is never selected
-from the interface language. It covers the Latin and Arabic scripts, which is every locale the app
-ships except Russian, Japanese and Chinese; those fall to the platform's fallback chain (see the
-end of this section, tracked in #118).
+from the interface language. It covers the Latin and Arabic scripts. Cyrillic and Greek come from a
+bundled cut of Roboto that Android falls back to letter by letter, and Japanese and Chinese from the
+platform (see the end of this section).
 
 The font used to be picked from `AppLanguage`: Persian got Shabnam, other RTL languages got
 Vazirmatn, everyone else got `FontFamily.SansSerif`. That confuses the language someone *reads*
@@ -72,12 +72,33 @@ axis rather than four files — which is also what Shabnam could not do: it was 
 upstream, and registered under four weights that all loaded the same Regular face, so Persian UI
 had no weight hierarchy at all.
 
-**The boundary.** Vazirmatn carries no Cyrillic, Greek or CJK, so Russian, Japanese and Chinese
-resolve through the platform's fallback chain. That is not a regression — those three resolved the
-same way before Vazirmatn became the base font — but it does mean the app draws a different
-typeface for them than for everyone else, and on a device whose owner has themed the system font
-it will not even be the same one twice. Verified rendering cleanly on a physical device in all
-three; the open question is only whether to bundle a companion face. Tracked in #118.
+**Cyrillic and Greek: a bundled companion.** Vazirmatn carries neither, so Russian, and a Cyrillic
+or Greek name in any interface language, used to take whatever the platform fell back to: stock
+Roboto on one device, an owner's themed system font on the next. From API 29 the app builds its own
+fallback chain with `Typeface.CustomFallbackBuilder` — Vazirmatn, then
+`res/font/roboto_cyrillic_greek.ttf`, then the platform's `sans-serif` — and Android walks it per
+character, so mixed-script text takes each letter from the face that has it.
+
+- **Roboto, not Noto Sans.** Vazirmatn's Latin already is Roboto, so a Latin word inside Russian
+  text stays in one design, and a stock device draws Russian in the same design as before. Noto
+  Sans is a different design, and its variable file is four times the size of Roboto's.
+- **Cut down by [`tools/fonts/build-companion-font.sh`](tools/fonts/build-companion-font.sh)** from
+  Google Fonts' variable Roboto, pinned to one commit and checked against its hash: width fixed at
+  normal, weight limited to 400–700, and only Cyrillic, Cyrillic Supplement, Greek and the combining
+  marks Roboto has. The marks matter because Android keeps a mark in its letter's font only when
+  that font carries it; without them a stress mark on a Cyrillic vowel is drawn by Vazirmatn instead.
+  A rerun produces a byte-identical file. It is 109,404 bytes and adds 66,212 to the APK.
+- **Weights stay real.** Each of the scale's four weights is its own chain, with both fonts read at
+  the same `wght`. Handing Compose a single platform typeface through `FontFamily(Typeface)` does not
+  work: Compose returns that typeface unchanged for every weight it is asked for.
+- **Below API 29** Android offers no way to add an app font to the fallback chain, so Android 9 keeps
+  Vazirmatn alone and resolves Cyrillic and Greek through the platform, as before.
+- **Japanese and Chinese stay on the platform.** Google Fonts' variable Noto Sans is 9.6 MB for
+  Japanese and 17.8 MB for Simplified Chinese — too much for two locales in an APK this size. Those
+  two still take the device's own face, and follow a themed system font.
+- **Tested from both ends.** `TypeTest` checks the bundled file's coverage and weight axis in CI.
+  `TypeRenderTest` (instrumented, API 31+) asks Android's text shaper which font drew each glyph, at
+  which weight.
 
 **Rejected: keeping the platform sans for Latin.** `Typeface.CustomFallbackBuilder` (API 29+) can
 leave the system font drawing Latin and hand Vazirmatn only the Arabic-script runs, which would
@@ -85,6 +106,53 @@ respect an owner's themed system font. It was turned down because it reintroduce
 change removed — text whose typeface depends on where it happens to be rendered — and because a
 design system that pins spacing, shape, elevation and colour has no reason to leave the typeface
 to the OEM. Revisit only if themed-font users complain.
+
+### Centring text on its letters (`TextInk.kt`)
+
+Centring a `Text` centres the box its font asks for, and Vazirmatn's box is a poor stand-in for the
+letters inside it: its ascent reserves room for Arabic marks and its descent for Persian tails, so a
+Latin capital, a digit or an emoji sits **0.156em above the box's centre**. Roboto's equivalent error
+is 0.014em — a fraction of a pixel, which is why "centre the layout box" is the usual advice and why
+it is usually right. Ours is eleven times that: measured 4px on the dashboard's Join button.
+
+Three forms correct it, and which one a site uses is not a matter of taste:
+
+| | when | why |
+|---|---|---|
+| `Modifier.typeCentered(style)` | **one line** of text centred against something that is **not text** — a button label in its fixed-height container, a navigation label under its icon, a chip's or a badge's label, a list item's line beside its switch, a top bar's title beside its actions, a label paired with an icon | one number per text style, so peer labels keep a shared baseline |
+| `Modifier.typeCentered(firstLine, lastLine)` | **a block of lines centred as one** — a title over its supporting line beside an icon or avatar. The same call goes on every line of the block, or once on the column holding them | only the room above the first line's capitals and below the last line's baseline decide where the block's letters sit. Correcting each line by its own style adds together corrections that should partly cancel: 22sp over 14sp on the profile card measured 4px low that way, 0.5px as a block |
+| `Modifier.inkCentered(text, style)` | **one glyph or short word alone in a shape** — an avatar's initial, a reaction's emoji, the `!` in an error dot, a count in a badge, the "or" between two rules | that string's own ink is the whole of what must look centred, and it may be nothing like a capital |
+
+**`typeCentered` must be applied to every such site, not the convenient ones.** Its only real risk is
+partiality: a corrected `BedrudButton` label measured 5px below the plain `TextButton` beside it in
+the same dialog — two controls that had agreed with each other until one of them was improved. The
+sign-in screen's "No account yet?" sat 5px above the "Sign Up" beside it for the same reason, until
+the prompt was corrected along with the button.
+
+**A line with a shape beside it inside a block** — the profile card's name and its admin badge — moves
+with the block, and the shape is raised by that line's own correction to meet its letters, rather
+than the line lowered to meet the shape. Lowering the line would move it out of the block.
+
+**Never `inkCentered` on text with text beside it.** The per-string correction depends on the string:
+a word with a descender has its ink centre lower and asks for less of one. Applied to the bottom
+navigation it put "Settings" 4px off the baseline "Rooms" and "Profile" sat on.
+
+**Rejected: putting the correction on the type scale.** A `BaselineShift` on every style in
+`Type.kt` would need no call sites at all, and it was measured and turned down. It moves ink inside a
+box each container has already placed, so every container compensates differently: it aligned a
+dialog's two buttons, corrected only a quarter of the navigation's error, and pushed the dashboard's
+search placeholder 8px below its own field, out of line with the icon beside it. A
+`lineHeightStyle` of `Center`/`Trim.None` on the scale was measured too and changes nothing — it is
+already what these styles do.
+
+**`BedrudTextField` deliberately opts out.** Its placeholder is a `Text` that could be corrected, but
+the value the user types is drawn inside `OutlinedTextField` where no modifier reaches it. Correcting
+the reachable half would put the hint at a different height from the text that replaces it, which is
+worse than the fault being fixed. Both halves stay uncorrected so they agree with each other. The
+two fields built on `BasicTextField` — the custom server address and the chat composer — draw both
+halves themselves, so both are corrected, by the same amount. The app's `Snackbar` opts out for the
+same reason as `BedrudTextField`: Material draws its message and its action button, and neither can
+be reached.
 
 ## Shape (`Shape.kt`)
 
@@ -100,6 +168,18 @@ as two unrelated systems rather than one.
 `maxContentWidth 480` (keeps forms readable on tablets/foldables). Components: `buttonHeight 48`,
 `buttonHeightLarge 56`, `fieldMinHeight 56`, `minTouchTarget 48`, `borderThin 1`, `borderStrong 2`,
 icon sizes `iconXs 16 · iconSm 18 · iconMd 24 · iconLg 32`, `avatar 40`, `brandMark 72`.
+
+**Text sets a floor, not a height.** A container that holds text takes a minimum height —
+`heightIn(min = …)`, or the component's own `defaultMinSize` — never a fixed `height(…)`. Text grows
+with the reader's font-size setting, up to 2× since Android 14, and a fixed box clips it: the rooms
+search field, the full-width sign-in buttons and the poll answers all did. Text fields are the
+sharpest case: M3's field pads 16dp above and below its line, so the 48dp the search field was
+pinned to left its 20sp line 16dp and cut it before the font was even raised. A growing
+container also has to hold its size while its content changes: `BedrudTextField` keeps a
+single-line field's placeholder to one line, because a hint that wrapped made the empty field
+taller than the typed one, and everything under it jumped on the first keystroke. Keep fixed
+heights for what does not scale with the font (icons, handles, slider tracks), and check a text
+container at font scale 1.0, 1.5 and 2.0.
 
 ## Elevation (`Elevation.kt`) & Motion (`Motion.kt`)
 
@@ -119,8 +199,10 @@ disabled state reads as merely deselected.
 ## Components (`ui/components/`)
 
 - **`BedrudButton`** — 6 variants (PRIMARY, SECONDARY, TONAL, OUTLINE, GHOST, DESTRUCTIVE). Token-driven height
-  (`defaultMinSize(buttonHeight)`, so callers can grow it, e.g. `height(buttonHeightLarge)` for a full CTA),
-  shape (`BedrudShapeTokens.button`), and padding. Built-in `loading` state.
+  (`defaultMinSize(buttonHeight)`, so callers can grow it, e.g. `heightIn(min = buttonHeightLarge)` for a full CTA),
+  shape (`BedrudShapeTokens.button`), and padding — `space24` across, `space8` above and below; the
+  vertical half only shows once a label outgrows the minimum height, and keeps a wrapped label off
+  the edges. Built-in `loading` state.
 - **`BedrudCard` / `BedrudOutlinedCard`** — outline-first cards, tonal surface, minimal elevation.
 - **`BedrudCompactTopBar`** — compact status-bar-aware header. Takes either a `title: String` or a
   slot `title` composable (the rooms header uses the slot for its "{server} rooms" name, in a single
@@ -522,6 +604,15 @@ the `meeting*` tokens in `Dimens.kt`, timing in `Motion.meetingChromeAutoHideDel
   gate's raw capture level against `speakingLevels` every `SampleIntervalMillis` and names the
   cause; the reach check needs at least one remote participant, since an empty room has no reason
   to report a speaker and no one to miss you.
+
+  Whether you are talking at all is judged against **your own microphone**, not a fixed level:
+  `SpeechLevelTracker` takes the lowest level of the last two seconds as the room's floor, keeps
+  one floor for muted capture and one for live, and counts a level 9 dB above it as speech. The
+  same answer drives the speaking bridge on your own tile, so the tile and the ring never disagree
+  about it. The reach check is stricter, because the server names a speaker only above a fixed
+  level of its own (`VoiceReachMonitor.RoomSpeakerLevel`, LiveKit's default `active_level`): the
+  room is blamed only for speech loud enough that it would have reported it. A quiet voice still
+  gets "muted", but never "the room can't hear you".
 
   Both states share the colour because they are the same news, so **motion carries the cause**: a
   reconnect sends a single arc travelling around the outline (a dashed stroke whose phase moves,

@@ -10,7 +10,21 @@ Kotlin + Jetpack Compose + Material 3. Single `:app` module. minSdk 28, compileS
 ./gradlew test                   # Unit tests only (src/test/)
 ```
 
-No instrumented test directory.
+Instrumented Compose tests live in `app/src/androidTest/` and run against a running emulator or
+device. CI does not run them, so run them yourself when a change touches what they cover — one
+class at a time while iterating:
+
+```bash
+./gradlew connectedDebugAndroidTest
+./gradlew connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.bedrud.app.ui.screens.dashboard.DashboardScreenTest
+```
+
+Name one class per run: a comma-separated `class=` list runs only its first class. To cover
+several, filter by `package=` instead (`…RunnerArguments.package=com.bedrud.app.ui.components`).
+
+Their method names are camelCase (`shouldLayOutPlaceholderInFullAtLargeFontScale`), not backticked
+sentences: with minSdk 28 the test APK is dexed below DEX version 040, which rejects spaces in
+method names.
 
 This repo also has its own root `Makefile` wrapping the above plus device, CI-parity and
 release steps — `make help` lists them. The two that matter most day to day:
@@ -24,7 +38,8 @@ For the single command to run before every commit, see **Verify command** under
 [Working Agreement](#working-agreement) — it folds install into the same invocation so the
 on-device pass doesn't pay Gradle's startup cost a second time.
 
-**Test stack:** JUnit 4, MockK, OkHttp MockWebServer, kotlinx-coroutines-test.
+**Test stack:** JUnit 4, MockK, OkHttp MockWebServer, kotlinx-coroutines-test; Compose UI test
+(`ui-test-junit4`) for the instrumented tests.
 **Test util:** `InMemorySharedPreferences` in `testutil/` — inject into any class taking `SharedPreferences` (InstanceStore, AuthManager). Avoid Android framework dependency.
 
 **Versioning:** there is no version number in the repo. `versionCode` comes from the CI run
@@ -44,7 +59,7 @@ app/src/main/java/com/bedrud/app/
 │   ├── instance/               Multi-instance: InstanceStore → InstanceManager
 │   ├── auth/                   AuthManager (encrypted prefs), PasskeyManager, OAuthLoginHandler
 │   ├── api/                    Retrofit interfaces: AuthApi, RoomApi, AdminApi + ApiClientFactory
-│   ├── audio/                  Voice gate, reach monitor, and the meeting notification tones
+│   ├── audio/                  Voice gate, speech detection, reach monitor, and the meeting notification tones
 │   ├── livekit/RoomManager.kt  LiveKit room lifecycle, media toggles, chat
 │   ├── livekit/ParticipantMetadata.kt  Shared metadata blob: app writes the avatar, server writes moderation flags
 │   ├── meeting/chat/           Chat wire format (ChatWire), >60KB reassembly (ChatChunkAssembler), clustering
@@ -80,7 +95,7 @@ App connects to user-chosen Bedrud server instances, not fixed backend.
 
 Switching instances: `instanceManager.switchTo(id)` → sets active → rebuilds all clients → UI reacts to StateFlow changes. `InstanceSwitcherSheet` is the shared bottom sheet for this, reachable from the Profile tab's Server section and from tapping the rooms dashboard's header title.
 
-The rooms dashboard (`DashboardContent`) lists the **active** server's rooms from the API and weaves in **recent** rooms from every server (`RecentRoomsStore`, which stores each recent's server id, name, and accent color). Its **All** tab merges both (recency/live first); **My Rooms** is the subset the user created. Each card is tinted with its server's color, and tapping a recent that lives on another server prompts a confirm-and-switch (`switchTo` + join) rather than switching silently.
+The rooms dashboard (`DashboardContent`) shows the **active** server and nothing else: its rooms from the API, plus the rooms this device has visited on it that the API does not list (`recentRoomsNotInApiList`, reading `RecentRoomsStore`). Recents from other servers are left out on purpose. Its **All** tab holds both, ordered as described below; **My Rooms** is the subset the user created. The way to a room on another server from here is the quick-join box: a pasted link to a room on another server the user has added prompts a confirm-and-switch (`switchTo` + join) rather than switching silently, and a link to a server that has not been added is turned away with a snackbar asking to add it first. When the switch lands on a server with nobody signed in, the room waits for the sign-in and opens after it (see [Deep Links](#deep-links)).
 
 Both the "3h ago" a card prints and its position in either tab come from one number, `resolveRoomActivityAt` in `core/rooms/RoomActivity.kt`: the server's `lastActivityAt` for the room, which it stamps on every participant's join, falling back to this device's own visit from `RecentRoomsStore`. The server's answer wins because it covers everyone — a room somebody else was in an hour ago says so on a device that has never opened it, which local history alone could never report. `sortByActivity` orders both tabs by that same number and leaves rooms nothing can date at the end in server order, so a card's rank never contradicts the time it prints. A recent card is a room the active server does not list at all, so local history remains the only thing that can date one.
 
@@ -211,12 +226,13 @@ assumed gone; removing it earlier signs out everyone who has not upgraded throug
 ## Key Conventions
 
 - **Design tokens:** All sizes/spacing/curves/colors/motion come from `ui/theme/` (`Dimens`, `BedrudShapeTokens`, `Elevation`, `Motion`, `MaterialTheme.colorScheme/typography/shapes`). No raw `n.dp` or hex literals in `ui/screens/**` or `ui/components/**`. See [DESIGN.md](DESIGN.md).
-- **Buttons:** Use `BedrudButton` with `BedrudButtonVariant` enum (PRIMARY, SECONDARY, OUTLINE, GHOST, DESTRUCTIVE). Height/shape/padding are token-driven (`Dimens.buttonHeight`, `BedrudShapeTokens.button`); grow via `Modifier.height(Dimens.buttonHeightLarge)` for a full CTA.
+- **Centred text:** Vazirmatn's box sits 0.156em off its own letters, so text centred against anything that is not text carries a correction from `ui/theme/TextInk.kt` — `Modifier.typeCentered(style)` for a label (button, navigation, chip, list item line, label beside an icon), `Modifier.typeCentered(firstLine, lastLine)` on every line of a block centred as one (a title over its supporting line beside an avatar), `Modifier.inkCentered(text, style)` for one glyph alone in a shape (avatar initial, reaction emoji, badge count). A new button or label needs `typeCentered` too: the correction's only real failure mode is being applied to some text and not the text beside it. `BedrudTextField` opts out whole, on purpose. Full rules in DESIGN.md.
+- **Buttons:** Use `BedrudButton` with `BedrudButtonVariant` enum (PRIMARY, SECONDARY, OUTLINE, GHOST, DESTRUCTIVE). Height/shape/padding are token-driven (`Dimens.buttonHeight`, `BedrudShapeTokens.button`); grow via `Modifier.heightIn(min = Dimens.buttonHeightLarge)` for a full CTA — a floor, never a fixed `height(…)`, so a label that wraps at a large font scale grows the button instead of being clipped.
 - **Cards:** Use `BedrudCard` / `BedrudOutlinedCard` — outline-first, tonal surface, minimal elevation.
-- **Colors:** Always `MaterialTheme.colorScheme.*`. Rose (`#E11D48`) primary + teal (`#14B8A6`) tertiary on warm neutrals; the full M3 role set (light+dark) is mapped in `ui/theme/Theme.kt` from the ramps in `Color.kt`. `dynamicColor` is off by default.
+- **Colors:** Always `MaterialTheme.colorScheme.*`. Rose (`#E11D48`) primary + teal (`#14B8A6`) tertiary on warm neutrals; the full M3 role set (light+dark) is mapped in `ui/theme/Theme.kt` from the ramps in `Color.kt`. `dynamicColor` is off by default. Because the primary is a rose and the error is a red, those two roles share a hue family and only distance keeps a selected control from reading as a broken one — `ThemeTest` measures them apart and also measures `error` and `onError` against what each is drawn on, so moving either role needs the numbers re-run rather than eyeballed.
 - **Serialization:** `@SerializedName` annotations on model fields (Gson). Snake_case from server ↔ camelCase in Kotlin.
 - **DI:** Koin. Single module (`appModule`). Inject with `by inject()` in Activities, `by koinViewModel()` or `koinInject()` in composables.
-- **Strings:** User-facing strings go in `res/values/strings.xml` **and must be translated in every locale** (ar, de, es, fa, fr, ja, ru, tr, zh) — CI lint fails on `MissingTranslation`, so English-only is not enough. RTL supported: `LocaleHelper` sets the layout direction from the active `AppLanguage`; the typeface is Vazirmatn in every locale and never varies by language.
+- **Strings:** User-facing strings go in `res/values/strings.xml` **and must be translated in every locale** (ar, de, es, fa, fr, ja, ru, tr, zh) — CI lint fails on `MissingTranslation`, so English-only is not enough. RTL supported: `LocaleHelper` sets the layout direction from the active `AppLanguage`; the typeface is Vazirmatn in every locale and never varies by language, with a bundled cut of Roboto behind it for Cyrillic and Greek (see Typography in [DESIGN.md](DESIGN.md)).
 - **Input:** Validate/format user input per its type (trim/strip whitespace, validate URL/email shape); never treat malformed input as valid.
 - **Keyboard:** The IME may cover the primary button, but the focused input must stay visible — make content scroll into view (ime-aware: `WindowInsets.ime` / `imePadding`), wherever reasonable, so the user sees what they type. The action key should dismiss the keyboard + run the primary action. App is edge-to-edge → react to ime insets, not window resizing.
 - **Dev-only UI:** Gate not-yet-wired UI or QA aids with `DevOnly { … }` / `DevHintBadge("…")` (visible on debug/`dev`, hidden on release) — backed by `BuildConfig.DEV_HINTS` via `core/DevFlags.kt`.
@@ -303,6 +319,49 @@ Release builds use minification + resource shrinking. Rules in `app/proguard-rul
 - `bedrud://oauth` → OAuth callback (expects `?token=...`)
 
 Parsed in `BedrudURLParser`, handled in `MainActivity.handleDeepLink()`.
+
+No way into a meeting navigates to it directly. A deep link, the call notification, a call still
+running when the activity is recreated, every join from `MainScreen` (a room card, a new room,
+the quick-join box, including its switch to another server), and a room link followed from a call's
+chat all hold the room in `PendingRoom`
+(`core/rooms/PendingRoom.kt`), together with the server that was active when it was asked for.
+`BedrudNavHost` opens it once somebody is signed in on that server, and that is the only place the
+app navigates to `Routes.MEETING`.
+
+The reason is the sign-in in between. A room asked for on a server with nobody signed in, most
+often right after switching to it, sends the auth router to `LOGIN` with `popUpTo(0)`, which clears
+the back stack; a room kept only as a navigation entry was lost there, and the reader landed on
+the dashboard after signing in. Held outside the stack, it survives the sign-in and opens after it.
+It is opened only once, and dropped rather than opened when another server becomes active first:
+backing out of sign-in to another server means the reader has gone somewhere else.
+
+The effect that opens it re-runs on the collected sign-in state but decides on the live one
+(`instanceManager.authManager.value`). For a frame after a server switch the collected state is
+still the old server's, and deciding on it opened the room while nobody was signed in yet.
+
+A room link tapped **in the chat** takes a different path, because it always arrives during a call
+and telecom refuses to place a second call over an unholdable one. `resolveChatLink`
+(`core/deeplink/ChatLinkTarget.kt`) decides where it leads — a page, the room this call is already
+in, or a room on one of the reader's own servers, matched by whole base URL as the dashboard's quick
+join does — and a room only opens after the reader confirms leaving this call. The call then ends
+through `CallService.stop`, the same teardown as the leave button; the app switches server if the room
+is on another one; and the room is held in `PendingRoom` like every other way in, so it opens in the
+old one's place — after the sign-in, when nobody is signed in on that server yet.
+
+The next room's screen appears while the call being left is still tearing down, so two things must
+hold for anything that touches the meeting screen:
+
+- A meeting screen counts only **its own room's** connection (`isOwnConnection`). On one server every
+  meeting screen reads the same `RoomManager`, so the room just left still reports `CONNECTED` for a
+  moment; counted as the new screen's own, its disconnect would read as the new call ending.
+- Leaving pops **only its own back-stack entry**. The room just left stays composed while it animates
+  out, and when its disconnect lands it asks to leave; matched by route rather than by entry, that
+  would close the room that was just opened.
+
+Nothing waits explicitly for the old call to end. On an emulator its service was destroyed and its
+telecom call disconnected before the next room's join request had even been sent, both on the same
+server and across servers. If that ever stops holding, the symptom is telecom refusing the new call
+as "unholdable", and the fix is to wait for the old one before joining.
 
 ## Skills Reference
 

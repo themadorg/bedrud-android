@@ -32,6 +32,7 @@ import com.bedrud.app.core.deeplink.BedrudURLParser
 import com.bedrud.app.core.instance.InstanceManager
 import com.bedrud.app.core.meeting.VideoAspect
 import com.bedrud.app.core.pip.PipStateHolder
+import com.bedrud.app.core.rooms.PendingRoom
 import com.bedrud.app.ui.screens.auth.EmailLoginScreen
 import com.bedrud.app.ui.screens.auth.LoginScreen
 import com.bedrud.app.ui.screens.auth.RegisterScreen
@@ -51,8 +52,15 @@ class MainActivity : ComponentActivity() {
     private val settingsStore: SettingsStore by inject()
     private val pipStateHolder: PipStateHolder by inject()
 
-    private val _deepLinkRoomName = MutableStateFlow<String?>(null)
+    // The room the app was asked to open, by a join from the dashboard, a link, the call notification
+    // or a resumed call, held until somebody is signed in on its server to open it.
+    private val pendingRoom = PendingRoom()
     private val _oauthToken = MutableStateFlow<String?>(null)
+
+    /** Holds [roomName] for the server that is active now, the one the request arrived on. */
+    private fun holdOnActiveServer(roomName: String) {
+        pendingRoom.hold(roomName, instanceManager.store.activeInstanceId.value)
+    }
 
     override fun attachBaseContext(base: Context) {
         val localeTag = SettingsStore(base).getLanguageTag()
@@ -82,7 +90,7 @@ class MainActivity : ComponentActivity() {
 
         // Resume meeting if the foreground call service is still running
         CallService.activeRoomName?.let { room ->
-            _deepLinkRoomName.value = room
+            holdOnActiveServer(room)
         }
 
         // Handle OAuth callback from initial intent (app not running)
@@ -105,7 +113,7 @@ class MainActivity : ComponentActivity() {
                 ) {
                     BedrudNavHost(
                         instanceManager = instanceManager,
-                        deepLinkRoomName = _deepLinkRoomName,
+                        pendingRoom = pendingRoom,
                         oauthToken = _oauthToken
                     )
                 }
@@ -130,13 +138,13 @@ class MainActivity : ComponentActivity() {
     private fun handleDeepLink(intent: Intent?) {
         val uri = intent?.data ?: return
         val parsed = BedrudURLParser.parse(uri.toString()) ?: return
-        _deepLinkRoomName.value = parsed.roomName
+        holdOnActiveServer(parsed.roomName)
     }
 
     private fun handleReturnToMeeting(intent: Intent?) {
         if (intent?.action != CallService.ACTION_RETURN_TO_MEETING) return
         val roomName = intent.getStringExtra(CallService.EXTRA_ROOM_NAME) ?: return
-        _deepLinkRoomName.value = roomName
+        holdOnActiveServer(roomName)
     }
 
     private fun clearLockScreenFlags() {
@@ -188,7 +196,7 @@ object Routes {
 @Composable
 fun BedrudNavHost(
     instanceManager: InstanceManager,
-    deepLinkRoomName: MutableStateFlow<String?> = MutableStateFlow(null),
+    pendingRoom: PendingRoom,
     oauthToken: MutableStateFlow<String?> = MutableStateFlow(null)
 ) {
     val navController = rememberNavController()
@@ -240,18 +248,25 @@ fun BedrudNavHost(
         oauthToken.value = null
     }
 
-    // Handle deep links
-    val deepLink by deepLinkRoomName.collectAsState()
-    LaunchedEffect(deepLink) {
-        val roomName = deepLink ?: return@LaunchedEffect
-        if (isLoggedIn) {
-            // The recent is recorded once the call actually starts (MeetingScreen), not on the way
-            // in: a link to a room the server has deleted must not leave a card behind for it.
-            navController.navigate(Routes.meeting(roomName)) {
-                launchSingleTop = true
-                popUpTo(Routes.MEETING) { inclusive = true }
-            }
-            deepLinkRoomName.value = null
+    // Open the room the app was asked for once somebody is signed in on its server. Every way into a
+    // meeting holds its room in pendingRoom rather than navigating itself, so a room asked for on a
+    // server with nobody signed in waits there across the sign-in, which clears the back stack.
+    // Keyed on the collected state so it re-runs when a sign-in or a switch lands, but decided on the
+    // live state: for a frame after a server switch, the collected sign-in is still the old server's.
+    val requestedRoom by pendingRoom.request.collectAsState()
+    val activeServerId by instanceManager.store.activeInstanceId.collectAsState()
+    LaunchedEffect(requestedRoom, isLoggedIn, activeServerId) {
+        val roomName = pendingRoom.take(
+            activeServerId = instanceManager.store.activeInstanceId.value,
+            isSignedIn = instanceManager.authManager.value?.isLoggedIn?.value == true,
+        ) ?: return@LaunchedEffect
+        // The recent is recorded once the call actually starts (MeetingScreen), not on the way
+        // in: a link to a room the server has deleted must not leave a card behind for it.
+        // In place of any meeting already on the stack, so at most one is ever there: a room link
+        // followed from a call's chat opens its room where the room just left used to be.
+        navController.navigate(Routes.meeting(roomName)) {
+            launchSingleTop = true
+            popUpTo(Routes.MEETING) { inclusive = true }
         }
     }
 
@@ -331,11 +346,11 @@ fun BedrudNavHost(
 
         composable(Routes.MAIN) {
             MainScreen(
+                // The active server is read when the join is asked for, after any switch the
+                // caller made just before it, so a join on another server is held for that server
+                // and waits there if its sign-in is still to come.
                 onJoinRoom = { roomName ->
-                    navController.navigate(Routes.meeting(roomName)) {
-                        launchSingleTop = true
-                        popUpTo(Routes.MEETING) { inclusive = true }
-                    }
+                    pendingRoom.hold(roomName, instanceManager.store.activeInstanceId.value)
                 },
                 onLogout = {
                     instanceManager.authManager.value?.logout()
@@ -362,12 +377,21 @@ fun BedrudNavHost(
                     // Leaving can be triggered twice for one action (e.g. the
                     // button handler pops immediately, then the connection-state
                     // watcher pops again once the async disconnect lands). Only
-                    // pop while the meeting screen is still the current entry so
-                    // the second call can't pop past it and empty the back stack.
-                    if (navController.currentDestination?.route == Routes.MEETING) {
+                    // pop while this entry is still the current one, so the second
+                    // call can't pop past it and empty the back stack. The entry,
+                    // not the route: after following a room link the next room is
+                    // a meeting too, and the room just left, still on screen while
+                    // it animates out, must not close it.
+                    if (navController.currentBackStackEntry?.id == backStackEntry.id) {
                         navController.popBackStack()
                     }
-                }
+                },
+                // Held like every other way in. The meeting screen switches server before asking,
+                // so the room is held for the server it lives on, and a room there that needs a
+                // sign-in first opens after it rather than being lost with the back stack.
+                onJoinRoom = { nextRoomName ->
+                    pendingRoom.hold(nextRoomName, instanceManager.store.activeInstanceId.value)
+                },
             )
         }
     }

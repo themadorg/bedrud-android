@@ -22,6 +22,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import com.bedrud.app.ui.theme.Dimens
+import com.bedrud.app.ui.theme.typeCentered
 
 /**
  * Scaffold content insets without IME. [android:windowSoftInputMode=adjustResize] already
@@ -52,11 +53,13 @@ fun BedrudCompactTopBar(
         modifier = modifier,
         actions = actions,
         title = {
+            val titleStyle = MaterialTheme.typography.headlineSmall
             Text(
                 text = title,
-                style = MaterialTheme.typography.headlineSmall,
+                style = titleStyle,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.typeCentered(titleStyle),
             )
         },
     )

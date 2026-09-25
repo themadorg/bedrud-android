@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -33,7 +32,8 @@ import com.bedrud.app.ui.components.BedrudBottomSheet
 import com.bedrud.app.ui.components.BedrudSheetTitle
 import com.bedrud.app.ui.theme.BedrudShapeTokens
 import com.bedrud.app.ui.theme.Dimens
-import com.bedrud.app.ui.theme.rememberInkCenteringOffset
+import com.bedrud.app.ui.theme.inkCentered
+import com.bedrud.app.ui.theme.typeCentered
 
 /**
  * Who reacted with what, opened from the message's own menu.
@@ -181,15 +181,14 @@ fun ChatReactionRow(
                     alignment = Alignment.CenterHorizontally,
                 ),
             ) {
-                // Each glyph carries its own centring: an emoji and a digit have different ink
-                // inside boxes the layout treats alike, so one shared correction would only ever
-                // suit one of them.
+                // The emoji measures its own ink; the tally takes the correction for its style.
+                // An emoji fills the em box rather than the cap box, so a cap-height correction
+                // would suit it no better than no correction at all — while the digit beside it is
+                // cap height, and has to agree with every other label drawn at that style.
                 Text(
                     text = chip.emoji,
                     style = glyphStyle,
-                    modifier = Modifier.offset(
-                        y = rememberInkCenteringOffset(chip.emoji, glyphStyle),
-                    ),
+                    modifier = Modifier.inkCentered(chip.emoji, glyphStyle),
                 )
                 // One reaction needs no tally: the emoji is already the whole message, and "1"
                 // beside it only asks the reader to count to one.
@@ -198,9 +197,7 @@ fun ChatReactionRow(
                     Text(
                         text = tally,
                         style = countStyle,
-                        modifier = Modifier.offset(
-                            y = rememberInkCenteringOffset(tally, countStyle),
-                        ),
+                        modifier = Modifier.typeCentered(countStyle),
                         color = if (chip.mine) {
                             MaterialTheme.colorScheme.onPrimary
                         } else {

@@ -5,3 +5,14 @@ This product includes software developed by the Bedrud Project (https://github.c
 
 This product includes software developed by the LiveKit Project (https://github.com/livekit/livekit).
 LiveKit is licensed under the Apache License, Version 2.0.
+
+This product bundles the Vazirmatn font (https://github.com/rastikerdar/vazirmatn).
+Copyright 2015 The Vazirmatn Project Authors.
+Vazirmatn is licensed under the SIL Open Font License, Version 1.1.
+
+This product bundles a subset of the Roboto font (https://github.com/googlefonts/roboto-classic).
+Copyright 2011 The Roboto Project Authors.
+Roboto is licensed under the SIL Open Font License, Version 1.1.
+
+Each font file carries its copyright notice and a link to the license in its name table. The
+license text is available at https://openfontlicense.org.
