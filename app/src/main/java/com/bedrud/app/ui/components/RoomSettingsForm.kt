@@ -24,14 +24,17 @@ import com.bedrud.app.ui.theme.typeCentered
  * The room-level settings toggles shared by the dashboard's settings dialog and the in-meeting
  * settings sheet — one place to add or unlock a toggle so the two surfaces can't drift.
  *
- * Public visibility is live; Require Approval, Recording, and E2EE are shown but locked off for
- * now — not ready to be user-controlled yet, tracked for a later pass. [contentColor] lets the
+ * Public visibility and chat are live; Require Approval, Recording, and E2EE are shown but
+ * locked off for now — not ready to be user-controlled yet, tracked for a later pass. The live
+ * toggles come first so the locked ones sit together below them. [contentColor] lets the
  * meeting sheet render labels on its chrome palette; Unspecified inherits the ambient color.
  */
 @Composable
 fun RoomSettingsForm(
     isPublic: Boolean,
     onIsPublicChange: (Boolean) -> Unit,
+    allowChat: Boolean,
+    onAllowChatChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
     contentColor: Color = Color.Unspecified,
     verticalSpacing: Dp = Dimens.space4,
@@ -42,6 +45,12 @@ fun RoomSettingsForm(
             checked = isPublic,
             contentColor = contentColor,
             onCheckedChange = onIsPublicChange,
+        )
+        RoomSettingToggleRow(
+            label = stringResource(R.string.dashboard_roomSettings_allowChat),
+            checked = allowChat,
+            contentColor = contentColor,
+            onCheckedChange = onAllowChatChange,
         )
         RoomSettingToggleRow(
             label = stringResource(R.string.dashboard_roomSettings_requireApproval),
@@ -69,11 +78,11 @@ fun RoomSettingsForm(
 
 /**
  * What both save paths submit alongside the form: the toggles the form shows locked are forced
- * to their locked values, and the media flags stay on (no UI for them yet). Must change together
- * with [RoomSettingsForm].
+ * to their locked values, and the media flags stay on (no UI for them yet). Chat is left as the
+ * caller set it, so a room that has chat off keeps it off. Must change together with
+ * [RoomSettingsForm].
  */
 fun RoomSettings.withLockedToggles(): RoomSettings = copy(
-    allowChat = true,
     allowVideo = true,
     allowAudio = true,
     requireApproval = false,

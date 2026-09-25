@@ -28,9 +28,9 @@ import com.bedrud.app.ui.theme.Dimens
 import com.bedrud.app.ui.theme.typeCentered
 import kotlinx.coroutines.launch
 
-// In-room mirror of RoomSettingsDialog (dashboard) — same three room-level toggles,
-// same PUT /room/{roomId}/settings endpoint, so a room's visibility/approval/E2EE can
-// be managed without leaving the call.
+// In-room mirror of RoomSettingsDialog (dashboard) — same room-level toggles, same
+// PUT /room/{roomId}/settings endpoint, so a room's visibility and chat can be managed
+// without leaving the call.
 @Composable
 fun MeetingRoomSettingsSheet(
     roomId: String,
@@ -45,6 +45,7 @@ fun MeetingRoomSettingsSheet(
     val scope = rememberCoroutineScope()
 
     var localIsPublic by remember { mutableStateOf(isPublic) }
+    var localAllowChat by remember { mutableStateOf(settings.allowChat) }
     var isSaving by remember { mutableStateOf(false) }
 
     BedrudBottomSheet(onDismiss = onDismiss) {
@@ -58,13 +59,15 @@ fun MeetingRoomSettingsSheet(
         RoomSettingsForm(
             isPublic = localIsPublic,
             onIsPublicChange = { localIsPublic = it },
+            allowChat = localAllowChat,
+            onAllowChatChange = { localAllowChat = it },
             contentColor = colors.onButton,
         )
 
         Button(
             onClick = {
                 if (isSaving) return@Button
-                val newSettings = settings.withLockedToggles()
+                val newSettings = settings.copy(allowChat = localAllowChat).withLockedToggles()
                 isSaving = true
                 scope.launch {
                     try {
