@@ -10,7 +10,21 @@ Kotlin + Jetpack Compose + Material 3. Single `:app` module. minSdk 28, compileS
 ./gradlew test                   # Unit tests only (src/test/)
 ```
 
-No instrumented test directory.
+Instrumented Compose tests live in `app/src/androidTest/` and run against a running emulator or
+device. CI does not run them, so run them yourself when a change touches what they cover — one
+class at a time while iterating:
+
+```bash
+./gradlew connectedDebugAndroidTest
+./gradlew connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.bedrud.app.ui.screens.dashboard.DashboardScreenTest
+```
+
+Name one class per run: a comma-separated `class=` list runs only its first class. To cover
+several, filter by `package=` instead (`…RunnerArguments.package=com.bedrud.app.ui.components`).
+
+Their method names are camelCase (`shouldLayOutPlaceholderInFullAtLargeFontScale`), not backticked
+sentences: with minSdk 28 the test APK is dexed below DEX version 040, which rejects spaces in
+method names.
 
 This repo also has its own root `Makefile` wrapping the above plus device, CI-parity and
 release steps — `make help` lists them. The two that matter most day to day:
@@ -24,7 +38,8 @@ For the single command to run before every commit, see **Verify command** under
 [Working Agreement](#working-agreement) — it folds install into the same invocation so the
 on-device pass doesn't pay Gradle's startup cost a second time.
 
-**Test stack:** JUnit 4, MockK, OkHttp MockWebServer, kotlinx-coroutines-test.
+**Test stack:** JUnit 4, MockK, OkHttp MockWebServer, kotlinx-coroutines-test; Compose UI test
+(`ui-test-junit4`) for the instrumented tests.
 **Test util:** `InMemorySharedPreferences` in `testutil/` — inject into any class taking `SharedPreferences` (InstanceStore, AuthManager). Avoid Android framework dependency.
 
 **Versioning:** there is no version number in the repo. `versionCode` comes from the CI run
@@ -211,9 +226,10 @@ assumed gone; removing it earlier signs out everyone who has not upgraded throug
 ## Key Conventions
 
 - **Design tokens:** All sizes/spacing/curves/colors/motion come from `ui/theme/` (`Dimens`, `BedrudShapeTokens`, `Elevation`, `Motion`, `MaterialTheme.colorScheme/typography/shapes`). No raw `n.dp` or hex literals in `ui/screens/**` or `ui/components/**`. See [DESIGN.md](DESIGN.md).
-- **Buttons:** Use `BedrudButton` with `BedrudButtonVariant` enum (PRIMARY, SECONDARY, OUTLINE, GHOST, DESTRUCTIVE). Height/shape/padding are token-driven (`Dimens.buttonHeight`, `BedrudShapeTokens.button`); grow via `Modifier.height(Dimens.buttonHeightLarge)` for a full CTA.
+- **Centred text:** Vazirmatn's box sits 0.156em off its own letters, so text centred against anything that is not text carries a correction from `ui/theme/TextInk.kt` — `Modifier.typeCentered(style)` for a label (button, navigation, chip, list item line, label beside an icon), `Modifier.typeCentered(firstLine, lastLine)` on every line of a block centred as one (a title over its supporting line beside an avatar), `Modifier.inkCentered(text, style)` for one glyph alone in a shape (avatar initial, reaction emoji, badge count). A new button or label needs `typeCentered` too: the correction's only real failure mode is being applied to some text and not the text beside it. `BedrudTextField` opts out whole, on purpose. Full rules in DESIGN.md.
+- **Buttons:** Use `BedrudButton` with `BedrudButtonVariant` enum (PRIMARY, SECONDARY, OUTLINE, GHOST, DESTRUCTIVE). Height/shape/padding are token-driven (`Dimens.buttonHeight`, `BedrudShapeTokens.button`); grow via `Modifier.heightIn(min = Dimens.buttonHeightLarge)` for a full CTA — a floor, never a fixed `height(…)`, so a label that wraps at a large font scale grows the button instead of being clipped.
 - **Cards:** Use `BedrudCard` / `BedrudOutlinedCard` — outline-first, tonal surface, minimal elevation.
-- **Colors:** Always `MaterialTheme.colorScheme.*`. Rose (`#E11D48`) primary + teal (`#14B8A6`) tertiary on warm neutrals; the full M3 role set (light+dark) is mapped in `ui/theme/Theme.kt` from the ramps in `Color.kt`. `dynamicColor` is off by default.
+- **Colors:** Always `MaterialTheme.colorScheme.*`. Rose (`#E11D48`) primary + teal (`#14B8A6`) tertiary on warm neutrals; the full M3 role set (light+dark) is mapped in `ui/theme/Theme.kt` from the ramps in `Color.kt`. `dynamicColor` is off by default. Because the primary is a rose and the error is a red, those two roles share a hue family and only distance keeps a selected control from reading as a broken one — `ThemeTest` measures them apart and also measures `error` and `onError` against what each is drawn on, so moving either role needs the numbers re-run rather than eyeballed.
 - **Serialization:** `@SerializedName` annotations on model fields (Gson). Snake_case from server ↔ camelCase in Kotlin.
 - **DI:** Koin. Single module (`appModule`). Inject with `by inject()` in Activities, `by koinViewModel()` or `koinInject()` in composables.
 - **Strings:** User-facing strings go in `res/values/strings.xml` **and must be translated in every locale** (ar, de, es, fa, fr, ja, ru, tr, zh) — CI lint fails on `MissingTranslation`, so English-only is not enough. RTL supported: `LocaleHelper` sets the layout direction from the active `AppLanguage`; the typeface is Vazirmatn in every locale and never varies by language.

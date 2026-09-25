@@ -20,6 +20,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.bedrud.app.ui.theme.BedrudShapeTokens
 import com.bedrud.app.ui.theme.Dimens
+import com.bedrud.app.ui.theme.typeCentered
 
 enum class BedrudButtonVariant {
     PRIMARY,
@@ -29,6 +30,14 @@ enum class BedrudButtonVariant {
     GHOST,
     DESTRUCTIVE
 }
+
+/**
+ * The padding every variant puts around its content. At the default font size the vertical half
+ * changes nothing, since the minimum height is taller than a line plus this padding. It matters
+ * once the label outgrows that minimum — a raised font size, or a label that wraps — and keeps
+ * the text off the button's edges.
+ */
+private val ContentPadding = PaddingValues(horizontal = Dimens.space24, vertical = Dimens.space8)
 
 @Composable
 fun BedrudButton(
@@ -50,7 +59,7 @@ fun BedrudButton(
                 modifier = modifier.defaultMinSize(minHeight = Dimens.buttonHeight),
                 enabled = enabled && !loading,
                 shape = shape,
-                contentPadding = PaddingValues(horizontal = Dimens.space24, vertical = 0.dp)
+                contentPadding = ContentPadding
             ) {
                 ButtonContent(text, loading, leadingIcon, trailingIcon)
             }
@@ -66,7 +75,7 @@ fun BedrudButton(
                     containerColor = MaterialTheme.colorScheme.secondary,
                     contentColor = MaterialTheme.colorScheme.onSecondary
                 ),
-                contentPadding = PaddingValues(horizontal = Dimens.space24, vertical = 0.dp)
+                contentPadding = ContentPadding
             ) {
                 ButtonContent(text, loading, leadingIcon, trailingIcon)
             }
@@ -78,7 +87,7 @@ fun BedrudButton(
                 modifier = modifier.defaultMinSize(minHeight = Dimens.buttonHeight),
                 enabled = enabled && !loading,
                 shape = shape,
-                contentPadding = PaddingValues(horizontal = Dimens.space24, vertical = 0.dp)
+                contentPadding = ContentPadding
             ) {
                 ButtonContent(text, loading, leadingIcon, trailingIcon)
             }
@@ -90,7 +99,7 @@ fun BedrudButton(
                 modifier = modifier.defaultMinSize(minHeight = Dimens.buttonHeight),
                 enabled = enabled && !loading,
                 shape = shape,
-                contentPadding = PaddingValues(horizontal = Dimens.space24, vertical = 0.dp)
+                contentPadding = ContentPadding
             ) {
                 ButtonContent(text, loading, leadingIcon, trailingIcon)
             }
@@ -102,7 +111,7 @@ fun BedrudButton(
                 modifier = modifier.defaultMinSize(minHeight = Dimens.buttonHeight),
                 enabled = enabled && !loading,
                 shape = shape,
-                contentPadding = PaddingValues(horizontal = Dimens.space24, vertical = 0.dp)
+                contentPadding = ContentPadding
             ) {
                 ButtonContent(text, loading, leadingIcon, trailingIcon)
             }
@@ -118,7 +127,7 @@ fun BedrudButton(
                     containerColor = MaterialTheme.colorScheme.error,
                     contentColor = MaterialTheme.colorScheme.onError
                 ),
-                contentPadding = PaddingValues(horizontal = Dimens.space24, vertical = 0.dp)
+                contentPadding = ContentPadding
             ) {
                 ButtonContent(text, loading, leadingIcon, trailingIcon)
             }
@@ -149,9 +158,15 @@ private fun ButtonContent(
         }
     }
 
+    val labelStyle = MaterialTheme.typography.labelLarge
     Text(
         text = text,
-        style = MaterialTheme.typography.labelLarge
+        style = labelStyle,
+        // A button is a fixed-height container, and with a leading or trailing icon the label is
+        // also centred against something that is not text. Corrected per style rather than per
+        // string, so two buttons side by side keep one baseline even when only one of their
+        // labels has a descender.
+        modifier = Modifier.typeCentered(labelStyle),
     )
 
     trailingIcon?.let {

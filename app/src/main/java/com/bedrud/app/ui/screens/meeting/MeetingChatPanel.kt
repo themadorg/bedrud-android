@@ -89,6 +89,7 @@ import com.bedrud.app.ui.theme.BedrudShapeTokens
 import com.bedrud.app.ui.theme.Dimens
 import com.bedrud.app.ui.theme.Elevation
 import com.bedrud.app.ui.theme.bedrudColors
+import com.bedrud.app.ui.theme.typeCentered
 import com.bedrud.app.ui.util.openChatPage
 import kotlinx.coroutines.launch
 
@@ -305,9 +306,11 @@ fun MeetingChatPanel(
                     modifier = Modifier.size(Dimens.chatUploadIndicator),
                     strokeWidth = Dimens.chatUploadIndicatorStroke,
                 )
+                val uploadingStyle = MaterialTheme.typography.labelSmall
                 Text(
                     text = stringResource(R.string.meeting_chat_uploading),
-                    style = MaterialTheme.typography.labelSmall,
+                    style = uploadingStyle,
+                    modifier = Modifier.typeCentered(uploadingStyle),
                 )
             }
         }
@@ -458,19 +461,27 @@ fun MeetingChatPanel(
                                         // lines plus 6dp above and below is precisely the bar's
                                         // 72dp resting height, so even the full three lines never
                                         // grow the bar. A single line still centres in the band.
+                                        //
+                                        // The hint and the typed text are both drawn in here, so
+                                        // the letter correction goes on the box holding the two
+                                        // and moves them together. Without it the hint's letters
+                                        // measured 5px above the send button's centre.
+                                        val hintStyle = MaterialTheme.typography.bodyMedium.copy(
+                                            lineHeightStyle = CenteredLineHeight,
+                                        )
                                         Box(
                                             contentAlignment = Alignment.CenterStart,
-                                            modifier = Modifier.padding(
-                                                horizontal = Dimens.space4,
-                                                vertical = Dimens.space6,
-                                            ),
+                                            modifier = Modifier
+                                                .padding(
+                                                    horizontal = Dimens.space4,
+                                                    vertical = Dimens.space6,
+                                                )
+                                                .typeCentered(hintStyle),
                                         ) {
                                             if (input.isEmpty()) {
                                                 Text(
                                                     text = stringResource(R.string.meeting_chat_placeholder),
-                                                    style = MaterialTheme.typography.bodyMedium.copy(
-                                                        lineHeightStyle = CenteredLineHeight,
-                                                    ),
+                                                    style = hintStyle,
                                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                                 )
                                             }
@@ -723,11 +734,13 @@ private fun ChatSendDisabledNotice(@StringRes reason: Int) {
             tint = MaterialTheme.bedrudColors.onWarningContainer,
             modifier = Modifier.size(Dimens.iconXs),
         )
+        val noticeStyle = MaterialTheme.typography.labelMedium
         Text(
             text = stringResource(reason),
-            style = MaterialTheme.typography.labelMedium,
+            style = noticeStyle,
             color = MaterialTheme.bedrudColors.onWarningContainer,
             textAlign = TextAlign.Center,
+            modifier = Modifier.typeCentered(noticeStyle),
         )
     }
 }

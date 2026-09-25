@@ -55,6 +55,7 @@ import com.bedrud.app.ui.components.BedrudBottomSheet
 import com.bedrud.app.ui.components.InitialsAvatar
 import com.bedrud.app.ui.theme.BedrudShapeTokens
 import com.bedrud.app.ui.theme.Dimens
+import com.bedrud.app.ui.theme.typeCentered
 import com.bedrud.app.ui.util.PlainTextMimeType
 import com.bedrud.app.ui.util.sharePlainText
 import com.google.zxing.BarcodeFormat
@@ -254,13 +255,16 @@ fun MeetingInviteSheet(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(Dimens.space8),
             ) {
+                val linkStyle = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace)
                 Text(
                     text = roomLink,
-                    style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
+                    style = linkStyle,
                     color = colors.onButton,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier
+                        .weight(1f)
+                        .typeCentered(linkStyle),
                 )
                 Icon(
                     imageVector = Icons.Default.ContentCopy,
