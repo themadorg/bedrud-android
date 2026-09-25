@@ -23,7 +23,7 @@ import com.bedrud.app.models.UpdateRoomSettingsRequest
 import com.bedrud.app.ui.components.BedrudBottomSheet
 import com.bedrud.app.ui.components.BedrudSheetTitle
 import com.bedrud.app.ui.components.RoomSettingsForm
-import com.bedrud.app.ui.components.withLockedToggles
+import com.bedrud.app.ui.components.withFormEdits
 import com.bedrud.app.ui.theme.Dimens
 import com.bedrud.app.ui.theme.typeCentered
 import kotlinx.coroutines.launch
@@ -61,13 +61,14 @@ fun MeetingRoomSettingsSheet(
             onIsPublicChange = { localIsPublic = it },
             allowChat = localAllowChat,
             onAllowChatChange = { localAllowChat = it },
+            roomSettings = settings,
             contentColor = colors.onButton,
         )
 
         Button(
             onClick = {
                 if (isSaving) return@Button
-                val newSettings = settings.copy(allowChat = localAllowChat).withLockedToggles()
+                val newSettings = settings.withFormEdits(allowChat = localAllowChat)
                 isSaving = true
                 scope.launch {
                     try {

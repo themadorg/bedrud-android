@@ -17,7 +17,7 @@ import com.bedrud.app.models.UserRoomResponse
 import com.bedrud.app.ui.components.BedrudButton
 import com.bedrud.app.ui.components.BedrudButtonVariant
 import com.bedrud.app.ui.components.RoomSettingsForm
-import com.bedrud.app.ui.components.withLockedToggles
+import com.bedrud.app.ui.components.withFormEdits
 import com.bedrud.app.ui.theme.typeCentered
 
 @Composable
@@ -41,15 +41,14 @@ fun RoomSettingsDialog(
                 onIsPublicChange = { isPublic = it },
                 allowChat = allowChat,
                 onAllowChatChange = { allowChat = it },
+                roomSettings = room.settings,
             )
         },
         confirmButton = {
             BedrudButton(
                 text = stringResource(R.string.common_button_save),
                 variant = BedrudButtonVariant.TONAL,
-                onClick = {
-                    onSave(isPublic, room.settings.copy(allowChat = allowChat).withLockedToggles())
-                },
+                onClick = { onSave(isPublic, room.settings.withFormEdits(allowChat = allowChat)) },
             )
         },
         dismissButton = {

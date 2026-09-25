@@ -25,9 +25,11 @@ import com.bedrud.app.ui.theme.typeCentered
  * settings sheet — one place to add or unlock a toggle so the two surfaces can't drift.
  *
  * Public visibility and chat are live; Require Approval, Recording, and E2EE are shown but
- * locked off for now — not ready to be user-controlled yet, tracked for a later pass. The live
- * toggles come first so the locked ones sit together below them. [contentColor] lets the
- * meeting sheet render labels on its chrome palette; Unspecified inherits the ambient color.
+ * locked — not ready to be user-controlled yet, tracked for a later pass. A locked toggle shows
+ * the room's own value from [roomSettings], so a room with recording allowed on the web says
+ * so here rather than reading as off. The live toggles come first so the locked ones sit
+ * together below them. [contentColor] lets the meeting sheet render labels on its chrome
+ * palette; Unspecified inherits the ambient color.
  */
 @Composable
 fun RoomSettingsForm(
@@ -35,6 +37,7 @@ fun RoomSettingsForm(
     onIsPublicChange: (Boolean) -> Unit,
     allowChat: Boolean,
     onAllowChatChange: (Boolean) -> Unit,
+    roomSettings: RoomSettings,
     modifier: Modifier = Modifier,
     contentColor: Color = Color.Unspecified,
     verticalSpacing: Dp = Dimens.space4,
@@ -54,21 +57,21 @@ fun RoomSettingsForm(
         )
         RoomSettingToggleRow(
             label = stringResource(R.string.dashboard_roomSettings_requireApproval),
-            checked = false,
+            checked = roomSettings.requireApproval,
             contentColor = contentColor,
             enabled = false,
             onCheckedChange = {},
         )
         RoomSettingToggleRow(
             label = stringResource(R.string.dashboard_roomSettings_recording),
-            checked = false,
+            checked = roomSettings.recordingsAllowed,
             contentColor = contentColor,
             enabled = false,
             onCheckedChange = {},
         )
         RoomSettingToggleRow(
             label = stringResource(R.string.dashboard_roomSettings_e2ee),
-            checked = false,
+            checked = roomSettings.e2ee,
             contentColor = contentColor,
             enabled = false,
             onCheckedChange = {},
@@ -77,18 +80,13 @@ fun RoomSettingsForm(
 }
 
 /**
- * What both save paths submit alongside the form: the toggles the form shows locked are forced
- * to their locked values, and the media flags stay on (no UI for them yet). Chat is left as the
- * caller set it, so a room that has chat off keeps it off. Must change together with
+ * What both save paths submit: the room's settings with the form's edits applied. Everything the
+ * form does not edit goes back exactly as the server reported it — the locked toggles, the media
+ * flags, persistence — because a save from Android must not undo a choice made elsewhere, such
+ * as recording allowed or approval required from the web. Must change together with
  * [RoomSettingsForm].
  */
-fun RoomSettings.withLockedToggles(): RoomSettings = copy(
-    allowVideo = true,
-    allowAudio = true,
-    requireApproval = false,
-    e2ee = false,
-    recordingsAllowed = false,
-)
+fun RoomSettings.withFormEdits(allowChat: Boolean): RoomSettings = copy(allowChat = allowChat)
 
 @Composable
 private fun RoomSettingToggleRow(
