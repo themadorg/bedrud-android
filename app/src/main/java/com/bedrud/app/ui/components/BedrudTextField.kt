@@ -64,6 +64,13 @@ fun BedrudTextField(
     // Placeholder must match the input's own text style: M3 otherwise renders the placeholder at
     // its default bodyLarge regardless of [textStyle], so a compact field (e.g. bodyMedium) shows a
     // hint larger than the text the user types. Reuse the exact merged style for both.
+    //
+    // This field deliberately takes no ink-centring correction (`typeCentered`, see TextInk.kt),
+    // although labels elsewhere in the app do. The placeholder is a `Text` this file could correct,
+    // but the value the user types is drawn inside OutlinedTextField where no modifier reaches it.
+    // Correcting the reachable half would put the hint at a different height from the text that
+    // replaces it, which is a worse fault than the one being fixed. Both halves stay uncorrected so
+    // they agree with each other.
     val mergedTextStyle = textStyle.copy(textDirection = textDirection)
     OutlinedTextField(
         value = value,

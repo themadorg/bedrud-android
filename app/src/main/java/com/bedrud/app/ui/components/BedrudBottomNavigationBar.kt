@@ -1,6 +1,7 @@
 package com.bedrud.app.ui.components
 
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Text
@@ -8,6 +9,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextOverflow
+import com.bedrud.app.ui.theme.typeCentered
 
 data class BottomNavTab(
     val label: String,
@@ -43,10 +45,19 @@ fun BedrudBottomNavigationBar(
                     )
                 },
                 label = {
+                    // The style the item provides for its label slot, read rather than restated so
+                    // the correction is measured from the type M3 actually renders here.
+                    val labelStyle = LocalTextStyle.current
                     Text(
                         text = tab.label,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
+                        // The bar is a fixed height and the label is centred under an icon, so the
+                        // font box's asymmetry shows as an uneven gap between the two. Per style,
+                        // never per string: correcting each tab's own word moved "Settings" 4px
+                        // off the baseline "Rooms" and "Profile" sat on, because its descender
+                        // carries its ink centre down.
+                        modifier = Modifier.typeCentered(labelStyle),
                     )
                 },
             )

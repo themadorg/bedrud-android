@@ -48,6 +48,7 @@ import com.bedrud.app.core.chat.ChatSaveResult
 import com.bedrud.app.ui.theme.BedrudShapeTokens
 import com.bedrud.app.ui.theme.Dimens
 import com.bedrud.app.ui.theme.Motion
+import com.bedrud.app.ui.theme.typeCentered
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -184,9 +185,10 @@ fun ChatImageLightbox(
             }
 
             outcome?.let { message ->
+                val noticeStyle = MaterialTheme.typography.labelLarge
                 Text(
                     text = message,
-                    style = MaterialTheme.typography.labelLarge,
+                    style = noticeStyle,
                     color = Color.White,
                     textAlign = TextAlign.Center,
                     modifier = Modifier
@@ -197,7 +199,9 @@ fun ChatImageLightbox(
                             MaterialTheme.colorScheme.inverseSurface.copy(alpha = NoticeAlpha),
                             BedrudShapeTokens.pill,
                         )
-                        .padding(horizontal = Dimens.space16, vertical = Dimens.space8),
+                        .padding(horizontal = Dimens.space16, vertical = Dimens.space8)
+                        // Last in the chain, so it moves the letters inside the pill, not the pill.
+                        .typeCentered(noticeStyle),
                 )
             }
         }

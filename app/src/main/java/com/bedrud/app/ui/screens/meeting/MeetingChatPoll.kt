@@ -38,6 +38,7 @@ import com.bedrud.app.ui.components.BedrudBottomSheet
 import com.bedrud.app.ui.components.BedrudSheetTitle
 import com.bedrud.app.ui.theme.BedrudShapeTokens
 import com.bedrud.app.ui.theme.Dimens
+import com.bedrud.app.ui.theme.typeCentered
 
 /**
  * A poll in the conversation, drawn as the message it arrived in.
@@ -193,19 +194,24 @@ private fun PollAnswer(
                         modifier = Modifier.size(Dimens.iconXs),
                     )
                 }
+                // Centred in a fixed-height bar beside the tick, so corrected like a button label.
+                val answerStyle = MaterialTheme.typography.bodySmall.copy(
+                    textDirection = BidiUtils.textDirection(text),
+                )
                 Text(
                     text = BidiUtils.wrap(text),
-                    style = MaterialTheme.typography.bodySmall.copy(
-                        textDirection = BidiUtils.textDirection(text),
-                    ),
+                    style = answerStyle,
                     color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.typeCentered(answerStyle),
                 )
             }
             if (showShare) {
+                val shareStyle = MaterialTheme.typography.labelSmall
                 Text(
                     text = "$percent$PercentSign",
-                    style = MaterialTheme.typography.labelSmall,
+                    style = shareStyle,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.typeCentered(shareStyle),
                 )
             }
         }

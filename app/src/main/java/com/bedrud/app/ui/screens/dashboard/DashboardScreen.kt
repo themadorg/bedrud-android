@@ -44,6 +44,7 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHostState
@@ -133,6 +134,7 @@ import com.bedrud.app.ui.screens.instance.InstanceSwitcherSheet
 import com.bedrud.app.ui.theme.BedrudShapeTokens
 import com.bedrud.app.ui.theme.Dimens
 import com.bedrud.app.ui.theme.Motion
+import com.bedrud.app.ui.theme.typeCentered
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
@@ -517,7 +519,13 @@ fun DashboardContent(
             },
             dismissButton = {
                 TextButton(onClick = { pendingServerSwitch = null }) {
-                    Text(stringResource(R.string.common_button_cancel))
+                    // Corrected like the BedrudButton beside it, or the two labels in this dialog
+                    // sit at different heights.
+                    val cancelStyle = LocalTextStyle.current
+                    Text(
+                        stringResource(R.string.common_button_cancel),
+                        modifier = Modifier.typeCentered(cancelStyle),
+                    )
                 }
             }
         )
@@ -864,7 +872,11 @@ private fun RoomsHeaderTitle(serverName: String?, onClick: () -> Unit) {
             text = titleText,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.weight(1f, fill = false),
+            // Corrected at the server name's size, the run that sets this line's height, so the
+            // header sits where the other tabs' single-style titles do.
+            modifier = Modifier
+                .weight(1f, fill = false)
+                .typeCentered(MaterialTheme.typography.headlineSmall),
         )
         Icon(
             Icons.Default.ExpandMore,
@@ -980,7 +992,8 @@ private fun FilterRow(
                         when (filter) {
                             RoomFilter.ALL -> stringResource(R.string.dashboard_filter_all)
                             RoomFilter.MY_ROOMS -> stringResource(R.string.dashboard_filter_myRooms)
-                        }
+                        },
+                        modifier = Modifier.typeCentered(LocalTextStyle.current)
                     )
                 },
                 // Canonical M3 filter-chip affordance: a leading check on the active chip only, so
@@ -1046,18 +1059,7 @@ private fun RoomCard(
 
     SwipeableRoomRow(action = swipeAction, modifier = modifier.fillMaxWidth()) {
         RoomCardScaffold(onClick = onJoin) {
-            Column(modifier = Modifier.weight(1f)) {
-                RoomTitleLine(title = title)
-                if (metaText != null) {
-                    Text(
-                        text = metaText,
-                        style = MaterialTheme.typography.labelSmall,
-                        color = statusTint,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                }
-            }
+            RoomCardText(title = title, status = metaText, statusColor = statusTint)
 
             if (onSettings != null) {
                 IconButton(onClick = onSettings, modifier = Modifier.size(Dimens.minTouchTarget)) {
@@ -1112,18 +1114,7 @@ private fun RecentRoomCard(
 
     SwipeableRoomRow(action = swipeAction, modifier = modifier.fillMaxWidth()) {
         RoomCardScaffold(onClick = onJoin) {
-            Column(modifier = Modifier.weight(1f)) {
-                RoomTitleLine(title = recent.roomName)
-                if (presence != null) {
-                    Text(
-                        text = presence.text,
-                        style = MaterialTheme.typography.labelSmall,
-                        color = statusTint,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                }
-            }
+            RoomCardText(title = recent.roomName, status = presence?.text, statusColor = statusTint)
 
             TrailingChevron()
         }
@@ -1181,19 +1172,43 @@ private fun RoomCardScaffold(
     }
 }
 
-/** Line 1 of a room card: the room name in monospace. */
+/**
+ * A room card's text: the room name in monospace and, when anything is known, a second line saying
+ * whether it is live or how long since it was. The two are centred on the card's trailing icons as
+ * one block.
+ */
 @Composable
-private fun RoomTitleLine(title: String) {
-    Text(
-        text = title,
-        style = MaterialTheme.typography.bodyLarge.copy(
-            fontFamily = FontFamily.Monospace,
-            textDirection = TextDirection.Ltr,
-        ),
-        maxLines = 1,
-        overflow = TextOverflow.Ellipsis,
-        modifier = Modifier.fillMaxWidth(),
+private fun RowScope.RoomCardText(title: String, status: String?, statusColor: Color) {
+    val titleStyle = MaterialTheme.typography.bodyLarge.copy(
+        fontFamily = FontFamily.Monospace,
+        textDirection = TextDirection.Ltr,
     )
+    val statusStyle = MaterialTheme.typography.labelSmall
+    Column(
+        modifier = Modifier
+            .weight(1f)
+            .typeCentered(
+                firstLine = titleStyle,
+                lastLine = if (status != null) statusStyle else titleStyle,
+            ),
+    ) {
+        Text(
+            text = title,
+            style = titleStyle,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        if (status != null) {
+            Text(
+                text = status,
+                style = statusStyle,
+                color = statusColor,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+    }
 }
 
 @Composable
@@ -1272,7 +1287,9 @@ private fun SwipeActionBackground(action: SwipeAction, state: SwipeToDismissBoxS
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(Dimens.space8),
         ) {
-            Text(action.label, style = MaterialTheme.typography.labelLarge, color = action.contentColor)
+            // Centred against the icon beside it rather than against other text.
+            val labelStyle = MaterialTheme.typography.labelLarge
+            Text(action.label, style = labelStyle, color = action.contentColor, modifier = Modifier.typeCentered(labelStyle))
             Icon(action.icon, contentDescription = null, tint = action.contentColor, modifier = Modifier.size(Dimens.iconSm))
         }
     }
@@ -1513,7 +1530,13 @@ private fun CreateRoomDialog(
         },
         dismissButton = {
             TextButton(onClick = onDismiss, enabled = !isCreating) {
-                Text(stringResource(R.string.common_button_cancel))
+                // Corrected like the BedrudButton beside it, or the two labels in this dialog sit
+                // at different heights — measured 5px apart before this was applied.
+                val cancelStyle = LocalTextStyle.current
+                Text(
+                    stringResource(R.string.common_button_cancel),
+                    modifier = Modifier.typeCentered(cancelStyle),
+                )
             }
         }
     )
