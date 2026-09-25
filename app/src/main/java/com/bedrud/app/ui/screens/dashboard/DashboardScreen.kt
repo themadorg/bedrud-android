@@ -180,7 +180,6 @@ private data class PendingServerSwitch(val instance: Instance, val roomName: Str
 fun DashboardContent(
     modifier: Modifier = Modifier,
     onJoinRoom: (String) -> Unit,
-    onJoinRecent: (RecentRoom) -> Unit,
     onOpenProfile: () -> Unit,
     onNavigateToAddInstance: () -> Unit,
     instanceManager: InstanceManager = koinInject(),
@@ -784,7 +783,9 @@ fun DashboardContent(
                                             is RoomListEntry.FromRecent -> RecentRoomCard(
                                                 recent = entry.recent,
                                                 now = nowTickMs,
-                                                onJoin = { onJoinRecent(entry.recent) },
+                                                // Only the active server's recents are listed, so a
+                                                // recent joins like any other card, with no switch.
+                                                onJoin = { onJoinRoom(entry.recent.roomName) },
                                                 onRemove = {
                                                     recentRoomsStore.remove(
                                                         entry.recent.roomName,

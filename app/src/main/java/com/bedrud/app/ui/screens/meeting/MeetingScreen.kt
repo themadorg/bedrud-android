@@ -285,7 +285,7 @@ fun MeetingScreen(
         // written back as visited just now, so a card that could never be joined kept resurfacing
         // at the top of the list, labelled "Live" by the very tap that failed to open it.
         instanceManager.store.activeInstance?.let { instance ->
-            recentRoomsStore.add(roomName, instance.id, instance.displayName, instance.iconColorHex)
+            recentRoomsStore.add(roomName, instance.id)
         }
         isJoining = false
     }
