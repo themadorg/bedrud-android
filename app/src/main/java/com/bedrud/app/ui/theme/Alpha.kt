@@ -9,4 +9,10 @@ package com.bedrud.app.ui.theme
 object Alpha {
     /** Material 3's disabled-content opacity. */
     const val disabled = 0.38f
+
+    /** The image viewer's scrim: dark enough that the picture is all there is to look at, short of fully hiding the call. */
+    const val lightboxScrim = 0.92f
+
+    /** The image viewer's saved/failed notice, letting a trace of the picture show through its pill. */
+    const val lightboxNotice = 0.9f
 }

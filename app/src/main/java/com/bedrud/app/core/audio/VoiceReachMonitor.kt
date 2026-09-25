@@ -36,30 +36,39 @@ enum class MeetingVoiceAlert {
  *
  * Nothing is ever reported while you are quiet. The whole point is to answer "am I talking to
  * nobody", which is only a question while you are talking, so talking is treated as lasting
- * [QuietHoldMillis] past the last loud frame — long enough to bridge the gaps inside a sentence,
- * short enough to end when you stop.
+ * [QuietHoldMillis] past the last sample of speech — long enough to bridge the gaps inside a
+ * sentence, short enough to end when you stop. Whether a sample is speech at all is
+ * [SpeechLevelTracker]'s call, made against this microphone's own noise floor.
+ *
+ * That floor is this device's, but the room's reports are not: the server names a speaker only
+ * above a fixed level of its own, [RoomSpeakerLevel]. Speech that clears the floor but not that
+ * level is still worth a local warning — muted is muted however quietly you speak — yet the room
+ * staying silent about it proves nothing, so the room is only blamed for speech it would report.
  */
 class VoiceReachMonitor(
-    private val talkingLevel: Float = TalkingLevel,
     private val causeGraceMillis: Long = CauseGraceMillis,
     private val reachGraceMillis: Long = ReachGraceMillis,
     private val quietHoldMillis: Long = QuietHoldMillis,
+    private val roomSpeakerLevel: Float = RoomSpeakerLevel,
 ) {
 
     private var lastLoudAtMillis: Long? = null
+    private var lastReportableAtMillis: Long? = null
     private var roomLastHeardMillis: Long? = null
     private var cause: MeetingVoiceAlert = MeetingVoiceAlert.None
     private var causeSinceMillis: Long? = null
 
     /**
-     * Folds one sample of the local capture level and the room's view of it into a verdict.
+     * Folds one sample of the local capture and the room's view of it into a verdict.
      *
-     * [micLevel] must go quiet honestly when capture stops — a frozen last reading would look like
-     * speech forever.
+     * [isSpeech] must go false honestly when capture stops — a frozen last reading would look like
+     * speech forever. [micLevel] is that same sample's level, null once capture has stalled, and
+     * only decides whether the room would have reported it.
      */
     fun sample(
         nowMillis: Long,
-        micLevel: Float,
+        micLevel: Float?,
+        isSpeech: Boolean,
         isMicEnabled: Boolean,
         isPushToTalk: Boolean,
         isGateOpen: Boolean,
@@ -67,12 +76,18 @@ class VoiceReachMonitor(
         roomHasOthers: Boolean,
     ): MeetingVoiceAlert {
         if (roomHearsMe) roomLastHeardMillis = nowMillis
-        if (micLevel >= talkingLevel) lastLoudAtMillis = nowMillis
+        if (isSpeech) lastLoudAtMillis = nowMillis
+        if (isSpeech && micLevel != null && micLevel >= roomSpeakerLevel) {
+            lastReportableAtMillis = nowMillis
+        }
 
         // Speech is loud in bursts with gaps between words, so "talking" has to survive a dip or
-        // the run never lasts long enough to judge — and would never end once it had.
+        // the run never lasts long enough to judge — and would never end once it had. Talking
+        // loudly enough for the room to report rides the same hold, for the same reason.
         val lastLoud = lastLoudAtMillis
         val talking = lastLoud != null && nowMillis - lastLoud < quietHoldMillis
+        val talkingReportably = lastReportableAtMillis
+            ?.let { nowMillis - it < quietHoldMillis } == true
 
         // The clock only runs while you are talking. Letting it accumulate through a silence
         // meant the first word after a long pause arrived with the grace already served, and
@@ -91,6 +106,8 @@ class VoiceReachMonitor(
             // Alone in the room there is nobody to not hear you, and the server has no reason to
             // report a speaker to an empty room — so silence from it proves nothing.
             !roomHasOthers -> MeetingVoiceAlert.None
+            // Too quiet for the server to name as a speaker, so its silence is expected.
+            !talkingReportably -> MeetingVoiceAlert.None
             heardRecently -> MeetingVoiceAlert.None
             else -> MeetingVoiceAlert.NotReachingRoom
         }
@@ -116,6 +133,7 @@ class VoiceReachMonitor(
 
     fun reset() {
         lastLoudAtMillis = null
+        lastReportableAtMillis = null
         roomLastHeardMillis = null
         cause = MeetingVoiceAlert.None
         causeSinceMillis = null
@@ -126,15 +144,17 @@ class VoiceReachMonitor(
 
     companion object {
         /**
-         * Capture level that counts as talking, on [VoiceGateProcessor]'s normalized scale.
+         * The level, on the capture scale, below which the server does not name a speaker.
          *
-         * Measured on device once the capture format was decoded correctly. Live, the room reads
-         * about 0.25 between words and peaks near 0.84 on speech; muted, the floor drops to a true
-         * zero and speech peaks around 0.6, because a muted capture is not being gain-ridden for
-         * transmission. The bar has to clear the live floor and still be reachable by the quieter
-         * muted signal, which leaves it here.
+         * LiveKit's `audio.active_level` defaults to 30, meaning -30 dBov, which lands at 0.5 on a
+         * scale running linearly from -60 to 0 dB. The server also wants that level held for more
+         * than 40% of each interval; that is not modelled here, and [QuietHoldMillis] bridges the
+         * same gaps instead. A deployment can change both, and the client is never told, so this
+         * assumes the default. Measured on device with a second participant, a hum between 0.15
+         * and 0.5 was never reported by the room, and blaming the room for it lit the warning on a
+         * call that was working.
          */
-        const val TalkingLevel = 0.3f
+        const val RoomSpeakerLevel = 0.5f
 
         /**
          * How long a locally-known cause (muted, gate shut) must hold before it is worth saying.
@@ -149,7 +169,7 @@ class VoiceReachMonitor(
         const val ReachGraceMillis = 2_500L
 
         /**
-         * How long a dip below [TalkingLevel] still counts as talking.
+         * How long a sample that is not speech still counts as talking.
          *
          * Long enough to ride the gap between two words, short enough that the ring goes out
          * promptly when you actually stop. Ordinary speech gaps run 150-300ms.

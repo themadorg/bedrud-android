@@ -101,6 +101,10 @@
   <string name="meeting_button_goBack">Retour</string>
   <string name="meeting_dialog_kickTitle">Expulser un participant</string>
   <string name="meeting_dialog_kickMessage">Êtes-vous sûr de vouloir expulser <xliff:g id="participantName" example="John Doe">%1$s</xliff:g> du salon ?</string>
+  <string name="meeting_dialog_followRoomTitle">Quitter cet appel ?</string>
+  <string name="meeting_dialog_followRoomMessage">Vous allez quitter <xliff:g id="currentRoom" example="obd-hzpi-dfv">%1$s</xliff:g> et rejoindre <xliff:g id="nextRoom" example="oqc-qpka-bvw">%2$s</xliff:g>.</string>
+  <string name="meeting_dialog_followRoomOnServerMessage">Vous allez quitter <xliff:g id="currentRoom" example="obd-hzpi-dfv">%1$s</xliff:g> et rejoindre <xliff:g id="nextRoom" example="oqc-qpka-bvw">%2$s</xliff:g> sur <xliff:g id="serverName" example="Bedrud">%3$s</xliff:g>.</string>
+  <string name="meeting_button_leaveAndJoin">Quitter et rejoindre</string>
   <string name="meeting_action_mute">Mettre en sourdine</string>
   <string name="meeting_action_unmute">Réactiver le son</string>
   <string name="meeting_action_disableVideo">Désactiver la vidéo</string>
@@ -141,6 +145,7 @@
   <string name="meeting_chat_reactions">Réactions</string>
   <string name="meeting_chat_shareChooser">Partager le message</string>
   <string name="meeting_chat_linkUnopenable">Aucune application ne peut ouvrir ce lien</string>
+  <string name="meeting_chat_linkCurrentRoom">Vous êtes déjà dans ce salon</string>
   <plurals name="meeting_chat_reactionCount">
     <item quantity="one">%1$d réaction</item>
     <item quantity="other">%1$d réactions</item>
@@ -210,6 +215,7 @@
   <string name="settings_theme_light">Clair</string>
   <string name="settings_theme_dark">Sombre</string>
   <string name="settings_label_language">Langue</string>
+  <string name="settings_language_system">Système</string>
   <string name="settings_section_notifications">Notifications</string>
   <string name="settings_label_enableNotifications">Activer les notifications</string>
   <string name="settings_section_account">Compte</string>
@@ -245,7 +251,6 @@
   <string name="dashboard_stat_live">En direct</string>
   <string name="dashboard_stat_private">Privé</string>
   <string name="dashboard_status_live">● En direct</string>
-  <string name="dashboard_status_timeAgo">il y a %1$s</string>
   <string name="dashboard_empty_noRooms">Aucun salon pour l\'instant</string>
   <string name="dashboard_feature_chat">Chat</string>
   <string name="dashboard_feature_video">Vidéo</string>

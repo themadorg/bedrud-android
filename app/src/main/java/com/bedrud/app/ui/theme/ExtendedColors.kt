@@ -9,8 +9,9 @@ import androidx.compose.ui.graphics.Color
 /**
  * Semantic colors Material 3's [androidx.compose.material3.ColorScheme] has no slot for.
  *
- * Currently a `warning` role (amber) for non-critical cautions — kept distinct from `error` (red),
- * which is reserved for errors and destructive/irreversible actions.
+ * A `warning` role (amber) for non-critical cautions — kept distinct from `error` (red), which is
+ * reserved for errors and destructive/irreversible actions — and `onScrim`, for controls drawn
+ * straight onto the scrim. The scrim is black in both themes, so what sits on it is white in both.
  *
  * Provided via [LocalBedrudColors] in [BedrudTheme]; read through `MaterialTheme.bedrudColors`.
  */
@@ -19,6 +20,7 @@ data class BedrudExtendedColors(
     val onWarning: Color,
     val warningContainer: Color,
     val onWarningContainer: Color,
+    val onScrim: Color,
 )
 
 val LightExtendedColors = BedrudExtendedColors(
@@ -26,6 +28,7 @@ val LightExtendedColors = BedrudExtendedColors(
     onWarning = Neutral0,
     warningContainer = Amber100,
     onWarningContainer = Amber900,
+    onScrim = Neutral0,
 )
 
 val DarkExtendedColors = BedrudExtendedColors(
@@ -33,6 +36,7 @@ val DarkExtendedColors = BedrudExtendedColors(
     onWarning = Amber950,
     warningContainer = Amber900,
     onWarningContainer = Amber100,
+    onScrim = Neutral0,
 )
 
 val LocalBedrudColors = staticCompositionLocalOf { LightExtendedColors }

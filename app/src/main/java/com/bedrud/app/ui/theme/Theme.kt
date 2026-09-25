@@ -22,7 +22,7 @@ import com.bedrud.app.ui.screens.settings.AppLanguage
  * The full Material 3 role set is specified (containers, surface-tonal levels, inverse, scrim)
  * so components that reach for any role get an on-brand value instead of an M3 default.
  */
-private val LightColorScheme = lightColorScheme(
+internal val LightColorScheme = lightColorScheme(
     primary = Rose600,
     onPrimary = Neutral0,
     primaryContainer = Rose100,
@@ -39,7 +39,9 @@ private val LightColorScheme = lightColorScheme(
     tertiaryContainer = Teal100,
     onTertiaryContainer = Teal900,
 
-    error = Red600,
+    // A step darker than the red the ramp starts at, so the error role clears the rose primary.
+    // Rose and red share a hue family, so lightness is what separates them here.
+    error = Red700,
     onError = Neutral0,
     errorContainer = Red100,
     onErrorContainer = Red900,
@@ -67,7 +69,7 @@ private val LightColorScheme = lightColorScheme(
     surfaceContainerHighest = Neutral200,
 )
 
-private val DarkColorScheme = darkColorScheme(
+internal val DarkColorScheme = darkColorScheme(
     primary = Rose400,
     onPrimary = Rose950,
     primaryContainer = Rose800,
@@ -84,8 +86,11 @@ private val DarkColorScheme = darkColorScheme(
     tertiaryContainer = Teal800,
     onTertiaryContainer = Teal100,
 
-    error = Red400,
-    onError = Red950,
+    // A step darker than the rose primary sits at, so the error role reads as its own color
+    // rather than as the brand. Red950 no longer clears AA on this fill, so the label that sits
+    // on it drops to the page's own background instead.
+    error = Red500,
+    onError = Stone950,
     errorContainer = Red900,
     onErrorContainer = Red100,
 
