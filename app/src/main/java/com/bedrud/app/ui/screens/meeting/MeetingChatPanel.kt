@@ -91,6 +91,7 @@ import com.bedrud.app.ui.theme.Elevation
 import com.bedrud.app.ui.theme.bedrudColors
 import com.bedrud.app.ui.theme.typeCentered
 import com.bedrud.app.ui.util.openChatPage
+import java.util.Locale
 import kotlinx.coroutines.launch
 
 /**
@@ -215,7 +216,9 @@ fun MeetingChatPanel(
                     uploadError = when (val reason = result.reason) {
                         ChatUploadFailure.Unreadable -> unreadableMessage
                         ChatUploadFailure.Unreachable -> unreachableMessage
-                        is ChatUploadFailure.Rejected -> rejectedFormat.format(reason.code)
+                        // The status code stays in Latin digits in every language: it is a technical
+                        // code people search for and report, like a version or an ID.
+                        is ChatUploadFailure.Rejected -> String.format(Locale.ROOT, rejectedFormat, reason.code)
                     }
                 }
             }

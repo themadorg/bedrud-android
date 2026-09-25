@@ -40,6 +40,7 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import com.bedrud.app.R
@@ -62,6 +63,9 @@ import org.koin.compose.koinInject
 
 /** Which sign-in action is currently in flight, so only its button shows a spinner. */
 private enum class HubAction { PASSKEY, GUEST }
+
+/** The shortest guest name accepted, once surrounding spaces are trimmed. */
+private const val MinGuestNameLength = 2
 
 /** The OAuth providers the app knows about, in display order (backend ids: google/github/twitter). */
 private data class OAuthOption(
@@ -116,7 +120,12 @@ fun LoginScreen(
     val settingsFailed = settingsState is PublicSettingsState.Failed
     val isBusy = loadingAction != null
 
-    val nameTooShortMessage = stringResource(R.string.auth_error_nameTooShort)
+    // The length is passed as a number, so it is written in the app language's own digits.
+    val nameTooShortMessage = pluralStringResource(
+        R.plurals.auth_error_nameTooShort,
+        MinGuestNameLength,
+        MinGuestNameLength,
+    )
     val passkeyFailedMessage = stringResource(R.string.auth_error_generic)
     val guestFailedMessage = stringResource(R.string.auth_error_guestFailed)
 
@@ -158,7 +167,7 @@ fun LoginScreen(
         if (isBusy) return
         focusManager.clearFocus()
         val trimmed = guestName.trim()
-        if (trimmed.length < 2) {
+        if (trimmed.length < MinGuestNameLength) {
             errorMessage = nameTooShortMessage
             return
         }

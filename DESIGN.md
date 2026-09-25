@@ -745,6 +745,17 @@ app. The QR scanner is ZXing's `CaptureActivity`, a library screen that is not w
 prompt follows the device. The System entry is the one language-picker label drawn from
 `strings.xml`; every other entry is the language's own name in its own script.
 
+**Numbers are written in the language's own digits** — `۱۲` in Persian — wherever they are
+something to read rather than something to copy. A number inside a sentence goes through its string
+resource as a number (`%1$d`, or a `<plurals>` when a word agrees with it), which the resources
+format in the app's language; one standing alone — a badge, a reaction tally, a stat, a poll share —
+goes through `formatCount` / `formatPercent` in `core/LocalizedNumbers.kt`. `toString()` and string
+templates are what left these in Latin digits, and a `"$value%"` template also gets the sign wrong
+wherever it moves (`%25` in Turkish, `25 %` in French, `۲۵٪` in Persian). Machine-shaped text keeps
+Latin digits in every language: room slugs, IDs, server addresses, the app version, invite tokens and
+an HTTP status code in an error, which is formatted with `Locale.ROOT` because people search for and
+report it as it is.
+
 **Content direction is separate from layout direction.** What someone types is not governed by the
 language they chose the app in: a Persian message written in the English build is still a
 right-to-left paragraph. `BidiUtils` answers that from the text itself, by its first strong

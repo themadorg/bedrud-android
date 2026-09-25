@@ -39,7 +39,10 @@
   <string name="auth_hint_passwordMinLength">حداقل %1$d نویسه</string>
   <string name="auth_error_emailInvalid">یک ایمیل معتبر وارد کنید</string>
   <string name="auth_error_guestFailed">پیوستن به‌عنوان مهمان ممکن نشد. لطفاً دوباره تلاش کنید.</string>
-  <string name="auth_error_nameTooShort">لطفاً حداقل ۲ نویسه وارد کنید.</string>
+  <plurals name="auth_error_nameTooShort">
+    <item quantity="one">لطفاً حداقل %1$d نویسه وارد کنید.</item>
+    <item quantity="other">لطفاً حداقل %1$d نویسه وارد کنید.</item>
+  </plurals>
   <string name="auth_error_generic">مشکلی پیش آمد. لطفاً دوباره تلاش کنید.</string>
   <string name="auth_error_registrationFailed">ثبت‌نام ناموفق بود. لطفاً دوباره تلاش کنید.</string>
   <string name="auth_error_signInFailed">ورود ناموفق بود. لطفاً دوباره تلاش کنید.</string>

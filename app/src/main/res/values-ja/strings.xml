@@ -39,7 +39,9 @@
   <string name="auth_hint_passwordMinLength">%1$d文字以上</string>
   <string name="auth_error_emailInvalid">有効なメールアドレスを入力してください</string>
   <string name="auth_error_guestFailed">ゲストとして参加できませんでした。もう一度お試しください。</string>
-  <string name="auth_error_nameTooShort">2文字以上入力してください。</string>
+  <plurals name="auth_error_nameTooShort">
+    <item quantity="other">%1$d文字以上入力してください。</item>
+  </plurals>
   <string name="auth_error_generic">問題が発生しました。もう一度お試しください。</string>
   <string name="auth_error_registrationFailed">登録に失敗しました。もう一度お試しください。</string>
   <string name="auth_error_signInFailed">サインインに失敗しました。もう一度お試しください。</string>
