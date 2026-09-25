@@ -16,11 +16,13 @@ import android.util.Log
 import androidx.core.app.NotificationCompat
 import com.bedrud.app.MainActivity
 import com.bedrud.app.R
+import com.bedrud.app.core.createLocaleContext
 import com.bedrud.app.core.instance.InstanceManager
 import com.bedrud.app.core.livekit.ConnectionState
 import com.bedrud.app.core.livekit.RoomManager
 import com.bedrud.app.core.recent.RecentRoomsStore
 import com.bedrud.app.core.registerNotificationChannel
+import com.bedrud.app.ui.screens.settings.SettingsStore
 import com.twilio.audioswitch.AudioDevice
 import com.twilio.audioswitch.AudioDeviceChangeListener
 import kotlinx.coroutines.CoroutineScope
@@ -41,6 +43,12 @@ class CallService : Service() {
     private var wakeLock: PowerManager.WakeLock? = null
     private var proximityScreenLock: ProximityScreenLock? = null
     private var audioRouteListener: AudioDeviceChangeListener? = null
+
+    // The system hands a service its own context in the device's language, not the one picked in
+    // the app, so the call notification needs the same wrapping MainActivity applies to itself.
+    override fun attachBaseContext(base: Context) {
+        super.attachBaseContext(base.createLocaleContext(SettingsStore(base).getLanguageTag()))
+    }
 
     override fun onBind(intent: Intent?): IBinder? = null
 

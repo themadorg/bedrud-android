@@ -39,7 +39,11 @@
   <string name="auth_hint_passwordMinLength">Al menos %1$d caracteres</string>
   <string name="auth_error_emailInvalid">Introduce un correo electrónico válido</string>
   <string name="auth_error_guestFailed">No se pudo entrar como invitado. Inténtalo de nuevo.</string>
-  <string name="auth_error_nameTooShort">Introduce al menos 2 caracteres.</string>
+  <plurals name="auth_error_nameTooShort">
+    <item quantity="one">Introduce al menos %1$d carácter.</item>
+    <item quantity="many">Introduce al menos %1$d de caracteres.</item>
+    <item quantity="other">Introduce al menos %1$d caracteres.</item>
+  </plurals>
   <string name="auth_error_generic">Algo salió mal. Inténtalo de nuevo.</string>
   <string name="auth_error_registrationFailed">Error al registrarse. Inténtalo de nuevo.</string>
   <string name="auth_error_signInFailed">Error al iniciar sesión. Inténtalo de nuevo.</string>
@@ -97,6 +101,10 @@
   <string name="meeting_button_goBack">Volver</string>
   <string name="meeting_dialog_kickTitle">Expulsar participante</string>
   <string name="meeting_dialog_kickMessage">¿Estás seguro de que quieres expulsar a <xliff:g id="participantName" example="John Doe">%1$s</xliff:g> de la sala?</string>
+  <string name="meeting_dialog_followRoomTitle">¿Salir de esta llamada?</string>
+  <string name="meeting_dialog_followRoomMessage">Saldrás de <xliff:g id="currentRoom" example="obd-hzpi-dfv">%1$s</xliff:g> y te unirás a <xliff:g id="nextRoom" example="oqc-qpka-bvw">%2$s</xliff:g>.</string>
+  <string name="meeting_dialog_followRoomOnServerMessage">Saldrás de <xliff:g id="currentRoom" example="obd-hzpi-dfv">%1$s</xliff:g> y te unirás a <xliff:g id="nextRoom" example="oqc-qpka-bvw">%2$s</xliff:g> en <xliff:g id="serverName" example="Bedrud">%3$s</xliff:g>.</string>
+  <string name="meeting_button_leaveAndJoin">Salir y unirse</string>
   <string name="meeting_action_mute">Silenciar</string>
   <string name="meeting_action_unmute">Activar sonido</string>
   <string name="meeting_action_disableVideo">Desactivar video</string>
@@ -137,6 +145,7 @@
   <string name="meeting_chat_reactions">Reacciones</string>
   <string name="meeting_chat_shareChooser">Compartir mensaje</string>
   <string name="meeting_chat_linkUnopenable">Ninguna aplicación puede abrir ese enlace</string>
+  <string name="meeting_chat_linkCurrentRoom">Ya estás en esta sala</string>
   <plurals name="meeting_chat_reactionCount">
     <item quantity="one">%1$d reacción</item>
     <item quantity="other">%1$d reacciones</item>
@@ -206,6 +215,7 @@
   <string name="settings_theme_light">Claro</string>
   <string name="settings_theme_dark">Oscuro</string>
   <string name="settings_label_language">Idioma</string>
+  <string name="settings_language_system">Sistema</string>
   <string name="settings_section_notifications">Notificaciones</string>
   <string name="settings_label_enableNotifications">Activar notificaciones</string>
   <string name="settings_section_account">Cuenta</string>
@@ -241,7 +251,6 @@
   <string name="dashboard_stat_live">En vivo</string>
   <string name="dashboard_stat_private">Privado</string>
   <string name="dashboard_status_live">● En vivo</string>
-  <string name="dashboard_status_timeAgo">hace %1$s</string>
   <string name="dashboard_empty_noRooms">Aún no hay salas</string>
   <string name="dashboard_feature_chat">Chat</string>
   <string name="dashboard_feature_video">Video</string>

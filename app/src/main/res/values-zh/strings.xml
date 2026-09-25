@@ -39,7 +39,9 @@
   <string name="auth_hint_passwordMinLength">至少 %1$d 个字符</string>
   <string name="auth_error_emailInvalid">请输入有效的邮箱地址</string>
   <string name="auth_error_guestFailed">无法以访客身份加入。请重试。</string>
-  <string name="auth_error_nameTooShort">请至少输入 2 个字符。</string>
+  <plurals name="auth_error_nameTooShort">
+    <item quantity="other">请至少输入 %1$d 个字符。</item>
+  </plurals>
   <string name="auth_error_generic">出错了。请重试。</string>
   <string name="auth_error_registrationFailed">注册失败。请重试。</string>
   <string name="auth_error_signInFailed">登录失败。请重试。</string>
@@ -97,6 +99,10 @@
   <string name="meeting_button_goBack">返回</string>
   <string name="meeting_dialog_kickTitle">移出参与者</string>
   <string name="meeting_dialog_kickMessage">确定要将 <xliff:g id="participantName" example="John Doe">%1$s</xliff:g> 移出此房间吗？</string>
+  <string name="meeting_dialog_followRoomTitle">离开此通话？</string>
+  <string name="meeting_dialog_followRoomMessage">您将离开 <xliff:g id="currentRoom" example="obd-hzpi-dfv">%1$s</xliff:g> 并加入 <xliff:g id="nextRoom" example="oqc-qpka-bvw">%2$s</xliff:g>。</string>
+  <string name="meeting_dialog_followRoomOnServerMessage">您将离开 <xliff:g id="currentRoom" example="obd-hzpi-dfv">%1$s</xliff:g> 并加入 <xliff:g id="serverName" example="Bedrud">%3$s</xliff:g> 上的 <xliff:g id="nextRoom" example="oqc-qpka-bvw">%2$s</xliff:g>。</string>
+  <string name="meeting_button_leaveAndJoin">离开并加入</string>
   <string name="meeting_action_mute">静音</string>
   <string name="meeting_action_unmute">取消静音</string>
   <string name="meeting_action_disableVideo">关闭视频</string>
@@ -136,6 +142,7 @@
   <string name="meeting_chat_reactions">回应</string>
   <string name="meeting_chat_shareChooser">分享消息</string>
   <string name="meeting_chat_linkUnopenable">没有应用可以打开该链接</string>
+  <string name="meeting_chat_linkCurrentRoom">您已在此房间中</string>
   <plurals name="meeting_chat_reactionCount">
     <item quantity="other">%1$d 个回应</item>
   </plurals>
@@ -204,6 +211,7 @@
   <string name="settings_theme_light">浅色</string>
   <string name="settings_theme_dark">深色</string>
   <string name="settings_label_language">语言</string>
+  <string name="settings_language_system">系统</string>
   <string name="settings_section_notifications">通知</string>
   <string name="settings_label_enableNotifications">启用通知</string>
   <string name="settings_section_account">账户</string>
@@ -239,7 +247,6 @@
   <string name="dashboard_stat_live">直播中</string>
   <string name="dashboard_stat_private">私密</string>
   <string name="dashboard_status_live">● 直播中</string>
-  <string name="dashboard_status_timeAgo">%1$s前</string>
   <string name="dashboard_empty_noRooms">暂无房间</string>
   <string name="dashboard_feature_chat">聊天</string>
   <string name="dashboard_feature_video">视频</string>
