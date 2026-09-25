@@ -17,6 +17,7 @@ import androidx.compose.material.icons.automirrored.filled.ScreenShare
 import androidx.compose.material.icons.filled.Fullscreen
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -30,6 +31,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import com.bedrud.app.R
 import com.bedrud.app.ui.theme.BedrudShapeTokens
 import com.bedrud.app.ui.theme.Dimens
+import com.bedrud.app.ui.theme.typeCentered
 import io.livekit.android.compose.ui.ScaleType
 import io.livekit.android.compose.ui.VideoTrackView
 import io.livekit.android.room.Room
@@ -92,7 +94,11 @@ fun MeetingStreamTile(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                     FilledTonalButton(onClick = onStopShare) {
-                        Text(stringResource(R.string.meeting_stream_stop))
+                        val labelStyle = LocalTextStyle.current
+                        Text(
+                            stringResource(R.string.meeting_stream_stop),
+                            modifier = Modifier.typeCentered(labelStyle),
+                        )
                     }
                 }
             }
@@ -147,7 +153,11 @@ fun MeetingStreamTile(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                     FilledTonalButton(onClick = onWatch) {
-                        Text(stringResource(R.string.meeting_stream_watch))
+                        val labelStyle = LocalTextStyle.current
+                        Text(
+                            stringResource(R.string.meeting_stream_watch),
+                            modifier = Modifier.typeCentered(labelStyle),
+                        )
                     }
                 }
             }
@@ -172,12 +182,14 @@ fun MeetingStreamTile(
                 tint = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.size(Dimens.meetingBadgeIcon),
             )
+            val nameStyle = MaterialTheme.typography.labelSmall.copy(textDirection = TextDirection.Content)
             Text(
                 text = name,
-                style = MaterialTheme.typography.labelSmall.copy(textDirection = TextDirection.Content),
+                style = nameStyle,
                 color = MaterialTheme.colorScheme.onSurface,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.typeCentered(nameStyle),
             )
         }
     }

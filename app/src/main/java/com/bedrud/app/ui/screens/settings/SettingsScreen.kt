@@ -33,6 +33,7 @@ import com.bedrud.app.ui.components.BedrudTabScaffoldContentInsets
 import com.bedrud.app.ui.components.CardSectionHeader
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
@@ -62,6 +63,7 @@ import com.bedrud.app.core.instance.InstanceManager
 import com.bedrud.app.ui.theme.BedrudShapeTokens
 import com.bedrud.app.models.ChangePasswordRequest
 import com.bedrud.app.core.api.apiAction
+import com.bedrud.app.ui.theme.typeCentered
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 
@@ -122,7 +124,10 @@ fun SettingsContent(
                                     count = AppAppearance.entries.size
                                 )
                             ) {
-                                Text(stringResource(option.stringResId))
+                                Text(
+                                    stringResource(option.stringResId),
+                                    modifier = Modifier.typeCentered(LocalTextStyle.current)
+                                )
                             }
                         }
                     }
@@ -150,7 +155,9 @@ fun SettingsContent(
                         ) {
                             AppLanguage.entries.forEach { lang ->
                                 DropdownMenuItem(
-                                    text = { Text(lang.label) },
+                                    text = {
+                                        Text(lang.label, modifier = Modifier.typeCentered(LocalTextStyle.current))
+                                    },
                                     onClick = {
                                         settingsStore.setLanguage(lang)
                                         languageExpanded = false
@@ -171,7 +178,12 @@ fun SettingsContent(
                         modifier = Modifier.padding(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 8.dp)
                     )
                     ListItem(
-                        headlineContent = { Text(stringResource(R.string.settings_label_enableNotifications)) },
+                        headlineContent = {
+                            Text(
+                                stringResource(R.string.settings_label_enableNotifications),
+                                modifier = Modifier.typeCentered(LocalTextStyle.current)
+                            )
+                        },
                         trailingContent = {
                             Switch(
                                 checked = notificationsEnabled,
@@ -198,30 +210,49 @@ fun SettingsContent(
                             }
                         }
                         ListItem(
-                            headlineContent = { Text(stringResource(R.string.settings_label_accountId)) },
+                            headlineContent = {
+                                Text(
+                                    stringResource(R.string.settings_label_accountId),
+                                    modifier = Modifier.typeCentered(LocalTextStyle.current)
+                                )
+                            },
                             trailingContent = {
-                                Text(currentUser?.id?.take(8) ?: "", style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                val idStyle = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace)
+                                Text(currentUser?.id?.take(8) ?: "", style = idStyle,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.typeCentered(idStyle))
                             },
                             colors = ListItemDefaults.colors(containerColor = Color.Transparent)
                         )
                         HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp),
                             color = MaterialTheme.colorScheme.outlineVariant)
                         ListItem(
-                            headlineContent = { Text(stringResource(R.string.settings_label_signInMethod)) },
+                            headlineContent = {
+                                Text(
+                                    stringResource(R.string.settings_label_signInMethod),
+                                    modifier = Modifier.typeCentered(LocalTextStyle.current)
+                                )
+                            },
                             trailingContent = {
                                 Text(currentUser?.provider?.replaceFirstChar { it.uppercase() } ?: stringResource(R.string.settings_provider_email),
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.typeCentered(LocalTextStyle.current))
                             },
                             colors = ListItemDefaults.colors(containerColor = Color.Transparent)
                         )
                         HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp),
                             color = MaterialTheme.colorScheme.outlineVariant)
                         ListItem(
-                            headlineContent = { Text(stringResource(R.string.settings_label_role)) },
+                            headlineContent = {
+                                Text(
+                                    stringResource(R.string.settings_label_role),
+                                    modifier = Modifier.typeCentered(LocalTextStyle.current)
+                                )
+                            },
                             trailingContent = {
                                 Text(if (currentUser?.isAdmin == true) stringResource(R.string.settings_role_admin) else stringResource(R.string.settings_role_user),
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.typeCentered(LocalTextStyle.current))
                             },
                             colors = ListItemDefaults.colors(containerColor = Color.Transparent)
                         )
@@ -295,7 +326,13 @@ fun SettingsContent(
                             },
                             enabled = currentPassword.isNotBlank() && newPassword.isNotBlank() && confirmPassword.isNotBlank(),
                             modifier = Modifier.fillMaxWidth()
-                        ) { Text(stringResource(R.string.settings_button_changePassword)) }
+                        ) {
+                            val labelStyle = LocalTextStyle.current
+                            Text(
+                                stringResource(R.string.settings_button_changePassword),
+                                modifier = Modifier.typeCentered(labelStyle),
+                            )
+                        }
                     }
                 }
             }
@@ -315,12 +352,19 @@ fun SettingsContent(
                     }
 
                     ListItem(
-                        headlineContent = { Text(stringResource(R.string.settings_label_version)) },
+                        headlineContent = {
+                            Text(
+                                stringResource(R.string.settings_label_version),
+                                modifier = Modifier.typeCentered(LocalTextStyle.current)
+                            )
+                        },
                         trailingContent = {
+                            val valueStyle = MaterialTheme.typography.bodyMedium
                             Text(
                                 packageInfo?.versionName ?: "1.0.0",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                style = valueStyle,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.typeCentered(valueStyle)
                             )
                         },
                         colors = ListItemDefaults.colors(containerColor = Color.Transparent)
@@ -332,12 +376,19 @@ fun SettingsContent(
                     )
 
                     ListItem(
-                        headlineContent = { Text(stringResource(R.string.settings_label_build)) },
+                        headlineContent = {
+                            Text(
+                                stringResource(R.string.settings_label_build),
+                                modifier = Modifier.typeCentered(LocalTextStyle.current)
+                            )
+                        },
                         trailingContent = {
+                            val valueStyle = MaterialTheme.typography.bodyMedium
                             Text(
                                 packageInfo?.longVersionCode?.toString() ?: "1",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                style = valueStyle,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.typeCentered(valueStyle)
                             )
                         },
                         colors = ListItemDefaults.colors(containerColor = Color.Transparent)

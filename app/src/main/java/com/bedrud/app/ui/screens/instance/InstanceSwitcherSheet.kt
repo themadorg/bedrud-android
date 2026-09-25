@@ -38,6 +38,7 @@ import com.bedrud.app.ui.components.BedrudSheetTitle
 import com.bedrud.app.ui.components.InitialsAvatar
 import com.bedrud.app.ui.theme.Dimens
 import com.bedrud.app.ui.theme.parseInstanceColor
+import com.bedrud.app.ui.theme.typeCentered
 
 @Composable
 fun InstanceSwitcherSheet(
@@ -109,16 +110,23 @@ private fun SwitcherRow(
 
             Spacer(modifier = Modifier.width(Dimens.space16))
 
-            Column(modifier = Modifier.weight(1f)) {
+            // Centred on the avatar as one block, as BedrudSheetActionRow's lines are.
+            val nameStyle = MaterialTheme.typography.bodyLarge.copy(textDirection = TextDirection.Content)
+            val urlStyle = MaterialTheme.typography.bodySmall.copy(textDirection = TextDirection.Ltr)
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .typeCentered(firstLine = nameStyle, lastLine = urlStyle)
+            ) {
                 Text(
                     text = instance.displayName,
-                    style = MaterialTheme.typography.bodyLarge.copy(textDirection = TextDirection.Content),
+                    style = nameStyle,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
                 Text(
                     text = instance.serverURL,
-                    style = MaterialTheme.typography.bodySmall.copy(textDirection = TextDirection.Ltr),
+                    style = urlStyle,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis

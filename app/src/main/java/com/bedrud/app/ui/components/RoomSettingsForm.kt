@@ -18,19 +18,26 @@ import androidx.compose.ui.unit.dp
 import com.bedrud.app.R
 import com.bedrud.app.models.RoomSettings
 import com.bedrud.app.ui.theme.Dimens
+import com.bedrud.app.ui.theme.typeCentered
 
 /**
  * The room-level settings toggles shared by the dashboard's settings dialog and the in-meeting
  * settings sheet — one place to add or unlock a toggle so the two surfaces can't drift.
  *
- * Public visibility is live; Require Approval, Recording, and E2EE are shown but locked off for
- * now — not ready to be user-controlled yet, tracked for a later pass. [contentColor] lets the
- * meeting sheet render labels on its chrome palette; Unspecified inherits the ambient color.
+ * Public visibility and chat are live; Require Approval, Recording, and E2EE are shown but
+ * locked — not ready to be user-controlled yet, tracked for a later pass. A locked toggle shows
+ * the room's own value from [roomSettings], so a room with recording allowed on the web says
+ * so here rather than reading as off. The live toggles come first so the locked ones sit
+ * together below them. [contentColor] lets the meeting sheet render labels on its chrome
+ * palette; Unspecified inherits the ambient color.
  */
 @Composable
 fun RoomSettingsForm(
     isPublic: Boolean,
     onIsPublicChange: (Boolean) -> Unit,
+    allowChat: Boolean,
+    onAllowChatChange: (Boolean) -> Unit,
+    roomSettings: RoomSettings,
     modifier: Modifier = Modifier,
     contentColor: Color = Color.Unspecified,
     verticalSpacing: Dp = Dimens.space4,
@@ -43,22 +50,28 @@ fun RoomSettingsForm(
             onCheckedChange = onIsPublicChange,
         )
         RoomSettingToggleRow(
+            label = stringResource(R.string.dashboard_roomSettings_allowChat),
+            checked = allowChat,
+            contentColor = contentColor,
+            onCheckedChange = onAllowChatChange,
+        )
+        RoomSettingToggleRow(
             label = stringResource(R.string.dashboard_roomSettings_requireApproval),
-            checked = false,
+            checked = roomSettings.requireApproval,
             contentColor = contentColor,
             enabled = false,
             onCheckedChange = {},
         )
         RoomSettingToggleRow(
             label = stringResource(R.string.dashboard_roomSettings_recording),
-            checked = false,
+            checked = roomSettings.recordingsAllowed,
             contentColor = contentColor,
             enabled = false,
             onCheckedChange = {},
         )
         RoomSettingToggleRow(
             label = stringResource(R.string.dashboard_roomSettings_e2ee),
-            checked = false,
+            checked = roomSettings.e2ee,
             contentColor = contentColor,
             enabled = false,
             onCheckedChange = {},
@@ -67,18 +80,13 @@ fun RoomSettingsForm(
 }
 
 /**
- * What both save paths submit alongside the form: the toggles the form shows locked are forced
- * to their locked values, and the media flags stay on (no UI for them yet). Must change together
- * with [RoomSettingsForm].
+ * What both save paths submit: the room's settings with the form's edits applied. Everything the
+ * form does not edit goes back exactly as the server reported it — the locked toggles, the media
+ * flags, persistence — because a save from Android must not undo a choice made elsewhere, such
+ * as recording allowed or approval required from the web. Must change together with
+ * [RoomSettingsForm].
  */
-fun RoomSettings.withLockedToggles(): RoomSettings = copy(
-    allowChat = true,
-    allowVideo = true,
-    allowAudio = true,
-    requireApproval = false,
-    e2ee = false,
-    recordingsAllowed = false,
-)
+fun RoomSettings.withFormEdits(allowChat: Boolean): RoomSettings = copy(allowChat = allowChat)
 
 @Composable
 private fun RoomSettingToggleRow(
@@ -95,11 +103,14 @@ private fun RoomSettingToggleRow(
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
+        val labelStyle = MaterialTheme.typography.bodyLarge
         Text(
             text = label,
             color = contentColor,
-            style = MaterialTheme.typography.bodyLarge,
-            modifier = Modifier.weight(1f)
+            style = labelStyle,
+            modifier = Modifier
+                .weight(1f)
+                .typeCentered(labelStyle)
         )
         Switch(checked = checked, onCheckedChange = onCheckedChange, enabled = enabled)
     }
