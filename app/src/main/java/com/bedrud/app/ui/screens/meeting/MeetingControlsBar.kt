@@ -53,6 +53,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
+import androidx.compose.ui.AbsoluteAlignment
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -78,6 +79,7 @@ import com.bedrud.app.core.audio.MeetingInputMode
 import com.bedrud.app.core.formatCount
 import com.bedrud.app.core.audio.MeetingVoiceAlert
 import com.bedrud.app.core.livekit.ConnectionState
+import com.bedrud.app.ui.components.LeftToRight
 import com.bedrud.app.ui.theme.BedrudShapeTokens
 import com.bedrud.app.ui.theme.Dimens
 import com.bedrud.app.ui.theme.Elevation
@@ -114,18 +116,24 @@ internal fun MeetingCallControlsRow(
     modifier: Modifier = Modifier,
 ) {
     val colors = meetingChromeColors()
+    // The same order in every language, through the absolute arrangements and alignments: the bar
+    // is a set of controls in fixed places, like a player's, not a line of reading, and it swaps in
+    // place with the chat bar, whose send button is hang-up's twin at the same end. Only the
+    // placing is fixed — the mic pill's label still reads in the app's language.
+    //
     // Three sections with equal-weight sides keep the mic slot — button or pill — exactly
     // centered under the drag handle, whatever the input mode, at a constant bar width.
     Row(
         modifier = modifier,
+        horizontalArrangement = Arrangement.Absolute.Left,
         verticalAlignment = Alignment.CenterVertically,
     ) {
         // Side clusters anchor to the bar's edges so every control keeps its position across
         // input modes; only the space beside the centered mic slot absorbs the difference.
-        Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.CenterStart) {
+        Box(modifier = Modifier.weight(1f), contentAlignment = AbsoluteAlignment.CenterLeft) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(Dimens.meetingBarItemGap),
+                horizontalArrangement = Arrangement.Absolute.spacedBy(Dimens.meetingBarItemGap),
             ) {
                 MeetMediaButton(
                     colors = colors,
@@ -158,10 +166,10 @@ internal fun MeetingCallControlsRow(
             onPushToTalkChange = onPushToTalkChange,
         )
 
-        Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.CenterEnd) {
+        Box(modifier = Modifier.weight(1f), contentAlignment = AbsoluteAlignment.CenterRight) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(Dimens.meetingBarItemGap),
+                horizontalArrangement = Arrangement.Absolute.spacedBy(Dimens.meetingBarItemGap),
             ) {
                 MeetCircleButton(
                     colors = colors,
@@ -747,21 +755,25 @@ private fun MeetCircleButton(
         }
     }
 
-    if (badge != null) {
-        BadgedBox(
-            badge = {
-                // The call's accent rather than Material's default error red: an unread count is
-                // news, not a failure, and red here sat beside hang-up and the media-failure dot.
-                Badge(containerColor = colors.accent, contentColor = colors.onAccent) {
-                    // A count alone in its dot, so its own digits are measured.
-                    Text(badge, modifier = Modifier.inkCentered(badge, LocalTextStyle.current))
-                }
-            },
-        ) {
+    // As drawn in every language, like the bar it sits in: the icon unmirrored and the count on
+    // its top-right corner.
+    LeftToRight {
+        if (badge != null) {
+            BadgedBox(
+                badge = {
+                    // The call's accent rather than Material's default error red: an unread count is
+                    // news, not a failure, and red here sat beside hang-up and the media-failure dot.
+                    Badge(containerColor = colors.accent, contentColor = colors.onAccent) {
+                        // A count alone in its dot, so its own digits are measured.
+                        Text(badge, modifier = Modifier.inkCentered(badge, LocalTextStyle.current))
+                    }
+                },
+            ) {
+                button()
+            }
+        } else {
             button()
         }
-    } else {
-        button()
     }
 }
 

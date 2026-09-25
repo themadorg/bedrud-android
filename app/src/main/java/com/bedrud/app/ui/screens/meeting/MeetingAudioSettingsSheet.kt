@@ -40,6 +40,7 @@ import com.bedrud.app.core.livekit.CallAudioSwitch
 import com.bedrud.app.ui.components.BedrudBottomSheet
 import com.bedrud.app.ui.components.BedrudSheetActionRow
 import com.bedrud.app.ui.components.BedrudSheetTitle
+import com.bedrud.app.ui.components.LeftToRight
 import com.bedrud.app.ui.theme.Alpha
 import com.bedrud.app.ui.theme.Dimens
 
@@ -106,6 +107,8 @@ fun MeetingAudioSettingsSheet(
                 BedrudSheetActionRow(
                     icon = audioDeviceIcon(device),
                     title = audioDeviceLabel(device),
+                    // Every output icon is a picture of the device; none is a direction.
+                    mirrorIcon = false,
                     contentColor = if (selected) colors.accent else colors.onButton,
                     trailing = {
                         RadioButton(
@@ -236,24 +239,29 @@ private fun VolumeSliderRow(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(Dimens.space12),
     ) {
-        Icon(
-            imageVector = Icons.AutoMirrored.Filled.VolumeDown,
-            contentDescription = null,
-            tint = iconTint,
-            modifier = Modifier.size(Dimens.iconMd),
-        )
+        // The slider runs in the reading direction; the speakers at its ends face one way always.
+        LeftToRight {
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.VolumeDown,
+                contentDescription = null,
+                tint = iconTint,
+                modifier = Modifier.size(Dimens.iconMd),
+            )
+        }
         MeetingCompactSlider(
             value = value,
             onValueChange = onValueChange,
             label = label,
             modifier = Modifier.weight(1f),
         )
-        Icon(
-            imageVector = Icons.AutoMirrored.Filled.VolumeUp,
-            contentDescription = null,
-            tint = iconTint,
-            modifier = Modifier.size(Dimens.iconMd),
-        )
+        LeftToRight {
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.VolumeUp,
+                contentDescription = null,
+                tint = iconTint,
+                modifier = Modifier.size(Dimens.iconMd),
+            )
+        }
     }
 }
 

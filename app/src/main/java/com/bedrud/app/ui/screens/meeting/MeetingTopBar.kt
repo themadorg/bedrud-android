@@ -33,6 +33,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import com.bedrud.app.R
 import com.bedrud.app.core.livekit.ConnectionState
 import com.bedrud.app.ui.components.DevOnly
+import com.bedrud.app.ui.components.LeftToRight
 import com.bedrud.app.ui.theme.Dimens
 import com.bedrud.app.ui.theme.bedrudColors
 import com.bedrud.app.ui.theme.typeCentered
@@ -142,11 +143,14 @@ fun MeetingTopBar(
                 }
             }
             IconButton(onClick = onOpenAudioOutput) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.VolumeUp,
-                    contentDescription = stringResource(R.string.meeting_contentDescription_audioOutput),
-                    tint = colors.onButton,
-                )
+                // A speaker is a picture, not a direction: it faces the same way in every language.
+                LeftToRight {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.VolumeUp,
+                        contentDescription = stringResource(R.string.meeting_contentDescription_audioOutput),
+                        tint = colors.onButton,
+                    )
+                }
             }
         }
     }

@@ -40,6 +40,7 @@ import com.bedrud.app.ui.components.BedrudSheetTitle
 import com.bedrud.app.ui.components.ConfirmDialog
 import com.bedrud.app.ui.components.DevHintBadge
 import com.bedrud.app.ui.components.DevOnly
+import com.bedrud.app.ui.components.LeftToRight
 import com.bedrud.app.ui.theme.Dimens
 import com.bedrud.app.ui.theme.typeCentered
 import kotlinx.coroutines.launch
@@ -153,12 +154,15 @@ fun MeetingParticipantSheet(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(Dimens.space12),
         ) {
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.VolumeDown,
-                contentDescription = null,
-                tint = colors.onButtonVariant,
-                modifier = Modifier.size(Dimens.iconMd),
-            )
+            // The slider runs in the reading direction; the speakers at its ends face one way always.
+            LeftToRight {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.VolumeDown,
+                    contentDescription = null,
+                    tint = colors.onButtonVariant,
+                    modifier = Modifier.size(Dimens.iconMd),
+                )
+            }
             MeetingCompactSlider(
                 value = sliderValue,
                 onValueChange = {
@@ -168,12 +172,14 @@ fun MeetingParticipantSheet(
                 label = stringResource(R.string.meeting_participant_volume),
                 modifier = Modifier.weight(1f),
             )
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.VolumeUp,
-                contentDescription = null,
-                tint = colors.onButtonVariant,
-                modifier = Modifier.size(Dimens.iconMd),
-            )
+            LeftToRight {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.VolumeUp,
+                    contentDescription = null,
+                    tint = colors.onButtonVariant,
+                    modifier = Modifier.size(Dimens.iconMd),
+                )
+            }
         }
 
         BedrudSheetActionRow(

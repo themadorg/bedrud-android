@@ -44,6 +44,8 @@ fun MeetingAudioSourceSheet(
                 BedrudSheetActionRow(
                     icon = audioDeviceIcon(device),
                     title = audioDeviceLabel(device),
+                    // Every output icon is a picture of the device; none is a direction.
+                    mirrorIcon = false,
                     // Selection is a trailing radio, per the design's output picker — the row
                     // stays unfilled, and the accent-tinted label backs the radio up.
                     contentColor = if (selected) colors.accent else colors.onButton,

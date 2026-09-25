@@ -109,6 +109,9 @@ fun BedrudSheetTitle(text: String, modifier: Modifier = Modifier, color: Color =
  *
  * A row that does not apply right now takes [enabled] `false` rather than being left out — the
  * sheet keeps its height, so toggling one setting never makes the rows under it jump.
+ *
+ * [mirrorIcon] `false` keeps an auto-mirrored icon as drawn in a right-to-left language, for an icon
+ * that is a picture rather than a direction, like a speaker.
  */
 @Composable
 fun BedrudSheetActionRow(
@@ -120,6 +123,7 @@ fun BedrudSheetActionRow(
     contentColor: Color = MaterialTheme.colorScheme.onSurface,
     supportingColor: Color = MaterialTheme.colorScheme.onSurfaceVariant,
     enabled: Boolean = true,
+    mirrorIcon: Boolean = true,
     trailing: @Composable (() -> Unit)? = null,
 ) {
     Surface(
@@ -141,12 +145,15 @@ fun BedrudSheetActionRow(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(Dimens.space16),
         ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = contentColor,
-                modifier = Modifier.size(Dimens.iconMd),
-            )
+            val rowIcon = @Composable {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = contentColor,
+                    modifier = Modifier.size(Dimens.iconMd),
+                )
+            }
+            if (mirrorIcon) rowIcon() else LeftToRight(rowIcon)
             // The title and its supporting line are centred on the icon as one block.
             val titleStyle = MaterialTheme.typography.bodyLarge
             val supportingStyle = MaterialTheme.typography.bodyMedium

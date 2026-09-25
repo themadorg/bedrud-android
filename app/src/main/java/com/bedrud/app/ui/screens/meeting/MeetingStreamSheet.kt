@@ -37,6 +37,7 @@ fun MeetingStreamSheet(
         DevOnly {
             BedrudSheetActionRow(
                 icon = Icons.AutoMirrored.Filled.VolumeUp,
+                mirrorIcon = false,
                 title = stringResource(R.string.meeting_participant_volume),
                 contentColor = colors.onButton,
                 trailing = { DevHintBadge(stringResource(R.string.common_hint_comingSoon)) },
