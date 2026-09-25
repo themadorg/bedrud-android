@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AdminPanelSettings
@@ -61,6 +60,7 @@ import androidx.compose.ui.unit.dp
 import com.bedrud.app.R
 import com.bedrud.app.core.instance.InstanceManager
 import com.bedrud.app.ui.theme.BedrudShapeTokens
+import com.bedrud.app.ui.theme.Elevation
 import com.bedrud.app.models.ChangePasswordRequest
 import com.bedrud.app.core.api.apiAction
 import com.bedrud.app.ui.theme.typeCentered
@@ -108,7 +108,7 @@ fun SettingsContent(
             Spacer(modifier = Modifier.height(0.dp))
 
             // Appearance
-            BedrudOutlinedCard(shape = BedrudShapeTokens.card) {
+            BedrudOutlinedCard {
                 Column(modifier = Modifier.padding(16.dp)) {
                     CardSectionHeader(stringResource(R.string.settings_section_appearance))
                     Spacer(modifier = Modifier.height(12.dp))
@@ -152,9 +152,15 @@ fun SettingsContent(
                             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = languageExpanded) },
                             modifier = Modifier.menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
                         )
+                        // The chrome of the app's other menus (the chat's), so every menu that
+                        // drops open has the same corners, fill and lift.
                         ExposedDropdownMenu(
                             expanded = languageExpanded,
-                            onDismissRequest = { languageExpanded = false }
+                            onDismissRequest = { languageExpanded = false },
+                            shape = BedrudShapeTokens.card,
+                            containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                            tonalElevation = Elevation.level2,
+                            shadowElevation = Elevation.level3,
                         ) {
                             AppLanguage.entries.forEach { lang ->
                                 DropdownMenuItem(
@@ -177,7 +183,7 @@ fun SettingsContent(
             }
 
             // Notifications
-            BedrudOutlinedCard(shape = BedrudShapeTokens.card) {
+            BedrudOutlinedCard {
                 Column {
                     CardSectionHeader(
                         stringResource(R.string.settings_section_notifications),
@@ -203,7 +209,7 @@ fun SettingsContent(
 
             // Account Info
             if (currentUser != null) {
-                BedrudOutlinedCard(shape = BedrudShapeTokens.card) {
+                BedrudOutlinedCard {
                     Column {
                         Row(
                             modifier = Modifier.padding(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 8.dp),
@@ -268,7 +274,7 @@ fun SettingsContent(
 
             // Change Password
             val isLocalAccount = currentUser?.provider.let { it == null || it == "local" || it == "passkey" }
-            BedrudOutlinedCard(shape = BedrudShapeTokens.card) {
+            BedrudOutlinedCard {
                 Column(modifier = Modifier.padding(16.dp)) {
                     CardSectionHeader(stringResource(R.string.settings_section_security))
                     Spacer(modifier = Modifier.height(12.dp))
@@ -344,7 +350,7 @@ fun SettingsContent(
             }
 
             // About
-            BedrudOutlinedCard(shape = BedrudShapeTokens.card) {
+            BedrudOutlinedCard {
                 Column {
                     CardSectionHeader(
                         stringResource(R.string.settings_section_about),

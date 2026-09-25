@@ -93,7 +93,6 @@ import com.bedrud.app.models.AdminUser
 import com.bedrud.app.models.CreateInviteTokenRequest
 import com.bedrud.app.models.InviteToken
 import com.bedrud.app.ui.theme.BedrudRadius
-import com.bedrud.app.ui.theme.BedrudShapeTokens
 import com.bedrud.app.ui.theme.rememberTypeCenteringOffset
 import com.bedrud.app.ui.theme.typeCentered
 import kotlinx.coroutines.delay
@@ -261,7 +260,7 @@ private fun AdminOverviewContent(
                 }
 
                 // Recent users
-                BedrudOutlinedCard(shape = BedrudShapeTokens.card) {
+                BedrudOutlinedCard {
                     Column(modifier = Modifier.padding(16.dp)) {
                         CardSectionHeader(stringResource(R.string.admin_section_recentSignups))
                         Spacer(modifier = Modifier.height(8.dp))
@@ -709,7 +708,7 @@ private fun AdminSettingsContent(
         ) {
             settings?.let { s ->
                 // Registration settings
-                BedrudOutlinedCard(shape = BedrudShapeTokens.card) {
+                BedrudOutlinedCard {
                     Column {
                         CardSectionHeader(
                             stringResource(R.string.admin_section_registration),
@@ -781,7 +780,7 @@ private fun AdminSettingsContent(
             }
 
             // Invite tokens
-            BedrudOutlinedCard(shape = BedrudShapeTokens.card) {
+            BedrudOutlinedCard {
                 Column(modifier = Modifier.padding(16.dp)) {
                     CardSectionHeader(stringResource(R.string.admin_section_inviteTokens))
                     Spacer(modifier = Modifier.height(8.dp))

@@ -198,12 +198,13 @@ fun ChatImageLightbox(
                         .align(Alignment.BottomCenter)
                         .navigationBarsPadding()
                         .padding(Dimens.space16)
+                        // A snackbar's colours and a snackbar's corners: it is one in all but name.
                         .background(
                             MaterialTheme.colorScheme.inverseSurface.copy(alpha = Alpha.lightboxNotice),
-                            BedrudShapeTokens.pill,
+                            BedrudShapeTokens.snackbar,
                         )
                         .padding(horizontal = Dimens.space16, vertical = Dimens.space8)
-                        // Last in the chain, so it moves the letters inside the pill, not the pill.
+                        // Last in the chain, so it moves the letters inside the notice, not the notice.
                         .typeCentered(noticeStyle),
                 )
             }

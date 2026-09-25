@@ -1195,7 +1195,6 @@ private fun RoomCardScaffold(
 ) {
     BedrudOutlinedCard(
         onClick = onClick,
-        shape = BedrudShapeTokens.card,
         modifier = Modifier.fillMaxWidth(),
     ) {
         Row(
