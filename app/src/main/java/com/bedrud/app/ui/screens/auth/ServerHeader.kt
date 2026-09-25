@@ -13,6 +13,7 @@ import androidx.compose.ui.text.style.TextDirection
 import com.bedrud.app.R
 import com.bedrud.app.ui.components.InitialsAvatar
 import com.bedrud.app.ui.theme.Dimens
+import com.bedrud.app.ui.theme.OnInstanceColor
 import com.bedrud.app.ui.theme.parseInstanceColor
 
 /**
@@ -28,12 +29,16 @@ internal fun ServerHeader(
     iconColorHex: String?
 ) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        val instanceColor = iconColorHex?.let(::parseInstanceColor)
         InitialsAvatar(
             name = displayName,
             size = Dimens.brandMark,
             textStyle = MaterialTheme.typography.headlineMedium,
-            containerColor = iconColorHex?.let(::parseInstanceColor)
-                ?: MaterialTheme.colorScheme.primaryContainer,
+            containerColor = instanceColor ?: MaterialTheme.colorScheme.primaryContainer,
+            // Each fill with the initial color made for it: a server's own, or primaryContainer's
+            // on-role while no server is chosen yet.
+            contentColor = if (instanceColor != null) OnInstanceColor
+            else MaterialTheme.colorScheme.onPrimaryContainer,
             fallbackInitial = "B"
         )
         Spacer(Modifier.height(Dimens.space16))

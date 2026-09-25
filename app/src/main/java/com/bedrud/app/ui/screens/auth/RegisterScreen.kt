@@ -12,7 +12,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -260,14 +259,11 @@ fun RegisterScreen(
 
         Spacer(Modifier.height(Dimens.space16))
 
-        TextButton(
+        BedrudButton(
+            text = stringResource(R.string.auth_link_alreadyHaveAccount),
+            variant = BedrudButtonVariant.GHOST,
             onClick = onNavigateToLogin,
-            enabled = !isLoading
-        ) {
-            Text(
-                text = stringResource(R.string.auth_link_alreadyHaveAccount),
-                style = MaterialTheme.typography.labelLarge
-            )
-        }
+            enabled = !isLoading,
+        )
     }
 }

@@ -25,10 +25,10 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
 import com.bedrud.app.R
 import com.bedrud.app.core.instance.InstanceManager
 import com.bedrud.app.models.Instance
@@ -36,8 +36,11 @@ import com.bedrud.app.ui.components.BedrudBottomSheet
 import com.bedrud.app.ui.components.BedrudSheetActionRow
 import com.bedrud.app.ui.components.BedrudSheetTitle
 import com.bedrud.app.ui.components.InitialsAvatar
+import com.bedrud.app.ui.theme.BedrudShapeTokens
 import com.bedrud.app.ui.theme.Dimens
+import com.bedrud.app.ui.theme.OnInstanceColor
 import com.bedrud.app.ui.theme.parseInstanceColor
+import com.bedrud.app.ui.theme.typeCentered
 
 @Composable
 fun InstanceSwitcherSheet(
@@ -91,6 +94,8 @@ private fun SwitcherRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            // The action row's corners too, so both rows press the same shape.
+            .clip(BedrudShapeTokens.card)
             .clickable(onClick = onSelect)
             .defaultMinSize(minHeight = Dimens.sheetRowHeightTwoLine)
             .padding(horizontal = Dimens.space12),
@@ -103,22 +108,29 @@ private fun SwitcherRow(
         ) {
             InitialsAvatar(
                 name = instance.displayName,
-                size = SwitcherAvatar,
-                containerColor = parseInstanceColor(instance.iconColorHex)
+                containerColor = parseInstanceColor(instance.iconColorHex),
+                contentColor = OnInstanceColor,
             )
 
             Spacer(modifier = Modifier.width(Dimens.space16))
 
-            Column(modifier = Modifier.weight(1f)) {
+            // Centred on the avatar as one block, as BedrudSheetActionRow's lines are.
+            val nameStyle = MaterialTheme.typography.bodyLarge.copy(textDirection = TextDirection.Content)
+            val urlStyle = MaterialTheme.typography.bodySmall.copy(textDirection = TextDirection.Ltr)
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .typeCentered(firstLine = nameStyle, lastLine = urlStyle)
+            ) {
                 Text(
                     text = instance.displayName,
-                    style = MaterialTheme.typography.bodyLarge.copy(textDirection = TextDirection.Content),
+                    style = nameStyle,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
                 Text(
                     text = instance.serverURL,
-                    style = MaterialTheme.typography.bodySmall.copy(textDirection = TextDirection.Ltr),
+                    style = urlStyle,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
@@ -136,6 +148,3 @@ private fun SwitcherRow(
         }
     }
 }
-
-// The server avatar is this sheet's own leading element, not a shared size.
-private val SwitcherAvatar = 32.dp

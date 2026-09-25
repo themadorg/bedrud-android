@@ -63,16 +63,20 @@ import com.bedrud.app.core.api.parseApiErrorMessage
 import com.bedrud.app.core.call.CallService
 import com.bedrud.app.core.toUserMessage
 import com.bedrud.app.core.deeplink.BedrudURLParser
+import com.bedrud.app.core.deeplink.ChatLinkTarget
+import com.bedrud.app.core.deeplink.resolveChatLink
 import com.bedrud.app.core.instance.InstanceManager
 import com.bedrud.app.core.recent.RecentRoomsStore
 import com.bedrud.app.core.rooms.JoinFailureRelay
 import com.bedrud.app.core.toUserMessage
+import com.bedrud.app.ui.components.BedrudButton
+import com.bedrud.app.ui.components.BedrudButtonVariant
 import com.bedrud.app.ui.components.BedrudScaffoldContentInsets
 import com.bedrud.app.ui.components.BedrudSnackbarHost
+import com.bedrud.app.ui.components.ConfirmDialog
 import com.bedrud.app.ui.theme.BedrudShapeTokens
 import com.bedrud.app.ui.theme.Dimens
 import com.bedrud.app.ui.theme.Motion
-import com.bedrud.app.ui.util.hostOf
 import com.bedrud.app.ui.util.setPlainText
 import com.bedrud.app.core.livekit.ConnectionState
 import com.bedrud.app.core.livekit.ParticipantMetadata
@@ -82,6 +86,7 @@ import com.bedrud.app.core.pip.PipStateHolder
 import com.bedrud.app.ui.screens.settings.SettingsStore
 import com.bedrud.app.models.JoinRoomRequest
 import com.bedrud.app.models.JoinRoomResponse
+import com.bedrud.app.ui.theme.inkCentered
 import io.livekit.android.compose.ui.ScaleType
 import io.livekit.android.compose.ui.VideoTrackView
 import io.livekit.android.room.Room
@@ -99,10 +104,23 @@ private val GONE_STATUS_CODES = setOf(
     HttpURLConnection.HTTP_GONE,
 )
 
+/**
+ * Whether the room connection is this screen's own call rather than one it merely shares.
+ *
+ * Every meeting screen on a server reads the same connection. Following a room link leaves one call
+ * and opens the next room's screen straight away, while the call being left is still connected for a
+ * moment: counted as this screen's own, its disconnect a moment later would read as this call ending,
+ * and close the room that was just opened.
+ */
+internal fun isOwnConnection(state: ConnectionState, connectedRoomName: String?, roomName: String): Boolean =
+    state == ConnectionState.CONNECTED && connectedRoomName == roomName
+
 @Composable
 fun MeetingScreen(
     roomName: String,
     onLeave: () -> Unit,
+    // Opens another room in this one's place, once this call has been left for it.
+    onJoinRoom: (String) -> Unit,
     instanceManager: InstanceManager = koinInject(),
     pipStateHolder: PipStateHolder = koinInject(),
     settingsStore: SettingsStore = koinInject(),
@@ -114,10 +132,10 @@ fun MeetingScreen(
     val authManager = instanceManager.authManager.collectAsState().value
     val currentUser by (authManager?.currentUser ?: kotlinx.coroutines.flow.MutableStateFlow(null)).collectAsState()
     val serverURL = instanceManager.store.activeInstance?.serverURL.orEmpty()
-    // Every server this person has added, by host. A room link on one of them opens in the app
-    // rather than the website; anything else is somebody else's page and goes to a browser.
+    // Every server this person has added. A room link on one of them is joined in the app rather
+    // than opened as a website; anything else is somebody else's page and goes to a browser.
     val instances by instanceManager.store.instances.collectAsState()
-    val knownHosts = remember(instances) { instances.mapNotNull { hostOf(it.serverURL) }.toSet() }
+    val activeInstanceId by instanceManager.store.activeInstanceId.collectAsState()
     val accessToken = authManager?.getAccessToken()
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -240,6 +258,8 @@ fun MeetingScreen(
 
     // Leave/end dialog
     var showLeaveDialog by remember { mutableStateOf(false) }
+    // A room somebody linked in the chat, waiting on the reader to agree to leave this call for it.
+    var pendingRoomLink by remember { mutableStateOf<ChatLinkTarget.Room?>(null) }
     var showAudioSheet by remember { mutableStateOf(false) }
     var showRoomSettingsSheet by remember { mutableStateOf(false) }
     var showMoreOptionsSheet by remember { mutableStateOf(false) }
@@ -264,7 +284,7 @@ fun MeetingScreen(
         // written back as visited just now, so a card that could never be joined kept resurfacing
         // at the top of the list, labelled "Live" by the very tap that failed to open it.
         instanceManager.store.activeInstance?.let { instance ->
-            recentRoomsStore.add(roomName, instance.id, instance.displayName, instance.iconColorHex)
+            recentRoomsStore.add(roomName, instance.id)
         }
         isJoining = false
     }
@@ -397,9 +417,10 @@ fun MeetingScreen(
     }
 
     // Handle server-side disconnect: when connection drops after being connected, leave
+    val connectedRoomName by roomManager.roomName.collectAsState()
     var wasConnected by remember { mutableStateOf(false) }
-    LaunchedEffect(connectionState) {
-        if (connectionState == ConnectionState.CONNECTED) {
+    LaunchedEffect(connectionState, connectedRoomName) {
+        if (isOwnConnection(connectionState, connectedRoomName, roomName)) {
             wasConnected = true
         } else if (wasConnected && connectionState == ConnectionState.DISCONNECTED) {
             onLeave()
@@ -530,11 +551,17 @@ fun MeetingScreen(
                                         modifier = Modifier.fillMaxSize(),
                                         passedRoom = room,
                                     )
-                                    else -> Text(
-                                        text = pipState.name.take(1).uppercase(),
-                                        style = MaterialTheme.typography.displayLarge,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    )
+                                    // One initial alone in the window, measured as an avatar's is.
+                                    else -> {
+                                        val initial = pipState.name.take(1).uppercase()
+                                        val initialStyle = MaterialTheme.typography.displayLarge
+                                        Text(
+                                            text = initial,
+                                            style = initialStyle,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            modifier = Modifier.inkCentered(initial, initialStyle),
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -1054,7 +1081,50 @@ fun MeetingScreen(
                                         isChatBlocked -> R.string.meeting_chat_blockedByModerator
                                         else -> null
                                     },
-                                    knownHosts = knownHosts,
+                                    resolveLink = { url ->
+                                        resolveChatLink(
+                                            url = url,
+                                            servers = instances,
+                                            activeServerId = activeInstanceId,
+                                            currentRoomName = roomName,
+                                        )
+                                    },
+                                    onFollowRoom = { pendingRoomLink = it },
+                                )
+                            }
+
+                            // Following a room link ends this call, so it is asked first, naming
+                            // both rooms. Not destructive: the reader can come straight back.
+                            pendingRoomLink?.let { target ->
+                                ConfirmDialog(
+                                    title = stringResource(R.string.meeting_dialog_followRoomTitle),
+                                    message = if (target.switchesServer) {
+                                        stringResource(
+                                            R.string.meeting_dialog_followRoomOnServerMessage,
+                                            roomName,
+                                            target.roomName,
+                                            target.server.displayName,
+                                        )
+                                    } else {
+                                        stringResource(
+                                            R.string.meeting_dialog_followRoomMessage,
+                                            roomName,
+                                            target.roomName,
+                                        )
+                                    },
+                                    confirmLabel = stringResource(R.string.meeting_button_leaveAndJoin),
+                                    confirmVariant = BedrudButtonVariant.TONAL,
+                                    onConfirm = {
+                                        pendingRoomLink = null
+                                        // The same teardown as the leave button, so there is one way
+                                        // a call ends rather than two. The next room's screen opens
+                                        // while it finishes, which is why a screen only ever counts
+                                        // its own room's connection (see isOwnConnection).
+                                        CallService.stop(context)
+                                        if (target.switchesServer) instanceManager.switchTo(target.server.id)
+                                        onJoinRoom(target.roomName)
+                                    },
+                                    onDismiss = { pendingRoomLink = null },
                                 )
                             }
 
@@ -1093,10 +1163,11 @@ fun MeetingScreen(
                             Spacer(modifier = Modifier.height(Dimens.space16))
                             val errorCopiedMessage = stringResource(R.string.meeting_toast_errorCopied)
                             val copyDescription = stringResource(R.string.common_action_copy)
+                            // The message's own inset, so the box's edges line up under its text.
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(horizontal = Dimens.space24)
+                                    .padding(horizontal = Dimens.meetingStatePadding)
                                     .clip(BedrudShapeTokens.chip)
                                     .background(MaterialTheme.colorScheme.surfaceVariant),
                                 verticalAlignment = Alignment.Top,
@@ -1132,17 +1203,17 @@ fun MeetingScreen(
                             }
                         }
                         Spacer(modifier = Modifier.height(Dimens.space24))
-                        androidx.compose.material3.FilledTonalButton(
+                        BedrudButton(
+                            text = stringResource(R.string.meeting_button_goBack),
+                            variant = BedrudButtonVariant.TONAL,
                             // The service normally self-stops the instant the connection fails
                             // (see CallService); this is a guarded safety net for any case where
                             // it is still up, so we never navigate back leaving its notification.
                             onClick = {
                                 if (CallService.isRunning) CallService.stop(context)
                                 onLeave()
-                            }
-                        ) {
-                            Text(stringResource(R.string.meeting_button_goBack))
-                        }
+                            },
+                        )
                     }
                 }
             }
@@ -1182,9 +1253,11 @@ private fun KickedScreen(onBack: () -> Unit) {
                 modifier = Modifier.padding(horizontal = Dimens.meetingStatePadding)
             )
             Spacer(modifier = Modifier.height(Dimens.space24))
-            androidx.compose.material3.FilledTonalButton(onClick = onBack) {
-                Text(stringResource(R.string.meeting_button_backToDashboard))
-            }
+            BedrudButton(
+                text = stringResource(R.string.meeting_button_backToDashboard),
+                variant = BedrudButtonVariant.TONAL,
+                onClick = onBack,
+            )
         }
     }
 }

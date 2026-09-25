@@ -52,9 +52,11 @@ import androidx.compose.ui.text.style.TextOverflow
 import coil.compose.AsyncImage
 import com.bedrud.app.R
 import com.bedrud.app.ui.components.BedrudBottomSheet
+import com.bedrud.app.ui.components.BedrudSheetTitle
 import com.bedrud.app.ui.components.InitialsAvatar
 import com.bedrud.app.ui.theme.BedrudShapeTokens
 import com.bedrud.app.ui.theme.Dimens
+import com.bedrud.app.ui.theme.typeCentered
 import com.bedrud.app.ui.util.PlainTextMimeType
 import com.bedrud.app.ui.util.sharePlainText
 import com.google.zxing.BarcodeFormat
@@ -95,11 +97,9 @@ fun MeetingInviteSheet(
     var showQr by remember { mutableStateOf(false) }
 
     BedrudBottomSheet(onDismiss = onDismiss) {
-        Text(
+        BedrudSheetTitle(
             text = stringResource(R.string.meeting_panel_participants, participants.size),
             color = colors.onButton,
-            style = MaterialTheme.typography.titleMedium,
-            modifier = Modifier.padding(horizontal = Dimens.space4, vertical = Dimens.space8),
         )
 
         LazyVerticalGrid(
@@ -254,13 +254,16 @@ fun MeetingInviteSheet(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(Dimens.space8),
             ) {
+                val linkStyle = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace)
                 Text(
                     text = roomLink,
-                    style = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
+                    style = linkStyle,
                     color = colors.onButton,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier
+                        .weight(1f)
+                        .typeCentered(linkStyle),
                 )
                 Icon(
                     imageVector = Icons.Default.ContentCopy,

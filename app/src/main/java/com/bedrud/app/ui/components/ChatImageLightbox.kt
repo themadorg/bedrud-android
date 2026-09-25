@@ -3,7 +3,6 @@ package com.bedrud.app.ui.components
 import android.Manifest
 import android.content.pm.PackageManager
 import android.os.Build
-import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
@@ -33,7 +32,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -45,9 +43,12 @@ import com.bedrud.app.R
 import com.bedrud.app.core.chat.ChatImageSaver
 import com.bedrud.app.core.chat.ChatSaveFailure
 import com.bedrud.app.core.chat.ChatSaveResult
+import com.bedrud.app.ui.theme.Alpha
 import com.bedrud.app.ui.theme.BedrudShapeTokens
 import com.bedrud.app.ui.theme.Dimens
 import com.bedrud.app.ui.theme.Motion
+import com.bedrud.app.ui.theme.bedrudColors
+import com.bedrud.app.ui.theme.typeCentered
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -60,8 +61,8 @@ fun ChatImageLightbox(
 ) {
     if (url == null) return
 
-    BackHandler(onBack = onClose)
-
+    // Back is the dialog's own: dismissOnBackPress routes it to onDismissRequest, since the dialog
+    // window holds focus and an activity-level BackHandler never hears it.
     Dialog(
         onDismissRequest = onClose,
         properties = DialogProperties(
@@ -124,10 +125,11 @@ fun ChatImageLightbox(
             }
         }
 
+        val onScrim = MaterialTheme.bedrudColors.onScrim
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color.Black.copy(alpha = ScrimAlpha))
+                .background(MaterialTheme.colorScheme.scrim.copy(alpha = Alpha.lightboxScrim))
                 .clickable(
                     indication = null,
                     interactionSource = remember { MutableInteractionSource() },
@@ -163,14 +165,14 @@ fun ChatImageLightbox(
                             .padding(Dimens.space12)
                             .size(Dimens.chatUploadIndicator),
                         strokeWidth = Dimens.chatUploadIndicatorStroke,
-                        color = Color.White,
+                        color = onScrim,
                     )
                 } else {
                     IconButton(onClick = onSaveClick) {
                         Icon(
                             Icons.Default.Download,
                             contentDescription = stringResource(R.string.meeting_chat_saveImage),
-                            tint = Color.White,
+                            tint = onScrim,
                         )
                     }
                 }
@@ -178,33 +180,34 @@ fun ChatImageLightbox(
                     Icon(
                         Icons.Default.Close,
                         contentDescription = stringResource(R.string.meeting_contentDescription_closeImagePreview),
-                        tint = Color.White,
+                        tint = onScrim,
                     )
                 }
             }
 
             outcome?.let { message ->
+                val noticeStyle = MaterialTheme.typography.labelLarge
                 Text(
                     text = message,
-                    style = MaterialTheme.typography.labelLarge,
-                    color = Color.White,
+                    style = noticeStyle,
+                    // The inverse pair, as a snackbar uses: white text on inverseSurface vanished in
+                    // dark theme, where inverseSurface is the light one.
+                    color = MaterialTheme.colorScheme.inverseOnSurface,
                     textAlign = TextAlign.Center,
                     modifier = Modifier
                         .align(Alignment.BottomCenter)
                         .navigationBarsPadding()
                         .padding(Dimens.space16)
+                        // A snackbar's colours and a snackbar's corners: it is one in all but name.
                         .background(
-                            MaterialTheme.colorScheme.inverseSurface.copy(alpha = NoticeAlpha),
-                            BedrudShapeTokens.pill,
+                            MaterialTheme.colorScheme.inverseSurface.copy(alpha = Alpha.lightboxNotice),
+                            BedrudShapeTokens.snackbar,
                         )
-                        .padding(horizontal = Dimens.space16, vertical = Dimens.space8),
+                        .padding(horizontal = Dimens.space16, vertical = Dimens.space8)
+                        // Last in the chain, so it moves the letters inside the notice, not the notice.
+                        .typeCentered(noticeStyle),
                 )
             }
         }
     }
 }
-
-/** Dark enough that the picture is the only thing left to look at, short of fully hiding the call. */
-private const val ScrimAlpha = 0.92f
-
-private const val NoticeAlpha = 0.9f

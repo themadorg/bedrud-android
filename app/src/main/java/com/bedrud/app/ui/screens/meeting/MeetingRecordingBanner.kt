@@ -1,5 +1,6 @@
 package com.bedrud.app.ui.screens.meeting
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -8,13 +9,15 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import com.bedrud.app.ui.components.BedrudButton
+import com.bedrud.app.ui.components.BedrudButtonVariant
 import com.bedrud.app.ui.theme.BedrudShapeTokens
 import com.bedrud.app.ui.theme.Dimens
+import com.bedrud.app.ui.theme.Elevation
 import com.bedrud.app.R
 
 /**
@@ -44,9 +47,13 @@ fun MeetingRecordingBanner(
     onAcknowledge: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    // Lifted and outlined like every other surface floating over the call — the menus, the
+    // controls bar — so it separates from video behind it instead of sitting flat on it.
     Surface(
         shape = BedrudShapeTokens.card,
         color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        shadowElevation = Elevation.level3,
+        border = BorderStroke(Dimens.borderThin, meetingChromeColors().divider),
         modifier = modifier.fillMaxWidth(),
     ) {
         Column(
@@ -78,9 +85,11 @@ fun MeetingRecordingBanner(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.End,
             ) {
-                TextButton(onClick = onAcknowledge) {
-                    Text(stringResource(R.string.meeting_recording_acknowledge))
-                }
+                BedrudButton(
+                    text = stringResource(R.string.meeting_recording_acknowledge),
+                    variant = BedrudButtonVariant.GHOST,
+                    onClick = onAcknowledge,
+                )
             }
         }
     }

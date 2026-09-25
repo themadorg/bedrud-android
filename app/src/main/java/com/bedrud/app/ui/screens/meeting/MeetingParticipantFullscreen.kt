@@ -38,6 +38,7 @@ import com.bedrud.app.ui.components.InitialsAvatar
 import com.bedrud.app.ui.theme.BedrudShapeTokens
 import com.bedrud.app.ui.theme.Dimens
 import com.bedrud.app.ui.theme.Motion
+import com.bedrud.app.ui.theme.typeCentered
 import io.livekit.android.compose.ui.ScaleType
 import io.livekit.android.compose.ui.VideoTrackView
 import io.livekit.android.room.Room
@@ -129,7 +130,7 @@ fun MeetingParticipantFullscreen(
             !avatarUrl.isNullOrBlank() -> {
                 AsyncImage(
                     model = avatarUrl,
-                    contentDescription = stringResource(R.string.meeting_contentDescription_participantAvatar),
+                    contentDescription = stringResource(R.string.meeting_contentDescription_participantAvatar, name),
                     modifier = Modifier
                         .size(Dimens.meetingFullscreenAvatar)
                         .clip(CircleShape),
@@ -164,12 +165,14 @@ fun MeetingParticipantFullscreen(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(Dimens.space4),
             ) {
+                val nameStyle = MaterialTheme.typography.labelMedium.copy(textDirection = TextDirection.Content)
                 Text(
                     text = name,
-                    style = MaterialTheme.typography.labelMedium.copy(textDirection = TextDirection.Content),
+                    style = nameStyle,
                     color = MaterialTheme.colorScheme.onSurface,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.typeCentered(nameStyle),
                 )
                 // Kept unconditionally, unlike the grid tile's: this chip carries no mute badge to
                 // make it redundant, so the badge is the only speaking signal on the whole view.

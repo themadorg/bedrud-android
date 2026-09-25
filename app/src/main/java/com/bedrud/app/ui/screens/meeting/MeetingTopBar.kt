@@ -34,6 +34,8 @@ import com.bedrud.app.R
 import com.bedrud.app.core.livekit.ConnectionState
 import com.bedrud.app.ui.components.DevOnly
 import com.bedrud.app.ui.theme.Dimens
+import com.bedrud.app.ui.theme.bedrudColors
+import com.bedrud.app.ui.theme.typeCentered
 
 /**
  * The in-call top bar: invite/participants entry at the start, the room name (with recording and
@@ -89,22 +91,26 @@ fun MeetingTopBar(
         ) {
             Crossfade(targetState = showConnectedNotice, label = "connectedNotice") { connected ->
                 if (connected) {
+                    val noticeStyle = MaterialTheme.typography.labelMedium
                     Text(
                         text = stringResource(R.string.meeting_status_connected),
-                        style = MaterialTheme.typography.labelMedium,
+                        style = noticeStyle,
                         color = MaterialTheme.colorScheme.primary,
                         maxLines = 1,
+                        modifier = Modifier.typeCentered(noticeStyle),
                     )
                 } else {
+                    val roomNameStyle = MaterialTheme.typography.bodySmall.copy(
+                        fontFamily = FontFamily.Monospace,
+                        textDirection = TextDirection.Ltr,
+                    )
                     Text(
                         text = roomName,
-                        style = MaterialTheme.typography.bodySmall.copy(
-                            fontFamily = FontFamily.Monospace,
-                            textDirection = TextDirection.Ltr,
-                        ),
+                        style = roomNameStyle,
                         color = MaterialTheme.colorScheme.onBackground,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.typeCentered(roomNameStyle),
                     )
                 }
             }
@@ -172,7 +178,8 @@ private fun ReconnectingDot() {
         modifier = Modifier
             .size(Dimens.meetingIndicatorDot)
             .clip(CircleShape)
-            .background(MaterialTheme.colorScheme.tertiary)
+            // The warning role, like the mic pill's reconnecting ring: one state, one colour.
+            .background(MaterialTheme.bedrudColors.warning)
             .semantics { contentDescription = description },
     )
 }

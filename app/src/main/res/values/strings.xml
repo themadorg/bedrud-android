@@ -29,7 +29,10 @@
   <string name="auth_prompt_noAccount">No account yet?</string>
   <string name="auth_error_loginFailed">Login failed. Please check your credentials.</string>
   <string name="auth_error_guestFailed">Unable to join as a guest. Please try again.</string>
-  <string name="auth_error_nameTooShort">Please enter at least 2 characters.</string>
+  <plurals name="auth_error_nameTooShort">
+    <item quantity="one">Please enter at least %1$d character.</item>
+    <item quantity="other">Please enter at least %1$d characters.</item>
+  </plurals>
   <string name="auth_error_generic">Something went wrong. Please try again.</string>
   <string name="auth_error_registrationFailed">Registration failed. Please try again.</string>
   <string name="auth_error_signInFailed">Sign-in failed. Please try again.</string>
@@ -97,11 +100,17 @@
   <string name="meeting_button_goBack">Go Back</string>
   <string name="meeting_dialog_kickTitle">Kick Participant</string>
   <string name="meeting_dialog_kickMessage">Are you sure you want to kick <xliff:g id="participantName" example="John Doe">%1$s</xliff:g> from the room?</string>
+  <string name="meeting_dialog_followRoomTitle">Leave this call?</string>
+  <string name="meeting_dialog_followRoomMessage">You\'ll leave <xliff:g id="currentRoom" example="obd-hzpi-dfv">%1$s</xliff:g> and join <xliff:g id="nextRoom" example="oqc-qpka-bvw">%2$s</xliff:g>.</string>
+  <string name="meeting_dialog_followRoomOnServerMessage">You\'ll leave <xliff:g id="currentRoom" example="obd-hzpi-dfv">%1$s</xliff:g> and join <xliff:g id="nextRoom" example="oqc-qpka-bvw">%2$s</xliff:g> on <xliff:g id="serverName" example="Bedrud">%3$s</xliff:g>.</string>
+  <string name="meeting_button_leaveAndJoin">Leave and join</string>
   <string name="meeting_action_mute">Mute</string>
   <string name="meeting_action_unmute">Unmute</string>
   <string name="meeting_action_disableVideo">Disable Video</string>
   <string name="meeting_action_enableVideo">Enable Video</string>
   <string name="meeting_action_kick">Kick</string>
+  <string name="meeting_dialog_banTitle">Ban Participant</string>
+  <string name="meeting_dialog_banMessage">Are you sure you want to ban <xliff:g id="participantName" example="John Doe">%1$s</xliff:g> from the room?</string>
   <string name="meeting_action_ban">Ban</string>
   <string name="meeting_panel_participants">Participants (<xliff:g id="count" example="5">%1$d</xliff:g>)</string>
   <string name="meeting_panel_chat">Chat</string>
@@ -137,6 +146,7 @@
   <string name="meeting_chat_reactions">Reactions</string>
   <string name="meeting_chat_shareChooser">Share message</string>
   <string name="meeting_chat_linkUnopenable">No app can open that link</string>
+  <string name="meeting_chat_linkCurrentRoom">You\'re already in this room</string>
   <plurals name="meeting_chat_reactionCount">
     <item quantity="one">%1$d reaction</item>
     <item quantity="other">%1$d reactions</item>
@@ -201,6 +211,10 @@
   <string name="admin_error_loadSettingsFailed">Couldn\'t load settings</string>
   <string name="admin_error_saveSettingsFailed">Couldn\'t save settings</string>
   <string name="admin_error_createTokenFailed">Couldn\'t create the invite token</string>
+  <string name="admin_dialog_banTitle">Ban user?</string>
+  <string name="admin_dialog_banMessage">Are you sure you want to ban <xliff:g id="userName" example="John Doe">%1$s</xliff:g>?</string>
+  <string name="admin_dialog_deleteTokenTitle">Delete invite token?</string>
+  <string name="admin_dialog_deleteTokenMessage">Are you sure you want to delete this invite token? This cannot be undone.</string>
   <string name="admin_error_deleteTokenFailed">Couldn\'t delete the invite token</string>
   <string name="common_action_copy">Copy</string>
   <string name="common_action_share">Share</string>
@@ -211,12 +225,14 @@
   <string name="settings_theme_light">Light</string>
   <string name="settings_theme_dark">Dark</string>
   <string name="settings_label_language">Language</string>
+  <string name="settings_language_system">System</string>
   <string name="settings_section_notifications">Notifications</string>
   <string name="settings_label_enableNotifications">Enable Notifications</string>
   <string name="settings_section_account">Account</string>
   <string name="settings_label_accountId">Account ID</string>
   <string name="settings_label_signInMethod">Sign-in method</string>
   <string name="settings_provider_email">Email</string>
+  <string name="settings_provider_passkey">Passkey</string>
   <string name="settings_label_role">Role</string>
   <string name="settings_role_admin">Admin</string>
   <string name="settings_role_user">User</string>
@@ -270,7 +286,6 @@
   <string name="dashboard_stat_live">Live</string>
   <string name="dashboard_stat_private">Private</string>
   <string name="dashboard_status_live">● Live</string>
-  <string name="dashboard_status_timeAgo">%1$s ago</string>
   <string name="dashboard_empty_noRooms">No rooms yet</string>
   <string name="dashboard_feature_chat">Chat</string>
   <string name="dashboard_feature_video">Video</string>
@@ -305,9 +320,6 @@
   <string name="profile_badge_admin">Admin</string>
   <string name="profile_section_server">Server</string>
   <string name="profile_button_switch">Switch</string>
-  <string name="profile_section_account">Account</string>
-  <string name="profile_label_userId">User ID</string>
-  <string name="profile_label_provider">Provider</string>
   <string name="profile_button_signOut">Sign Out</string>
 
   <!-- Generic error messages (network/exception classification) -->

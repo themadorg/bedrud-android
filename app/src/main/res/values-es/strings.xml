@@ -39,7 +39,11 @@
   <string name="auth_hint_passwordMinLength">Al menos %1$d caracteres</string>
   <string name="auth_error_emailInvalid">Introduce un correo electrónico válido</string>
   <string name="auth_error_guestFailed">No se pudo entrar como invitado. Inténtalo de nuevo.</string>
-  <string name="auth_error_nameTooShort">Introduce al menos 2 caracteres.</string>
+  <plurals name="auth_error_nameTooShort">
+    <item quantity="one">Introduce al menos %1$d carácter.</item>
+    <item quantity="many">Introduce al menos %1$d de caracteres.</item>
+    <item quantity="other">Introduce al menos %1$d caracteres.</item>
+  </plurals>
   <string name="auth_error_generic">Algo salió mal. Inténtalo de nuevo.</string>
   <string name="auth_error_registrationFailed">Error al registrarse. Inténtalo de nuevo.</string>
   <string name="auth_error_signInFailed">Error al iniciar sesión. Inténtalo de nuevo.</string>
@@ -97,11 +101,17 @@
   <string name="meeting_button_goBack">Volver</string>
   <string name="meeting_dialog_kickTitle">Expulsar participante</string>
   <string name="meeting_dialog_kickMessage">¿Estás seguro de que quieres expulsar a <xliff:g id="participantName" example="John Doe">%1$s</xliff:g> de la sala?</string>
+  <string name="meeting_dialog_followRoomTitle">¿Salir de esta llamada?</string>
+  <string name="meeting_dialog_followRoomMessage">Saldrás de <xliff:g id="currentRoom" example="obd-hzpi-dfv">%1$s</xliff:g> y te unirás a <xliff:g id="nextRoom" example="oqc-qpka-bvw">%2$s</xliff:g>.</string>
+  <string name="meeting_dialog_followRoomOnServerMessage">Saldrás de <xliff:g id="currentRoom" example="obd-hzpi-dfv">%1$s</xliff:g> y te unirás a <xliff:g id="nextRoom" example="oqc-qpka-bvw">%2$s</xliff:g> en <xliff:g id="serverName" example="Bedrud">%3$s</xliff:g>.</string>
+  <string name="meeting_button_leaveAndJoin">Salir y unirse</string>
   <string name="meeting_action_mute">Silenciar</string>
   <string name="meeting_action_unmute">Activar sonido</string>
   <string name="meeting_action_disableVideo">Desactivar video</string>
   <string name="meeting_action_enableVideo">Activar video</string>
   <string name="meeting_action_kick">Expulsar</string>
+  <string name="meeting_dialog_banTitle">Bloquear participante</string>
+  <string name="meeting_dialog_banMessage">¿Estás seguro de que quieres bloquear a <xliff:g id="participantName" example="John Doe">%1$s</xliff:g> en la sala?</string>
   <string name="meeting_action_ban">Bloquear</string>
   <string name="meeting_panel_participants">Participantes (<xliff:g id="count" example="5">%1$d</xliff:g>)</string>
   <string name="meeting_panel_chat">Chat</string>
@@ -137,6 +147,7 @@
   <string name="meeting_chat_reactions">Reacciones</string>
   <string name="meeting_chat_shareChooser">Compartir mensaje</string>
   <string name="meeting_chat_linkUnopenable">Ninguna aplicación puede abrir ese enlace</string>
+  <string name="meeting_chat_linkCurrentRoom">Ya estás en esta sala</string>
   <plurals name="meeting_chat_reactionCount">
     <item quantity="one">%1$d reacción</item>
     <item quantity="other">%1$d reacciones</item>
@@ -196,6 +207,10 @@
   <string name="admin_error_loadSettingsFailed">No se pudo cargar la configuración</string>
   <string name="admin_error_saveSettingsFailed">No se pudo guardar la configuración</string>
   <string name="admin_error_createTokenFailed">No se pudo crear el token de invitación</string>
+  <string name="admin_dialog_banTitle">¿Bloquear usuario?</string>
+  <string name="admin_dialog_banMessage">¿Seguro que quieres bloquear a <xliff:g id="userName" example="John Doe">%1$s</xliff:g>?</string>
+  <string name="admin_dialog_deleteTokenTitle">¿Eliminar token de invitación?</string>
+  <string name="admin_dialog_deleteTokenMessage">¿Seguro que quieres eliminar este token de invitación? Esta acción no se puede deshacer.</string>
   <string name="admin_error_deleteTokenFailed">No se pudo eliminar el token de invitación</string>
   <string name="common_action_copy">Copiar</string>
   <string name="common_action_share">Compartir</string>
@@ -206,12 +221,14 @@
   <string name="settings_theme_light">Claro</string>
   <string name="settings_theme_dark">Oscuro</string>
   <string name="settings_label_language">Idioma</string>
+  <string name="settings_language_system">Sistema</string>
   <string name="settings_section_notifications">Notificaciones</string>
   <string name="settings_label_enableNotifications">Activar notificaciones</string>
   <string name="settings_section_account">Cuenta</string>
   <string name="settings_label_accountId">ID de cuenta</string>
   <string name="settings_label_signInMethod">Método de inicio de sesión</string>
   <string name="settings_provider_email">Correo electrónico</string>
+  <string name="settings_provider_passkey">Passkey</string>
   <string name="settings_label_role">Rol</string>
   <string name="settings_role_admin">Administrador</string>
   <string name="settings_role_user">Usuario</string>
@@ -241,7 +258,6 @@
   <string name="dashboard_stat_live">En vivo</string>
   <string name="dashboard_stat_private">Privado</string>
   <string name="dashboard_status_live">● En vivo</string>
-  <string name="dashboard_status_timeAgo">hace %1$s</string>
   <string name="dashboard_empty_noRooms">Aún no hay salas</string>
   <string name="dashboard_feature_chat">Chat</string>
   <string name="dashboard_feature_video">Video</string>
@@ -263,9 +279,6 @@
   <string name="profile_badge_admin">Admin</string>
   <string name="profile_section_server">Servidor</string>
   <string name="profile_button_switch">Cambiar</string>
-  <string name="profile_section_account">Cuenta</string>
-  <string name="profile_label_userId">ID de usuario</string>
-  <string name="profile_label_provider">Proveedor</string>
   <string name="profile_button_signOut">Cerrar sesión</string>
 
   <string name="meeting_stage_screenSharePresenting"><xliff:g id="name" example="Alex">%1$s</xliff:g> está presentando</string>

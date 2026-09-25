@@ -39,7 +39,10 @@
   <string name="auth_hint_passwordMinLength">En az %1$d karakter</string>
   <string name="auth_error_emailInvalid">Geçerli bir e-posta adresi girin</string>
   <string name="auth_error_guestFailed">Misafir olarak katılınamadı. Lütfen tekrar deneyin.</string>
-  <string name="auth_error_nameTooShort">Lütfen en az 2 karakter girin.</string>
+  <plurals name="auth_error_nameTooShort">
+    <item quantity="one">Lütfen en az %1$d karakter girin.</item>
+    <item quantity="other">Lütfen en az %1$d karakter girin.</item>
+  </plurals>
   <string name="auth_error_generic">Bir şeyler ters gitti. Lütfen tekrar deneyin.</string>
   <string name="auth_error_registrationFailed">Kayıt başarısız oldu. Lütfen tekrar deneyin.</string>
   <string name="auth_error_signInFailed">Giriş başarısız oldu. Lütfen tekrar deneyin.</string>
@@ -97,11 +100,17 @@
   <string name="meeting_button_goBack">Geri Dön</string>
   <string name="meeting_dialog_kickTitle">Katılımcıyı At</string>
   <string name="meeting_dialog_kickMessage"><xliff:g id="participantName" example="John Doe">%1$s</xliff:g> kişisini odadan atmak istediğinize emin misiniz?</string>
+  <string name="meeting_dialog_followRoomTitle">Bu aramadan ayrılmak istiyor musunuz?</string>
+  <string name="meeting_dialog_followRoomMessage"><xliff:g id="currentRoom" example="obd-hzpi-dfv">%1$s</xliff:g> odasından ayrılıp <xliff:g id="nextRoom" example="oqc-qpka-bvw">%2$s</xliff:g> odasına katılacaksınız.</string>
+  <string name="meeting_dialog_followRoomOnServerMessage"><xliff:g id="currentRoom" example="obd-hzpi-dfv">%1$s</xliff:g> odasından ayrılıp <xliff:g id="serverName" example="Bedrud">%3$s</xliff:g> sunucusundaki <xliff:g id="nextRoom" example="oqc-qpka-bvw">%2$s</xliff:g> odasına katılacaksınız.</string>
+  <string name="meeting_button_leaveAndJoin">Ayrıl ve katıl</string>
   <string name="meeting_action_mute">Sesi Kapat</string>
   <string name="meeting_action_unmute">Sesi Aç</string>
   <string name="meeting_action_disableVideo">Videoyu Devre Dışı Bırak</string>
   <string name="meeting_action_enableVideo">Videoyu Etkinleştir</string>
   <string name="meeting_action_kick">At</string>
+  <string name="meeting_dialog_banTitle">Katılımcıyı Yasakla</string>
+  <string name="meeting_dialog_banMessage"><xliff:g id="participantName" example="John Doe">%1$s</xliff:g> kişisini odadan yasaklamak istediğinize emin misiniz?</string>
   <string name="meeting_action_ban">Yasakla</string>
   <string name="meeting_panel_participants">Katılımcılar (<xliff:g id="count" example="5">%1$d</xliff:g>)</string>
   <string name="meeting_panel_chat">Sohbet</string>
@@ -137,6 +146,7 @@
   <string name="meeting_chat_reactions">Tepkiler</string>
   <string name="meeting_chat_shareChooser">Mesajı paylaş</string>
   <string name="meeting_chat_linkUnopenable">Bu bağlantıyı açabilecek bir uygulama yok</string>
+  <string name="meeting_chat_linkCurrentRoom">Zaten bu odadasınız</string>
   <plurals name="meeting_chat_reactionCount">
     <item quantity="one">%1$d tepki</item>
     <item quantity="other">%1$d tepki</item>
@@ -196,6 +206,10 @@
   <string name="admin_error_loadSettingsFailed">Ayarlar yüklenemedi</string>
   <string name="admin_error_saveSettingsFailed">Ayarlar kaydedilemedi</string>
   <string name="admin_error_createTokenFailed">Davet kodu oluşturulamadı</string>
+  <string name="admin_dialog_banTitle">Kullanıcı yasaklansın mı?</string>
+  <string name="admin_dialog_banMessage"><xliff:g id="userName" example="John Doe">%1$s</xliff:g> kişisini yasaklamak istediğinize emin misiniz?</string>
+  <string name="admin_dialog_deleteTokenTitle">Davet kodu silinsin mi?</string>
+  <string name="admin_dialog_deleteTokenMessage">Bu davet kodunu silmek istediğinize emin misiniz? Bu geri alınamaz.</string>
   <string name="admin_error_deleteTokenFailed">Davet kodu silinemedi</string>
   <string name="common_action_copy">Kopyala</string>
   <string name="common_action_share">Paylaş</string>
@@ -206,12 +220,14 @@
   <string name="settings_theme_light">Açık</string>
   <string name="settings_theme_dark">Koyu</string>
   <string name="settings_label_language">Dil</string>
+  <string name="settings_language_system">Sistem</string>
   <string name="settings_section_notifications">Bildirimler</string>
   <string name="settings_label_enableNotifications">Bildirimleri Etkinleştir</string>
   <string name="settings_section_account">Hesap</string>
   <string name="settings_label_accountId">Hesap Kimliği</string>
   <string name="settings_label_signInMethod">Giriş yöntemi</string>
   <string name="settings_provider_email">E-posta</string>
+  <string name="settings_provider_passkey">Anahtar</string>
   <string name="settings_label_role">Rol</string>
   <string name="settings_role_admin">Yönetici</string>
   <string name="settings_role_user">Kullanıcı</string>
@@ -241,7 +257,6 @@
   <string name="dashboard_stat_live">Canlı</string>
   <string name="dashboard_stat_private">Özel</string>
   <string name="dashboard_status_live">● Canlı</string>
-  <string name="dashboard_status_timeAgo">%1$s önce</string>
   <string name="dashboard_empty_noRooms">Henüz oda yok</string>
   <string name="dashboard_feature_chat">Sohbet</string>
   <string name="dashboard_feature_video">Video</string>
@@ -263,9 +278,6 @@
   <string name="profile_badge_admin">Yönetici</string>
   <string name="profile_section_server">Sunucu</string>
   <string name="profile_button_switch">Değiştir</string>
-  <string name="profile_section_account">Hesap</string>
-  <string name="profile_label_userId">Kullanıcı Kimliği</string>
-  <string name="profile_label_provider">Sağlayıcı</string>
   <string name="profile_button_signOut">Çıkış Yap</string>
 
   <string name="meeting_stage_screenSharePresenting"><xliff:g id="name" example="Alex">%1$s</xliff:g> sunum yapıyor</string>

@@ -29,6 +29,8 @@ import androidx.compose.ui.text.style.LineBreak
 import androidx.compose.ui.text.style.TextDirection
 import com.bedrud.app.R
 import com.bedrud.app.core.BidiUtils
+import com.bedrud.app.core.appLocale
+import com.bedrud.app.core.formatPercent
 import com.bedrud.app.core.meeting.chat.ChatPoll
 import com.bedrud.app.core.meeting.chat.results
 import com.bedrud.app.core.meeting.chat.totalVotes
@@ -37,6 +39,7 @@ import com.bedrud.app.ui.components.BedrudBottomSheet
 import com.bedrud.app.ui.components.BedrudSheetTitle
 import com.bedrud.app.ui.theme.BedrudShapeTokens
 import com.bedrud.app.ui.theme.Dimens
+import com.bedrud.app.ui.theme.typeCentered
 
 /**
  * A poll in the conversation, drawn as the message it arrived in.
@@ -201,19 +204,24 @@ private fun PollAnswer(
                         modifier = Modifier.size(Dimens.iconXs),
                     )
                 }
+                // Centred in a fixed-height bar beside the tick, so corrected like a button label.
+                val answerStyle = MaterialTheme.typography.bodySmall.copy(
+                    textDirection = BidiUtils.textDirection(text),
+                )
                 Text(
                     text = BidiUtils.wrap(text),
-                    style = MaterialTheme.typography.bodySmall.copy(
-                        textDirection = BidiUtils.textDirection(text),
-                    ),
+                    style = answerStyle,
                     color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.typeCentered(answerStyle),
                 )
             }
             if (showShare) {
+                val shareStyle = MaterialTheme.typography.labelSmall
                 Text(
-                    text = "$percent$PercentSign",
-                    style = MaterialTheme.typography.labelSmall,
+                    text = formatPercent(percent, appLocale()),
+                    style = shareStyle,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.typeCentered(shareStyle),
                 )
             }
         }
@@ -294,7 +302,6 @@ fun ChatPollResultsSheet(
 
 /** How much of an answer row the bar covers at 100%, since the share is counted in whole percent. */
 private const val PercentPerWhole = 100f
-private const val PercentSign = "%"
 
 /** How far the winning bar tints its row: readable behind the label, not a block of colour. */
 private const val PollBarAlpha = 0.35f

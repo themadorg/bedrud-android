@@ -45,7 +45,9 @@ import com.bedrud.app.ui.components.BedrudButton
 import com.bedrud.app.ui.components.BedrudButtonVariant
 import com.bedrud.app.ui.components.BedrudPasswordField
 import com.bedrud.app.ui.components.BedrudTextField
+import com.bedrud.app.ui.theme.BedrudShapeTokens
 import com.bedrud.app.ui.theme.Dimens
+import com.bedrud.app.ui.theme.typeCentered
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 
@@ -179,15 +181,19 @@ fun EmailLoginScreen(
         TextButton(
             onClick = { showResetSheet = true },
             enabled = !isLoading,
+            shape = BedrudShapeTokens.button,
             contentPadding = PaddingValues(
                 horizontal = Dimens.space8,
                 vertical = Dimens.space8
             ),
             modifier = Modifier.align(Alignment.End)
         ) {
+            // Corrected like every other button label, so it stays level with the field above.
+            val linkStyle = MaterialTheme.typography.labelLarge
             Text(
                 text = stringResource(R.string.auth_forgot_link),
-                style = MaterialTheme.typography.labelLarge
+                style = linkStyle,
+                modifier = Modifier.typeCentered(linkStyle),
             )
         }
 
@@ -270,9 +276,12 @@ private fun ForgotPasswordSheet(
     // scaffold — this sheet only supplies its form.
     BedrudBottomSheet(onDismiss = onDismiss) {
         Column(modifier = Modifier.fillMaxWidth()) {
+            // The sheet-title style every other sheet's BedrudSheetTitle uses. This one stays a
+            // plain Text only for its inset: the form below it starts at the sheet's edge, not at
+            // BedrudSheetTitle's list-row inset.
             Text(
                 text = stringResource(R.string.auth_forgot_title),
-                style = MaterialTheme.typography.headlineSmall,
+                style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.onSurface
             )
 

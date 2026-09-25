@@ -69,6 +69,7 @@ import com.bedrud.app.BuildConfig
 import com.bedrud.app.R
 import com.bedrud.app.core.instance.InstanceManager
 import com.bedrud.app.core.instance.ServerUrlCanonicalizer
+import com.bedrud.app.ui.components.BedrudBadge
 import com.bedrud.app.ui.components.BedrudButton
 import com.bedrud.app.ui.components.BedrudScaffoldContentInsets
 import com.bedrud.app.ui.components.BedrudSnackbarHost
@@ -77,6 +78,7 @@ import com.bedrud.app.ui.theme.BedrudShapeTokens
 import com.bedrud.app.ui.theme.Dimens
 import com.bedrud.app.ui.theme.Motion
 import com.bedrud.app.ui.theme.bedrudColors
+import com.bedrud.app.ui.theme.typeCentered
 import com.journeyapps.barcodescanner.ScanContract
 import com.journeyapps.barcodescanner.ScanOptions
 import kotlinx.coroutines.launch
@@ -235,14 +237,16 @@ fun AddInstanceScreen(
                             else R.string.instance_choice_default_tag
                         ),
                     ) { selected ->
+                        val urlStyle = MaterialTheme.typography.bodyLarge.copy(
+                            fontFamily = FontFamily.Monospace,
+                            textDirection = TextDirection.Ltr
+                        )
                         Text(
                             text = displayUrl(defaultUrl ?: BuildConfig.DEFAULT_SERVER_HOST),
-                            style = MaterialTheme.typography.bodyLarge.copy(
-                                fontFamily = FontFamily.Monospace,
-                                textDirection = TextDirection.Ltr
-                            ),
+                            style = urlStyle,
                             color = if (selected) MaterialTheme.colorScheme.onSurface
-                            else MaterialTheme.colorScheme.onSurfaceVariant
+                            else MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.typeCentered(urlStyle)
                         )
                     }
 
@@ -292,10 +296,12 @@ fun AddInstanceScreen(
                             tint = MaterialTheme.colorScheme.error,
                             modifier = Modifier.size(Dimens.iconSm)
                         )
+                        val errorStyle = MaterialTheme.typography.bodySmall
                         Text(
                             text = errorMessage ?: "",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.error
+                            style = errorStyle,
+                            color = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.typeCentered(errorStyle)
                         )
                     }
                 }
@@ -373,9 +379,10 @@ private fun ServerChoiceCard(
     modifier: Modifier = Modifier,
     content: @Composable (selected: Boolean) -> Unit
 ) {
+    // Unselected, the card has the same outline as every other card in the app.
     val borderColor by animateColorAsState(
         targetValue = if (selected) MaterialTheme.colorScheme.primary
-        else MaterialTheme.colorScheme.outlineVariant,
+        else MaterialTheme.colorScheme.outline,
         animationSpec = tween(Motion.durationMedium, easing = Motion.standardEasing),
         label = "cardBorder"
     )
@@ -384,6 +391,8 @@ private fun ServerChoiceCard(
     Surface(
         modifier = modifier
             .fillMaxWidth()
+            // Clipped before selectable, so the press ripple keeps to the card's corners.
+            .clip(BedrudShapeTokens.card)
             .selectable(
                 selected = selected,
                 role = Role.RadioButton,
@@ -412,36 +421,26 @@ private fun ServerChoiceCard(
                     .align(Alignment.CenterStart)
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
+                    // Every line in the card is corrected, so the block keeps its spacing and moves
+                    // as one; the title is also lined up against the badge beside it.
+                    val titleStyle = MaterialTheme.typography.titleMedium
                     Text(
                         text = title,
-                        style = MaterialTheme.typography.titleMedium,
+                        style = titleStyle,
                         color = if (selected) MaterialTheme.colorScheme.onSurface
                         else MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(end = Dimens.space8)
+                        modifier = Modifier
+                            .padding(end = Dimens.space8)
+                            .typeCentered(titleStyle)
                     )
                     if (badge != null) {
-                        CardBadge(badge)
+                        BedrudBadge(badge)
                     }
                 }
                 Spacer(Modifier.height(Dimens.space8))
                 content(selected)
             }
         }
-    }
-}
-
-@Composable
-private fun CardBadge(text: String) {
-    Surface(
-        shape = BedrudShapeTokens.pill,
-        color = MaterialTheme.colorScheme.tertiaryContainer,
-        contentColor = MaterialTheme.colorScheme.onTertiaryContainer
-    ) {
-        Text(
-            text = text,
-            style = MaterialTheme.typography.labelSmall,
-            modifier = Modifier.padding(horizontal = Dimens.space8, vertical = Dimens.space2)
-        )
     }
 }
 
@@ -486,15 +485,19 @@ private fun CustomServerField(
                 else MaterialTheme.colorScheme.outlineVariant
             )
         }
+        // Unlike BedrudTextField, both the hint and the typed value are drawn here, so both can be
+        // corrected, and by the same amount — the one replaces the other in place.
+        val fieldStyle = MaterialTheme.typography.bodyLarge.copy(
+            fontFamily = FontFamily.Monospace,
+            textDirection = TextDirection.Ltr
+        )
         Box(modifier = Modifier.weight(1f)) {
             if (value.isEmpty()) {
                 Text(
                     text = stringResource(R.string.instance_placeholder_serverAddress),
-                    style = MaterialTheme.typography.bodyLarge.copy(
-                        fontFamily = FontFamily.Monospace,
-                        textDirection = TextDirection.Ltr
-                    ),
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    style = fieldStyle,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.typeCentered(fieldStyle)
                 )
             }
             BasicTextField(
@@ -502,11 +505,7 @@ private fun CustomServerField(
                 onValueChange = onValueChange,
                 enabled = enabled,
                 singleLine = true,
-                textStyle = MaterialTheme.typography.bodyLarge.copy(
-                    fontFamily = FontFamily.Monospace,
-                    textDirection = TextDirection.Ltr,
-                    color = textColor
-                ),
+                textStyle = fieldStyle.copy(color = textColor),
                 cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
                 keyboardOptions = KeyboardOptions(
                     keyboardType = KeyboardType.Uri,
@@ -516,6 +515,7 @@ private fun CustomServerField(
                 modifier = Modifier
                     .fillMaxWidth()
                     .focusRequester(focusRequester)
+                    .typeCentered(fieldStyle)
             )
         }
     }
@@ -534,10 +534,12 @@ private fun InsecureNote() {
             tint = MaterialTheme.bedrudColors.warning,
             modifier = Modifier.size(Dimens.iconXs)
         )
+        val noteStyle = MaterialTheme.typography.bodySmall
         Text(
             text = stringResource(R.string.instance_note_insecure),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.bedrudColors.warning
+            style = noteStyle,
+            color = MaterialTheme.bedrudColors.warning,
+            modifier = Modifier.typeCentered(noteStyle)
         )
     }
 }

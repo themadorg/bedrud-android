@@ -8,6 +8,7 @@ import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -27,6 +28,7 @@ import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.text.style.TextOverflow
 import com.bedrud.app.R
 import com.bedrud.app.ui.theme.BedrudShapeTokens
+import com.bedrud.app.ui.theme.typeCentered
 
 /**
  * The app's standard single-line form field: outlined, [BedrudShapeTokens.field] corners, and
@@ -68,6 +70,15 @@ fun BedrudTextField(
     // that pins the value typed in, while the hint is written in the app's language and reads in
     // its direction, as the label does. Laid out left-to-right, a Persian hint's closing "…" went
     // in front of its first word.
+    //
+    // The label is centred on its letters like every other label in the app (`typeCentered`, see
+    // TextInk.kt), in its own current style. It never shares its place with typed text: it rests
+    // in the field only while the field is empty and unfocused, and floats to the outline first.
+    //
+    // The placeholder deliberately takes no correction. It is replaced in place by the value the
+    // user types, which is drawn inside OutlinedTextField where no modifier reaches it; correcting
+    // only the placeholder would make the text jump on the first keystroke. Both stay uncorrected so
+    // they agree with each other.
     val mergedTextStyle = textStyle.copy(textDirection = textDirection)
     // A single-line field keeps its hint to one line as well. A hint that wrapped at a large font
     // size made the empty field taller than the one line it takes once typed in, so the field
@@ -76,7 +87,7 @@ fun BedrudTextField(
     OutlinedTextField(
         value = value,
         onValueChange = onValueChange,
-        label = label?.let { { Text(it) } },
+        label = label?.let { { Text(it, modifier = Modifier.typeCentered(LocalTextStyle.current)) } },
         placeholder = placeholder?.let {
             {
                 Text(

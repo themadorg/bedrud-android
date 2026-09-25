@@ -40,6 +40,8 @@ import com.bedrud.app.R
 import com.bedrud.app.ui.components.InitialsAvatar
 import com.bedrud.app.ui.theme.BedrudShapeTokens
 import com.bedrud.app.ui.theme.Dimens
+import com.bedrud.app.ui.theme.inkCentered
+import com.bedrud.app.ui.theme.typeCentered
 import io.livekit.android.compose.ui.VideoTrackView
 import io.livekit.android.room.Room
 
@@ -264,7 +266,7 @@ internal fun ParticipantTile(
             !avatarUrl.isNullOrBlank() -> {
                 AsyncImage(
                     model = avatarUrl,
-                    contentDescription = stringResource(R.string.meeting_contentDescription_participantAvatar),
+                    contentDescription = stringResource(R.string.meeting_contentDescription_participantAvatar, name),
                     modifier = Modifier
                         .size(Dimens.meetingTileAvatar)
                         .clip(CircleShape),
@@ -328,12 +330,14 @@ internal fun ParticipantTile(
                     modifier = Modifier.size(Dimens.meetingBadgeIcon),
                 )
             }
+            val nameStyle = MaterialTheme.typography.labelSmall.copy(textDirection = TextDirection.Content)
             Text(
                 text = name,
-                style = MaterialTheme.typography.labelSmall.copy(textDirection = TextDirection.Content),
+                style = nameStyle,
                 color = MaterialTheme.colorScheme.onSurface,
                 maxLines = 1,
-                overflow = TextOverflow.Ellipsis
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.typeCentered(nameStyle)
             )
             // Colour alone cannot carry the ring, so speech also earns a badge, trailing the name.
             // A muted participant gets none at all: they can never speak, so its calm state would
@@ -364,10 +368,14 @@ private fun OverflowTile(
         modifier = modifier,
     ) {
         Box(contentAlignment = Alignment.Center) {
+            // A short count alone in its tile, so its own ink is what gets centred.
+            val overflowText = stringResource(R.string.meeting_tile_overflow, count)
+            val overflowStyle = MaterialTheme.typography.headlineMedium
             Text(
-                text = stringResource(R.string.meeting_tile_overflow, count),
-                style = MaterialTheme.typography.headlineMedium,
+                text = overflowText,
+                style = overflowStyle,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.inkCentered(overflowText, overflowStyle),
             )
         }
     }

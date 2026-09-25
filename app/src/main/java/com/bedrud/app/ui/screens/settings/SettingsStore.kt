@@ -2,16 +2,16 @@ package com.bedrud.app.ui.screens.settings
 
 import android.content.Context
 import android.content.SharedPreferences
-import android.text.TextUtils
 import android.view.View
 import androidx.annotation.StringRes
+import androidx.core.text.layoutDirection
 import com.bedrud.app.R
 import com.bedrud.app.core.audio.MeetingInputMode
 import com.bedrud.app.core.audio.NoiseSuppressionMode
 import com.bedrud.app.core.audio.VoiceGateProcessor
+import com.bedrud.app.core.deviceLocale
 import com.bedrud.app.core.prefs.getEnum
 import com.bedrud.app.core.prefs.putEnum
-import java.util.Locale
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -22,8 +22,18 @@ enum class AppAppearance(val label: String, @param:StringRes val stringResId: In
     DARK("Dark", R.string.settings_theme_dark);
 }
 
-enum class AppLanguage(val localeTag: String, val label: String, val isRtl: Boolean = false) {
-    SYSTEM("", "System"),
+/**
+ * A language the app can be shown in. [label] is each language's name in its own script, which is
+ * how a language picker lists them; System is the one entry that is not a language, so it names
+ * itself through [labelResId] in the reader's current language instead.
+ */
+enum class AppLanguage(
+    val localeTag: String,
+    val label: String,
+    val isRtl: Boolean = false,
+    @param:StringRes val labelResId: Int? = null,
+) {
+    SYSTEM("", "System", labelResId = R.string.settings_language_system),
     ENGLISH("en", "English"),
     PERSIAN("fa", "فارسی", isRtl = true),
     ARABIC("ar", "العربية", isRtl = true),
@@ -37,7 +47,7 @@ enum class AppLanguage(val localeTag: String, val label: String, val isRtl: Bool
 
     fun resolveIsRtl(): Boolean {
         if (this != SYSTEM) return isRtl
-        return TextUtils.getLayoutDirectionFromLocale(Locale.getDefault()) == View.LAYOUT_DIRECTION_RTL
+        return deviceLocale().layoutDirection == View.LAYOUT_DIRECTION_RTL
     }
 }
 

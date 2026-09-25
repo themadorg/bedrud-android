@@ -1,37 +1,35 @@
 package com.bedrud.app.ui.screens.profile
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.SwapHoriz
-import androidx.compose.material3.ButtonDefaults
 
+import com.bedrud.app.ui.components.BedrudBadge
+import com.bedrud.app.ui.components.BedrudButton
+import com.bedrud.app.ui.components.BedrudButtonVariant
 import com.bedrud.app.ui.components.BedrudOutlinedCard
 import com.bedrud.app.ui.components.CardSectionHeader
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilledTonalButton
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import com.bedrud.app.ui.components.BedrudCompactTopBar
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -45,19 +43,19 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.bedrud.app.R
 import com.bedrud.app.core.instance.InstanceManager
 import com.bedrud.app.ui.components.InitialsAvatar
 import com.bedrud.app.ui.screens.instance.InstanceSwitcherSheet
-import com.bedrud.app.ui.theme.BedrudRadius
-import com.bedrud.app.ui.theme.BedrudShapeTokens
+import com.bedrud.app.ui.theme.Dimens
+import com.bedrud.app.ui.theme.OnInstanceColor
 import com.bedrud.app.ui.theme.parseInstanceColor
+import com.bedrud.app.ui.theme.rememberTypeCenteringOffset
+import com.bedrud.app.ui.theme.typeCentered
 import org.koin.compose.koinInject
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -91,17 +89,16 @@ fun ProfileContent(
             modifier = Modifier
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+                // The same page padding and card gap on every tab.
+                .padding(Dimens.screenPaddingCompact),
+            verticalArrangement = Arrangement.spacedBy(Dimens.space16)
         ) {
-            Spacer(modifier = Modifier.height(0.dp))
-
             // User section
-            BedrudOutlinedCard(shape = BedrudShapeTokens.card) {
+            BedrudOutlinedCard {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(16.dp),
+                        .padding(Dimens.cardPadding),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     if (!user?.avatarUrl.isNullOrBlank()) {
@@ -109,47 +106,51 @@ fun ProfileContent(
                             model = user?.avatarUrl,
                             contentDescription = stringResource(R.string.profile_contentDescription_profilePicture),
                             modifier = Modifier
-                                .size(56.dp)
+                                .size(Dimens.avatarXl)
                                 .clip(CircleShape),
                             contentScale = ContentScale.Crop
                         )
                     } else {
                         InitialsAvatar(
                             name = user?.name,
-                            size = 56.dp,
+                            size = Dimens.avatarXl,
                             textStyle = MaterialTheme.typography.headlineSmall,
                             contentColor = MaterialTheme.colorScheme.onPrimary
                         )
                     }
-                    Spacer(modifier = Modifier.width(16.dp))
-                    Column(modifier = Modifier.weight(1f)) {
+                    Spacer(modifier = Modifier.width(Dimens.space16))
+                    // Name and email are centred on the avatar as one block. The name's own
+                    // correction would not do: at 22sp over 14sp, the two lines' corrections added
+                    // up put the block 4px low.
+                    val nameStyle = MaterialTheme.typography.titleLarge.copy(textDirection = TextDirection.Content)
+                    val emailStyle = MaterialTheme.typography.bodyMedium.copy(textDirection = TextDirection.Ltr)
+                    Column(
+                        modifier = Modifier
+                            .weight(1f)
+                            .typeCentered(firstLine = nameStyle, lastLine = emailStyle)
+                    ) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            horizontalArrangement = Arrangement.spacedBy(Dimens.space8)
                         ) {
                             Text(
                                 user?.name ?: stringResource(R.string.profile_fallback_name),
-                                style = MaterialTheme.typography.titleLarge.copy(textDirection = TextDirection.Content)
+                                style = nameStyle
                             )
                             if (user?.isAdmin == true) {
-                                Text(
-                                    stringResource(R.string.profile_badge_admin),
-                                    style = MaterialTheme.typography.labelSmall.copy(
-                                        fontWeight = FontWeight.Bold
-                                    ),
-                                    color = MaterialTheme.colorScheme.onPrimary,
-                                    modifier = Modifier
-                                        .background(
-                                            MaterialTheme.colorScheme.primary,
-                                            RoundedCornerShape(BedrudRadius.xs)
-                                        )
-                                        .padding(horizontal = 6.dp, vertical = 2.dp)
+                                // The block moved the name as it stands, so its letters still sit
+                                // above its own box's centre. The badge is raised by the name's
+                                // correction to meet them, rather than the name lowered to meet it.
+                                val nameCorrection = rememberTypeCenteringOffset(nameStyle)
+                                BedrudBadge(
+                                    text = stringResource(R.string.profile_badge_admin),
+                                    modifier = Modifier.offset(y = -nameCorrection),
                                 )
                             }
                         }
                         Text(
                             user?.email ?: "",
-                            style = MaterialTheme.typography.bodyMedium.copy(textDirection = TextDirection.Ltr),
+                            style = emailStyle,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
@@ -157,43 +158,55 @@ fun ProfileContent(
             }
 
             // Server section
-            BedrudOutlinedCard(shape = BedrudShapeTokens.card) {
+            BedrudOutlinedCard {
                 Column {
                     CardSectionHeader(
                         stringResource(R.string.profile_section_server),
-                        modifier = Modifier.padding(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 8.dp)
+                        modifier = Modifier.padding(start = Dimens.cardPadding, top = Dimens.cardPadding, end = Dimens.cardPadding, bottom = Dimens.space8)
                     )
 
                     if (activeInstance != null) {
+                        // Both lines take the block's correction, so they move as one.
+                        val serverNameStyle = MaterialTheme.typography.bodyLarge.copy(textDirection = TextDirection.Content)
+                        val urlStyle = MaterialTheme.typography.bodySmall.copy(textDirection = TextDirection.Ltr)
                         ListItem(
                             headlineContent = {
-                                Text(activeInstance.displayName, style = MaterialTheme.typography.bodyLarge.copy(textDirection = TextDirection.Content))
+                                Text(
+                                    activeInstance.displayName,
+                                    style = serverNameStyle,
+                                    modifier = Modifier.typeCentered(firstLine = serverNameStyle, lastLine = urlStyle)
+                                )
                             },
                             supportingContent = {
                                 Text(
                                     activeInstance.serverURL,
-                                    style = MaterialTheme.typography.bodySmall.copy(textDirection = TextDirection.Ltr),
+                                    style = urlStyle,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
+                                    overflow = TextOverflow.Ellipsis,
+                                    modifier = Modifier.typeCentered(firstLine = serverNameStyle, lastLine = urlStyle)
                                 )
                             },
                             leadingContent = {
                                 InitialsAvatar(
                                     name = activeInstance.displayName,
-                                    containerColor = parseInstanceColor(activeInstance.iconColorHex)
+                                    containerColor = parseInstanceColor(activeInstance.iconColorHex),
+                                    contentColor = OnInstanceColor,
                                 )
                             },
                             trailingContent = {
-                                FilledTonalButton(onClick = { showInstanceSwitcher = true }) {
-                                    Icon(
-                                        Icons.Default.SwapHoriz,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(18.dp)
-                                    )
-                                    Spacer(modifier = Modifier.width(4.dp))
-                                    Text(stringResource(R.string.profile_button_switch))
-                                }
+                                BedrudButton(
+                                    text = stringResource(R.string.profile_button_switch),
+                                    onClick = { showInstanceSwitcher = true },
+                                    variant = BedrudButtonVariant.TONAL,
+                                    leadingIcon = {
+                                        Icon(
+                                            Icons.Default.SwapHoriz,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(Dimens.iconSm),
+                                        )
+                                    },
+                                )
                             },
                             colors = ListItemDefaults.colors(containerColor = Color.Transparent)
                         )
@@ -201,66 +214,26 @@ fun ProfileContent(
                 }
             }
 
-            // Account section
-            BedrudOutlinedCard(shape = BedrudShapeTokens.card) {
-                Column {
-                    CardSectionHeader(
-                        stringResource(R.string.profile_section_account),
-                        modifier = Modifier.padding(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 8.dp)
-                    )
-
-                    if (user != null) {
-                        ListItem(
-                            headlineContent = { Text(stringResource(R.string.profile_label_userId)) },
-                            trailingContent = {
-                                Text(
-                                    user!!.id.take(8) + "...",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            },
-                            colors = ListItemDefaults.colors(containerColor = Color.Transparent)
-                        )
-
-                        if (user?.provider != null) {
-                            HorizontalDivider(
-                                modifier = Modifier.padding(horizontal = 16.dp),
-                                color = MaterialTheme.colorScheme.outlineVariant
-                            )
-                            ListItem(
-                                headlineContent = { Text(stringResource(R.string.profile_label_provider)) },
-                                trailingContent = {
-                                    Text(
-                                        user!!.provider!!.replaceFirstChar { it.uppercase() },
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                },
-                                colors = ListItemDefaults.colors(containerColor = Color.Transparent)
-                            )
-                        }
-                    }
-                }
-            }
+            // The account's details (ID, sign-in method, role) live in Settings' Account card
+            // alone. Profile showed the same ID and method a second time, under other labels and
+            // in another format.
 
             // Sign Out
-            TextButton(
+            // Not in the error colour: signing out is neither an error nor irreversible, since
+            // the account is one sign-in away and nothing on the server is lost.
+            BedrudButton(
+                text = stringResource(R.string.profile_button_signOut),
                 onClick = onLogout,
-                colors = ButtonDefaults.textButtonColors(
-                    contentColor = MaterialTheme.colorScheme.error
-                ),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Icon(
-                    Icons.AutoMirrored.Filled.Logout,
-                    contentDescription = null,
-                    modifier = Modifier.size(18.dp)
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(stringResource(R.string.profile_button_signOut), style = MaterialTheme.typography.labelLarge)
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
+                variant = BedrudButtonVariant.GHOST,
+                leadingIcon = {
+                    Icon(
+                        Icons.AutoMirrored.Filled.Logout,
+                        contentDescription = null,
+                        modifier = Modifier.size(Dimens.iconSm),
+                    )
+                },
+                modifier = Modifier.fillMaxWidth(),
+            )
         }
     }
 }
