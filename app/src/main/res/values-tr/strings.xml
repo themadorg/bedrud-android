@@ -79,7 +79,7 @@
   <string name="instance_contentDescription_scanQr">QR kodu tara</string>
   <string name="instance_note_insecure">Bu bağlantı şifrelenmeyecek.</string>
   <string name="dashboard_title_rooms">Odalar</string>
-  <string name="dashboard_placeholder_search">Oda adı veya bağlantısı girin…</string>
+  <string name="dashboard_placeholder_joinRoom">Oda adı veya bağlantısı girin…</string>
   <string name="dashboard_join_invalidInput">Bir oda adı veya geçerli bir toplantı bağlantısı girin.</string>
   <string name="dashboard_join_unknownServer">Önce bu bağlantının sunucusunu ekleyin.</string>
   <string name="dashboard_dialog_createTitle">Oda Oluştur</string>

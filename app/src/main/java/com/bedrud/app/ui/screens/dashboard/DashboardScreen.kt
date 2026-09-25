@@ -42,7 +42,7 @@ import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.MeetingRoom
-import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
@@ -952,8 +952,10 @@ internal fun QuickJoinBar(
         BedrudTextField(
             value = value,
             onValueChange = onValueChange,
-            placeholder = stringResource(R.string.dashboard_placeholder_search),
-            leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, modifier = Modifier.size(Dimens.iconSm)) },
+            placeholder = stringResource(R.string.dashboard_placeholder_joinRoom),
+            // A link, not a magnifier: the field joins the room it is given and searches nothing,
+            // and a search icon had the hint translated as "search rooms".
+            leadingIcon = { Icon(Icons.Default.Link, contentDescription = null, modifier = Modifier.size(Dimens.iconSm)) },
             textStyle = MaterialTheme.typography.bodyMedium,
             // Room slugs and links are lowercase, no spaces — suppress auto-capitalize/correct and
             // use the URL keyboard. The "Go" key joins (and, on success, the navigation dismisses it).

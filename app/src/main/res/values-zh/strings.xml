@@ -78,7 +78,7 @@
   <string name="instance_contentDescription_scanQr">扫描二维码</string>
   <string name="instance_note_insecure">此连接将不会加密。</string>
   <string name="dashboard_title_rooms">房间</string>
-  <string name="dashboard_placeholder_search">输入房间名称或链接…</string>
+  <string name="dashboard_placeholder_joinRoom">输入房间名称或链接…</string>
   <string name="dashboard_join_invalidInput">请输入房间名称或有效的会议链接。</string>
   <string name="dashboard_join_unknownServer">请先添加此链接对应的服务器。</string>
   <string name="dashboard_dialog_createTitle">创建房间</string>

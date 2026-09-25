@@ -211,6 +211,17 @@ taller than the typed one, and everything under it jumped on the first keystroke
 heights for what does not scale with the font (icons, handles, slider tracks), and check a text
 container at font scale 1.0, 1.5 and 2.0.
 
+**A field's direction pins its value, not its hint.** `BedrudTextField`'s `textDirection` exists for
+machine-shaped values — a link, an email, a room slug — which read left-to-right in every language.
+The placeholder takes the field's size but not that pin: it is written in the app's language, so it
+reads in that language's direction, as the label does. Pinned with the value, a Persian hint was laid
+out left-to-right and its closing "…" landed in front of its first word.
+
+**A field's hint and icon say what the field does.** The rooms dashboard's field joins the room
+named or linked in it and filters nothing, so it leads with a link icon and its hint asks for a room
+name or link (`dashboard_placeholder_joinRoom`). It used to carry a magnifier and a key named
+`…_search`, and its Persian hint had been translated as "search rooms".
+
 ## Elevation (`Elevation.kt`) & Motion (`Motion.kt`)
 
 Elevation is tonal and light — the app leans on outlines + tonal surfaces over shadows; most surfaces

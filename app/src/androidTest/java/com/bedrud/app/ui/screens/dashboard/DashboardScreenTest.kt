@@ -40,7 +40,7 @@ class DashboardScreenTest {
 
     private fun assertPlaceholderFits(fontScale: Float) {
         showQuickJoinBar(fontScale)
-        val placeholder = context.getString(R.string.dashboard_placeholder_search)
+        val placeholder = context.getString(R.string.dashboard_placeholder_joinRoom)
 
         val layout = compose.onNodeWithText(placeholder, useUnmergedTree = true).textLayout()
 
