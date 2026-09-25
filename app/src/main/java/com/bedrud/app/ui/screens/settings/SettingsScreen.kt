@@ -71,6 +71,9 @@ import com.bedrud.app.ui.theme.typeCentered
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 
+@Composable
+private fun AppLanguage.displayName(): String = labelResId?.let { stringResource(it) } ?: label
+
 /** The sign-in method in the app's language, or an identity provider by its own name. */
 @Composable
 private fun signInMethodLabel(method: SignInMethod): String = when (method) {
@@ -155,7 +158,7 @@ fun SettingsContent(
                         onExpandedChange = { languageExpanded = it }
                     ) {
                         BedrudTextField(
-                            value = language.label,
+                            value = language.displayName(),
                             onValueChange = {},
                             readOnly = true,
                             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = languageExpanded) },
@@ -174,7 +177,10 @@ fun SettingsContent(
                             AppLanguage.entries.forEach { lang ->
                                 DropdownMenuItem(
                                     text = {
-                                        Text(lang.label, modifier = Modifier.typeCentered(LocalTextStyle.current))
+                                        Text(
+                                            lang.displayName(),
+                                            modifier = Modifier.typeCentered(LocalTextStyle.current),
+                                        )
                                     },
                                     onClick = {
                                         settingsStore.setLanguage(lang)

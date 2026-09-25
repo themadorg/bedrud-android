@@ -73,10 +73,10 @@ import androidx.compose.ui.window.PopupProperties
 import com.bedrud.app.R
 import com.bedrud.app.core.BidiUtils
 import com.bedrud.app.core.api.RoomApi
-import com.bedrud.app.core.call.CallService
 import com.bedrud.app.core.chat.ChatImageUploader
 import com.bedrud.app.core.chat.ChatUploadFailure
 import com.bedrud.app.core.chat.ChatUploadResult
+import com.bedrud.app.core.deeplink.ChatLinkTarget
 import com.bedrud.app.core.livekit.ChatAttachment
 import com.bedrud.app.core.livekit.ChatMessage
 import com.bedrud.app.core.meeting.chat.ChatPoll
@@ -89,7 +89,8 @@ import com.bedrud.app.ui.theme.Dimens
 import com.bedrud.app.ui.theme.Elevation
 import com.bedrud.app.ui.theme.bedrudColors
 import com.bedrud.app.ui.theme.typeCentered
-import com.bedrud.app.ui.util.openChatLink
+import com.bedrud.app.ui.util.openChatPage
+import java.util.Locale
 import kotlinx.coroutines.launch
 
 /**
@@ -134,12 +135,12 @@ fun MeetingChatPanel(
     imageContext: ChatImageContext?,
     @StringRes sendDisabledReason: Int?,
     /**
-     * The servers this person has added, by host. A room link on one of them opens the app; anything
-     * else opens a browser. Passed in rather than looked up here because a link to somebody else's
-     * site that happens to carry an `/m/` path is not this app's to swallow, and only the caller
-     * knows which servers are actually the reader's.
+     * Where a tapped link leads. Passed in rather than worked out here because only the caller knows
+     * which servers are the reader's and which room this call is in.
      */
-    knownHosts: Set<String>,
+    resolveLink: (String) -> ChatLinkTarget,
+    /** Asks to leave this call for another room; the caller confirms before anything is left. */
+    onFollowRoom: (ChatLinkTarget.Room) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val listState = rememberLazyListState()
@@ -176,6 +177,10 @@ fun MeetingChatPanel(
     // reads as a broken link rather than as a missing app. Shares the notice line below.
     var linkError by remember { mutableStateOf<String?>(null) }
     val linkUnopenable = stringResource(R.string.meeting_chat_linkUnopenable)
+    // A link to the room this call is already in has nowhere to go, and saying nothing would read as
+    // broken too. It is not an error, though, so it shares the line in a neutral colour.
+    var linkNotice by remember { mutableStateOf<String?>(null) }
+    val linkCurrentRoom = stringResource(R.string.meeting_chat_linkCurrentRoom)
     var previewImageUrl by remember { mutableStateOf<String?>(null) }
     var isComposingPoll by remember { mutableStateOf(false) }
     // Attach and poll show only on an empty field. They hold a fixed column on the left, and once
@@ -210,7 +215,9 @@ fun MeetingChatPanel(
                     uploadError = when (val reason = result.reason) {
                         ChatUploadFailure.Unreadable -> unreadableMessage
                         ChatUploadFailure.Unreachable -> unreachableMessage
-                        is ChatUploadFailure.Rejected -> rejectedFormat.format(reason.code)
+                        // The status code stays in Latin digits in every language: it is a technical
+                        // code people search for and report, like a version or an ID.
+                        is ChatUploadFailure.Rejected -> String.format(Locale.ROOT, rejectedFormat, reason.code)
                     }
                 }
             }
@@ -255,19 +262,16 @@ fun MeetingChatPanel(
                         onShowPollResults = { resultsMessageId = it },
                         onShowReactions = { reactionsMessageId = it },
                         onLinkClick = { url ->
-                            linkError = if (
-                                context.openChatLink(
-                                    url = url,
-                                    knownHosts = knownHosts,
-                                    // Chat only exists inside a call, so this is false today. It is
-                                    // asked rather than assumed so the room hop turns itself on the
-                                    // moment leaving a call to follow a link becomes a thing.
-                                    canJoinAnotherRoom = !CallService.isRunning,
-                                )
-                            ) {
-                                null
-                            } else {
-                                linkUnopenable
+                            val target = resolveLink(url)
+                            linkNotice = if (target == ChatLinkTarget.CurrentRoom) linkCurrentRoom else null
+                            linkError = when (target) {
+                                ChatLinkTarget.Page ->
+                                    if (context.openChatPage(url)) null else linkUnopenable
+                                ChatLinkTarget.CurrentRoom -> null
+                                is ChatLinkTarget.Room -> {
+                                    onFollowRoom(target)
+                                    null
+                                }
                             }
                         },
                     )
@@ -314,11 +318,13 @@ fun MeetingChatPanel(
                 )
             }
         }
-        (uploadError ?: linkError)?.let { error ->
+        val noticeLine = (uploadError ?: linkError)?.let { it to MaterialTheme.colorScheme.error }
+            ?: linkNotice?.let { it to MaterialTheme.colorScheme.onSurfaceVariant }
+        noticeLine?.let { (notice, color) ->
             Text(
-                text = error,
+                text = notice,
                 style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.error,
+                color = color,
                 modifier = Modifier.padding(horizontal = Dimens.space12, vertical = Dimens.space2),
             )
         }

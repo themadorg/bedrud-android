@@ -25,6 +25,8 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextDirection
 import com.bedrud.app.R
 import com.bedrud.app.core.BidiUtils
+import com.bedrud.app.core.appLocale
+import com.bedrud.app.core.formatCount
 import com.bedrud.app.core.meeting.chat.ChatReactions
 import com.bedrud.app.core.meeting.chat.breakdown
 import com.bedrud.app.core.meeting.chat.grouped
@@ -193,7 +195,7 @@ fun ChatReactionRow(
                 // One reaction needs no tally: the emoji is already the whole message, and "1"
                 // beside it only asks the reader to count to one.
                 if (chip.count > 1) {
-                    val tally = chip.count.toString()
+                    val tally = formatCount(chip.count, appLocale())
                     Text(
                         text = tally,
                         style = countStyle,
