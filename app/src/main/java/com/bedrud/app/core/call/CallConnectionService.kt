@@ -16,9 +16,17 @@ import android.telecom.TelecomManager
 import android.util.Log
 import androidx.annotation.RequiresApi
 import com.bedrud.app.R
+import com.bedrud.app.core.createLocaleContext
 import com.bedrud.app.core.deeplink.BedrudScheme
+import com.bedrud.app.ui.screens.settings.SettingsStore
 
 class CallConnectionService : ConnectionService() {
+
+    // Same reason as CallService: without this, the fallback room name comes out in the device's
+    // language rather than the one picked in the app.
+    override fun attachBaseContext(base: Context) {
+        super.attachBaseContext(base.createLocaleContext(SettingsStore(base).getLanguageTag()))
+    }
 
     override fun onCreateOutgoingConnection(
         connectionManagerPhoneAccount: PhoneAccountHandle?,

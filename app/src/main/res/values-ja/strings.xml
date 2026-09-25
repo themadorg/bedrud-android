@@ -209,6 +209,7 @@
   <string name="settings_theme_light">ライト</string>
   <string name="settings_theme_dark">ダーク</string>
   <string name="settings_label_language">言語</string>
+  <string name="settings_language_system">システム</string>
   <string name="settings_section_notifications">通知</string>
   <string name="settings_label_enableNotifications">通知を有効にする</string>
   <string name="settings_section_account">アカウント</string>

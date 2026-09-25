@@ -710,6 +710,19 @@ lint fails CI on `MissingTranslation`, so shipping English-only is not an option
 `LocaleHelper` and `BedrudTheme` set the layout direction from the active `AppLanguage`, while the
 typeface does not vary by locale at all — see [Typography](#typography-typekt).
 
+**Which language, and when.** A first run follows the device, because nothing has been picked yet and
+`AppLanguage.SYSTEM` is the default; a pick in Settings holds from that moment on, and picking System
+again hands the choice back to the device. The device's language is read from
+`Resources.getSystem()` (`deviceLocale()` in `LocaleHelper`), never from `Locale.getDefault()`:
+applying a language overwrites that default, so after one pick "System" used to keep answering with
+the language just left behind until the process died. Each of the app's own components gets the same
+wrapping in its `attachBaseContext` — the application, `MainActivity`, and the two call services
+(`CallService`, `CallConnectionService`) — because the system hands each its own context in the
+device's language; without it the call notification spoke the device's language inside a Persian
+app. The QR scanner is ZXing's `CaptureActivity`, a library screen that is not wrapped, so its own
+prompt follows the device. The System entry is the one language-picker label drawn from
+`strings.xml`; every other entry is the language's own name in its own script.
+
 **Content direction is separate from layout direction.** What someone types is not governed by the
 language they chose the app in: a Persian message written in the English build is still a
 right-to-left paragraph. `BidiUtils` answers that from the text itself, by its first strong

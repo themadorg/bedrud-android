@@ -209,6 +209,7 @@
   <string name="settings_theme_light">浅色</string>
   <string name="settings_theme_dark">深色</string>
   <string name="settings_label_language">语言</string>
+  <string name="settings_language_system">系统</string>
   <string name="settings_section_notifications">通知</string>
   <string name="settings_label_enableNotifications">启用通知</string>
   <string name="settings_section_account">账户</string>
