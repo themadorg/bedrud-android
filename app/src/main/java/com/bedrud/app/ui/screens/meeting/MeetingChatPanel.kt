@@ -74,10 +74,10 @@ import androidx.compose.ui.window.PopupProperties
 import com.bedrud.app.R
 import com.bedrud.app.core.BidiUtils
 import com.bedrud.app.core.api.RoomApi
-import com.bedrud.app.core.call.CallService
 import com.bedrud.app.core.chat.ChatImageUploader
 import com.bedrud.app.core.chat.ChatUploadFailure
 import com.bedrud.app.core.chat.ChatUploadResult
+import com.bedrud.app.core.deeplink.ChatLinkTarget
 import com.bedrud.app.core.livekit.ChatAttachment
 import com.bedrud.app.core.livekit.ChatMessage
 import com.bedrud.app.core.meeting.chat.ChatPoll
@@ -89,7 +89,8 @@ import com.bedrud.app.ui.theme.BedrudShapeTokens
 import com.bedrud.app.ui.theme.Dimens
 import com.bedrud.app.ui.theme.Elevation
 import com.bedrud.app.ui.theme.bedrudColors
-import com.bedrud.app.ui.util.openChatLink
+import com.bedrud.app.ui.theme.typeCentered
+import com.bedrud.app.ui.util.openChatPage
 import kotlinx.coroutines.launch
 
 /**
@@ -134,12 +135,12 @@ fun MeetingChatPanel(
     imageContext: ChatImageContext?,
     @StringRes sendDisabledReason: Int?,
     /**
-     * The servers this person has added, by host. A room link on one of them opens the app; anything
-     * else opens a browser. Passed in rather than looked up here because a link to somebody else's
-     * site that happens to carry an `/m/` path is not this app's to swallow, and only the caller
-     * knows which servers are actually the reader's.
+     * Where a tapped link leads. Passed in rather than worked out here because only the caller knows
+     * which servers are the reader's and which room this call is in.
      */
-    knownHosts: Set<String>,
+    resolveLink: (String) -> ChatLinkTarget,
+    /** Asks to leave this call for another room; the caller confirms before anything is left. */
+    onFollowRoom: (ChatLinkTarget.Room) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val listState = rememberLazyListState()
@@ -176,6 +177,10 @@ fun MeetingChatPanel(
     // reads as a broken link rather than as a missing app. Shares the notice line below.
     var linkError by remember { mutableStateOf<String?>(null) }
     val linkUnopenable = stringResource(R.string.meeting_chat_linkUnopenable)
+    // A link to the room this call is already in has nowhere to go, and saying nothing would read as
+    // broken too. It is not an error, though, so it shares the line in a neutral colour.
+    var linkNotice by remember { mutableStateOf<String?>(null) }
+    val linkCurrentRoom = stringResource(R.string.meeting_chat_linkCurrentRoom)
     var previewImageUrl by remember { mutableStateOf<String?>(null) }
     var isComposingPoll by remember { mutableStateOf(false) }
     // Attach and poll show only on an empty field. They hold a fixed column on the left, and once
@@ -255,19 +260,16 @@ fun MeetingChatPanel(
                         onShowPollResults = { resultsMessageId = it },
                         onShowReactions = { reactionsMessageId = it },
                         onLinkClick = { url ->
-                            linkError = if (
-                                context.openChatLink(
-                                    url = url,
-                                    knownHosts = knownHosts,
-                                    // Chat only exists inside a call, so this is false today. It is
-                                    // asked rather than assumed so the room hop turns itself on the
-                                    // moment leaving a call to follow a link becomes a thing.
-                                    canJoinAnotherRoom = !CallService.isRunning,
-                                )
-                            ) {
-                                null
-                            } else {
-                                linkUnopenable
+                            val target = resolveLink(url)
+                            linkNotice = if (target == ChatLinkTarget.CurrentRoom) linkCurrentRoom else null
+                            linkError = when (target) {
+                                ChatLinkTarget.Page ->
+                                    if (context.openChatPage(url)) null else linkUnopenable
+                                ChatLinkTarget.CurrentRoom -> null
+                                is ChatLinkTarget.Room -> {
+                                    onFollowRoom(target)
+                                    null
+                                }
                             }
                         },
                     )
@@ -304,17 +306,21 @@ fun MeetingChatPanel(
                     modifier = Modifier.size(Dimens.chatUploadIndicator),
                     strokeWidth = Dimens.chatUploadIndicatorStroke,
                 )
+                val uploadingStyle = MaterialTheme.typography.labelSmall
                 Text(
                     text = stringResource(R.string.meeting_chat_uploading),
-                    style = MaterialTheme.typography.labelSmall,
+                    style = uploadingStyle,
+                    modifier = Modifier.typeCentered(uploadingStyle),
                 )
             }
         }
-        (uploadError ?: linkError)?.let { error ->
+        val noticeLine = (uploadError ?: linkError)?.let { it to MaterialTheme.colorScheme.error }
+            ?: linkNotice?.let { it to MaterialTheme.colorScheme.onSurfaceVariant }
+        noticeLine?.let { (notice, color) ->
             Text(
-                text = error,
+                text = notice,
                 style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.error,
+                color = color,
                 modifier = Modifier.padding(horizontal = Dimens.space12, vertical = Dimens.space2),
             )
         }
@@ -455,19 +461,27 @@ fun MeetingChatPanel(
                                         // lines plus 6dp above and below is precisely the bar's
                                         // 72dp resting height, so even the full three lines never
                                         // grow the bar. A single line still centres in the band.
+                                        //
+                                        // The hint and the typed text are both drawn in here, so
+                                        // the letter correction goes on the box holding the two
+                                        // and moves them together. Without it the hint's letters
+                                        // measured 5px above the send button's centre.
+                                        val hintStyle = MaterialTheme.typography.bodyMedium.copy(
+                                            lineHeightStyle = CenteredLineHeight,
+                                        )
                                         Box(
                                             contentAlignment = Alignment.CenterStart,
-                                            modifier = Modifier.padding(
-                                                horizontal = Dimens.space4,
-                                                vertical = Dimens.space6,
-                                            ),
+                                            modifier = Modifier
+                                                .padding(
+                                                    horizontal = Dimens.space4,
+                                                    vertical = Dimens.space6,
+                                                )
+                                                .typeCentered(hintStyle),
                                         ) {
                                             if (input.isEmpty()) {
                                                 Text(
                                                     text = stringResource(R.string.meeting_chat_placeholder),
-                                                    style = MaterialTheme.typography.bodyMedium.copy(
-                                                        lineHeightStyle = CenteredLineHeight,
-                                                    ),
+                                                    style = hintStyle,
                                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                                                 )
                                             }
@@ -720,11 +734,13 @@ private fun ChatSendDisabledNotice(@StringRes reason: Int) {
             tint = MaterialTheme.bedrudColors.onWarningContainer,
             modifier = Modifier.size(Dimens.iconXs),
         )
+        val noticeStyle = MaterialTheme.typography.labelMedium
         Text(
             text = stringResource(reason),
-            style = MaterialTheme.typography.labelMedium,
+            style = noticeStyle,
             color = MaterialTheme.bedrudColors.onWarningContainer,
             textAlign = TextAlign.Center,
+            modifier = Modifier.typeCentered(noticeStyle),
         )
     }
 }

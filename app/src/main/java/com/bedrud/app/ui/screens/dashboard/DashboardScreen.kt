@@ -1,5 +1,8 @@
 package com.bedrud.app.ui.screens.dashboard
 
+import android.icu.text.DisplayContext
+import android.icu.text.RelativeDateTimeFormatter
+import android.icu.util.ULocale
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
@@ -8,11 +11,13 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -28,9 +33,9 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.NavigateNext
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
@@ -44,6 +49,7 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHostState
@@ -82,6 +88,7 @@ import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
@@ -106,10 +113,12 @@ import com.bedrud.app.core.deeplink.BedrudURLParser
 import com.bedrud.app.core.instance.InstanceManager
 import com.bedrud.app.core.recent.RecentRoom
 import com.bedrud.app.core.recent.RecentRoomsStore
-import com.bedrud.app.core.recent.formatRecentRoomTimeAgo
 import com.bedrud.app.core.recent.recentRoomsNotInApiList
 import com.bedrud.app.core.rooms.DeletedRoomTombstones
+import com.bedrud.app.core.rooms.RoomActivityAge
+import com.bedrud.app.core.rooms.RoomActivityUnit
 import com.bedrud.app.core.rooms.resolveRoomActivityAt
+import com.bedrud.app.core.rooms.roomActivityAge
 import com.bedrud.app.core.rooms.sortByActivity
 import com.bedrud.app.core.api.apiAction
 import com.bedrud.app.core.api.apiBody
@@ -133,6 +142,7 @@ import com.bedrud.app.ui.screens.instance.InstanceSwitcherSheet
 import com.bedrud.app.ui.theme.BedrudShapeTokens
 import com.bedrud.app.ui.theme.Dimens
 import com.bedrud.app.ui.theme.Motion
+import com.bedrud.app.ui.theme.typeCentered
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
@@ -148,7 +158,7 @@ private const val AUTO_REFRESH_INTERVAL_MS = 60_000L
 // so a flaky request doesn't leave the list stale for a minute.
 private const val FAILED_FETCH_RETRY_MS = 5_000L
 
-// Cadence of the ticking clock that keeps the "Xm ago" recent-room labels advancing.
+// Cadence of the ticking clock that keeps the "5 minutes ago" recent-room labels advancing.
 private const val NOW_TICK_INTERVAL_MS = 60_000L
 
 // Ignore a silent refresh request that arrives within this window of the last fetch, so rapid tab
@@ -176,7 +186,6 @@ private data class PendingServerSwitch(val instance: Instance, val roomName: Str
 fun DashboardContent(
     modifier: Modifier = Modifier,
     onJoinRoom: (String) -> Unit,
-    onJoinRecent: (RecentRoom) -> Unit,
     onOpenProfile: () -> Unit,
     onNavigateToAddInstance: () -> Unit,
     instanceManager: InstanceManager = koinInject(),
@@ -211,7 +220,7 @@ fun DashboardContent(
         )
     }
     // Active-server recents keyed by room name, so a server-backed card can tell when the user was
-    // last in that room -- driving the Live / "Xm ago" presence label without a scan per card.
+    // last in that room -- driving the Live / "5 minutes ago" presence label without a scan per card.
     val activeRecentByName = remember(recentRooms, activeInstanceId) {
         recentRooms.filter { it.instanceId == activeInstanceId }.associateBy { it.roomName }
     }
@@ -259,7 +268,7 @@ fun DashboardContent(
     // is true immediately from pre-existing rooms, well before the async refetch includes it.
     var pendingScrollToTopFor by rememberSaveable { mutableStateOf<String?>(null) }
 
-    // Drives the "Xm ago" labels on recent-room cards. Compose only recomposes on state
+    // Drives the "5 minutes ago" labels on recent-room cards. Compose only recomposes on state
     // change, so without an explicit ticking clock those labels freeze at whatever they
     // read on the last recomposition instead of advancing with real time.
     var nowTickMs by remember { mutableLongStateOf(System.currentTimeMillis()) }
@@ -517,7 +526,13 @@ fun DashboardContent(
             },
             dismissButton = {
                 TextButton(onClick = { pendingServerSwitch = null }) {
-                    Text(stringResource(R.string.common_button_cancel))
+                    // Corrected like the BedrudButton beside it, or the two labels in this dialog
+                    // sit at different heights.
+                    val cancelStyle = LocalTextStyle.current
+                    Text(
+                        stringResource(R.string.common_button_cancel),
+                        modifier = Modifier.typeCentered(cancelStyle),
+                    )
                 }
             }
         )
@@ -774,7 +789,9 @@ fun DashboardContent(
                                             is RoomListEntry.FromRecent -> RecentRoomCard(
                                                 recent = entry.recent,
                                                 now = nowTickMs,
-                                                onJoin = { onJoinRecent(entry.recent) },
+                                                // Only the active server's recents are listed, so a
+                                                // recent joins like any other card, with no switch.
+                                                onJoin = { onJoinRoom(entry.recent.roomName) },
                                                 onRemove = {
                                                     recentRoomsStore.remove(
                                                         entry.recent.roomName,
@@ -864,7 +881,11 @@ private fun RoomsHeaderTitle(serverName: String?, onClick: () -> Unit) {
             text = titleText,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.weight(1f, fill = false),
+            // Corrected at the server name's size, the run that sets this line's height, so the
+            // header sits where the other tabs' single-style titles do.
+            modifier = Modifier
+                .weight(1f, fill = false)
+                .typeCentered(MaterialTheme.typography.headlineSmall),
         )
         Icon(
             Icons.Default.ExpandMore,
@@ -924,15 +945,20 @@ private fun ProfileAvatarButton(user: User?, onClick: () -> Unit) {
 // ── Quick join bar ────────────────────────────────────────────────────────────
 
 @Composable
-private fun QuickJoinBar(
+internal fun QuickJoinBar(
     value: String,
     onValueChange: (String) -> Unit,
     onJoin: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Row(modifier = modifier, verticalAlignment = Alignment.CenterVertically) {
-        // Both the field and the button sit at the compact 48dp control height with the shared
-        // corner token, so the row reads as one control without dominating the header area.
+    // The row is as tall as its tallest child, and both children fill it, so the field and the
+    // button stay one control at every font size the reader picks.
+    Row(
+        modifier = modifier.height(IntrinsicSize.Min),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        // The field keeps Material's own height, which grows with the font. Pinning it to the
+        // 48dp button height clipped the text as soon as the reader raised their font size.
         BedrudTextField(
             value = value,
             onValueChange = onValueChange,
@@ -949,7 +975,7 @@ private fun QuickJoinBar(
             ),
             keyboardActions = KeyboardActions(onGo = { onJoin() }),
             textDirection = TextDirection.Ltr,
-            modifier = Modifier.weight(1f).height(Dimens.buttonHeight)
+            modifier = Modifier.weight(1f).fillMaxHeight()
         )
         Spacer(modifier = Modifier.width(Dimens.space8))
         BedrudButton(
@@ -957,6 +983,7 @@ private fun QuickJoinBar(
             onClick = onJoin,
             variant = BedrudButtonVariant.TONAL,
             enabled = value.isNotBlank(),
+            modifier = Modifier.fillMaxHeight(),
         )
     }
 }
@@ -980,7 +1007,8 @@ private fun FilterRow(
                         when (filter) {
                             RoomFilter.ALL -> stringResource(R.string.dashboard_filter_all)
                             RoomFilter.MY_ROOMS -> stringResource(R.string.dashboard_filter_myRooms)
-                        }
+                        },
+                        modifier = Modifier.typeCentered(LocalTextStyle.current)
                     )
                 },
                 // Canonical M3 filter-chip affordance: a leading check on the active chip only, so
@@ -1046,18 +1074,7 @@ private fun RoomCard(
 
     SwipeableRoomRow(action = swipeAction, modifier = modifier.fillMaxWidth()) {
         RoomCardScaffold(onClick = onJoin) {
-            Column(modifier = Modifier.weight(1f)) {
-                RoomTitleLine(title = title)
-                if (metaText != null) {
-                    Text(
-                        text = metaText,
-                        style = MaterialTheme.typography.labelSmall,
-                        color = statusTint,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                }
-            }
+            RoomCardText(title = title, status = metaText, statusColor = statusTint)
 
             if (onSettings != null) {
                 IconButton(onClick = onSettings, modifier = Modifier.size(Dimens.minTouchTarget)) {
@@ -1112,18 +1129,7 @@ private fun RecentRoomCard(
 
     SwipeableRoomRow(action = swipeAction, modifier = modifier.fillMaxWidth()) {
         RoomCardScaffold(onClick = onJoin) {
-            Column(modifier = Modifier.weight(1f)) {
-                RoomTitleLine(title = recent.roomName)
-                if (presence != null) {
-                    Text(
-                        text = presence.text,
-                        style = MaterialTheme.typography.labelSmall,
-                        color = statusTint,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                }
-            }
+            RoomCardText(title = recent.roomName, status = presence?.text, statusColor = statusTint)
 
             TrailingChevron()
         }
@@ -1139,6 +1145,40 @@ private data class Presence(val text: String, val isLive: Boolean)
 // the call; after that we show how long ago it was last active.
 private const val LIVE_WINDOW_MS = 60_000L
 
+private fun RoomActivityUnit.toRelativeUnit(): RelativeDateTimeFormatter.RelativeUnit = when (this) {
+    RoomActivityUnit.MINUTES -> RelativeDateTimeFormatter.RelativeUnit.MINUTES
+    RoomActivityUnit.HOURS -> RelativeDateTimeFormatter.RelativeUnit.HOURS
+    RoomActivityUnit.DAYS -> RelativeDateTimeFormatter.RelativeUnit.DAYS
+    RoomActivityUnit.WEEKS -> RelativeDateTimeFormatter.RelativeUnit.WEEKS
+}
+
+// The whole phrase comes from ICU's CLDR data for the app's language — "3 hours ago", "vor 3
+// Stunden", "۳ ساعت پیش" — because the number, the unit, its plural form and the word order all
+// change together between languages, and CLDR already has every one of them right.
+@Composable
+private fun roomActivityAgeText(age: RoomActivityAge): String {
+    val locale = LocalConfiguration.current.locales[0]
+    val formatter = remember(locale) {
+        RelativeDateTimeFormatter.getInstance(
+            ULocale.forLocale(locale),
+            null,
+            RelativeDateTimeFormatter.Style.LONG,
+            DisplayContext.CAPITALIZATION_FOR_BEGINNING_OF_SENTENCE,
+        )
+    }
+    return when (age) {
+        RoomActivityAge.JustNow -> formatter.format(
+            RelativeDateTimeFormatter.Direction.PLAIN,
+            RelativeDateTimeFormatter.AbsoluteUnit.NOW,
+        )
+        is RoomActivityAge.Ago -> formatter.format(
+            age.count.toDouble(),
+            RelativeDateTimeFormatter.Direction.LAST,
+            age.unit.toRelativeUnit(),
+        )
+    }
+}
+
 // Two presence states only. Null means nothing is known about this room's activity — neither the
 // server nor local history — and such a card shows no presence line at all.
 @Composable
@@ -1147,8 +1187,7 @@ private fun presenceFor(isOngoing: Boolean, lastActivityAtMs: Long?, now: Long):
     return when {
         isLive -> Presence(stringResource(R.string.dashboard_status_live), isLive = true)
         lastActivityAtMs != null -> Presence(
-            // "%1$s ago" — the connective is localized; the compact duration ("12m", "3h") is not.
-            stringResource(R.string.dashboard_status_timeAgo, formatRecentRoomTimeAgo(lastActivityAtMs, now)),
+            roomActivityAgeText(roomActivityAge(lastActivityAtMs, now)),
             isLive = false,
         )
         else -> null
@@ -1181,25 +1220,57 @@ private fun RoomCardScaffold(
     }
 }
 
-/** Line 1 of a room card: the room name in monospace. */
+/**
+ * A room card's text: the room name in monospace and, when anything is known, a second line saying
+ * whether it is live or how long since it was. The two are centred on the card's trailing icons as
+ * one block.
+ */
 @Composable
-private fun RoomTitleLine(title: String) {
-    Text(
-        text = title,
-        style = MaterialTheme.typography.bodyLarge.copy(
-            fontFamily = FontFamily.Monospace,
-            textDirection = TextDirection.Ltr,
-        ),
-        maxLines = 1,
-        overflow = TextOverflow.Ellipsis,
-        modifier = Modifier.fillMaxWidth(),
+private fun RowScope.RoomCardText(title: String, status: String?, statusColor: Color) {
+    val titleStyle = MaterialTheme.typography.bodyLarge.copy(
+        fontFamily = FontFamily.Monospace,
+        textDirection = TextDirection.Ltr,
     )
+    val statusStyle = MaterialTheme.typography.labelSmall
+    // The card's height is fixed, so without a gap here all its spare room lands above and below the
+    // two lines and the name sits pressed against its status line.
+    Column(
+        modifier = Modifier
+            .weight(1f)
+            .typeCentered(
+                firstLine = titleStyle,
+                lastLine = if (status != null) statusStyle else titleStyle,
+            ),
+        verticalArrangement = Arrangement.spacedBy(Dimens.space4),
+    ) {
+        // The slug is pinned LTR so its dashes keep their order, and an LTR paragraph aligns to its
+        // own left edge. Wrapping the text to its width instead of filling the row hands placement
+        // back to the parent Column, which puts it at the layout's start edge: the right one in an
+        // RTL locale.
+        Text(
+            text = title,
+            style = titleStyle,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+        if (status != null) {
+            Text(
+                text = status,
+                style = statusStyle,
+                color = statusColor,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+    }
 }
 
 @Composable
 private fun TrailingChevron() {
+    // Auto-mirrored so it points toward the card's end edge in an RTL locale too; the glyph is the
+    // same chevron as ChevronRight, which has no mirrored variant.
     Icon(
-        Icons.Default.ChevronRight,
+        Icons.AutoMirrored.Filled.NavigateNext,
         contentDescription = null,
         modifier = Modifier
             .padding(end = Dimens.space6)
@@ -1272,7 +1343,9 @@ private fun SwipeActionBackground(action: SwipeAction, state: SwipeToDismissBoxS
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(Dimens.space8),
         ) {
-            Text(action.label, style = MaterialTheme.typography.labelLarge, color = action.contentColor)
+            // Centred against the icon beside it rather than against other text.
+            val labelStyle = MaterialTheme.typography.labelLarge
+            Text(action.label, style = labelStyle, color = action.contentColor, modifier = Modifier.typeCentered(labelStyle))
             Icon(action.icon, contentDescription = null, tint = action.contentColor, modifier = Modifier.size(Dimens.iconSm))
         }
     }
@@ -1513,7 +1586,13 @@ private fun CreateRoomDialog(
         },
         dismissButton = {
             TextButton(onClick = onDismiss, enabled = !isCreating) {
-                Text(stringResource(R.string.common_button_cancel))
+                // Corrected like the BedrudButton beside it, or the two labels in this dialog sit
+                // at different heights — measured 5px apart before this was applied.
+                val cancelStyle = LocalTextStyle.current
+                Text(
+                    stringResource(R.string.common_button_cancel),
+                    modifier = Modifier.typeCentered(cancelStyle),
+                )
             }
         }
     )

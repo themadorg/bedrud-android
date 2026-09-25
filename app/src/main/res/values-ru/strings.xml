@@ -97,6 +97,10 @@
   <string name="meeting_button_goBack">Назад</string>
   <string name="meeting_dialog_kickTitle">Выгнать участника</string>
   <string name="meeting_dialog_kickMessage">Вы уверены, что хотите выгнать <xliff:g id="participantName" example="John Doe">%1$s</xliff:g> из комнаты?</string>
+  <string name="meeting_dialog_followRoomTitle">Покинуть этот звонок?</string>
+  <string name="meeting_dialog_followRoomMessage">Вы покинете <xliff:g id="currentRoom" example="obd-hzpi-dfv">%1$s</xliff:g> и присоединитесь к <xliff:g id="nextRoom" example="oqc-qpka-bvw">%2$s</xliff:g>.</string>
+  <string name="meeting_dialog_followRoomOnServerMessage">Вы покинете <xliff:g id="currentRoom" example="obd-hzpi-dfv">%1$s</xliff:g> и присоединитесь к <xliff:g id="nextRoom" example="oqc-qpka-bvw">%2$s</xliff:g> на <xliff:g id="serverName" example="Bedrud">%3$s</xliff:g>.</string>
+  <string name="meeting_button_leaveAndJoin">Выйти и присоединиться</string>
   <string name="meeting_action_mute">Отключить звук</string>
   <string name="meeting_action_unmute">Включить звук</string>
   <string name="meeting_action_disableVideo">Отключить видео</string>
@@ -139,6 +143,7 @@
   <string name="meeting_chat_reactions">Реакции</string>
   <string name="meeting_chat_shareChooser">Поделиться сообщением</string>
   <string name="meeting_chat_linkUnopenable">Нет приложения, способного открыть эту ссылку</string>
+  <string name="meeting_chat_linkCurrentRoom">Вы уже в этой комнате</string>
   <plurals name="meeting_chat_reactionCount">
     <item quantity="one">%1$d реакция</item>
     <item quantity="few">%1$d реакции</item>
@@ -246,7 +251,6 @@
   <string name="dashboard_stat_live">В эфире</string>
   <string name="dashboard_stat_private">Закрытая</string>
   <string name="dashboard_status_live">● В эфире</string>
-  <string name="dashboard_status_timeAgo">%1$s назад</string>
   <string name="dashboard_empty_noRooms">Пока нет комнат</string>
   <string name="dashboard_feature_chat">Чат</string>
   <string name="dashboard_feature_video">Видео</string>

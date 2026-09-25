@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -45,6 +46,7 @@ import com.bedrud.app.ui.components.BedrudButtonVariant
 import com.bedrud.app.ui.components.BedrudPasswordField
 import com.bedrud.app.ui.components.BedrudTextField
 import com.bedrud.app.ui.theme.Dimens
+import com.bedrud.app.ui.theme.typeCentered
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 
@@ -184,9 +186,12 @@ fun EmailLoginScreen(
             ),
             modifier = Modifier.align(Alignment.End)
         ) {
+            // Corrected like every other button label, so it stays level with the field above.
+            val linkStyle = MaterialTheme.typography.labelLarge
             Text(
                 text = stringResource(R.string.auth_forgot_link),
-                style = MaterialTheme.typography.labelLarge
+                style = linkStyle,
+                modifier = Modifier.typeCentered(linkStyle),
             )
         }
 
@@ -200,7 +205,7 @@ fun EmailLoginScreen(
             loading = isLoading,
             modifier = Modifier
                 .fillMaxWidth()
-                .height(Dimens.buttonHeightLarge)
+                .heightIn(min = Dimens.buttonHeightLarge)
         )
     }
 
@@ -322,7 +327,7 @@ private fun ForgotPasswordSheet(
                 loading = isSending,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(Dimens.buttonHeightLarge)
+                    .heightIn(min = Dimens.buttonHeightLarge)
             )
         }
     }

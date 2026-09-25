@@ -6,13 +6,12 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.CheckCircle
@@ -38,6 +37,7 @@ import com.bedrud.app.ui.components.BedrudBottomSheet
 import com.bedrud.app.ui.components.BedrudSheetTitle
 import com.bedrud.app.ui.theme.BedrudShapeTokens
 import com.bedrud.app.ui.theme.Dimens
+import com.bedrud.app.ui.theme.typeCentered
 
 /**
  * A poll in the conversation, drawn as the message it arrived in.
@@ -155,33 +155,42 @@ private fun PollAnswer(
     isMine: Boolean,
     onClick: (() -> Unit)?,
 ) {
+    // A floor, not a fixed height: an answer that wraps, or a reader's larger font, grows the row
+    // instead of having its text cut off.
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .height(Dimens.chatPollOption)
+            .heightIn(min = Dimens.chatPollOption)
             .clip(BedrudShapeTokens.chip)
             // A shade *lighter* than the bubble, never darker. The track was the panel's own surface
             // back when the bubble could be the accent colour; against the neutral bubble that reads
             // as a hole cut in the card rather than as a row waiting to be tapped.
             .background(MaterialTheme.colorScheme.surfaceContainerHighest)
             .let { base -> if (onClick == null) base else base.clickable(onClick = onClick) },
+        contentAlignment = Alignment.CenterStart,
     ) {
         if (showShare && percent > 0) {
+            // The row only sets a minimum height, which leaves nothing for fillMaxHeight to fill, so
+            // the bar takes the row's measured size instead.
             Box(
                 modifier = Modifier
-                    .fillMaxHeight()
+                    .matchParentSize()
+                    .wrapContentWidth(Alignment.Start)
                     .fillMaxWidth(percent / PercentPerWhole)
                     .background(MaterialTheme.colorScheme.primary.copy(alpha = PollBarAlpha)),
             )
         }
         Row(
             modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = Dimens.space8),
+                .fillMaxWidth()
+                .padding(horizontal = Dimens.space8, vertical = Dimens.space6),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween,
+            horizontalArrangement = Arrangement.spacedBy(Dimens.space8),
         ) {
+            // The answer takes whatever the share leaves, so a long answer wraps beside the share
+            // instead of pushing it out of the row.
             Row(
+                modifier = Modifier.weight(1f),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(Dimens.space4),
             ) {
@@ -193,19 +202,24 @@ private fun PollAnswer(
                         modifier = Modifier.size(Dimens.iconXs),
                     )
                 }
+                // Centred in a fixed-height bar beside the tick, so corrected like a button label.
+                val answerStyle = MaterialTheme.typography.bodySmall.copy(
+                    textDirection = BidiUtils.textDirection(text),
+                )
                 Text(
                     text = BidiUtils.wrap(text),
-                    style = MaterialTheme.typography.bodySmall.copy(
-                        textDirection = BidiUtils.textDirection(text),
-                    ),
+                    style = answerStyle,
                     color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.typeCentered(answerStyle),
                 )
             }
             if (showShare) {
+                val shareStyle = MaterialTheme.typography.labelSmall
                 Text(
                     text = "$percent$PercentSign",
-                    style = MaterialTheme.typography.labelSmall,
+                    style = shareStyle,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.typeCentered(shareStyle),
                 )
             }
         }

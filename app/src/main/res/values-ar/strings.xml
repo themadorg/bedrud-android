@@ -97,6 +97,10 @@
   <string name="meeting_button_goBack">العودة</string>
   <string name="meeting_dialog_kickTitle">طرد مشارك</string>
   <string name="meeting_dialog_kickMessage">هل أنت متأكد من رغبتك في طرد <xliff:g id="participantName" example="John Doe">%1$s</xliff:g> من الغرفة؟</string>
+  <string name="meeting_dialog_followRoomTitle">هل تريد مغادرة هذه المكالمة؟</string>
+  <string name="meeting_dialog_followRoomMessage">ستغادر <xliff:g id="currentRoom" example="obd-hzpi-dfv">%1$s</xliff:g> وتنضم إلى <xliff:g id="nextRoom" example="oqc-qpka-bvw">%2$s</xliff:g>.</string>
+  <string name="meeting_dialog_followRoomOnServerMessage">ستغادر <xliff:g id="currentRoom" example="obd-hzpi-dfv">%1$s</xliff:g> وتنضم إلى <xliff:g id="nextRoom" example="oqc-qpka-bvw">%2$s</xliff:g> على <xliff:g id="serverName" example="Bedrud">%3$s</xliff:g>.</string>
+  <string name="meeting_button_leaveAndJoin">مغادرة والانضمام</string>
   <string name="meeting_action_mute">كتم الصوت</string>
   <string name="meeting_action_unmute">إلغاء كتم الصوت</string>
   <string name="meeting_action_disableVideo">تعطيل الفيديو</string>
@@ -141,6 +145,7 @@
   <string name="meeting_chat_reactions">التفاعلات</string>
   <string name="meeting_chat_shareChooser">مشاركة الرسالة</string>
   <string name="meeting_chat_linkUnopenable">لا يوجد تطبيق يمكنه فتح هذا الرابط</string>
+  <string name="meeting_chat_linkCurrentRoom">أنت بالفعل في هذه الغرفة</string>
   <plurals name="meeting_chat_reactionCount">
     <item quantity="zero">%1$d تفاعل</item>
     <item quantity="one">%1$d تفاعل</item>
@@ -250,7 +255,6 @@
   <string name="dashboard_stat_live">مباشر</string>
   <string name="dashboard_stat_private">خاص</string>
   <string name="dashboard_status_live">● مباشر</string>
-  <string name="dashboard_status_timeAgo">منذ %1$s</string>
   <string name="dashboard_empty_noRooms">لا توجد غرف بعد</string>
   <string name="dashboard_feature_chat">الدردشة</string>
   <string name="dashboard_feature_video">الفيديو</string>

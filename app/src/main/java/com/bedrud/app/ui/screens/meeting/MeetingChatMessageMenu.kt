@@ -47,6 +47,8 @@ import com.bedrud.app.core.meeting.chat.QuickReactions
 import com.bedrud.app.ui.theme.BedrudShapeTokens
 import com.bedrud.app.ui.theme.Dimens
 import com.bedrud.app.ui.theme.Elevation
+import com.bedrud.app.ui.theme.inkCentered
+import com.bedrud.app.ui.theme.typeCentered
 import com.bedrud.app.ui.util.setPlainText
 import com.bedrud.app.ui.util.sharePlainText
 import kotlinx.coroutines.launch
@@ -166,15 +168,18 @@ private fun ChatReactionPill(onPick: (String) -> Unit) {
                 .horizontalScroll(rememberScrollState())
                 .padding(horizontal = Dimens.space4),
         ) {
+            val emojiStyle = MaterialTheme.typography.titleMedium
             QuickReactions.forEach { emoji ->
+                // One glyph alone in its target, measured the way a reaction chip's emoji is.
                 Text(
                     text = emoji,
-                    style = MaterialTheme.typography.titleMedium,
+                    style = emojiStyle,
                     modifier = Modifier
                         .clip(BedrudShapeTokens.pill)
                         .clickable { onPick(emoji) }
                         .size(Dimens.chatReactionTarget)
-                        .wrapContentSize(Alignment.Center),
+                        .wrapContentSize(Alignment.Center)
+                        .inkCentered(emoji, emojiStyle),
                 )
             }
         }
@@ -266,10 +271,13 @@ internal fun ChatMessageAction(
         // line down the card and the eye reads the actions before it reads their symbols.
         horizontalArrangement = Arrangement.spacedBy(Dimens.space16, Alignment.Start),
     ) {
+        val labelStyle = MaterialTheme.typography.bodyMedium
         Text(
             text = label,
-            style = MaterialTheme.typography.bodyMedium,
-            modifier = Modifier.weight(1f),
+            style = labelStyle,
+            modifier = Modifier
+                .weight(1f)
+                .typeCentered(labelStyle),
         )
         Icon(
             imageVector = icon,

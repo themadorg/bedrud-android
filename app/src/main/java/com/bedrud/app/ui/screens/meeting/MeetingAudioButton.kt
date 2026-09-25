@@ -16,6 +16,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.bedrud.app.R
+import com.bedrud.app.ui.theme.inkCentered
 import com.twilio.audioswitch.AudioDevice
 
 @Composable
@@ -56,10 +57,15 @@ fun MeetingAudioButton(
                     .background(colors.mediaError, CircleShape),
                 contentAlignment = Alignment.Center,
             ) {
+                val glyphStyle = MaterialTheme.typography.labelSmall
                 Text(
                     text = "!",
                     color = colors.onMediaError,
-                    style = MaterialTheme.typography.labelSmall,
+                    style = glyphStyle,
+                    // One glyph alone in a circle, with nothing beside it to line up with, and the
+                    // circle small enough that the font box's asymmetry is a good part of its
+                    // radius. Measuring the glyph is what centres it.
+                    modifier = Modifier.inkCentered("!", glyphStyle),
                 )
             }
         }
