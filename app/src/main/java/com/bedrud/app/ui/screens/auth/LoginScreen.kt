@@ -308,9 +308,12 @@ fun LoginScreen(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.typeCentered(promptStyle)
             )
+            // A plain text button, not BedrudButton's ghost: it finishes the prompt beside it, and
+            // the ghost's wider padding would push it away from the words it completes.
             TextButton(
                 onClick = onNavigateToRegister,
-                enabled = !isBusy && registrationEnabled
+                enabled = !isBusy && registrationEnabled,
+                shape = BedrudShapeTokens.button,
             ) {
                 val signUpStyle = MaterialTheme.typography.labelLarge
                 Text(

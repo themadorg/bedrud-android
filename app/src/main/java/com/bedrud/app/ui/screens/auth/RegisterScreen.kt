@@ -12,7 +12,6 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -43,7 +42,6 @@ import com.bedrud.app.ui.components.BedrudButtonVariant
 import com.bedrud.app.ui.components.BedrudPasswordField
 import com.bedrud.app.ui.components.BedrudTextField
 import com.bedrud.app.ui.theme.Dimens
-import com.bedrud.app.ui.theme.typeCentered
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 
@@ -261,17 +259,11 @@ fun RegisterScreen(
 
         Spacer(Modifier.height(Dimens.space16))
 
-        TextButton(
+        BedrudButton(
+            text = stringResource(R.string.auth_link_alreadyHaveAccount),
+            variant = BedrudButtonVariant.GHOST,
             onClick = onNavigateToLogin,
-            enabled = !isLoading
-        ) {
-            // Corrected like every other button label, so it stays level with the form above.
-            val linkStyle = MaterialTheme.typography.labelLarge
-            Text(
-                text = stringResource(R.string.auth_link_alreadyHaveAccount),
-                style = linkStyle,
-                modifier = Modifier.typeCentered(linkStyle),
-            )
-        }
+            enabled = !isLoading,
+        )
     }
 }

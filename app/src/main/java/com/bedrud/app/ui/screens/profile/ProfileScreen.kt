@@ -16,13 +16,13 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.SwapHoriz
-import androidx.compose.material3.ButtonDefaults
 
 import com.bedrud.app.ui.components.BedrudBadge
+import com.bedrud.app.ui.components.BedrudButton
+import com.bedrud.app.ui.components.BedrudButtonVariant
 import com.bedrud.app.ui.components.BedrudOutlinedCard
 import com.bedrud.app.ui.components.CardSectionHeader
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import com.bedrud.app.ui.components.BedrudCompactTopBar
 import androidx.compose.material3.ListItem
@@ -30,7 +30,6 @@ import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -47,7 +46,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.bedrud.app.R
 import com.bedrud.app.core.instance.InstanceManager
@@ -197,19 +195,18 @@ fun ProfileContent(
                                 )
                             },
                             trailingContent = {
-                                FilledTonalButton(onClick = { showInstanceSwitcher = true }) {
-                                    Icon(
-                                        Icons.Default.SwapHoriz,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(18.dp)
-                                    )
-                                    Spacer(modifier = Modifier.width(4.dp))
-                                    val switchStyle = LocalTextStyle.current
-                                    Text(
-                                        stringResource(R.string.profile_button_switch),
-                                        modifier = Modifier.typeCentered(switchStyle),
-                                    )
-                                }
+                                BedrudButton(
+                                    text = stringResource(R.string.profile_button_switch),
+                                    onClick = { showInstanceSwitcher = true },
+                                    variant = BedrudButtonVariant.TONAL,
+                                    leadingIcon = {
+                                        Icon(
+                                            Icons.Default.SwapHoriz,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(Dimens.iconSm),
+                                        )
+                                    },
+                                )
                             },
                             colors = ListItemDefaults.colors(containerColor = Color.Transparent)
                         )
@@ -222,27 +219,21 @@ fun ProfileContent(
             // in another format.
 
             // Sign Out
-            TextButton(
+            // Not in the error colour: signing out is neither an error nor irreversible, since
+            // the account is one sign-in away and nothing on the server is lost.
+            BedrudButton(
+                text = stringResource(R.string.profile_button_signOut),
                 onClick = onLogout,
-                colors = ButtonDefaults.textButtonColors(
-                    contentColor = MaterialTheme.colorScheme.error
-                ),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Icon(
-                    Icons.AutoMirrored.Filled.Logout,
-                    contentDescription = null,
-                    modifier = Modifier.size(18.dp)
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                // Centred against the icon beside it, like every other label paired with one.
-                val signOutStyle = MaterialTheme.typography.labelLarge
-                Text(
-                    stringResource(R.string.profile_button_signOut),
-                    style = signOutStyle,
-                    modifier = Modifier.typeCentered(signOutStyle),
-                )
-            }
+                variant = BedrudButtonVariant.GHOST,
+                leadingIcon = {
+                    Icon(
+                        Icons.AutoMirrored.Filled.Logout,
+                        contentDescription = null,
+                        modifier = Modifier.size(Dimens.iconSm),
+                    )
+                },
+                modifier = Modifier.fillMaxWidth(),
+            )
         }
     }
 }
