@@ -95,7 +95,7 @@ App connects to user-chosen Bedrud server instances, not fixed backend.
 
 Switching instances: `instanceManager.switchTo(id)` → sets active → rebuilds all clients → UI reacts to StateFlow changes. `InstanceSwitcherSheet` is the shared bottom sheet for this, reachable from the Profile tab's Server section and from tapping the rooms dashboard's header title.
 
-The rooms dashboard (`DashboardContent`) lists the **active** server's rooms from the API and weaves in **recent** rooms from every server (`RecentRoomsStore`, which stores each recent's server id, name, and accent color). Its **All** tab merges both (recency/live first); **My Rooms** is the subset the user created. Each card is tinted with its server's color, and tapping a recent that lives on another server prompts a confirm-and-switch (`switchTo` + join) rather than switching silently.
+The rooms dashboard (`DashboardContent`) shows the **active** server and nothing else: its rooms from the API, plus the rooms this device has visited on it that the API does not list (`recentRoomsNotInApiList`, reading `RecentRoomsStore`). Recents from other servers are left out on purpose. Its **All** tab holds both, ordered as described below; **My Rooms** is the subset the user created. The way to a room on another server from here is the quick-join box: a pasted link to a room on another server the user has added prompts a confirm-and-switch (`switchTo` + join) rather than switching silently, and a link to a server that has not been added is turned away with a snackbar asking to add it first. When the switch lands on a server with nobody signed in, the room waits for the sign-in and opens after it (see [Deep Links](#deep-links)).
 
 Both the "3h ago" a card prints and its position in either tab come from one number, `resolveRoomActivityAt` in `core/rooms/RoomActivity.kt`: the server's `lastActivityAt` for the room, which it stamps on every participant's join, falling back to this device's own visit from `RecentRoomsStore`. The server's answer wins because it covers everyone — a room somebody else was in an hour ago says so on a device that has never opened it, which local history alone could never report. `sortByActivity` orders both tabs by that same number and leaves rooms nothing can date at the end in server order, so a card's rank never contradicts the time it prints. A recent card is a room the active server does not list at all, so local history remains the only thing that can date one.
 
@@ -320,13 +320,33 @@ Release builds use minification + resource shrinking. Rules in `app/proguard-rul
 
 Parsed in `BedrudURLParser`, handled in `MainActivity.handleDeepLink()`.
 
+No way into a meeting navigates to it directly. A deep link, the call notification, a call still
+running when the activity is recreated, every join from `MainScreen` (a room card, a new room,
+the quick-join box, including its switch to another server), and a room link followed from a call's
+chat all hold the room in `PendingRoom`
+(`core/rooms/PendingRoom.kt`), together with the server that was active when it was asked for.
+`BedrudNavHost` opens it once somebody is signed in on that server, and that is the only place the
+app navigates to `Routes.MEETING`.
+
+The reason is the sign-in in between. A room asked for on a server with nobody signed in, most
+often right after switching to it, sends the auth router to `LOGIN` with `popUpTo(0)`, which clears
+the back stack; a room kept only as a navigation entry was lost there, and the reader landed on
+the dashboard after signing in. Held outside the stack, it survives the sign-in and opens after it.
+It is opened only once, and dropped rather than opened when another server becomes active first:
+backing out of sign-in to another server means the reader has gone somewhere else.
+
+The effect that opens it re-runs on the collected sign-in state but decides on the live one
+(`instanceManager.authManager.value`). For a frame after a server switch the collected state is
+still the old server's, and deciding on it opened the room while nobody was signed in yet.
+
 A room link tapped **in the chat** takes a different path, because it always arrives during a call
 and telecom refuses to place a second call over an unholdable one. `resolveChatLink`
 (`core/deeplink/ChatLinkTarget.kt`) decides where it leads — a page, the room this call is already
 in, or a room on one of the reader's own servers, matched by whole base URL as the dashboard's quick
 join does — and a room only opens after the reader confirms leaving this call. The call then ends
 through `CallService.stop`, the same teardown as the leave button; the app switches server if the room
-is on another one; and `navigateToMeeting` opens the room in the old one's place.
+is on another one; and the room is held in `PendingRoom` like every other way in, so it opens in the
+old one's place — after the sign-in, when nobody is signed in on that server yet.
 
 The next room's screen appears while the call being left is still tearing down, so two things must
 hold for anything that touches the meeting screen:
