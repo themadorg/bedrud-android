@@ -30,9 +30,9 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.NavigateNext
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
@@ -1193,6 +1193,8 @@ private fun RowScope.RoomCardText(title: String, status: String?, statusColor: C
         textDirection = TextDirection.Ltr,
     )
     val statusStyle = MaterialTheme.typography.labelSmall
+    // The card's height is fixed, so without a gap here all its spare room lands above and below the
+    // two lines and the name sits pressed against its status line.
     Column(
         modifier = Modifier
             .weight(1f)
@@ -1200,13 +1202,17 @@ private fun RowScope.RoomCardText(title: String, status: String?, statusColor: C
                 firstLine = titleStyle,
                 lastLine = if (status != null) statusStyle else titleStyle,
             ),
+        verticalArrangement = Arrangement.spacedBy(Dimens.space4),
     ) {
+        // The slug is pinned LTR so its dashes keep their order, and an LTR paragraph aligns to its
+        // own left edge. Wrapping the text to its width instead of filling the row hands placement
+        // back to the parent Column, which puts it at the layout's start edge: the right one in an
+        // RTL locale.
         Text(
             text = title,
             style = titleStyle,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.fillMaxWidth(),
         )
         if (status != null) {
             Text(
@@ -1222,8 +1228,10 @@ private fun RowScope.RoomCardText(title: String, status: String?, statusColor: C
 
 @Composable
 private fun TrailingChevron() {
+    // Auto-mirrored so it points toward the card's end edge in an RTL locale too; the glyph is the
+    // same chevron as ChevronRight, which has no mirrored variant.
     Icon(
-        Icons.Default.ChevronRight,
+        Icons.AutoMirrored.Filled.NavigateNext,
         contentDescription = null,
         modifier = Modifier
             .padding(end = Dimens.space6)
