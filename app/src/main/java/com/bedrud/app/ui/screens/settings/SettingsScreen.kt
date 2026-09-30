@@ -71,6 +71,12 @@ import com.bedrud.app.ui.theme.typeCentered
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 
+/**
+ * Every card spans the page. Sized to its content instead, a card holding one short sentence (the
+ * Security card for an account with no password) stands narrower than the rest.
+ */
+private val SettingsCardModifier = Modifier.fillMaxWidth()
+
 @Composable
 private fun AppLanguage.displayName(): String = labelResId?.let { stringResource(it) } ?: label
 
@@ -132,7 +138,7 @@ fun SettingsContent(
             verticalArrangement = Arrangement.spacedBy(Dimens.space16)
         ) {
             // Appearance
-            BedrudOutlinedCard {
+            BedrudOutlinedCard(modifier = SettingsCardModifier) {
                 Column(modifier = Modifier.padding(Dimens.cardPadding)) {
                     CardSectionHeader(stringResource(R.string.settings_section_appearance))
                     Spacer(modifier = Modifier.height(Dimens.space12))
@@ -207,7 +213,7 @@ fun SettingsContent(
             }
 
             // Notifications
-            BedrudOutlinedCard {
+            BedrudOutlinedCard(modifier = SettingsCardModifier) {
                 Column {
                     CardSectionHeader(
                         stringResource(R.string.settings_section_notifications),
@@ -233,7 +239,7 @@ fun SettingsContent(
 
             // Account Info
             if (currentUser != null) {
-                BedrudOutlinedCard {
+                BedrudOutlinedCard(modifier = SettingsCardModifier) {
                     Column {
                         // The admin mark sits centred on the header's letters, at the small icon
                         // size a mark beside a label takes elsewhere; it used to hang from the top
@@ -314,7 +320,7 @@ fun SettingsContent(
             }
 
             // Change Password
-            BedrudOutlinedCard {
+            BedrudOutlinedCard(modifier = SettingsCardModifier) {
                 Column(modifier = Modifier.padding(Dimens.cardPadding)) {
                     CardSectionHeader(stringResource(R.string.settings_section_security))
                     Spacer(modifier = Modifier.height(Dimens.space12))
@@ -385,7 +391,7 @@ fun SettingsContent(
             }
 
             // About
-            BedrudOutlinedCard {
+            BedrudOutlinedCard(modifier = SettingsCardModifier) {
                 Column {
                     CardSectionHeader(
                         stringResource(R.string.settings_section_about),
