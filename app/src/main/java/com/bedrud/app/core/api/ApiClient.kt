@@ -47,12 +47,23 @@ private fun lenientGson(): Gson = GsonBuilder()
     .setStrictness(Strictness.LENIENT)
     .create()
 
+/** Logs a client's traffic at [level] in a debug build, and not at all in a release one. */
+private fun debugLogging(level: HttpLoggingInterceptor.Level): HttpLoggingInterceptor =
+    HttpLoggingInterceptor().apply {
+        this.level = if (BuildConfig.DEBUG) level else HttpLoggingInterceptor.Level.NONE
+    }
+
 /**
- * A Retrofit client with nothing attached: no auth header, no token authenticator, no logging.
+ * A Retrofit client with nothing attached: no auth header, no token authenticator, and in a debug
+ * build no more logging than each call's request line and status.
  *
  * Two calls need one. The token refresh cannot carry the authenticator it was triggered by, or a
  * refresh that itself answers 401 re-enters it. The health probe runs against a server the app has
  * no account on yet, so there is no session to attach.
+ *
+ * The log stops at the request line because the refresh sends its token in the request body and
+ * gets the new pair back in the response body, and neither may reach the log. That much is enough
+ * to trace a sign-out to the refresh that caused it.
  *
  * [timeoutSeconds] defaults to the app-wide API timeout; a caller with a reason to wait less passes
  * its own. The trailing slash Retrofit demands of a base URL is applied here, so no caller repeats
@@ -65,6 +76,7 @@ internal fun plainRetrofit(
     .baseUrl(baseURL.trimEnd('/') + "/")
     .client(
         OkHttpClient.Builder()
+            .addInterceptor(debugLogging(HttpLoggingInterceptor.Level.BASIC))
             .connectTimeout(timeoutSeconds, TimeUnit.SECONDS)
             .readTimeout(timeoutSeconds, TimeUnit.SECONDS)
             .build()
@@ -229,17 +241,9 @@ class ApiClientFactory(private val baseURL: String) {
         authInterceptor: AuthInterceptor,
         tokenAuthenticator: TokenAuthenticator
     ): OkHttpClient {
-        val loggingInterceptor = HttpLoggingInterceptor().apply {
-            level = if (BuildConfig.DEBUG) {
-                HttpLoggingInterceptor.Level.BODY
-            } else {
-                HttpLoggingInterceptor.Level.NONE
-            }
-        }
-
         return OkHttpClient.Builder()
             .addInterceptor(authInterceptor)
-            .addInterceptor(loggingInterceptor)
+            .addInterceptor(debugLogging(HttpLoggingInterceptor.Level.BODY))
             .authenticator(tokenAuthenticator)
             .connectTimeout(DEFAULT_TIMEOUT_SECONDS, TimeUnit.SECONDS)
             .readTimeout(DEFAULT_TIMEOUT_SECONDS, TimeUnit.SECONDS)
