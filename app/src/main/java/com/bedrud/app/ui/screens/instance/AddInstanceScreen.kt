@@ -57,6 +57,7 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -66,8 +67,10 @@ import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import com.bedrud.app.BuildConfig
 import com.bedrud.app.R
@@ -475,6 +478,10 @@ private fun CustomServerField(
         // Unlike BedrudTextField, both the hint and the typed value are drawn here, so both can be
         // corrected, and by the same amount — the one replaces the other in place.
         val fieldStyle = serverAddressStyle()
+        // An address reads left to right in every language, but it lines up under its title: in a
+        // right-to-left layout that is the right edge, where the official address above it starts.
+        val addressAlign = if (LocalLayoutDirection.current == LayoutDirection.Rtl) TextAlign.Right
+        else TextAlign.Left
         Box(modifier = Modifier.weight(1f)) {
             if (value.isEmpty()) {
                 Text(
@@ -489,7 +496,7 @@ private fun CustomServerField(
                 onValueChange = onValueChange,
                 enabled = enabled,
                 singleLine = true,
-                textStyle = fieldStyle.copy(color = textColor),
+                textStyle = fieldStyle.copy(color = textColor, textAlign = addressAlign),
                 cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
                 keyboardOptions = KeyboardOptions(
                     keyboardType = KeyboardType.Uri,

@@ -21,6 +21,7 @@ import androidx.test.platform.app.InstrumentationRegistry
 import com.bedrud.app.R
 import com.bedrud.app.testutil.FontScales
 import com.bedrud.app.testutil.setThemedContentAt
+import com.bedrud.app.testutil.textLayout
 import com.bedrud.app.ui.theme.Dimens
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -217,6 +218,20 @@ class AddInstanceScreenTest {
     }
 
     @Test
+    fun shouldStartTypedAddressUnderTitleInRightToLeftLayout() {
+        showBothCards(layoutDirection = LayoutDirection.Rtl, address = TypedAddress)
+
+        val layout = compose.onNode(hasSetTextAction()).textLayout()
+
+        assertEquals(
+            "typed address is not flush with the right edge",
+            layout.size.width.toFloat(),
+            layout.getLineRight(0),
+            1f,
+        )
+    }
+
+    @Test
     fun shouldShowInsecureNoteInsideCustomCard() {
         showBothCards(address = InsecureAddress, isInsecure = true)
 
@@ -228,6 +243,8 @@ class AddInstanceScreenTest {
 
         /** Short enough to stay on one line at the largest font scale. */
         const val ShortOfficialAddress = "https://b.xyz"
+
+        const val TypedAddress = "meet.mycompany.org"
 
         const val InsecureAddress = "http://192.168.1.20:8080"
 
