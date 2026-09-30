@@ -292,7 +292,20 @@ than standing at full strength beside a greyed-out one.
 - **`BedrudSnackbarHost`** — Material 3 snackbar with the rounded shape token; used across the auth
   screens and the rooms dashboard.
 - **Selectable cards** (e.g. the server chooser) — a `selectableGroup()` of `Surface`s marked
-  `selectable(role = RadioButton)`, selection shown by a radio **and** a primary border.
+  `selectable(role = RadioButton)`, selection shown by a radio **and** a primary border. The radio
+  keeps to the card's top-end corner, as far from the top as from the side; the title and badge
+  lead the content, which is centred in a shared minimum height (`Dimens.serverCardMinHeight`).
+  Centring keeps the titles level only while every card's content is the same height, so in the
+  server chooser each address sits in a row as tall as the scan button, whether or not the card has
+  one; content of different heights centred each title at a different height. The own-server
+  card's address row carries its QR scan as a trailing filled tonal icon button at Material's
+  extra-small size (`Dimens.iconButtonExtraSmall`, square corners from `shapes.medium`), centred on
+  one column with the radio above it, and the gap over both address rows gives back what centring
+  an address in that row adds, so each address sits as far under its title as a bare line would.
+  A plain `http://` address's warning sits under the address, inside that card; a server that could
+  not be reached is reported under both cards. The server chooser's two cards are the first-run screen's one decision, so they
+  are set larger than other cards: 18sp semi-bold titles over 17sp addresses, both between the type
+  scale's steps and named in `AddInstanceScreen.kt`. Every other card title stays `titleMedium`.
 - **Per-server color** — `parseInstanceColor("#RRGGBB")` in `ui/theme/InstanceColor.kt` is the single
   source of truth for an instance's accent color (the sign-in server header, the profile's server
   row and the server switcher). The initial on it is always `OnInstanceColor`, a dark tone: every
