@@ -234,6 +234,7 @@
   <string name="settings_role_user">Benutzer</string>
   <string name="settings_section_security">Sicherheit</string>
   <string name="settings_password_unavailable">Passwortänderung ist für die Anmeldung mit <xliff:g id="provider" example="Google">%1$s</xliff:g> nicht verfügbar.</string>
+  <string name="settings_password_unavailable_guest">Gastkonten haben kein Passwort, das geändert werden kann.</string>
   <string name="settings_label_currentPassword">Aktuelles Passwort</string>
   <string name="settings_label_newPassword">Neues Passwort</string>
   <string name="settings_label_confirmNewPassword">Neues Passwort bestätigen</string>

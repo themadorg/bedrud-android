@@ -235,6 +235,7 @@
   <string name="settings_role_user">Usuario</string>
   <string name="settings_section_security">Seguridad</string>
   <string name="settings_password_unavailable">El cambio de contraseña no está disponible para el inicio de sesión con <xliff:g id="provider" example="Google">%1$s</xliff:g>.</string>
+  <string name="settings_password_unavailable_guest">Las cuentas de invitado no tienen contraseña que cambiar.</string>
   <string name="settings_label_currentPassword">Contraseña actual</string>
   <string name="settings_label_newPassword">Nueva contraseña</string>
   <string name="settings_label_confirmNewPassword">Confirmar nueva contraseña</string>

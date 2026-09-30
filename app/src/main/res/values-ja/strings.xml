@@ -231,6 +231,7 @@
   <string name="settings_role_user">ユーザー</string>
   <string name="settings_section_security">セキュリティ</string>
   <string name="settings_password_unavailable"><xliff:g id="provider" example="Google">%1$s</xliff:g> サインインではパスワード変更は利用できません。</string>
+  <string name="settings_password_unavailable_guest">ゲストアカウントには変更できるパスワードがありません。</string>
   <string name="settings_label_currentPassword">現在のパスワード</string>
   <string name="settings_label_newPassword">新しいパスワード</string>
   <string name="settings_label_confirmNewPassword">新しいパスワード（確認）</string>

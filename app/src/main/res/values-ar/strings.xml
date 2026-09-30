@@ -246,6 +246,7 @@
   <string name="settings_role_user">مستخدم</string>
   <string name="settings_section_security">الأمان</string>
   <string name="settings_password_unavailable">تغيير كلمة المرور غير متاح لتسجيل الدخول عبر <xliff:g id="provider" example="Google">%1$s</xliff:g>.</string>
+  <string name="settings_password_unavailable_guest">حسابات الضيوف ليس لها كلمة مرور لتغييرها.</string>
   <string name="settings_label_currentPassword">كلمة المرور الحالية</string>
   <string name="settings_label_newPassword">كلمة المرور الجديدة</string>
   <string name="settings_label_confirmNewPassword">تأكيد كلمة المرور الجديدة</string>

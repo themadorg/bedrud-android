@@ -231,6 +231,7 @@
   <string name="settings_role_user">用户</string>
   <string name="settings_section_security">安全</string>
   <string name="settings_password_unavailable"><xliff:g id="provider" example="Google">%1$s</xliff:g> 登录不支持更改密码。</string>
+  <string name="settings_password_unavailable_guest">访客账户没有可更改的密码。</string>
   <string name="settings_label_currentPassword">当前密码</string>
   <string name="settings_label_newPassword">新密码</string>
   <string name="settings_label_confirmNewPassword">确认新密码</string>

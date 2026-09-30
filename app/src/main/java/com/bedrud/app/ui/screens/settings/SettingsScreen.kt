@@ -83,6 +83,17 @@ private fun signInMethodLabel(method: SignInMethod): String = when (method) {
     is SignInMethod.Provider -> method.name
 }
 
+/**
+ * Why the Security card offers no password change. An identity provider's name slots into one
+ * shared sentence, since a brand reads the same in every language; a guest gets a sentence of its
+ * own, because a translated noun dropped into that sentence cannot agree with it in every language.
+ */
+@Composable
+internal fun passwordUnavailableMessage(method: SignInMethod): String = when (method) {
+    SignInMethod.Guest -> stringResource(R.string.settings_password_unavailable_guest)
+    else -> stringResource(R.string.settings_password_unavailable, signInMethodLabel(method))
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsContent(
@@ -309,7 +320,7 @@ fun SettingsContent(
                     Spacer(modifier = Modifier.height(Dimens.space12))
 
                     if (!signInMethod.hasPassword) {
-                        Text(stringResource(R.string.settings_password_unavailable, signInMethodLabel(signInMethod)),
+                        Text(passwordUnavailableMessage(signInMethod),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant)
                     } else {
