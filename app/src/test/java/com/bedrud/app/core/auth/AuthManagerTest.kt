@@ -94,6 +94,44 @@ class AuthManagerTest {
     }
 
     @Test
+    fun `replaceUser stores a fresher copy of the signed-in account`() {
+        authManager.saveTokens("acc", "ref")
+        val stored = User(id = "u1", email = "a@b.com", name = "Alice", provider = "passkey")
+        authManager.saveUser(stored)
+        val fresher = stored.copy(passwordChangedAt = PASSWORD_CHANGED_AT)
+
+        authManager.replaceUser(fresher)
+
+        assertEquals(fresher, authManager.currentUser.value)
+        assertEquals(fresher, AuthManager(prefs).currentUser.value)
+    }
+
+    @Test
+    fun `replaceUser drops a record that arrives after sign-out`() {
+        // A fetch still out when the user signs out must not bring the account back without its
+        // tokens.
+        authManager.saveTokens("acc", "ref")
+        authManager.saveUser(User(id = "u1", email = "a@b.com", name = "Alice"))
+        authManager.logout()
+
+        authManager.replaceUser(User(id = "u1", email = "a@b.com", name = "Alice"))
+
+        assertNull(authManager.currentUser.value)
+        assertNull(AuthManager(prefs).currentUser.value)
+    }
+
+    @Test
+    fun `replaceUser drops another account's record`() {
+        val signedIn = User(id = "u1", email = "a@b.com", name = "Alice")
+        authManager.saveTokens("acc", "ref")
+        authManager.saveUser(signedIn)
+
+        authManager.replaceUser(User(id = "u2", email = "c@d.com", name = "Carol"))
+
+        assertEquals(signedIn, authManager.currentUser.value)
+    }
+
+    @Test
     fun `isAuthenticated returns true when token exists`() {
         assertFalse(authManager.isAuthenticated())
         authManager.saveTokens("acc", "ref")
