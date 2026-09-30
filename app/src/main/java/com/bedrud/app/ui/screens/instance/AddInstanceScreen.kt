@@ -225,59 +225,39 @@ fun AddInstanceScreen(
                         .selectableGroup(),
                     verticalArrangement = Arrangement.spacedBy(Dimens.space16)
                 ) {
-                    ServerChoiceCard(
+                    OfficialServerCard(
                         selected = choice == ServerChoice.DEFAULT,
                         onSelect = {
                             choice = ServerChoice.DEFAULT
                             errorMessage = null
                         },
-                        title = stringResource(R.string.instance_choice_default_title),
                         badge = stringResource(
                             if (isDefaultAdded) R.string.instance_choice_default_addedTag
                             else R.string.instance_choice_default_tag
                         ),
-                    ) { selected ->
-                        val urlStyle = MaterialTheme.typography.bodyLarge.copy(
-                            fontFamily = FontFamily.Monospace,
-                            textDirection = TextDirection.Ltr
-                        )
-                        Text(
-                            text = displayUrl(defaultUrl ?: BuildConfig.DEFAULT_SERVER_HOST),
-                            style = urlStyle,
-                            color = if (selected) MaterialTheme.colorScheme.onSurface
-                            else MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.typeCentered(urlStyle)
-                        )
-                    }
+                        address = displayUrl(defaultUrl ?: BuildConfig.DEFAULT_SERVER_HOST),
+                    )
 
-                    ServerChoiceCard(
+                    CustomServerCard(
                         selected = choice == ServerChoice.CUSTOM,
                         onSelect = {
                             choice = ServerChoice.CUSTOM
                             errorMessage = null
                         },
-                        title = stringResource(R.string.instance_choice_custom_title),
-                        badge = null,
-                    ) { selected ->
-                        CustomServerField(
-                            value = customInput,
-                            onValueChange = {
-                                customInput = it.filterNot(Char::isWhitespace)
-                                errorMessage = null
-                            },
-                            enabled = selected,
-                            focusRequester = customFocusRequester,
-                            // Keyboard action key: dismiss keyboard + run the primary action.
-                            onSubmit = {
-                                keyboardController?.hide()
-                                if (canContinue) submit()
-                            },
-                            onScanQrCode = ::scanQrCode
-                        )
-                        AnimatedVisibility(visible = selected && isInsecure) {
-                            InsecureNote()
-                        }
-                    }
+                        value = customInput,
+                        onValueChange = {
+                            customInput = it.filterNot(Char::isWhitespace)
+                            errorMessage = null
+                        },
+                        focusRequester = customFocusRequester,
+                        // Keyboard action key: dismiss keyboard + run the primary action.
+                        onSubmit = {
+                            keyboardController?.hide()
+                            if (canContinue) submit()
+                        },
+                        onScanQrCode = ::scanQrCode,
+                        isInsecure = isInsecure,
+                    )
                 }
 
                 // Inline error sits directly under the cards.
@@ -541,6 +521,66 @@ private fun InsecureNote() {
             color = MaterialTheme.bedrudColors.warning,
             modifier = Modifier.typeCentered(noteStyle)
         )
+    }
+}
+
+/** The official server's card: its address, read-only, under the title and its badge. */
+@Composable
+internal fun OfficialServerCard(
+    selected: Boolean,
+    onSelect: () -> Unit,
+    badge: String,
+    address: String,
+) {
+    ServerChoiceCard(
+        selected = selected,
+        onSelect = onSelect,
+        title = stringResource(R.string.instance_choice_default_title),
+        badge = badge,
+    ) { cardSelected ->
+        val urlStyle = MaterialTheme.typography.bodyLarge.copy(
+            fontFamily = FontFamily.Monospace,
+            textDirection = TextDirection.Ltr
+        )
+        Text(
+            text = address,
+            style = urlStyle,
+            color = if (cardSelected) MaterialTheme.colorScheme.onSurface
+            else MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.typeCentered(urlStyle)
+        )
+    }
+}
+
+/** The card for the user's own server: the address field, the QR scan, and what is wrong with it. */
+@Composable
+internal fun CustomServerCard(
+    selected: Boolean,
+    onSelect: () -> Unit,
+    value: String,
+    onValueChange: (String) -> Unit,
+    focusRequester: FocusRequester,
+    onSubmit: () -> Unit,
+    onScanQrCode: () -> Unit,
+    isInsecure: Boolean,
+) {
+    ServerChoiceCard(
+        selected = selected,
+        onSelect = onSelect,
+        title = stringResource(R.string.instance_choice_custom_title),
+        badge = null,
+    ) { cardSelected ->
+        CustomServerField(
+            value = value,
+            onValueChange = onValueChange,
+            enabled = cardSelected,
+            focusRequester = focusRequester,
+            onSubmit = onSubmit,
+            onScanQrCode = onScanQrCode
+        )
+        AnimatedVisibility(visible = cardSelected && isInsecure) {
+            InsecureNote()
+        }
     }
 }
 
