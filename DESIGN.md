@@ -213,6 +213,13 @@ which has a password from sign-up but is not stamped until it first changes it. 
 can be out of date: a password set on another device, or a record stored by a version of the app that
 did not keep the stamp or the account's access levels.
 
+A password change, or a first password set, ends every session of the account on the server, this
+one included. Settings therefore signs straight back in with the new password
+(`signBackInAfterPasswordChange` in `core/api/ApiResponseUtils.kt`) and confirms the change only once
+that has worked, so the user stays where they are. When it fails, the user is signed out at once, and
+the sign-in screen they land on says why: the reason travels there through `SignInNoticeRelay`,
+because the Settings screen that signed out is gone by the time it could show anything.
+
 **Text sets a floor, not a height.** A container that holds text takes a minimum height —
 `heightIn(min = …)`, or the component's own `defaultMinSize` — never a fixed `height(…)`. Text grows
 with the reader's font-size setting, up to 2× since Android 14, and a fixed box clips it: the rooms
