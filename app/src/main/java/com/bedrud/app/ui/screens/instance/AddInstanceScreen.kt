@@ -72,6 +72,7 @@ import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.bedrud.app.BuildConfig
 import com.bedrud.app.R
 import com.bedrud.app.core.instance.InstanceManager
@@ -357,6 +358,10 @@ private fun BrandHeader(wordmark: String) {
     }
 }
 
+/** A size between the type scale's title steps, for the server cards' titles. */
+private val CardTitleFontSize = 18.sp
+private val CardTitleLineHeight = 24.sp
+
 /** How far a server card's content sits under its title row, unless the content says otherwise. */
 private val CardContentGap = Dimens.space8
 
@@ -427,7 +432,10 @@ private fun ServerChoiceCard(
                 ) {
                     // Every line in the card is corrected, so the block keeps its spacing and moves
                     // as one; the title is also lined up against the badge beside it.
-                    val titleStyle = MaterialTheme.typography.titleMedium
+                    val titleStyle = MaterialTheme.typography.titleLarge.copy(
+                        fontSize = CardTitleFontSize,
+                        lineHeight = CardTitleLineHeight
+                    )
                     Text(
                         text = title,
                         style = titleStyle,
@@ -449,10 +457,16 @@ private fun ServerChoiceCard(
     }
 }
 
+/** A size between the type scale's body and title steps, for the two server addresses. */
+private val ServerAddressFontSize = 17.sp
+private val ServerAddressLineHeight = 24.sp
+
 /** The type both server addresses are drawn in: the official one and the one typed in. */
 @Composable
 private fun serverAddressStyle(): TextStyle = MaterialTheme.typography.bodyLarge.copy(
     fontFamily = FontFamily.Monospace,
+    fontSize = ServerAddressFontSize,
+    lineHeight = ServerAddressLineHeight,
     textDirection = TextDirection.Ltr
 )
 
