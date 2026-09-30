@@ -82,25 +82,16 @@ private val OAuthOptions = listOf(
     OAuthOption(OAuthLoginHandler.Provider.TWITTER, R.drawable.ic_oauth_x, "X", tinted = true)
 )
 
-/** Short caption shown under a sign-in method the server has turned off. */
-@Composable
-private fun MethodDisabledHint() {
-    Spacer(Modifier.height(Dimens.space4))
-    Text(
-        text = stringResource(R.string.auth_hint_methodDisabled),
-        style = MaterialTheme.typography.labelSmall,
-        color = MaterialTheme.colorScheme.onSurfaceVariant
-    )
-}
-
 /**
- * One sign-in method's full-width button, greyed when the server has turned the method off
- * ([serverAllows] false), with a short reason under it. [enabled] is everything else that gates
- * it: another sign-in in flight, a guest name still too short.
+ * One sign-in method's full-width button. When the server has turned the method off
+ * ([serverAllows] false) it is greyed and its own label says so, [offLabel] in place of [label],
+ * rather than keeping the action's name and explaining it in a caption underneath. [enabled] is
+ * everything else that gates it: another sign-in in flight, a guest name still too short.
  */
 @Composable
 internal fun SignInMethodButton(
     label: String,
+    offLabel: String,
     serverAllows: Boolean,
     enabled: Boolean,
     loading: Boolean,
@@ -109,7 +100,7 @@ internal fun SignInMethodButton(
     leadingIcon: @Composable (() -> Unit)? = null,
 ) {
     BedrudButton(
-        text = label,
+        text = if (serverAllows) label else offLabel,
         onClick = onClick,
         variant = variant,
         enabled = enabled && serverAllows,
@@ -119,7 +110,6 @@ internal fun SignInMethodButton(
             .fillMaxWidth()
             .heightIn(min = Dimens.buttonHeightLarge)
     )
-    if (!serverAllows) MethodDisabledHint()
 }
 
 /**
@@ -127,7 +117,7 @@ internal fun SignInMethodButton(
  * password (opens a dedicated form), passkey (one tap), OAuth providers, or continue as a guest
  * (name inline) — plus a sign-up link. Which methods appear and are enabled is driven by the
  * server's public settings ([com.bedrud.app.models.PublicSettings]); a method the server has
- * disabled is shown greyed with a short reason, and OAuth shows only the providers the server
+ * disabled is shown greyed, its button saying it is off, and OAuth shows only the providers the server
  * configured. On a failed settings fetch everything falls back to enabled so a blip never blocks
  * sign-in. The email/password form lives on its own screen; passkey and guest sign-in happen here.
  */
@@ -255,6 +245,7 @@ fun LoginScreen(
         Spacer(Modifier.height(Dimens.space12))
         SignInMethodButton(
             label = stringResource(R.string.auth_button_signInWithPasskey),
+            offLabel = stringResource(R.string.auth_button_passkeyOff),
             serverAllows = passkeyEnabled,
             enabled = !isBusy,
             loading = loadingAction == HubAction.PASSKEY,
@@ -319,6 +310,7 @@ fun LoginScreen(
         Spacer(Modifier.height(Dimens.space12))
         SignInMethodButton(
             label = stringResource(R.string.auth_button_continueAsGuest),
+            offLabel = stringResource(R.string.auth_button_guestOff),
             serverAllows = guestEnabled,
             enabled = !isBusy && guestName.trim().length >= MinGuestNameLength,
             loading = loadingAction == HubAction.GUEST,

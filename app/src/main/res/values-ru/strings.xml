@@ -51,7 +51,8 @@
   <string name="auth_notice_verifyEmail">Проверьте почту, чтобы подтвердить аккаунт</string>
   <string name="auth_notice_verifyBeforeSignIn">Подтвердите почту, прежде чем входить</string>
   <string name="auth_divider_orContinueWith">или продолжить через</string>
-  <string name="auth_hint_methodDisabled">Недоступно на этом сервере</string>
+  <string name="auth_button_passkeyOff">Вход с помощью ключа отключён</string>
+  <string name="auth_button_guestOff">Гостевой вход отключён</string>
   <string name="auth_oauth_continueWithFormat">Продолжить через %1$s</string>
   <string name="instance_title_servers">Серверы</string>
   <string name="instance_title_addServer">Добавить сервер</string>

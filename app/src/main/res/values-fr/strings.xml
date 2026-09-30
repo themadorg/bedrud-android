@@ -50,7 +50,8 @@
   <string name="auth_notice_verifyEmail">Veuillez consulter votre e-mail pour vérifier votre compte</string>
   <string name="auth_notice_verifyBeforeSignIn">Veuillez vérifier votre e-mail avant de vous connecter</string>
   <string name="auth_divider_orContinueWith">ou continuer avec</string>
-  <string name="auth_hint_methodDisabled">Non activé sur ce serveur</string>
+  <string name="auth_button_passkeyOff">Connexion avec Passkey désactivée</string>
+  <string name="auth_button_guestOff">Accès invité désactivé</string>
   <string name="auth_oauth_continueWithFormat">Continuer avec %1$s</string>
   <string name="instance_title_servers">Serveurs</string>
   <string name="instance_title_addServer">Ajouter un serveur</string>
