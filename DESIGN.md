@@ -765,7 +765,7 @@ reconnecting ring — one state, one colour. Hairlines inside the call's menus a
   system share, copy, inline QR, email, Telegram, WhatsApp — and the raw link). The controls
   bar's handle expands it into `MeetingControlsPanel`, which keeps the five call controls at its
   foot and lists deafen, hide-all-cameras (viewer-side data saver), audio settings, the
-  dev-hinted noise suppression (#106), invite, and admin room settings above them. The output picker uses
+  noise suppression (Off / Device; richer modes are tracked in #106), invite, and admin room settings above them. The output picker uses
   trailing radios. `MeetingRecordingBanner` and the dot that opened it are **switched off** behind
   `RecordingIndicatorEnabled` (#107): the server has no egress client and registers no recording
   routes, so nothing in the app can be recording, and a permanently lit privacy light above a
