@@ -234,17 +234,23 @@
   <string name="settings_label_signInMethod">Способ входа</string>
   <string name="settings_provider_email">Эл. почта</string>
   <string name="settings_provider_passkey">Ключ</string>
+  <string name="settings_provider_guest">Гость</string>
   <string name="settings_label_role">Роль</string>
   <string name="settings_role_admin">Администратор</string>
   <string name="settings_role_user">Пользователь</string>
   <string name="settings_section_security">Безопасность</string>
   <string name="settings_password_unavailable">Смена пароля недоступна для входа через <xliff:g id="provider" example="Google">%1$s</xliff:g>.</string>
+  <string name="settings_password_unavailable_guest">У гостевых аккаунтов нет пароля, который можно изменить.</string>
   <string name="settings_label_currentPassword">Текущий пароль</string>
   <string name="settings_label_newPassword">Новый пароль</string>
   <string name="settings_label_confirmNewPassword">Подтвердите новый пароль</string>
   <string name="settings_button_changePassword">Сменить пароль</string>
   <string name="settings_password_changeSuccess">Пароль успешно изменён</string>
   <string name="settings_password_changeFailed">Не удалось изменить пароль</string>
+  <string name="settings_password_setIntro">Вы входите с помощью ключа. Задайте пароль, чтобы входить и по эл. почте.</string>
+  <string name="settings_button_setPassword">Задать пароль</string>
+  <string name="settings_password_setSuccess">Пароль успешно задан</string>
+  <string name="settings_password_setFailed">Не удалось задать пароль</string>
   <string name="settings_section_about">О приложении</string>
   <string name="settings_label_version">Версия</string>
   <string name="settings_label_build">Сборка</string>

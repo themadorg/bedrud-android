@@ -43,17 +43,6 @@ data class RefreshTokenResponse(
     val refreshToken: String
 )
 
-data class MeResponse(
-    val id: String,
-    val email: String,
-    val name: String,
-    @SerializedName("avatarUrl")
-    val avatarUrl: String? = null,
-    @SerializedName("isAdmin")
-    val isAdmin: Boolean = false,
-    val provider: String? = null
-)
-
 /**
  * Public server settings from GET /api/auth/settings (visible to unauthenticated visitors).
  * [serverName] is the operator's own name for the server, adopted as the instance's display name.

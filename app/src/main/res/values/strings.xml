@@ -233,17 +233,23 @@
   <string name="settings_label_signInMethod">Sign-in method</string>
   <string name="settings_provider_email">Email</string>
   <string name="settings_provider_passkey">Passkey</string>
+  <string name="settings_provider_guest">Guest</string>
   <string name="settings_label_role">Role</string>
   <string name="settings_role_admin">Admin</string>
   <string name="settings_role_user">User</string>
   <string name="settings_section_security">Security</string>
   <string name="settings_password_unavailable">Password change is not available for <xliff:g id="provider" example="Google">%1$s</xliff:g> sign-in.</string>
+  <string name="settings_password_unavailable_guest">Guest accounts have no password to change.</string>
   <string name="settings_label_currentPassword">Current password</string>
   <string name="settings_label_newPassword">New password</string>
   <string name="settings_label_confirmNewPassword">Confirm new password</string>
   <string name="settings_button_changePassword">Change Password</string>
   <string name="settings_password_changeSuccess">Password changed successfully</string>
   <string name="settings_password_changeFailed">Failed to change password</string>
+  <string name="settings_password_setIntro">You sign in with a passkey. Set a password to sign in with your email too.</string>
+  <string name="settings_button_setPassword">Set Password</string>
+  <string name="settings_password_setSuccess">Password set successfully</string>
+  <string name="settings_password_setFailed">Failed to set password</string>
   <string name="settings_section_about">About</string>
   <string name="settings_label_version">Version</string>
   <string name="settings_label_build">Build</string>

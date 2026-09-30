@@ -256,18 +256,9 @@ fun BedrudNavHost(
         manager.saveTokens(token, "")
         // Best-effort: the token is already saved, so a failed fetch just means no cached profile
         // yet. Must not throw — this runs directly in a LaunchedEffect.
-        val body = apiBody("", onError = {}) { api.getMe() }
-        if (body != null) {
-            manager.saveUser(
-                com.bedrud.app.models.User(
-                    id = body.id,
-                    email = body.email,
-                    name = body.name,
-                    avatarUrl = body.avatarUrl,
-                    isAdmin = body.isAdmin,
-                    provider = body.provider
-                )
-            )
+        val user = apiBody("", onError = {}) { api.getMe() }
+        if (user != null) {
+            manager.saveUser(user)
         }
         oauthToken.value = null
     }

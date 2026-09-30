@@ -85,18 +85,16 @@ class AuthApiTest : MockApiTest() {
     }
 
     @Test
-    fun `getMe sends GET to auth-me and parses MeResponse`() = runBlocking {
-        val responseBody = gson.toJson(
-            MeResponse(id = "u1", email = "a@b.com", name = "Alice")
-        )
-        server.enqueue(MockResponse().setBody(responseBody).setResponseCode(200))
+    fun `getMe sends GET to auth-me and parses the same User a sign-in returns`() = runBlocking {
+        val signedInUser = User(id = "u1", email = "a@b.com", name = "Alice", provider = "passkey")
+        server.enqueue(MockResponse().setBody(gson.toJson(signedInUser)).setResponseCode(200))
 
         val response = authApi.getMe()
 
         assertRequest("GET", "/auth/me")
         assertTrue(response.isSuccessful)
-        assertEquals("u1", response.body()!!.id)
-        assertEquals("Alice", response.body()!!.name)
+        val user: User = response.body()!!
+        assertEquals(signedInUser, user)
     }
 
     @Test

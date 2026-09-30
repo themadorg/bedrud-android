@@ -196,8 +196,22 @@ and a sheet's title `titleMedium`.
 The account's details — its ID, sign-in method and role — are shown once, in Settings. The sign-in
 method is read through `signInMethodOf` (`core/auth/SignInMethod.kt`), never printed as the server
 stores it: the server calls an email-and-password account "local", which is not a word for anyone to
-read, so the app's two methods are named in the app's language and an identity provider by its own
-name.
+read, so the methods the app itself offers — email, passkey and continuing as a guest — are named in
+the app's language, and an identity provider by its own name. For an account with no password to
+change, the Security card slots an identity provider's name into one shared sentence, but gives a
+guest a sentence of its own: a translated noun dropped into that sentence cannot agree with it in
+every language.
+
+The Security card offers one of three things, all decided by `signInMethodOf` from the account's
+`provider` and `passwordChangedAt`: a change form (current, new and confirm) for an account with a
+password; a set form (new and confirm, under a line saying why) for a passkey account that never set
+one; and the sentence above for an account that cannot have a password. A passkey account is created
+without a password, and the server stamps `passwordChangedAt` whenever it gives an existing account
+one, so a passkey account without the stamp has none. The stamp is not read for an email account,
+which has a password from sign-up but is not stamped until it first changes it. The signed-in screens
+(`MainScreen`) reload the account from `auth/me` when they open, because the record stored at sign-in
+can be out of date: a password set on another device, or a record stored by a version of the app that
+did not keep the stamp or the account's access levels.
 
 **Text sets a floor, not a height.** A container that holds text takes a minimum height —
 `heightIn(min = …)`, or the component's own `defaultMinSize` — never a fixed `height(…)`. Text grows

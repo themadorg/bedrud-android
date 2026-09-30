@@ -228,17 +228,23 @@
   <string name="settings_label_signInMethod">Giriş yöntemi</string>
   <string name="settings_provider_email">E-posta</string>
   <string name="settings_provider_passkey">Anahtar</string>
+  <string name="settings_provider_guest">Misafir</string>
   <string name="settings_label_role">Rol</string>
   <string name="settings_role_admin">Yönetici</string>
   <string name="settings_role_user">Kullanıcı</string>
   <string name="settings_section_security">Güvenlik</string>
   <string name="settings_password_unavailable"><xliff:g id="provider" example="Google">%1$s</xliff:g> girişi için şifre değişikliği mevcut değil.</string>
+  <string name="settings_password_unavailable_guest">Misafir hesaplarının değiştirilecek bir şifresi yoktur.</string>
   <string name="settings_label_currentPassword">Mevcut şifre</string>
   <string name="settings_label_newPassword">Yeni şifre</string>
   <string name="settings_label_confirmNewPassword">Yeni şifreyi onayla</string>
   <string name="settings_button_changePassword">Şifre Değiştir</string>
   <string name="settings_password_changeSuccess">Şifre başarıyla değiştirildi</string>
   <string name="settings_password_changeFailed">Şifre değiştirilemedi</string>
+  <string name="settings_password_setIntro">Anahtarla giriş yapıyorsunuz. E-postanızla da giriş yapmak için bir şifre belirleyin.</string>
+  <string name="settings_button_setPassword">Şifre Belirle</string>
+  <string name="settings_password_setSuccess">Şifre başarıyla belirlendi</string>
+  <string name="settings_password_setFailed">Şifre belirlenemedi</string>
   <string name="settings_section_about">Hakkında</string>
   <string name="settings_label_version">Sürüm</string>
   <string name="settings_label_build">Yapı</string>

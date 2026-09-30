@@ -240,17 +240,23 @@
   <string name="settings_label_signInMethod">طريقة تسجيل الدخول</string>
   <string name="settings_provider_email">البريد الإلكتروني</string>
   <string name="settings_provider_passkey">المفتاح</string>
+  <string name="settings_provider_guest">ضيف</string>
   <string name="settings_label_role">الدور</string>
   <string name="settings_role_admin">مشرف</string>
   <string name="settings_role_user">مستخدم</string>
   <string name="settings_section_security">الأمان</string>
   <string name="settings_password_unavailable">تغيير كلمة المرور غير متاح لتسجيل الدخول عبر <xliff:g id="provider" example="Google">%1$s</xliff:g>.</string>
+  <string name="settings_password_unavailable_guest">حسابات الضيوف ليس لها كلمة مرور لتغييرها.</string>
   <string name="settings_label_currentPassword">كلمة المرور الحالية</string>
   <string name="settings_label_newPassword">كلمة المرور الجديدة</string>
   <string name="settings_label_confirmNewPassword">تأكيد كلمة المرور الجديدة</string>
   <string name="settings_button_changePassword">تغيير كلمة المرور</string>
   <string name="settings_password_changeSuccess">تم تغيير كلمة المرور بنجاح</string>
   <string name="settings_password_changeFailed">فشل تغيير كلمة المرور</string>
+  <string name="settings_password_setIntro">تسجّل الدخول بالمفتاح. عيّن كلمة مرور لتسجّل الدخول ببريدك الإلكتروني أيضًا.</string>
+  <string name="settings_button_setPassword">تعيين كلمة المرور</string>
+  <string name="settings_password_setSuccess">تم تعيين كلمة المرور بنجاح</string>
+  <string name="settings_password_setFailed">فشل تعيين كلمة المرور</string>
   <string name="settings_section_about">حول</string>
   <string name="settings_label_version">الإصدار</string>
   <string name="settings_label_build">البنية</string>
