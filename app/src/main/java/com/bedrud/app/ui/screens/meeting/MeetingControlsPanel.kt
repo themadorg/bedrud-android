@@ -43,6 +43,7 @@ import com.bedrud.app.core.audio.MeetingInputMode
 import com.bedrud.app.core.audio.MeetingVoiceAlert
 import com.bedrud.app.core.livekit.ConnectionState
 import com.bedrud.app.ui.components.BedrudSheetActionRow
+import com.bedrud.app.ui.components.BedrudSheetHandle
 import com.bedrud.app.ui.theme.Dimens
 import com.bedrud.app.ui.theme.Motion
 
@@ -141,9 +142,11 @@ fun BoxScope.MeetingControlsPanel(
         },
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            MeetingPanelHandle(
-                color = colors.onButtonVariant,
+            BedrudSheetHandle(
                 onClick = { onExpandedChange(!expanded) },
+                onClickLabel = stringResource(R.string.meeting_contentDescription_moreOptions),
+                // Inside the pill the handle sits above the controls, not above spare sheet edge.
+                verticalPadding = Dimens.space4,
             )
 
             AnimatedVisibility(
