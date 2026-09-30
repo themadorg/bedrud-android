@@ -39,6 +39,7 @@
   <string name="auth_hint_passwordMinLength">Не менее %1$d символов</string>
   <string name="auth_error_emailInvalid">Введите действительный адрес электронной почты</string>
   <string name="auth_error_guestFailed">Не удалось присоединиться как гость. Попробуйте снова.</string>
+  <string name="auth_notice_passwordChanged">Ваш пароль изменён. Войдите с новым паролем.</string>
   <plurals name="auth_error_nameTooShort">
     <item quantity="one">Введите не менее %1$d символа.</item>
     <item quantity="few">Введите не менее %1$d символов.</item>

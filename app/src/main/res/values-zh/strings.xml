@@ -39,6 +39,7 @@
   <string name="auth_hint_passwordMinLength">至少 %1$d 个字符</string>
   <string name="auth_error_emailInvalid">请输入有效的邮箱地址</string>
   <string name="auth_error_guestFailed">无法以访客身份加入。请重试。</string>
+  <string name="auth_notice_passwordChanged">您的密码已更改。请使用新密码登录。</string>
   <plurals name="auth_error_nameTooShort">
     <item quantity="other">请至少输入 %1$d 个字符。</item>
   </plurals>

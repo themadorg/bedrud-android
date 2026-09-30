@@ -39,6 +39,7 @@
   <string name="auth_hint_passwordMinLength">Au moins %1$d caractères</string>
   <string name="auth_error_emailInvalid">Saisissez une adresse e-mail valide</string>
   <string name="auth_error_guestFailed">Impossible de rejoindre en tant qu’invité. Réessayez.</string>
+  <string name="auth_notice_passwordChanged">Votre mot de passe a été modifié. Connectez-vous avec votre nouveau mot de passe.</string>
   <plurals name="auth_error_nameTooShort">
     <item quantity="one">Veuillez saisir au moins %1$d caractère.</item>
     <item quantity="many">Veuillez saisir au moins %1$d de caractères.</item>
