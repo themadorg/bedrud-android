@@ -5,12 +5,18 @@ import com.bedrud.app.models.RefreshTokenResponse
 import com.bedrud.app.testutil.InMemorySharedPreferences
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import okhttp3.mockwebserver.Dispatcher
 import okhttp3.mockwebserver.MockResponse
+import okhttp3.mockwebserver.RecordedRequest
 import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
 import java.net.HttpURLConnection
+import java.util.concurrent.Callable
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicInteger
 
 private const val OLD_ACCESS_TOKEN = "old_access"
 private const val OLD_REFRESH_TOKEN = "old_refresh"
@@ -20,8 +26,21 @@ private const val NEW_REFRESH_TOKEN = "new_refresh"
 /** Any endpoint that needs a signed-in session; the server under test decides how it answers. */
 private const val PROTECTED_PATH = "/api/test"
 
+/** Where the authenticator sends its refresh, given the mock server's root as its base URL. */
+private const val REFRESH_PATH = "/auth/refresh"
+
 /** Connect and read timeout for the test client, short so a hung call fails the test quickly. */
 private const val CLIENT_TIMEOUT_SECONDS = 5L
+
+/** Requests sent at once on an expired access token. */
+private const val CONCURRENT_REQUESTS = 2
+
+/**
+ * How long the server holds the first refresh open waiting for a second one. Long enough that a
+ * second refresh would arrive inside it if every 401 refreshed on its own; with a shared refresh
+ * none arrives, so this is also how much the test waits.
+ */
+private const val REFRESH_OVERLAP_WINDOW_MILLIS = 500L
 
 class TokenAuthenticatorTest : MockApiTest() {
 
@@ -125,5 +144,52 @@ class TokenAuthenticatorTest : MockApiTest() {
         // After second 401, responseCount >= 2, so authenticator returns null
         assertEquals(HttpURLConnection.HTTP_UNAUTHORIZED, response.code)
         assertFalse(authManager.isLoggedIn.value)
+    }
+
+    @Test
+    fun `concurrent 401s share one refresh and keep the session`() {
+        authManager.saveTokens(OLD_ACCESS_TOKEN, OLD_REFRESH_TOKEN)
+        val refreshCount = AtomicInteger()
+        val allSentOnOldToken = CountDownLatch(CONCURRENT_REQUESTS)
+        val secondRefreshArrived = CountDownLatch(1)
+        server.dispatcher = object : Dispatcher() {
+            override fun dispatch(request: RecordedRequest): MockResponse = when {
+                request.path == REFRESH_PATH -> if (refreshCount.incrementAndGet() == 1) {
+                    secondRefreshArrived.await(REFRESH_OVERLAP_WINDOW_MILLIS, TimeUnit.MILLISECONDS)
+                    MockResponse().setBody(refreshBody())
+                } else {
+                    secondRefreshArrived.countDown()
+                    // As the server does: the first refresh rotated this refresh token, so it is
+                    // turned down from then on.
+                    MockResponse().setResponseCode(HttpURLConnection.HTTP_UNAUTHORIZED)
+                }
+                request.getHeader(ApiHeaders.AUTHORIZATION) == ApiHeaders.bearer(NEW_ACCESS_TOKEN) ->
+                    MockResponse().setBody("success")
+                else -> {
+                    // Answers no request on the old token until every one has been sent on it, so
+                    // all of them reach the authenticator together.
+                    allSentOnOldToken.countDown()
+                    allSentOnOldToken.await(CLIENT_TIMEOUT_SECONDS, TimeUnit.SECONDS)
+                    MockResponse().setResponseCode(HttpURLConnection.HTTP_UNAUTHORIZED)
+                }
+            }
+        }
+        val client = buildClient()
+        val executor = Executors.newFixedThreadPool(CONCURRENT_REQUESTS)
+
+        val codes = try {
+            executor.invokeAll(
+                List(CONCURRENT_REQUESTS) {
+                    Callable { client.newCall(protectedRequest()).execute().use { response -> response.code } }
+                }
+            ).map { future -> future.get() }
+        } finally {
+            executor.shutdownNow()
+        }
+
+        assertEquals(List(CONCURRENT_REQUESTS) { HttpURLConnection.HTTP_OK }, codes)
+        assertEquals(1, refreshCount.get())
+        assertEquals(NEW_ACCESS_TOKEN, authManager.getAccessToken())
+        assertTrue(authManager.isLoggedIn.value)
     }
 }

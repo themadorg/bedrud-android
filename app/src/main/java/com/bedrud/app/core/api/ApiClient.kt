@@ -82,54 +82,20 @@ class AuthInterceptor(
 /**
  * Authenticator that handles 401 responses by refreshing the JWT token
  * and retrying the original request with the new token.
+ *
+ * Refreshes run one at a time. The server rotates the refresh token on every refresh and turns the
+ * old one down from then on, so two requests refreshing the same expired session would spend the
+ * same refresh token twice, and the second refresh would end the session the first had just
+ * renewed. A request that failed on an access token another request has since replaced retries
+ * with the replacement instead of refreshing again.
  */
 class TokenAuthenticator(
     private val authManager: AuthManager,
     private val baseURL: String,
 ) : Authenticator {
 
-    override fun authenticate(route: Route?, response: Response): Request? {
-        // Avoid infinite retry loops
-        if (responseCount(response) >= MAX_REFRESH_ATTEMPTS) {
-            authManager.logout()
-            return null
-        }
-
-        val refreshToken = authManager.getRefreshToken() ?: run {
-            authManager.logout()
-            return null
-        }
-
-        // Perform synchronous token refresh on a plain client, so it cannot recurse back through
-        // this authenticator.
-        val refreshCall = run {
-            val refreshApi = plainRetrofit(baseURL).create(AuthApi::class.java)
-            try {
-                val refreshResponse = kotlinx.coroutines.runBlocking {
-                    refreshApi.refreshToken(RefreshTokenRequest(refreshToken))
-                }
-                if (refreshResponse.isSuccessful) {
-                    refreshResponse.body()
-                } else {
-                    null
-                }
-            } catch (e: Exception) {
-                null
-            }
-        }
-
-        if (refreshCall != null) {
-            authManager.saveTokens(refreshCall.accessToken, refreshCall.refreshToken)
-
-            return response.request.newBuilder()
-                .header(ApiHeaders.AUTHORIZATION, ApiHeaders.bearer(refreshCall.accessToken))
-                .build()
-        }
-
-        // Refresh failed, force logout
-        authManager.logout()
-        return null
-    }
+    /** Held for the whole of a refresh, so a 401 arriving meanwhile waits for its result. */
+    private val refreshLock = Any()
 
     private fun responseCount(response: Response): Int {
         var count = 1
@@ -139,6 +105,62 @@ class TokenAuthenticator(
             prior = prior.priorResponse
         }
         return count
+    }
+
+    /** [request] again, carrying [accessToken] in place of whatever it was sent with. */
+    private fun withAccessToken(request: Request, accessToken: String): Request =
+        request.newBuilder()
+            .header(ApiHeaders.AUTHORIZATION, ApiHeaders.bearer(accessToken))
+            .build()
+
+    override fun authenticate(route: Route?, response: Response): Request? {
+        // Avoid infinite retry loops
+        if (responseCount(response) >= MAX_REFRESH_ATTEMPTS) {
+            authManager.logout()
+            return null
+        }
+
+        synchronized(refreshLock) {
+            // Another request refreshed while this one was out on the token it replaced.
+            val storedAccessToken = authManager.getAccessToken()
+            if (!storedAccessToken.isNullOrBlank() &&
+                response.request.header(ApiHeaders.AUTHORIZATION) != ApiHeaders.bearer(storedAccessToken)
+            ) {
+                return withAccessToken(response.request, storedAccessToken)
+            }
+
+            val refreshToken = authManager.getRefreshToken() ?: run {
+                authManager.logout()
+                return null
+            }
+
+            // Perform synchronous token refresh on a plain client, so it cannot recurse back through
+            // this authenticator.
+            val refreshCall = run {
+                val refreshApi = plainRetrofit(baseURL).create(AuthApi::class.java)
+                try {
+                    val refreshResponse = kotlinx.coroutines.runBlocking {
+                        refreshApi.refreshToken(RefreshTokenRequest(refreshToken))
+                    }
+                    if (refreshResponse.isSuccessful) {
+                        refreshResponse.body()
+                    } else {
+                        null
+                    }
+                } catch (e: Exception) {
+                    null
+                }
+            }
+
+            if (refreshCall != null) {
+                authManager.saveTokens(refreshCall.accessToken, refreshCall.refreshToken)
+                return withAccessToken(response.request, refreshCall.accessToken)
+            }
+
+            // Refresh failed, force logout
+            authManager.logout()
+            return null
+        }
     }
 }
 
