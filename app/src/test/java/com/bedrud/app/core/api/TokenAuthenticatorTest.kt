@@ -9,7 +9,19 @@ import okhttp3.mockwebserver.MockResponse
 import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
+import java.net.HttpURLConnection
 import java.util.concurrent.TimeUnit
+
+private const val OLD_ACCESS_TOKEN = "old_access"
+private const val OLD_REFRESH_TOKEN = "old_refresh"
+private const val NEW_ACCESS_TOKEN = "new_access"
+private const val NEW_REFRESH_TOKEN = "new_refresh"
+
+/** Any endpoint that needs a signed-in session; the server under test decides how it answers. */
+private const val PROTECTED_PATH = "/api/test"
+
+/** Connect and read timeout for the test client, short so a hung call fails the test quickly. */
+private const val CLIENT_TIMEOUT_SECONDS = 5L
 
 class TokenAuthenticatorTest : MockApiTest() {
 
@@ -28,115 +40,90 @@ class TokenAuthenticatorTest : MockApiTest() {
             baseURL = server.url("/").toString(),
         )
 
-    @Test
-    fun `successful refresh saves new tokens and retries with new token`() {
-        authManager.saveTokens("old_access", "old_refresh")
-
-        val authenticator = buildAuthenticator()
-        val client = OkHttpClient.Builder()
+    /** A client wired as the app's own: the stored access token on every request, and [authenticator] on a 401. */
+    private fun buildClient(authenticator: TokenAuthenticator = buildAuthenticator()): OkHttpClient =
+        OkHttpClient.Builder()
             .addInterceptor(AuthInterceptor(authManager))
             .authenticator(authenticator)
-            .connectTimeout(5, TimeUnit.SECONDS)
-            .readTimeout(5, TimeUnit.SECONDS)
+            .connectTimeout(CLIENT_TIMEOUT_SECONDS, TimeUnit.SECONDS)
+            .readTimeout(CLIENT_TIMEOUT_SECONDS, TimeUnit.SECONDS)
             .build()
 
+    private fun protectedRequest(): Request =
+        Request.Builder().url(server.url(PROTECTED_PATH)).build()
+
+    private fun refreshBody(): String =
+        gson.toJson(RefreshTokenResponse(accessToken = NEW_ACCESS_TOKEN, refreshToken = NEW_REFRESH_TOKEN))
+
+    @Test
+    fun `successful refresh saves new tokens and retries with new token`() {
+        authManager.saveTokens(OLD_ACCESS_TOKEN, OLD_REFRESH_TOKEN)
+
         // First: 401 on the original request
-        server.enqueue(MockResponse().setResponseCode(401))
+        server.enqueue(MockResponse().setResponseCode(HttpURLConnection.HTTP_UNAUTHORIZED))
         // Second: refresh endpoint returns new tokens (called by internal Retrofit)
-        val refreshBody = gson.toJson(
-            RefreshTokenResponse(accessToken = "new_access", refreshToken = "new_refresh")
-        )
-        server.enqueue(MockResponse().setBody(refreshBody).setResponseCode(200))
+        server.enqueue(MockResponse().setBody(refreshBody()).setResponseCode(HttpURLConnection.HTTP_OK))
         // Third: retried request succeeds
-        server.enqueue(MockResponse().setBody("success").setResponseCode(200))
+        server.enqueue(MockResponse().setBody("success").setResponseCode(HttpURLConnection.HTTP_OK))
 
-        val response = client.newCall(
-            Request.Builder().url(server.url("/api/test")).build()
-        ).execute()
+        val response = buildClient().newCall(protectedRequest()).execute()
 
-        assertEquals(200, response.code)
-        assertEquals("new_access", authManager.getAccessToken())
-        assertEquals("new_refresh", authManager.getRefreshToken())
+        assertEquals(HttpURLConnection.HTTP_OK, response.code)
+        assertEquals(NEW_ACCESS_TOKEN, authManager.getAccessToken())
+        assertEquals(NEW_REFRESH_TOKEN, authManager.getRefreshToken())
 
         // Verify the retry had the new token
         server.takeRequest() // original
         server.takeRequest() // refresh call
         val retry = server.takeRequest()
-        assertEquals("Bearer new_access", retry.getHeader("Authorization"))
+        assertEquals(ApiHeaders.bearer(NEW_ACCESS_TOKEN), retry.getHeader(ApiHeaders.AUTHORIZATION))
     }
 
     @Test
     fun `no refresh token calls logout and returns null`() {
         // Don't save any tokens → getRefreshToken() returns null
-        val authenticator = buildAuthenticator()
-
         val client = OkHttpClient.Builder()
-            .authenticator(authenticator)
+            .authenticator(buildAuthenticator())
             .build()
 
-        server.enqueue(MockResponse().setResponseCode(401))
+        server.enqueue(MockResponse().setResponseCode(HttpURLConnection.HTTP_UNAUTHORIZED))
 
-        val response = client.newCall(
-            Request.Builder().url(server.url("/api/test")).build()
-        ).execute()
+        val response = client.newCall(protectedRequest()).execute()
 
-        assertEquals(401, response.code)
+        assertEquals(HttpURLConnection.HTTP_UNAUTHORIZED, response.code)
         assertFalse(authManager.isLoggedIn.value)
     }
 
     @Test
     fun `failed refresh returns 401 and logs out`() {
-        authManager.saveTokens("acc", "ref")
-
-        val authenticator = buildAuthenticator()
-        val client = OkHttpClient.Builder()
-            .addInterceptor(AuthInterceptor(authManager))
-            .authenticator(authenticator)
-            .connectTimeout(5, TimeUnit.SECONDS)
-            .readTimeout(5, TimeUnit.SECONDS)
-            .build()
+        authManager.saveTokens(OLD_ACCESS_TOKEN, OLD_REFRESH_TOKEN)
 
         // First: 401 on the original request
-        server.enqueue(MockResponse().setResponseCode(401))
+        server.enqueue(MockResponse().setResponseCode(HttpURLConnection.HTTP_UNAUTHORIZED))
         // Second: refresh endpoint also fails
-        server.enqueue(MockResponse().setResponseCode(401))
+        server.enqueue(MockResponse().setResponseCode(HttpURLConnection.HTTP_UNAUTHORIZED))
 
-        val response = client.newCall(
-            Request.Builder().url(server.url("/api/test")).build()
-        ).execute()
+        val response = buildClient().newCall(protectedRequest()).execute()
 
-        assertEquals(401, response.code)
+        assertEquals(HttpURLConnection.HTTP_UNAUTHORIZED, response.code)
         assertFalse(authManager.isLoggedIn.value)
     }
 
     @Test
     fun `max retries exceeded calls logout`() {
-        authManager.saveTokens("acc", "ref")
-
-        val authenticator = buildAuthenticator()
-        val client = OkHttpClient.Builder()
-            .addInterceptor(AuthInterceptor(authManager))
-            .authenticator(authenticator)
-            .connectTimeout(5, TimeUnit.SECONDS)
-            .readTimeout(5, TimeUnit.SECONDS)
-            .build()
+        authManager.saveTokens(OLD_ACCESS_TOKEN, OLD_REFRESH_TOKEN)
 
         // First: 401 on original
-        server.enqueue(MockResponse().setResponseCode(401))
+        server.enqueue(MockResponse().setResponseCode(HttpURLConnection.HTTP_UNAUTHORIZED))
         // Second: refresh succeeds with new tokens
-        val refreshBody = gson.toJson(
-            RefreshTokenResponse(accessToken = "new_acc", refreshToken = "new_ref")
-        )
-        server.enqueue(MockResponse().setBody(refreshBody).setResponseCode(200))
+        server.enqueue(MockResponse().setBody(refreshBody()).setResponseCode(HttpURLConnection.HTTP_OK))
         // Third: retried request also 401 → triggers authenticator again with responseCount >= 2
-        server.enqueue(MockResponse().setResponseCode(401))
+        server.enqueue(MockResponse().setResponseCode(HttpURLConnection.HTTP_UNAUTHORIZED))
 
-        val response = client.newCall(
-            Request.Builder().url(server.url("/api/test")).build()
-        ).execute()
+        val response = buildClient().newCall(protectedRequest()).execute()
 
         // After second 401, responseCount >= 2, so authenticator returns null
-        assertEquals(401, response.code)
+        assertEquals(HttpURLConnection.HTTP_UNAUTHORIZED, response.code)
         assertFalse(authManager.isLoggedIn.value)
     }
 }
