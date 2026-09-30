@@ -1,10 +1,12 @@
 package com.bedrud.app.core.api
 
 import com.bedrud.app.core.auth.AuthManager
+import com.bedrud.app.core.auth.SignInNoticeRelay
 import com.bedrud.app.models.ApiError
 import com.bedrud.app.models.LoginRequest
 import com.google.gson.Gson
 import com.google.gson.JsonObject
+import kotlinx.coroutines.CancellationException
 import retrofit2.Response
 
 /**
@@ -114,4 +116,44 @@ suspend fun performLogin(
     } catch (_: Exception) {
         LoginOutcome.Failed(null)
     }
+}
+
+/**
+ * Signs straight back in with [newPassword] once the server has accepted it, and returns whether
+ * that worked.
+ *
+ * The server ends every session of the account on a password change, this one included: it clears
+ * the stored refresh token and revokes the access token the change was sent with. Left alone, the
+ * app would carry on until its next request, which would then sign the user out with no reason
+ * given. Signing in with the new password keeps them where they are.
+ *
+ * When that fails (no email to sign in with, the server unreachable, or the sign-in refused), the
+ * user is signed out at once, and [signInAgainNotice] goes to the sign-in screen they land on
+ * through [signInNoticeRelay], so the sign-out comes with its reason.
+ */
+suspend fun signBackInAfterPasswordChange(
+    authApi: AuthApi,
+    authManager: AuthManager,
+    email: String?,
+    newPassword: String,
+    signInNoticeRelay: SignInNoticeRelay,
+    signInAgainNotice: String,
+): Boolean {
+    val outcome = if (email.isNullOrBlank()) {
+        null
+    } else {
+        try {
+            performLogin(authApi, authManager, email, newPassword)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (_: Exception) {
+            null
+        }
+    }
+    if (outcome is LoginOutcome.Success) return true
+
+    // Reported before signing out, which takes the app to the sign-in screen that shows it.
+    signInNoticeRelay.report(signInAgainNotice)
+    authManager.logout()
+    return false
 }

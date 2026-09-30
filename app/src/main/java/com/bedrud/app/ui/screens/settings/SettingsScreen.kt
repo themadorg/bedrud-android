@@ -67,6 +67,8 @@ import com.bedrud.app.ui.theme.Dimens
 import com.bedrud.app.ui.theme.Elevation
 import com.bedrud.app.models.ChangePasswordRequest
 import com.bedrud.app.core.api.apiAction
+import com.bedrud.app.core.api.signBackInAfterPasswordChange
+import com.bedrud.app.core.auth.SignInNoticeRelay
 import com.bedrud.app.ui.theme.typeCentered
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
@@ -105,7 +107,8 @@ internal fun passwordUnavailableMessage(method: SignInMethod): String = when (me
 fun SettingsContent(
     modifier: Modifier = Modifier,
     settingsStore: SettingsStore = koinInject(),
-    instanceManager: InstanceManager = koinInject()
+    instanceManager: InstanceManager = koinInject(),
+    signInNoticeRelay: SignInNoticeRelay = koinInject(),
 ) {
     val appearance by settingsStore.appearance.collectAsState()
     val notificationsEnabled by settingsStore.notificationsEnabled.collectAsState()
@@ -369,6 +372,7 @@ fun SettingsContent(
                             if (settingFirstPassword) R.string.settings_password_setFailed
                             else R.string.settings_password_changeFailed
                         )
+                        val signInAgainNotice = stringResource(R.string.auth_notice_passwordChanged)
                         BedrudButton(
                             text = stringResource(
                                 if (settingFirstPassword) R.string.settings_button_setPassword
@@ -397,10 +401,25 @@ fun SettingsContent(
                                             api.changePassword(ChangePasswordRequest(confirmingPassword, newPassword))
                                         }
                                         if (changed) {
+                                            // Kept to sign back in with, since the fields clear now.
+                                            val chosenPassword = newPassword
                                             currentPassword = ""
                                             newPassword = ""
                                             confirmPassword = ""
-                                            snackbarHostState.showSnackbar(passwordSavedMessage)
+                                            // The change has just ended this session as well; see
+                                            // signBackInAfterPasswordChange.
+                                            val manager = authManager ?: return@launch
+                                            val signedBackIn = signBackInAfterPasswordChange(
+                                                api,
+                                                manager,
+                                                currentUser?.email,
+                                                chosenPassword,
+                                                signInNoticeRelay,
+                                                signInAgainNotice,
+                                            )
+                                            if (signedBackIn) {
+                                                snackbarHostState.showSnackbar(passwordSavedMessage)
+                                            }
                                         }
                                     }
                                 }
