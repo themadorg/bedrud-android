@@ -82,6 +82,46 @@ private val OAuthOptions = listOf(
     OAuthOption(OAuthLoginHandler.Provider.TWITTER, R.drawable.ic_oauth_x, "X", tinted = true)
 )
 
+/** Short caption shown under a sign-in method the server has turned off. */
+@Composable
+private fun MethodDisabledHint() {
+    Spacer(Modifier.height(Dimens.space4))
+    Text(
+        text = stringResource(R.string.auth_hint_methodDisabled),
+        style = MaterialTheme.typography.labelSmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant
+    )
+}
+
+/**
+ * One sign-in method's full-width button, greyed when the server has turned the method off
+ * ([serverAllows] false), with a short reason under it. [enabled] is everything else that gates
+ * it: another sign-in in flight, a guest name still too short.
+ */
+@Composable
+internal fun SignInMethodButton(
+    label: String,
+    serverAllows: Boolean,
+    enabled: Boolean,
+    loading: Boolean,
+    variant: BedrudButtonVariant,
+    onClick: () -> Unit,
+    leadingIcon: @Composable (() -> Unit)? = null,
+) {
+    BedrudButton(
+        text = label,
+        onClick = onClick,
+        variant = variant,
+        enabled = enabled && serverAllows,
+        loading = loading,
+        leadingIcon = leadingIcon,
+        modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(min = Dimens.buttonHeightLarge)
+    )
+    if (!serverAllows) MethodDisabledHint()
+}
+
 /**
  * Sign-in landing / hub for the active server. Presents the ways in as peer choices — email &
  * password (opens a dedicated form), passkey (one tap), OAuth providers, or continue as a guest
@@ -213,12 +253,13 @@ fun LoginScreen(
                 .heightIn(min = Dimens.buttonHeightLarge)
         )
         Spacer(Modifier.height(Dimens.space12))
-        BedrudButton(
-            text = stringResource(R.string.auth_button_signInWithPasskey),
-            onClick = { signInWithPasskey() },
-            variant = BedrudButtonVariant.OUTLINE,
-            enabled = !isBusy && passkeyEnabled,
+        SignInMethodButton(
+            label = stringResource(R.string.auth_button_signInWithPasskey),
+            serverAllows = passkeyEnabled,
+            enabled = !isBusy,
             loading = loadingAction == HubAction.PASSKEY,
+            variant = BedrudButtonVariant.OUTLINE,
+            onClick = { signInWithPasskey() },
             leadingIcon = {
                 Icon(
                     Icons.Filled.Key,
@@ -226,11 +267,7 @@ fun LoginScreen(
                     modifier = Modifier.size(Dimens.iconSm)
                 )
             },
-            modifier = Modifier
-                .fillMaxWidth()
-                .heightIn(min = Dimens.buttonHeightLarge)
         )
-        if (!passkeyEnabled) MethodDisabledHint()
 
         // ── OAuth providers (compact logo row) ──
         if (showOAuthRow) {
@@ -280,17 +317,14 @@ fun LoginScreen(
             enabled = !isBusy && guestEnabled
         )
         Spacer(Modifier.height(Dimens.space12))
-        BedrudButton(
-            text = stringResource(R.string.auth_button_continueAsGuest),
-            onClick = { continueAsGuest() },
-            variant = BedrudButtonVariant.TONAL,
-            enabled = !isBusy && guestEnabled && guestName.trim().length >= 2,
+        SignInMethodButton(
+            label = stringResource(R.string.auth_button_continueAsGuest),
+            serverAllows = guestEnabled,
+            enabled = !isBusy && guestName.trim().length >= MinGuestNameLength,
             loading = loadingAction == HubAction.GUEST,
-            modifier = Modifier
-                .fillMaxWidth()
-                .heightIn(min = Dimens.buttonHeightLarge)
+            variant = BedrudButtonVariant.TONAL,
+            onClick = { continueAsGuest() },
         )
-        if (!guestEnabled) MethodDisabledHint()
 
         Spacer(Modifier.height(Dimens.space24))
 
@@ -366,17 +400,6 @@ private fun OAuthProviderButton(
             }
         }
     }
-}
-
-/** Short caption shown under a sign-in method the server has turned off. */
-@Composable
-private fun MethodDisabledHint() {
-    Spacer(Modifier.height(Dimens.space4))
-    Text(
-        text = stringResource(R.string.auth_hint_methodDisabled),
-        style = MaterialTheme.typography.labelSmall,
-        color = MaterialTheme.colorScheme.onSurfaceVariant
-    )
 }
 
 @Composable
