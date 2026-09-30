@@ -50,7 +50,6 @@
   <string name="auth_divider_orContinueWith">或使用以下方式继续</string>
   <string name="auth_hint_methodDisabled">此服务器未启用</string>
   <string name="auth_oauth_continueWithFormat">使用 %1$s 继续</string>
-  <string name="instance_title_servers">服务器</string>
   <string name="instance_title_addServer">添加新服务器</string>
   <string name="instance_title_switchServer">切换服务器</string>
   <string name="instance_subtitle_connectToServer">连接服务器以开始使用</string>
@@ -64,9 +63,15 @@
   <string name="instance_warning_insecure">连接将不会被加密。仅用于本地或开发服务器。</string>
   <string name="instance_error_duplicate">此地址的服务器已存在。</string>
   <string name="instance_button_addServer">添加服务器</string>
-  <string name="instance_status_active">活跃</string>
-  <string name="instance_empty_noServers">未配置服务器</string>
+  <string name="instance_status_inUse">使用中</string>
   <string name="instance_default_serverName">服务器</string>
+  <string name="instance_button_edit">编辑</string>
+  <string name="instance_button_done">完成</string>
+  <string name="instance_contentDescription_removeServer">移除 <xliff:g id="serverName" example="Bedrud">%1$s</xliff:g></string>
+  <string name="instance_dialog_removeTitle">移除 <xliff:g id="serverName" example="Bedrud">%1$s</xliff:g>？</string>
+  <string name="instance_dialog_removeMessage">你将在此设备上退出该服务器，其最近的房间也会被清除。你可以随时重新添加。</string>
+  <string name="instance_dialog_removeActiveMessage">你正在使用此服务器。你将在此设备上退出登录，应用会切换到 <xliff:g id="serverName" example="Bedrud">%1$s</xliff:g>。</string>
+  <string name="instance_dialog_removeLastMessage">这是你唯一的服务器。你将在此设备上退出登录，并需要添加一个服务器。</string>
   <string name="instance_default_displayName" translatable="false">Bedrud</string>
   <!-- First-run server chooser -->
   <string name="instance_choice_default_title">官方服务器</string>

@@ -51,7 +51,6 @@
   <string name="auth_register_subtitle">Sign up for a new account</string>
   <string name="auth_hint_passwordMinLength">At least %1$d characters</string>
   <string name="auth_error_emailInvalid">Enter a valid email address</string>
-  <string name="instance_title_servers">Servers</string>
   <string name="instance_title_addServer">Add New Server</string>
   <string name="instance_title_switchServer">Switch Server</string>
   <string name="instance_subtitle_connectToServer">Connect to a server to get started</string>
@@ -65,10 +64,17 @@
   <string name="instance_warning_insecure">Connection will not be encrypted. Only use for local or development servers.</string>
   <string name="instance_error_duplicate">A server with this address already exists.</string>
   <string name="instance_button_addServer">Add Server</string>
-  <string name="instance_status_active">Active</string>
-  <string name="instance_empty_noServers">No servers configured</string>
+  <string name="instance_status_inUse">In use</string>
   <string name="instance_default_serverName">Server</string>
   <string name="instance_default_displayName" translatable="false">Bedrud</string>
+  <!-- Removing a saved server, from the server switcher's edit mode -->
+  <string name="instance_button_edit">Edit</string>
+  <string name="instance_button_done">Done</string>
+  <string name="instance_contentDescription_removeServer">Remove <xliff:g id="serverName" example="Bedrud">%1$s</xliff:g></string>
+  <string name="instance_dialog_removeTitle">Remove <xliff:g id="serverName" example="Bedrud">%1$s</xliff:g>?</string>
+  <string name="instance_dialog_removeMessage">You\'ll be signed out of it on this device, and its recent rooms are cleared. You can add it again anytime.</string>
+  <string name="instance_dialog_removeActiveMessage">You\'re using this server now. You\'ll be signed out of it on this device, and the app moves to <xliff:g id="serverName" example="Bedrud">%1$s</xliff:g>.</string>
+  <string name="instance_dialog_removeLastMessage">It\'s your only server. You\'ll be signed out of it on this device, and asked to add a server.</string>
   <!-- First-run server chooser -->
   <string name="instance_choice_default_title">Official server</string>
   <string name="instance_choice_default_tag">Default</string>

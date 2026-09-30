@@ -51,7 +51,6 @@
   <string name="auth_divider_orContinueWith">veya şununla devam et</string>
   <string name="auth_hint_methodDisabled">Bu sunucuda etkin değil</string>
   <string name="auth_oauth_continueWithFormat">%1$s ile devam et</string>
-  <string name="instance_title_servers">Sunucular</string>
   <string name="instance_title_addServer">Yeni Sunucu Ekle</string>
   <string name="instance_title_switchServer">Sunucu Değiştir</string>
   <string name="instance_subtitle_connectToServer">Başlamak için bir sunucuya bağlanın</string>
@@ -65,9 +64,15 @@
   <string name="instance_warning_insecure">Bağlantı şifrelenmeyecek. Yalnızca yerel veya geliştirme sunucuları için kullanın.</string>
   <string name="instance_error_duplicate">Bu adrese sahip bir sunucu zaten var.</string>
   <string name="instance_button_addServer">Sunucu Ekle</string>
-  <string name="instance_status_active">Aktif</string>
-  <string name="instance_empty_noServers">Yapılandırılmış sunucu yok</string>
+  <string name="instance_status_inUse">Kullanımda</string>
   <string name="instance_default_serverName">Sunucu</string>
+  <string name="instance_button_edit">Düzenle</string>
+  <string name="instance_button_done">Bitti</string>
+  <string name="instance_contentDescription_removeServer">Kaldır: <xliff:g id="serverName" example="Bedrud">%1$s</xliff:g></string>
+  <string name="instance_dialog_removeTitle"><xliff:g id="serverName" example="Bedrud">%1$s</xliff:g> kaldırılsın mı?</string>
+  <string name="instance_dialog_removeMessage">Bu cihazda bu sunucudaki oturumunuz kapatılacak ve son odaları temizlenecek. İstediğiniz zaman yeniden ekleyebilirsiniz.</string>
+  <string name="instance_dialog_removeActiveMessage">Şu anda bu sunucuyu kullanıyorsunuz. Bu cihazda oturumunuz kapatılacak ve uygulama <xliff:g id="serverName" example="Bedrud">%1$s</xliff:g> sunucusuna geçecek.</string>
+  <string name="instance_dialog_removeLastMessage">Bu, tek sunucunuz. Bu cihazda oturumunuz kapatılacak ve bir sunucu eklemeniz istenecek.</string>
   <string name="instance_default_displayName" translatable="false">Bedrud</string>
   <!-- First-run server chooser -->
   <string name="instance_choice_default_title">Resmi sunucu</string>

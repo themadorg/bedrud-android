@@ -50,7 +50,6 @@
   <string name="auth_divider_orContinueWith">またはこちらで続行</string>
   <string name="auth_hint_methodDisabled">このサーバーでは無効です</string>
   <string name="auth_oauth_continueWithFormat">%1$sで続行</string>
-  <string name="instance_title_servers">サーバー</string>
   <string name="instance_title_addServer">新しいサーバーを追加</string>
   <string name="instance_title_switchServer">サーバーを切り替え</string>
   <string name="instance_subtitle_connectToServer">始めるにはサーバーに接続してください</string>
@@ -64,9 +63,15 @@
   <string name="instance_warning_insecure">接続は暗号化されません。ローカルまたは開発サーバーでのみ使用してください。</string>
   <string name="instance_error_duplicate">このアドレスのサーバーはすでに存在します。</string>
   <string name="instance_button_addServer">サーバーを追加</string>
-  <string name="instance_status_active">アクティブ</string>
-  <string name="instance_empty_noServers">サーバーが設定されていません</string>
+  <string name="instance_status_inUse">使用中</string>
   <string name="instance_default_serverName">サーバー</string>
+  <string name="instance_button_edit">編集</string>
+  <string name="instance_button_done">完了</string>
+  <string name="instance_contentDescription_removeServer"><xliff:g id="serverName" example="Bedrud">%1$s</xliff:g> を削除</string>
+  <string name="instance_dialog_removeTitle"><xliff:g id="serverName" example="Bedrud">%1$s</xliff:g> を削除しますか？</string>
+  <string name="instance_dialog_removeMessage">このデバイスでこのサーバーからサインアウトし、最近のルームも消去されます。いつでも再度追加できます。</string>
+  <string name="instance_dialog_removeActiveMessage">現在このサーバーを使用中です。このデバイスでサインアウトし、アプリは <xliff:g id="serverName" example="Bedrud">%1$s</xliff:g> に切り替わります。</string>
+  <string name="instance_dialog_removeLastMessage">これが唯一のサーバーです。このデバイスでサインアウトし、サーバーの追加を求められます。</string>
   <string name="instance_default_displayName" translatable="false">Bedrud</string>
   <!-- First-run server chooser -->
   <string name="instance_choice_default_title">公式サーバー</string>

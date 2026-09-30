@@ -52,7 +52,6 @@
   <string name="auth_divider_orContinueWith">o continúa con</string>
   <string name="auth_hint_methodDisabled">No habilitado en este servidor</string>
   <string name="auth_oauth_continueWithFormat">Continuar con %1$s</string>
-  <string name="instance_title_servers">Servidores</string>
   <string name="instance_title_addServer">Añadir nuevo servidor</string>
   <string name="instance_title_switchServer">Cambiar de servidor</string>
   <string name="instance_subtitle_connectToServer">Conéctate a un servidor para empezar</string>
@@ -66,9 +65,15 @@
   <string name="instance_warning_insecure">La conexión no estará cifrada. Úsalo solo para servidores locales o de desarrollo.</string>
   <string name="instance_error_duplicate">Ya existe un servidor con esta dirección.</string>
   <string name="instance_button_addServer">Añadir servidor</string>
-  <string name="instance_status_active">Activo</string>
-  <string name="instance_empty_noServers">Ningún servidor configurado</string>
+  <string name="instance_status_inUse">En uso</string>
   <string name="instance_default_serverName">Servidor</string>
+  <string name="instance_button_edit">Editar</string>
+  <string name="instance_button_done">Listo</string>
+  <string name="instance_contentDescription_removeServer">Eliminar <xliff:g id="serverName" example="Bedrud">%1$s</xliff:g></string>
+  <string name="instance_dialog_removeTitle">¿Eliminar <xliff:g id="serverName" example="Bedrud">%1$s</xliff:g>?</string>
+  <string name="instance_dialog_removeMessage">Se cerrará tu sesión en él en este dispositivo y se borrarán sus salas recientes. Puedes volver a añadirlo cuando quieras.</string>
+  <string name="instance_dialog_removeActiveMessage">Estás usando este servidor ahora. Se cerrará tu sesión en él en este dispositivo y la app pasará a <xliff:g id="serverName" example="Bedrud">%1$s</xliff:g>.</string>
+  <string name="instance_dialog_removeLastMessage">Es tu único servidor. Se cerrará tu sesión en él en este dispositivo y se te pedirá que añadas un servidor.</string>
   <string name="instance_default_displayName" translatable="false">Bedrud</string>
   <!-- First-run server chooser -->
   <string name="instance_choice_default_title">Servidor oficial</string>
