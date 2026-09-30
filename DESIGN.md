@@ -202,6 +202,17 @@ change, the Security card slots an identity provider's name into one shared sent
 guest a sentence of its own: a translated noun dropped into that sentence cannot agree with it in
 every language.
 
+The Security card offers one of three things, all decided by `signInMethodOf` from the account's
+`provider` and `passwordChangedAt`: a change form (current, new and confirm) for an account with a
+password; a set form (new and confirm, under a line saying why) for a passkey account that never set
+one; and the sentence above for an account that cannot have a password. A passkey account is created
+without a password, and the server stamps `passwordChangedAt` whenever it gives an existing account
+one, so a passkey account without the stamp has none. The stamp is not read for an email account,
+which has a password from sign-up but is not stamped until it first changes it. Settings reloads the
+account from `auth/me` each time it opens, because the record stored at sign-in can be out of date: a
+password set on another device, or a record stored by a version of the app that did not keep the
+stamp.
+
 **Text sets a floor, not a height.** A container that holds text takes a minimum height —
 `heightIn(min = …)`, or the component's own `defaultMinSize` — never a fixed `height(…)`. Text grows
 with the reader's font-size setting, up to 2× since Android 14, and a fixed box clips it: the rooms
