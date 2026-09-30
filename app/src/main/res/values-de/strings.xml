@@ -39,6 +39,7 @@
   <string name="auth_hint_passwordMinLength">Mindestens %1$d Zeichen</string>
   <string name="auth_error_emailInvalid">Geben Sie eine gültige E-Mail-Adresse ein</string>
   <string name="auth_error_guestFailed">Beitritt als Gast nicht möglich. Bitte versuchen Sie es erneut.</string>
+  <string name="auth_notice_passwordChanged">Ihr Passwort wurde geändert. Melden Sie sich mit Ihrem neuen Passwort an.</string>
   <plurals name="auth_error_nameTooShort">
     <item quantity="one">Bitte geben Sie mindestens %1$d Zeichen ein.</item>
     <item quantity="other">Bitte geben Sie mindestens %1$d Zeichen ein.</item>
@@ -228,17 +229,23 @@
   <string name="settings_label_signInMethod">Anmeldemethode</string>
   <string name="settings_provider_email">E-Mail</string>
   <string name="settings_provider_passkey">Passkey</string>
+  <string name="settings_provider_guest">Gast</string>
   <string name="settings_label_role">Rolle</string>
   <string name="settings_role_admin">Administrator</string>
   <string name="settings_role_user">Benutzer</string>
   <string name="settings_section_security">Sicherheit</string>
   <string name="settings_password_unavailable">Passwortänderung ist für die Anmeldung mit <xliff:g id="provider" example="Google">%1$s</xliff:g> nicht verfügbar.</string>
+  <string name="settings_password_unavailable_guest">Gastkonten haben kein Passwort, das geändert werden kann.</string>
   <string name="settings_label_currentPassword">Aktuelles Passwort</string>
   <string name="settings_label_newPassword">Neues Passwort</string>
   <string name="settings_label_confirmNewPassword">Neues Passwort bestätigen</string>
   <string name="settings_button_changePassword">Passwort ändern</string>
   <string name="settings_password_changeSuccess">Passwort erfolgreich geändert</string>
   <string name="settings_password_changeFailed">Passwortänderung fehlgeschlagen</string>
+  <string name="settings_password_setIntro">Sie melden sich mit einem Passkey an. Legen Sie ein Passwort fest, um sich auch mit Ihrer E-Mail anzumelden.</string>
+  <string name="settings_button_setPassword">Passwort festlegen</string>
+  <string name="settings_password_setSuccess">Passwort erfolgreich festgelegt</string>
+  <string name="settings_password_setFailed">Festlegen des Passworts fehlgeschlagen</string>
   <string name="settings_section_about">Über</string>
   <string name="settings_label_version">Version</string>
   <string name="settings_label_build">Build</string>

@@ -27,6 +27,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -47,6 +48,7 @@ import com.bedrud.app.R
 import com.bedrud.app.core.DevFlags
 import com.bedrud.app.core.api.apiBody
 import com.bedrud.app.core.auth.OAuthLoginHandler
+import com.bedrud.app.core.auth.SignInNoticeRelay
 import com.bedrud.app.core.instance.InstanceManager
 import com.bedrud.app.core.instance.PublicSettingsState
 import com.bedrud.app.models.GuestLoginRequest
@@ -98,7 +100,8 @@ fun LoginScreen(
     onNavigateToEmailLogin: () -> Unit,
     onNavigateToRegister: () -> Unit,
     onBack: (() -> Unit)? = null,
-    instanceManager: InstanceManager = koinInject()
+    instanceManager: InstanceManager = koinInject(),
+    signInNoticeRelay: SignInNoticeRelay = koinInject(),
 ) {
     val authApi = instanceManager.authApi.collectAsState().value ?: return
     val authManager = instanceManager.authManager.collectAsState().value ?: return
@@ -149,6 +152,17 @@ fun LoginScreen(
     val showOAuthRow = serverUrl != null && (realProviders != null || oauthDevPreview || settingsFailed)
 
     AuthErrorSnackbar(errorMessage, snackbarHostState) { errorMessage = null }
+
+    // Why the app signed the user out, said here because the screen that did it is gone — see
+    // SignInNoticeRelay.
+    val signInNotice by signInNoticeRelay.message.collectAsState()
+    LaunchedEffect(signInNotice) {
+        val notice = signInNotice ?: return@LaunchedEffect
+        // Consumed only once it has been read out: clearing it first would change this effect's key
+        // mid-message, cancelling the very snackbar it was showing.
+        snackbarHostState.showSnackbar(notice)
+        signInNoticeRelay.consume()
+    }
 
     fun signInWithPasskey() {
         if (isBusy) return

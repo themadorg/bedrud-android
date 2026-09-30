@@ -39,6 +39,7 @@
   <string name="auth_hint_passwordMinLength">%1$d文字以上</string>
   <string name="auth_error_emailInvalid">有効なメールアドレスを入力してください</string>
   <string name="auth_error_guestFailed">ゲストとして参加できませんでした。もう一度お試しください。</string>
+  <string name="auth_notice_passwordChanged">パスワードを変更しました。新しいパスワードでサインインしてください。</string>
   <plurals name="auth_error_nameTooShort">
     <item quantity="other">%1$d文字以上入力してください。</item>
   </plurals>
@@ -225,17 +226,23 @@
   <string name="settings_label_signInMethod">サインイン方法</string>
   <string name="settings_provider_email">メール</string>
   <string name="settings_provider_passkey">パスキー</string>
+  <string name="settings_provider_guest">ゲスト</string>
   <string name="settings_label_role">ロール</string>
   <string name="settings_role_admin">管理者</string>
   <string name="settings_role_user">ユーザー</string>
   <string name="settings_section_security">セキュリティ</string>
   <string name="settings_password_unavailable"><xliff:g id="provider" example="Google">%1$s</xliff:g> サインインではパスワード変更は利用できません。</string>
+  <string name="settings_password_unavailable_guest">ゲストアカウントには変更できるパスワードがありません。</string>
   <string name="settings_label_currentPassword">現在のパスワード</string>
   <string name="settings_label_newPassword">新しいパスワード</string>
   <string name="settings_label_confirmNewPassword">新しいパスワード（確認）</string>
   <string name="settings_button_changePassword">パスワードを変更</string>
   <string name="settings_password_changeSuccess">パスワードを変更しました</string>
   <string name="settings_password_changeFailed">パスワードの変更に失敗しました</string>
+  <string name="settings_password_setIntro">パスキーでサインインしています。パスワードを設定すると、メールアドレスでもサインインできます。</string>
+  <string name="settings_button_setPassword">パスワードを設定</string>
+  <string name="settings_password_setSuccess">パスワードを設定しました</string>
+  <string name="settings_password_setFailed">パスワードの設定に失敗しました</string>
   <string name="settings_section_about">このアプリについて</string>
   <string name="settings_label_version">バージョン</string>
   <string name="settings_label_build">ビルド</string>

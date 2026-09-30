@@ -77,7 +77,7 @@ building blocks, not just LiveKit.
 ```mermaid
 flowchart TD
     UI["UI · Compose (per route)<br/>MainActivity/NavHost · MeetingScreen · Dashboard · Admin · Login/Register/Guest · Profile · Settings · theme/ · components/"]
-    ST["State & Managers · StateFlow, no ViewModels<br/>InstanceManager · RoomManager · AuthManager · PasskeyManager · InstanceStore · SettingsStore · RecentRoomsStore · PipStateHolder · JoinFailureRelay"]
+    ST["State & Managers · StateFlow, no ViewModels<br/>InstanceManager · RoomManager · AuthManager · PasskeyManager · InstanceStore · SettingsStore · RecentRoomsStore · PipStateHolder · JoinFailureRelay · SignInNoticeRelay"]
     DA["Data · Retrofit + Gson<br/>AuthApi · RoomApi · AdminApi · ApiClientFactory · AuthInterceptor · TokenAuthenticator · models/"]
     PL["Platform & OS · Android + LiveKit<br/>LiveKit Room · CallService (foreground) · CallConnectionService (telecom) · EncryptedSharedPreferences · CredentialManager/FIDO · Custom Tabs · MediaProjection"]
     UI --> ST --> DA --> PL
@@ -138,7 +138,10 @@ flowchart LR
 ```
 
 The **Admin** tab only appears when `currentUser.isAdmin` is true, and carries its own
-nested Overview / Users / Rooms / Settings bottom-nav.
+nested Overview / Users / Rooms / Settings bottom-nav. The server sends no such flag: `isAdmin` is
+read from the user's `accesses`, and is true only for `superadmin`, the one level the server's
+`/admin` routes admit. A plain `admin` would find a tab of refusals, so it gets no tab, and is not
+shown as an admin in Profile or Settings either.
 
 ---
 

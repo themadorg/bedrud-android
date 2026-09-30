@@ -39,6 +39,7 @@
   <string name="auth_hint_passwordMinLength">حداقل %1$d نویسه</string>
   <string name="auth_error_emailInvalid">یک ایمیل معتبر وارد کنید</string>
   <string name="auth_error_guestFailed">پیوستن به‌عنوان مهمان ممکن نشد. لطفاً دوباره تلاش کنید.</string>
+  <string name="auth_notice_passwordChanged">رمز عبور شما تغییر کرد. با رمز عبور جدید خود وارد شوید.</string>
   <plurals name="auth_error_nameTooShort">
     <item quantity="one">لطفاً حداقل %1$d نویسه وارد کنید.</item>
     <item quantity="other">لطفاً حداقل %1$d نویسه وارد کنید.</item>
@@ -225,17 +226,23 @@
   <string name="settings_label_signInMethod">روش ورود</string>
   <string name="settings_provider_email">ایمیل</string>
   <string name="settings_provider_passkey">Passkey</string>
+  <string name="settings_provider_guest">مهمان</string>
   <string name="settings_label_role">نقش</string>
   <string name="settings_role_admin">مدیر</string>
   <string name="settings_role_user">کاربر</string>
   <string name="settings_section_security">امنیت</string>
   <string name="settings_password_unavailable">تغییر رمز عبور برای ورود با <xliff:g id="provider" example="Google">%1$s</xliff:g> در دسترس نیست.</string>
+  <string name="settings_password_unavailable_guest">حساب‌های مهمان رمز عبوری برای تغییر ندارند.</string>
   <string name="settings_label_currentPassword">رمز عبور فعلی</string>
   <string name="settings_label_newPassword">رمز عبور جدید</string>
   <string name="settings_label_confirmNewPassword">تایید رمز عبور جدید</string>
   <string name="settings_button_changePassword">تغییر رمز عبور</string>
   <string name="settings_password_changeSuccess">رمز عبور با موفقیت تغییر کرد</string>
   <string name="settings_password_changeFailed">تغییر رمز عبور ناموفق بود</string>
+  <string name="settings_password_setIntro">شما با Passkey وارد می‌شوید. یک رمز عبور تعیین کنید تا با ایمیل خود هم بتوانید وارد شوید.</string>
+  <string name="settings_button_setPassword">تعیین رمز عبور</string>
+  <string name="settings_password_setSuccess">رمز عبور با موفقیت تعیین شد</string>
+  <string name="settings_password_setFailed">تعیین رمز عبور ناموفق بود</string>
   <string name="settings_section_about">درباره</string>
   <string name="settings_label_version">نسخه</string>
   <string name="settings_label_build">ساخت</string>
