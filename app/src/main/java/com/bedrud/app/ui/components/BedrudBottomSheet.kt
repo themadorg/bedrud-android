@@ -30,7 +30,9 @@ import com.bedrud.app.ui.theme.Dimens
 import com.bedrud.app.ui.theme.typeCentered
 
 /**
- * The app's bottom sheet. Every sheet in the app is one of these.
+ * The app's bottom sheet. Every sheet in the app is one of these except the in-call chat
+ * (`MeetingChatSheet`), which needs three heights and its handle inside its own content, and so
+ * builds its own `ModalBottomSheet` from the same shape, container colour and handle.
  *
  * Container, drag handle, shape, insets and gutter are **fixed, not defaulted**. There is
  * deliberately no colour parameter: a default is a suggestion, and the one sheet that took the
@@ -39,8 +41,8 @@ import com.bedrud.app.ui.theme.typeCentered
  * lift a sheet off the background, and it is opaque over video just the same, so there is no case
  * where a darker container buys anything.
  *
- * The handle is [BedrudSheetHandle], shared with the call's controls bar and the chat sheet, rather
- * than M3's own. The Material one pressed as a rounded rectangle splashing across its whole touch
+ * The handle is [BedrudSheetHandle], shared with the chat sheet, rather than M3's own. The call's
+ * controls bar still draws its own, `MeetingPanelHandle`; sharing it is tracked in #209. The Material one pressed as a rounded rectangle splashing across its whole touch
  * area, and announced itself as "Drag Handle" — a label Android shows on long press, naming the
  * widget instead of saying what it does. The shape token stays: [BedrudShapeTokens.sheetTop] is
  * already M3's 28dp `extraLarge` top corners, just named.
