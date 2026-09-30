@@ -270,7 +270,7 @@ than standing at full strength beside a greyed-out one.
   finishes the prompt beside it and would drift from it at the ghost's padding; and the "Forgot
   password?" link, flush with the field's edge above it. Profile's "Sign out" is the ghost variant,
   not the error colour: signing out is neither an error nor irreversible.
-- **`BedrudCard` / `BedrudOutlinedCard`** — outline-first cards, tonal surface, minimal elevation.
+- **`BedrudOutlinedCard`** — outline-first cards, tonal surface, minimal elevation.
   `BedrudOutlinedCard`'s corners default to `BedrudShapeTokens.card`, the one card radius in the
   app; a card never passes its own. The default used to be 12dp while every caller but one passed
   16dp, so the one that did not (the admin stat card) sat with smaller corners beside the rest.
