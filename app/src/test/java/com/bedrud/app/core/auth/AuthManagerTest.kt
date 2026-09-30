@@ -10,6 +10,9 @@ import org.junit.Test
 /** When a user's password last changed, as the server writes the time. */
 private const val PASSWORD_CHANGED_AT = "2026-09-01T10:00:00Z"
 
+/** A superadmin's accesses, as the server sends them. */
+private val SUPERADMIN_ACCESSES = listOf("user", "superadmin")
+
 class AuthManagerTest {
 
     private lateinit var prefs: InMemorySharedPreferences
@@ -68,7 +71,7 @@ class AuthManagerTest {
 
     @Test
     fun `loadUser on init restores user from prefs`() {
-        val user = User(id = "u1", email = "a@b.com", name = "Alice", isAdmin = true)
+        val user = User(id = "u1", email = "a@b.com", name = "Alice", accesses = SUPERADMIN_ACCESSES)
         authManager.saveUser(user)
 
         // Create a new AuthManager with the same prefs
@@ -142,7 +145,7 @@ class AuthManagerTest {
     fun `Gson round-trip of User through prefs`() {
         val user = User(
             id = "u1", email = "a@b.com", name = "Alice",
-            avatarUrl = "https://img.com/a.png", isAdmin = true, provider = "passkey",
+            avatarUrl = "https://img.com/a.png", accesses = SUPERADMIN_ACCESSES, provider = "passkey",
             passwordChangedAt = PASSWORD_CHANGED_AT
         )
         authManager.saveUser(user)
@@ -154,6 +157,7 @@ class AuthManagerTest {
         assertEquals(user.email, loaded.email)
         assertEquals(user.name, loaded.name)
         assertEquals(user.avatarUrl, loaded.avatarUrl)
+        assertEquals(user.accesses, loaded.accesses)
         assertEquals(user.isAdmin, loaded.isAdmin)
         assertEquals(user.provider, loaded.provider)
         assertEquals(user.passwordChangedAt, loaded.passwordChangedAt)
