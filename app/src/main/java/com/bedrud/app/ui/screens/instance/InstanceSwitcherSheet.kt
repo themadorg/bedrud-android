@@ -43,47 +43,6 @@ import com.bedrud.app.ui.theme.parseInstanceColor
 import com.bedrud.app.ui.theme.typeCentered
 
 @Composable
-fun InstanceSwitcherSheet(
-    instanceManager: InstanceManager,
-    onDismiss: () -> Unit,
-    onAddInstance: () -> Unit
-) {
-    val instances by instanceManager.store.instances.collectAsState()
-    val activeId by instanceManager.store.activeInstanceId.collectAsState()
-
-    BedrudBottomSheet(onDismiss = onDismiss) {
-        BedrudSheetTitle(text = stringResource(R.string.instance_title_switchServer))
-
-        LazyColumn {
-            items(instances, key = { it.id }) { instance ->
-                SwitcherRow(
-                    instance = instance,
-                    isActive = instance.id == activeId,
-                    onSelect = {
-                        instanceManager.switchTo(instance.id)
-                        onDismiss()
-                    }
-                )
-            }
-        }
-
-        HorizontalDivider(modifier = Modifier.padding(vertical = Dimens.space8))
-
-        // "Add server" is a plain icon + label action, so it is the standard row rather than a
-        // hand-rolled one — same height, same inset, same icon size as every other sheet action.
-        BedrudSheetActionRow(
-            icon = Icons.Default.Add,
-            title = stringResource(R.string.instance_button_addServer),
-            contentColor = MaterialTheme.colorScheme.primary,
-            onClick = {
-                onDismiss()
-                onAddInstance()
-            }
-        )
-    }
-}
-
-@Composable
 private fun SwitcherRow(
     instance: Instance,
     isActive: Boolean,
@@ -146,5 +105,62 @@ private fun SwitcherRow(
                 modifier = Modifier.size(Dimens.iconSm)
             )
         }
+    }
+}
+
+/** The switcher's content — its title, the saved servers and the add action — without the sheet. */
+@Composable
+internal fun InstanceSwitcherContent(
+    instances: List<Instance>,
+    activeId: String?,
+    onSelect: (Instance) -> Unit,
+    onAddInstance: () -> Unit,
+) {
+    BedrudSheetTitle(text = stringResource(R.string.instance_title_switchServer))
+
+    LazyColumn {
+        items(instances, key = { it.id }) { instance ->
+            SwitcherRow(
+                instance = instance,
+                isActive = instance.id == activeId,
+                onSelect = { onSelect(instance) }
+            )
+        }
+    }
+
+    HorizontalDivider(modifier = Modifier.padding(vertical = Dimens.space8))
+
+    // "Add server" is a plain icon + label action, so it is the standard row rather than a
+    // hand-rolled one — same height, same inset, same icon size as every other sheet action.
+    BedrudSheetActionRow(
+        icon = Icons.Default.Add,
+        title = stringResource(R.string.instance_button_addServer),
+        contentColor = MaterialTheme.colorScheme.primary,
+        onClick = onAddInstance
+    )
+}
+
+@Composable
+fun InstanceSwitcherSheet(
+    instanceManager: InstanceManager,
+    onDismiss: () -> Unit,
+    onAddInstance: () -> Unit
+) {
+    val instances by instanceManager.store.instances.collectAsState()
+    val activeId by instanceManager.store.activeInstanceId.collectAsState()
+
+    BedrudBottomSheet(onDismiss = onDismiss) {
+        InstanceSwitcherContent(
+            instances = instances,
+            activeId = activeId,
+            onSelect = { instance ->
+                instanceManager.switchTo(instance.id)
+                onDismiss()
+            },
+            onAddInstance = {
+                onDismiss()
+                onAddInstance()
+            }
+        )
     }
 }
