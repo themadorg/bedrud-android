@@ -72,11 +72,11 @@ class ApiResponsesTest {
     }
 
     @Test
-    fun `MeResponse Gson deserialization`() {
+    fun `User Gson deserialization of an auth-me body`() {
         val json = """
             {"id":"u1","email":"a@b.com","name":"Alice","avatarUrl":"https://img.com/a.png","isAdmin":true,"provider":"google"}
         """.trimIndent()
-        val resp = gson.fromJson(json, MeResponse::class.java)
+        val resp = gson.fromJson(json, User::class.java)
         assertEquals("u1", resp.id)
         assertEquals("a@b.com", resp.email)
         assertEquals("Alice", resp.name)
