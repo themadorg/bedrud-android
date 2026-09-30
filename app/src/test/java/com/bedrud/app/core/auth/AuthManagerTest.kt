@@ -7,6 +7,9 @@ import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
 
+/** When a user's password last changed, as the server writes the time. */
+private const val PASSWORD_CHANGED_AT = "2026-09-01T10:00:00Z"
+
 class AuthManagerTest {
 
     private lateinit var prefs: InMemorySharedPreferences
@@ -101,7 +104,8 @@ class AuthManagerTest {
     fun `Gson round-trip of User through prefs`() {
         val user = User(
             id = "u1", email = "a@b.com", name = "Alice",
-            avatarUrl = "https://img.com/a.png", isAdmin = true, provider = "google"
+            avatarUrl = "https://img.com/a.png", isAdmin = true, provider = "passkey",
+            passwordChangedAt = PASSWORD_CHANGED_AT
         )
         authManager.saveUser(user)
 
@@ -114,5 +118,6 @@ class AuthManagerTest {
         assertEquals(user.avatarUrl, loaded.avatarUrl)
         assertEquals(user.isAdmin, loaded.isAdmin)
         assertEquals(user.provider, loaded.provider)
+        assertEquals(user.passwordChangedAt, loaded.passwordChangedAt)
     }
 }
