@@ -79,6 +79,7 @@ private fun AppLanguage.displayName(): String = labelResId?.let { stringResource
 private fun signInMethodLabel(method: SignInMethod): String = when (method) {
     SignInMethod.Email -> stringResource(R.string.settings_provider_email)
     SignInMethod.Passkey -> stringResource(R.string.settings_provider_passkey)
+    SignInMethod.Guest -> stringResource(R.string.settings_provider_guest)
     is SignInMethod.Provider -> method.name
 }
 
