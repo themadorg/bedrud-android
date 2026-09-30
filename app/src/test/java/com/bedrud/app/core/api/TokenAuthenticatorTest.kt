@@ -7,10 +7,12 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.mockwebserver.Dispatcher
 import okhttp3.mockwebserver.MockResponse
+import okhttp3.mockwebserver.MockWebServer
 import okhttp3.mockwebserver.RecordedRequest
 import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
+import java.io.IOException
 import java.net.HttpURLConnection
 import java.util.concurrent.Callable
 import java.util.concurrent.CountDownLatch
@@ -53,11 +55,28 @@ class TokenAuthenticatorTest : MockApiTest() {
         authManager = AuthManager(prefs)
     }
 
-    private fun buildAuthenticator(): TokenAuthenticator =
+    private fun buildAuthenticator(baseURL: String = server.url("/").toString()): TokenAuthenticator =
         TokenAuthenticator(
             authManager = authManager,
-            baseURL = server.url("/").toString(),
+            baseURL = baseURL,
         )
+
+    /** The base URL of a server that has shut down, so connecting to it is refused at once. */
+    private fun unreachableBaseURL(): String {
+        val closedServer = MockWebServer()
+        closedServer.start()
+        val baseURL = closedServer.url("/").toString()
+        closedServer.shutdown()
+        return baseURL
+    }
+
+    /** A server that answers every protected request with a 401 and every refresh with [refreshCode]. */
+    private fun refreshAnswering(refreshCode: Int): Dispatcher = object : Dispatcher() {
+        override fun dispatch(request: RecordedRequest): MockResponse = when (request.path) {
+            REFRESH_PATH -> MockResponse().setResponseCode(refreshCode)
+            else -> MockResponse().setResponseCode(HttpURLConnection.HTTP_UNAUTHORIZED)
+        }
+    }
 
     /** A client wired as the app's own: the stored access token on every request, and [authenticator] on a 401. */
     private fun buildClient(authenticator: TokenAuthenticator = buildAuthenticator()): OkHttpClient =
@@ -191,5 +210,63 @@ class TokenAuthenticatorTest : MockApiTest() {
         assertEquals(1, refreshCount.get())
         assertEquals(NEW_ACCESS_TOKEN, authManager.getAccessToken())
         assertTrue(authManager.isLoggedIn.value)
+    }
+
+    @Test
+    fun `a refresh that cannot reach the server fails the call and keeps the session`() {
+        authManager.saveTokens(OLD_ACCESS_TOKEN, OLD_REFRESH_TOKEN)
+        server.enqueue(MockResponse().setResponseCode(HttpURLConnection.HTTP_UNAUTHORIZED))
+        val client = buildClient(buildAuthenticator(baseURL = unreachableBaseURL()))
+
+        assertThrows(IOException::class.java) { client.newCall(protectedRequest()).execute() }
+
+        assertEquals(OLD_ACCESS_TOKEN, authManager.getAccessToken())
+        assertEquals(OLD_REFRESH_TOKEN, authManager.getRefreshToken())
+        assertTrue(authManager.isLoggedIn.value)
+    }
+
+    @Test
+    fun `a refresh the server could not judge hands back the 401 and keeps the session`() {
+        val refreshCodes = listOf(
+            HttpURLConnection.HTTP_CLIENT_TIMEOUT,
+            HTTP_TOO_MANY_REQUESTS,
+            HttpURLConnection.HTTP_INTERNAL_ERROR,
+            HttpURLConnection.HTTP_UNAVAILABLE,
+        )
+        refreshCodes.forEach { refreshCode ->
+            authManager.saveTokens(OLD_ACCESS_TOKEN, OLD_REFRESH_TOKEN)
+            server.dispatcher = refreshAnswering(refreshCode)
+
+            val code = buildClient().newCall(protectedRequest()).execute().use { response -> response.code }
+
+            val context = "refresh answered $refreshCode"
+            assertEquals(context, HttpURLConnection.HTTP_UNAUTHORIZED, code)
+            assertEquals(context, OLD_ACCESS_TOKEN, authManager.getAccessToken())
+            assertEquals(context, OLD_REFRESH_TOKEN, authManager.getRefreshToken())
+            assertTrue(context, authManager.isLoggedIn.value)
+        }
+    }
+
+    @Test
+    fun `a refresh token the server turns down signs out`() {
+        val refreshCodes = listOf(
+            // No refresh token reached the server.
+            HttpURLConnection.HTTP_BAD_REQUEST,
+            // The account was deactivated, or has an email still to verify.
+            HttpURLConnection.HTTP_FORBIDDEN,
+            // A refresh racing this one rotated the refresh token first.
+            HttpURLConnection.HTTP_CONFLICT,
+        )
+        refreshCodes.forEach { refreshCode ->
+            authManager.saveTokens(OLD_ACCESS_TOKEN, OLD_REFRESH_TOKEN)
+            server.dispatcher = refreshAnswering(refreshCode)
+
+            val code = buildClient().newCall(protectedRequest()).execute().use { response -> response.code }
+
+            val context = "refresh answered $refreshCode"
+            assertEquals(context, HttpURLConnection.HTTP_UNAUTHORIZED, code)
+            assertNull(context, authManager.getRefreshToken())
+            assertFalse(context, authManager.isLoggedIn.value)
+        }
     }
 }

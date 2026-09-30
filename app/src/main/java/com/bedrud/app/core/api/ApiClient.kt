@@ -3,9 +3,11 @@ package com.bedrud.app.core.api
 import com.bedrud.app.BuildConfig
 import com.bedrud.app.core.auth.AuthManager
 import com.bedrud.app.models.RefreshTokenRequest
+import com.bedrud.app.models.RefreshTokenResponse
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
 import com.google.gson.Strictness
+import kotlinx.coroutines.runBlocking
 import okhttp3.Authenticator
 import okhttp3.Interceptor
 import okhttp3.OkHttpClient
@@ -15,6 +17,8 @@ import okhttp3.Route
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
+import java.io.IOException
+import java.net.HttpURLConnection
 import java.util.concurrent.TimeUnit
 
 /** Connect/read/write timeout applied to every Bedrud API OkHttp client. */
@@ -22,6 +26,18 @@ private const val DEFAULT_TIMEOUT_SECONDS = 30L
 
 /** Cap on 401-driven token-refresh retries before forcing logout, to avoid infinite loops. */
 private const val MAX_REFRESH_ATTEMPTS = 2
+
+/** HTTP 429 Too Many Requests, which [HttpURLConnection] has no constant for. */
+internal const val HTTP_TOO_MANY_REQUESTS = 429
+
+/**
+ * Client errors from `auth/refresh` that say nothing about the refresh token: the request timed
+ * out, or the server is turning requests away for arriving too fast. Every other 4xx turns it down.
+ */
+private val REFRESH_RETRYABLE_CLIENT_ERRORS = setOf(
+    HttpURLConnection.HTTP_CLIENT_TIMEOUT,
+    HTTP_TOO_MANY_REQUESTS,
+)
 
 /**
  * Gson as every Bedrud client reads a response. Shared so a payload parses the same way whichever
@@ -79,6 +95,25 @@ class AuthInterceptor(
     }
 }
 
+/** What `auth/refresh` made of the stored refresh token. */
+private sealed interface RefreshOutcome {
+
+    /** A new token pair, replacing the stored one. */
+    data class Refreshed(val tokens: RefreshTokenResponse) : RefreshOutcome
+
+    /**
+     * The session is over: the server turned the refresh token down (expired, revoked, already
+     * rotated, or its account can no longer sign in), or took it without sending a usable pair back.
+     */
+    data object Ended : RefreshOutcome
+
+    /**
+     * The server could not judge the refresh token this time: an error of its own, a timeout, or
+     * rate limiting. The token may well be good on the next try.
+     */
+    data object Unavailable : RefreshOutcome
+}
+
 /**
  * Authenticator that handles 401 responses by refreshing the JWT token
  * and retrying the original request with the new token.
@@ -88,6 +123,10 @@ class AuthInterceptor(
  * same refresh token twice, and the second refresh would end the session the first had just
  * renewed. A request that failed on an access token another request has since replaced retries
  * with the replacement instead of refreshing again.
+ *
+ * Only the server turning the refresh token down ends the session. A refresh that never reached
+ * the server fails its call with the network error, and one the server could not answer hands the
+ * 401 back; both leave the tokens in place for the next request to refresh with.
  */
 class TokenAuthenticator(
     private val authManager: AuthManager,
@@ -113,6 +152,36 @@ class TokenAuthenticator(
             .header(ApiHeaders.AUTHORIZATION, ApiHeaders.bearer(accessToken))
             .build()
 
+    /**
+     * Sends [refreshToken] to `auth/refresh`, on a plain client so it cannot recurse back through
+     * this authenticator.
+     *
+     * An [IOException] is not caught: the refresh never reached the server, or its answer never
+     * arrived, so nothing is known about the token, and the call that needed the refresh fails as
+     * the network failure it is.
+     */
+    @Throws(IOException::class)
+    private fun refresh(refreshToken: String): RefreshOutcome {
+        val refreshApi = plainRetrofit(baseURL).create(AuthApi::class.java)
+        val refreshResponse = try {
+            runBlocking { refreshApi.refreshToken(RefreshTokenRequest(refreshToken)) }
+        } catch (e: IOException) {
+            throw e
+        } catch (e: Exception) {
+            // The server answered, but reading the answer failed: most likely a success whose body
+            // would not parse. A success has already rotated the token, so it is spent either way.
+            return RefreshOutcome.Ended
+        }
+        val code = refreshResponse.code()
+        return when {
+            refreshResponse.isSuccessful ->
+                refreshResponse.body()?.let(RefreshOutcome::Refreshed) ?: RefreshOutcome.Ended
+            code >= HttpURLConnection.HTTP_INTERNAL_ERROR || code in REFRESH_RETRYABLE_CLIENT_ERRORS ->
+                RefreshOutcome.Unavailable
+            else -> RefreshOutcome.Ended
+        }
+    }
+
     override fun authenticate(route: Route?, response: Response): Request? {
         // Avoid infinite retry loops
         if (responseCount(response) >= MAX_REFRESH_ATTEMPTS) {
@@ -134,32 +203,19 @@ class TokenAuthenticator(
                 return null
             }
 
-            // Perform synchronous token refresh on a plain client, so it cannot recurse back through
-            // this authenticator.
-            val refreshCall = run {
-                val refreshApi = plainRetrofit(baseURL).create(AuthApi::class.java)
-                try {
-                    val refreshResponse = kotlinx.coroutines.runBlocking {
-                        refreshApi.refreshToken(RefreshTokenRequest(refreshToken))
-                    }
-                    if (refreshResponse.isSuccessful) {
-                        refreshResponse.body()
-                    } else {
-                        null
-                    }
-                } catch (e: Exception) {
+            return when (val outcome = refresh(refreshToken)) {
+                is RefreshOutcome.Refreshed -> {
+                    authManager.saveTokens(outcome.tokens.accessToken, outcome.tokens.refreshToken)
+                    withAccessToken(response.request, outcome.tokens.accessToken)
+                }
+                RefreshOutcome.Ended -> {
+                    authManager.logout()
                     null
                 }
+                // The 401 goes back to the caller as it came, and the stored tokens stay for the
+                // next request to refresh with.
+                RefreshOutcome.Unavailable -> null
             }
-
-            if (refreshCall != null) {
-                authManager.saveTokens(refreshCall.accessToken, refreshCall.refreshToken)
-                return withAccessToken(response.request, refreshCall.accessToken)
-            }
-
-            // Refresh failed, force logout
-            authManager.logout()
-            return null
         }
     }
 }
