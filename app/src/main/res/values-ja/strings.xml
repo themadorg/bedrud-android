@@ -297,7 +297,6 @@
   <string name="meeting_sheet_deafen">スピーカーミュート</string>
   <string name="meeting_sheet_tools">ツール</string>
   <string name="meeting_sheet_report">不正利用を報告</string>
-  <string name="meeting_contentDescription_audioSource">オーディオソース</string>
   <string name="meeting_audio_sheet_title">音声出力を選択</string>
   <string name="meeting_audio_device_speaker">スピーカー</string>
   <string name="meeting_audio_device_earpiece">受話口</string>
