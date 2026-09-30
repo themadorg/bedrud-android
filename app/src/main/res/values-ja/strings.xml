@@ -23,6 +23,7 @@
   <string name="auth_title_createAccount">アカウント作成</string>
   <string name="auth_error_passwordMismatch">パスワードが一致しません</string>
   <string name="auth_subtitle_hubChoose">アカウントにサインインするか、ゲストとして続行してください。</string>
+  <string name="auth_subtitle_hubSignIn">アカウントにサインインしてください。</string>
   <string name="auth_button_signInWithEmail">メールでサインイン</string>
   <string name="auth_button_continueAsGuest">ゲストとして続行</string>
   <string name="auth_divider_or">または</string>

@@ -23,6 +23,7 @@
   <string name="auth_title_createAccount">Create Account</string>
   <string name="auth_error_passwordMismatch">Passwords do not match</string>
   <string name="auth_subtitle_hubChoose">Sign in to your account, or continue as a guest.</string>
+  <string name="auth_subtitle_hubSignIn">Sign in to your account.</string>
   <string name="auth_button_signInWithEmail">Sign in with email</string>
   <string name="auth_button_continueAsGuest">Continue as guest</string>
   <string name="auth_divider_or">or</string>

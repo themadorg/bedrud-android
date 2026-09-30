@@ -23,6 +23,7 @@
   <string name="auth_title_createAccount">ایجاد حساب کاربری</string>
   <string name="auth_error_passwordMismatch">رمزهای عبور مطابقت ندارند</string>
   <string name="auth_subtitle_hubChoose">وارد حساب خود شوید یا به‌عنوان مهمان ادامه دهید.</string>
+  <string name="auth_subtitle_hubSignIn">وارد حساب خود شوید.</string>
   <string name="auth_button_signInWithEmail">ورود با ایمیل</string>
   <string name="auth_button_continueAsGuest">ادامه به‌عنوان مهمان</string>
   <string name="auth_divider_or">یا</string>

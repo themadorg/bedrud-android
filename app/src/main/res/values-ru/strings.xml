@@ -23,6 +23,7 @@
   <string name="auth_title_createAccount">Создать аккаунт</string>
   <string name="auth_error_passwordMismatch">Пароли не совпадают</string>
   <string name="auth_subtitle_hubChoose">Войдите в свою учётную запись или продолжите как гость.</string>
+  <string name="auth_subtitle_hubSignIn">Войдите в свою учётную запись.</string>
   <string name="auth_button_signInWithEmail">Вход по электронной почте</string>
   <string name="auth_button_continueAsGuest">Продолжить как гость</string>
   <string name="auth_divider_or">или</string>

@@ -23,6 +23,7 @@
   <string name="auth_title_createAccount">创建账户</string>
   <string name="auth_error_passwordMismatch">密码不匹配</string>
   <string name="auth_subtitle_hubChoose">登录您的账户，或以访客身份继续。</string>
+  <string name="auth_subtitle_hubSignIn">登录您的账户。</string>
   <string name="auth_button_signInWithEmail">使用邮箱登录</string>
   <string name="auth_button_continueAsGuest">以访客身份继续</string>
   <string name="auth_divider_or">或</string>

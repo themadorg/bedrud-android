@@ -23,6 +23,7 @@
   <string name="auth_title_createAccount">إنشاء حساب</string>
   <string name="auth_error_passwordMismatch">كلمتا المرور غير متطابقتين</string>
   <string name="auth_subtitle_hubChoose">سجّل الدخول إلى حسابك أو تابع كضيف.</string>
+  <string name="auth_subtitle_hubSignIn">سجّل الدخول إلى حسابك.</string>
   <string name="auth_button_signInWithEmail">تسجيل الدخول بالبريد الإلكتروني</string>
   <string name="auth_button_continueAsGuest">المتابعة كضيف</string>
   <string name="auth_divider_or">أو</string>

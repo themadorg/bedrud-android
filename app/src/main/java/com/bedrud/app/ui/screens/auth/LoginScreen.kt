@@ -1,5 +1,6 @@
 package com.bedrud.app.ui.screens.auth
 
+import androidx.annotation.StringRes
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
@@ -81,6 +82,14 @@ private val OAuthOptions = listOf(
     OAuthOption(OAuthLoginHandler.Provider.GITHUB, R.drawable.ic_oauth_github, "GitHub", tinted = true),
     OAuthOption(OAuthLoginHandler.Provider.TWITTER, R.drawable.ic_oauth_x, "X", tinted = true)
 )
+
+/**
+ * The hub's subtitle. It offers continuing as a guest only on a server that allows it: on one that
+ * does not, the words above the buttons would promise what the greyed guest button below refuses.
+ */
+@StringRes
+internal fun hubSubtitle(guestAllowed: Boolean): Int =
+    if (guestAllowed) R.string.auth_subtitle_hubChoose else R.string.auth_subtitle_hubSignIn
 
 /**
  * One sign-in method's full-width button. When the server has turned the method off
@@ -221,7 +230,7 @@ fun LoginScreen(
     AuthScreenScaffold(
         snackbarHostState = snackbarHostState,
         activeInstance = activeInstance,
-        subtitle = stringResource(R.string.auth_subtitle_hubChoose),
+        subtitle = stringResource(hubSubtitle(guestAllowed = guestEnabled)),
         onBack = onBack,
         backEnabled = !isBusy,
     ) {

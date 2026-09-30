@@ -23,6 +23,7 @@
   <string name="auth_title_createAccount">Konto erstellen</string>
   <string name="auth_error_passwordMismatch">Passwörter stimmen nicht überein</string>
   <string name="auth_subtitle_hubChoose">Melden Sie sich bei Ihrem Konto an oder fahren Sie als Gast fort.</string>
+  <string name="auth_subtitle_hubSignIn">Melden Sie sich bei Ihrem Konto an.</string>
   <string name="auth_button_signInWithEmail">Mit E-Mail anmelden</string>
   <string name="auth_button_continueAsGuest">Als Gast fortfahren</string>
   <string name="auth_divider_or">oder</string>

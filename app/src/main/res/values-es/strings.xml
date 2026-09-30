@@ -23,6 +23,7 @@
   <string name="auth_title_createAccount">Crear cuenta</string>
   <string name="auth_error_passwordMismatch">Las contraseñas no coinciden</string>
   <string name="auth_subtitle_hubChoose">Inicia sesión en tu cuenta o continúa como invitado.</string>
+  <string name="auth_subtitle_hubSignIn">Inicia sesión en tu cuenta.</string>
   <string name="auth_button_signInWithEmail">Iniciar sesión con correo</string>
   <string name="auth_button_continueAsGuest">Continuar como invitado</string>
   <string name="auth_divider_or">o</string>

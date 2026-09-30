@@ -23,6 +23,7 @@
   <string name="auth_title_createAccount">Créer un compte</string>
   <string name="auth_error_passwordMismatch">Les mots de passe ne correspondent pas</string>
   <string name="auth_subtitle_hubChoose">Connectez-vous à votre compte ou continuez en tant qu’invité.</string>
+  <string name="auth_subtitle_hubSignIn">Connectez-vous à votre compte.</string>
   <string name="auth_button_signInWithEmail">Se connecter avec un e-mail</string>
   <string name="auth_button_continueAsGuest">Continuer en tant qu’invité</string>
   <string name="auth_divider_or">ou</string>
