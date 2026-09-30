@@ -247,6 +247,10 @@
   <string name="settings_button_changePassword">Сменить пароль</string>
   <string name="settings_password_changeSuccess">Пароль успешно изменён</string>
   <string name="settings_password_changeFailed">Не удалось изменить пароль</string>
+  <string name="settings_password_setIntro">Вы входите с помощью ключа. Задайте пароль, чтобы входить и по эл. почте.</string>
+  <string name="settings_button_setPassword">Задать пароль</string>
+  <string name="settings_password_setSuccess">Пароль успешно задан</string>
+  <string name="settings_password_setFailed">Не удалось задать пароль</string>
   <string name="settings_section_about">О приложении</string>
   <string name="settings_label_version">Версия</string>
   <string name="settings_label_build">Сборка</string>

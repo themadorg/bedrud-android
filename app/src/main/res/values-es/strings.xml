@@ -242,6 +242,10 @@
   <string name="settings_button_changePassword">Cambiar contraseña</string>
   <string name="settings_password_changeSuccess">Contraseña cambiada correctamente</string>
   <string name="settings_password_changeFailed">No se pudo cambiar la contraseña</string>
+  <string name="settings_password_setIntro">Inicias sesión con una passkey. Establece una contraseña para iniciar sesión también con tu correo electrónico.</string>
+  <string name="settings_button_setPassword">Establecer contraseña</string>
+  <string name="settings_password_setSuccess">Contraseña establecida correctamente</string>
+  <string name="settings_password_setFailed">No se pudo establecer la contraseña</string>
   <string name="settings_section_about">Acerca de</string>
   <string name="settings_label_version">Versión</string>
   <string name="settings_label_build">Compilación</string>

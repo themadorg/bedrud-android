@@ -238,6 +238,10 @@
   <string name="settings_button_changePassword">パスワードを変更</string>
   <string name="settings_password_changeSuccess">パスワードを変更しました</string>
   <string name="settings_password_changeFailed">パスワードの変更に失敗しました</string>
+  <string name="settings_password_setIntro">パスキーでサインインしています。パスワードを設定すると、メールアドレスでもサインインできます。</string>
+  <string name="settings_button_setPassword">パスワードを設定</string>
+  <string name="settings_password_setSuccess">パスワードを設定しました</string>
+  <string name="settings_password_setFailed">パスワードの設定に失敗しました</string>
   <string name="settings_section_about">このアプリについて</string>
   <string name="settings_label_version">バージョン</string>
   <string name="settings_label_build">ビルド</string>

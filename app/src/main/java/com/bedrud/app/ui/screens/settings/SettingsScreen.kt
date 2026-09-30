@@ -86,7 +86,7 @@ private fun AppLanguage.displayName(): String = labelResId?.let { stringResource
 @Composable
 private fun signInMethodLabel(method: SignInMethod): String = when (method) {
     SignInMethod.Email -> stringResource(R.string.settings_provider_email)
-    SignInMethod.Passkey -> stringResource(R.string.settings_provider_passkey)
+    is SignInMethod.Passkey -> stringResource(R.string.settings_provider_passkey)
     SignInMethod.Guest -> stringResource(R.string.settings_provider_guest)
     is SignInMethod.Provider -> method.name
 }
@@ -118,7 +118,7 @@ fun SettingsContent(
     val authApi = instanceManager.authApi.collectAsState().value
     val authManager = instanceManager.authManager.collectAsState().value
     val currentUser by (authManager?.currentUser ?: kotlinx.coroutines.flow.MutableStateFlow(null)).collectAsState()
-    val signInMethod = signInMethodOf(currentUser?.provider)
+    val signInMethod = signInMethodOf(currentUser?.provider, currentUser?.passwordChangedAt)
 
     // Settings shows the account as the server has it now, not as it was stored at sign-in: a
     // record stored by an older version of the app lacks fields, and one changed on another device
@@ -331,23 +331,33 @@ fun SettingsContent(
                 }
             }
 
-            // Change Password
+            // Password: changed, or set for the first time
             BedrudOutlinedCard(modifier = SettingsCardModifier) {
                 Column(modifier = Modifier.padding(Dimens.cardPadding)) {
                     CardSectionHeader(stringResource(R.string.settings_section_security))
                     Spacer(modifier = Modifier.height(Dimens.space12))
 
-                    if (!signInMethod.hasPassword) {
+                    if (!signInMethod.canHavePassword) {
                         Text(passwordUnavailableMessage(signInMethod),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant)
                     } else {
-                        BedrudPasswordField(
-                            value = currentPassword,
-                            onValueChange = { currentPassword = it },
-                            label = stringResource(R.string.settings_label_currentPassword)
-                        )
-                        Spacer(modifier = Modifier.height(Dimens.space8))
+                        // A passkey account that never set a password has none to confirm, and the
+                        // server asks for none, so the form sets a first one instead.
+                        val settingFirstPassword = !signInMethod.hasPassword
+                        if (settingFirstPassword) {
+                            Text(stringResource(R.string.settings_password_setIntro),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Spacer(modifier = Modifier.height(Dimens.space12))
+                        } else {
+                            BedrudPasswordField(
+                                value = currentPassword,
+                                onValueChange = { currentPassword = it },
+                                label = stringResource(R.string.settings_label_currentPassword)
+                            )
+                            Spacer(modifier = Modifier.height(Dimens.space8))
+                        }
                         BedrudPasswordField(
                             value = newPassword,
                             onValueChange = { newPassword = it },
@@ -363,10 +373,19 @@ fun SettingsContent(
                         val passwordTooShortMessage =
                             stringResource(R.string.auth_hint_passwordMinLength, PasswordPolicy.MIN_LENGTH)
                         val passwordMismatchMessage = stringResource(R.string.auth_error_passwordMismatch)
-                        val passwordChangedMessage = stringResource(R.string.settings_password_changeSuccess)
-                        val passwordChangeFailedMessage = stringResource(R.string.settings_password_changeFailed)
+                        val passwordSavedMessage = stringResource(
+                            if (settingFirstPassword) R.string.settings_password_setSuccess
+                            else R.string.settings_password_changeSuccess
+                        )
+                        val passwordSaveFailedMessage = stringResource(
+                            if (settingFirstPassword) R.string.settings_password_setFailed
+                            else R.string.settings_password_changeFailed
+                        )
                         BedrudButton(
-                            text = stringResource(R.string.settings_button_changePassword),
+                            text = stringResource(
+                                if (settingFirstPassword) R.string.settings_button_setPassword
+                                else R.string.settings_button_changePassword
+                            ),
                             onClick = {
                                 when {
                                     !PasswordPolicy.meetsMinLength(newPassword) -> scope.launch {
@@ -377,25 +396,29 @@ fun SettingsContent(
                                     }
                                     else -> scope.launch {
                                         val api = authApi ?: run {
-                                            snackbarHostState.showSnackbar(passwordChangeFailedMessage)
+                                            snackbarHostState.showSnackbar(passwordSaveFailedMessage)
                                             return@launch
                                         }
+                                        // Text typed as a current password before the account was
+                                        // found to have none is not sent along.
+                                        val confirmingPassword = if (settingFirstPassword) "" else currentPassword
                                         val changed = apiAction(
-                                            passwordChangeFailedMessage,
+                                            passwordSaveFailedMessage,
                                             { snackbarHostState.showSnackbar(it) }
                                         ) {
-                                            api.changePassword(ChangePasswordRequest(currentPassword, newPassword))
+                                            api.changePassword(ChangePasswordRequest(confirmingPassword, newPassword))
                                         }
                                         if (changed) {
                                             currentPassword = ""
                                             newPassword = ""
                                             confirmPassword = ""
-                                            snackbarHostState.showSnackbar(passwordChangedMessage)
+                                            snackbarHostState.showSnackbar(passwordSavedMessage)
                                         }
                                     }
                                 }
                             },
-                            enabled = currentPassword.isNotBlank() && newPassword.isNotBlank() && confirmPassword.isNotBlank(),
+                            enabled = (settingFirstPassword || currentPassword.isNotBlank()) &&
+                                newPassword.isNotBlank() && confirmPassword.isNotBlank(),
                             modifier = Modifier.fillMaxWidth()
                         )
                     }
