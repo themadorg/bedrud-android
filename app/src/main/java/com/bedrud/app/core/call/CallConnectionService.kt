@@ -145,6 +145,9 @@ class CallConnectionService : ConnectionService() {
             onDisconnect()
         }
 
+        // Mute travels one way: Telecom tells the connection when a headset or car mutes the call,
+        // but a self-managed Connection has no setter to tell Telecom back, so the app's own mic
+        // toggles are not reported to it.
         override fun onMuteStateChanged(isMuted: Boolean) {
             muteListener?.invoke(isMuted)
         }
@@ -261,15 +264,6 @@ class CallConnectionService : ConnectionService() {
             }
             activeConnection = null
             pendingRoute = null
-        }
-
-        fun updateMuteState(muted: Boolean) {
-            Log.d(TAG, "updateMuteState muted=$muted activeConnection=${activeConnection != null}")
-            try {
-                activeConnection?.setActive()
-            } catch (e: Exception) {
-                Log.e(TAG, "Failed to update mute state", e)
-            }
         }
 
         /**
