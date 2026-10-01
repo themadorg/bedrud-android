@@ -77,8 +77,20 @@ app/src/main/java/com/bedrud/app/
 ```
 
 **Navigation routes** in `Routes` object, `MainActivity.kt`:
-`ADD_INSTANCE → LOGIN → {EMAIL_LOGIN, REGISTER} → MAIN (bottom nav) → MEETING/{roomName}`
+`ADD_INSTANCE → LOGIN → {EMAIL_LOGIN, REGISTER} → MAIN (bottom nav) → {MEETING/{roomName}, LICENSES}`
 (LOGIN is the sign-in hub: email/password opens EMAIL_LOGIN, passkey + continue-as-guest happen inline. EMAIL_LOGIN also offers password recovery — "Forgot password?" requests a reset email via `auth/forgot-password`; the reset link itself is completed on the server's web page. REGISTER is the account-creation form, reached from the hub's "No account yet? Sign up" prompt (shown only when the server's `registrationEnabled` is set); it posts to `auth/register` and, on success, immediately signs the new account in.)
+
+LICENSES is the Open-source licenses screen, reached from the last row of Settings' About card. Its
+list is generated, not written: the AboutLibraries Gradle plugin reads every runtime dependency's
+license into `R.raw.aboutlibraries` at build time, so a new library appears without anyone adding
+it. The bundled fonts are files rather than dependencies, so they are added by hand in
+`app/aboutlibraries/`: `libraries/` names each font and `licenses/` holds each font's own `OFL.txt`,
+copyright line included, exactly as its project publishes it. A font added to `res/font` needs an
+entry there and a paragraph in `NOTICE`. The screen opens on the main projects (`MainProjects` in
+`LicensesScreen.kt`: LiveKit, WebRTC, Compose Material 3 and the two fonts) with an "All libraries"
+row under them that opens the rest. The rest is folded away, never dropped: most of those
+libraries are Apache 2.0, which asks for its licence to travel with every copy. Licence texts stay in English in every language and run
+left to right in an RTL one; only the row's label and the dialog's button are translated.
 
 No ViewModels. State in `MutableStateFlow` on manager classes (RoomManager, AuthManager, InstanceManager) and screen-level stores (SettingsStore). Collected in composables via `collectAsState()`.
 
