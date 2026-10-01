@@ -55,7 +55,7 @@ app/src/main/java/com/bedrud/app/
 ├── BedrudApplication.kt        Koin init + instance migration
 ├── MainActivity.kt             NavHost, routes, deep links, PiP
 ├── core/
-│   ├── di/AppModule.kt         Koin module (4 singletons)
+│   ├── di/AppModule.kt         Koin module: the app-wide singletons
 │   ├── instance/               Multi-instance: InstanceStore → InstanceManager
 │   ├── auth/                   AuthManager (encrypted prefs), PasskeyManager, OAuthLoginHandler
 │   ├── api/                    Retrofit interfaces: AuthApi, RoomApi, AdminApi + ApiClientFactory
