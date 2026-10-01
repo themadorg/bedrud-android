@@ -122,6 +122,40 @@ internal fun SignInMethodButton(
 }
 
 /**
+ * The guest way in: a name field and the button that joins under that name. [enabled] is false
+ * while another sign-in is in flight; the button also waits for a name of [MinGuestNameLength].
+ */
+@Composable
+internal fun GuestSignIn(
+    name: String,
+    onNameChange: (String) -> Unit,
+    serverAllows: Boolean,
+    enabled: Boolean,
+    loading: Boolean,
+    onContinue: () -> Unit,
+) {
+    BedrudTextField(
+        value = name,
+        onValueChange = onNameChange,
+        label = stringResource(R.string.auth_label_displayName),
+        placeholder = stringResource(R.string.auth_placeholder_displayName),
+        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Go),
+        keyboardActions = KeyboardActions(onGo = { onContinue() }),
+        enabled = enabled && serverAllows
+    )
+    Spacer(Modifier.height(Dimens.space12))
+    SignInMethodButton(
+        label = stringResource(R.string.auth_button_continueAsGuest),
+        offLabel = stringResource(R.string.auth_button_guestOff),
+        serverAllows = serverAllows,
+        enabled = enabled && name.trim().length >= MinGuestNameLength,
+        loading = loading,
+        variant = BedrudButtonVariant.TONAL,
+        onClick = onContinue,
+    )
+}
+
+/**
  * Sign-in landing / hub for the active server. Presents the ways in as peer choices — email &
  * password (opens a dedicated form), passkey (one tap), OAuth providers, or continue as a guest
  * (name inline) — plus a sign-up link. Which methods appear and are enabled is driven by the
@@ -304,27 +338,16 @@ fun LoginScreen(
         Spacer(Modifier.height(Dimens.space24))
 
         // ── Guest sign-in ──
-        BedrudTextField(
-            value = guestName,
-            onValueChange = {
+        GuestSignIn(
+            name = guestName,
+            onNameChange = {
                 guestName = it
                 errorMessage = null
             },
-            label = stringResource(R.string.auth_label_displayName),
-            placeholder = stringResource(R.string.auth_placeholder_displayName),
-            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Go),
-            keyboardActions = KeyboardActions(onGo = { continueAsGuest() }),
-            enabled = !isBusy && guestEnabled
-        )
-        Spacer(Modifier.height(Dimens.space12))
-        SignInMethodButton(
-            label = stringResource(R.string.auth_button_continueAsGuest),
-            offLabel = stringResource(R.string.auth_button_guestOff),
             serverAllows = guestEnabled,
-            enabled = !isBusy && guestName.trim().length >= MinGuestNameLength,
+            enabled = !isBusy,
             loading = loadingAction == HubAction.GUEST,
-            variant = BedrudButtonVariant.TONAL,
-            onClick = { continueAsGuest() },
+            onContinue = { continueAsGuest() },
         )
 
         Spacer(Modifier.height(Dimens.space24))
