@@ -348,8 +348,16 @@ Every sheet in the app goes through **`BedrudBottomSheet`** so they share one co
 handle, one shape, one set of insets, and one gutter. Those are **fixed, not defaulted** — the
 component takes no colour, shape or state parameters at all:
 
-- **Material's drag handle**, not a hand-drawn bar. A bare `Box` can match the 32×4dp look but
-  carries none of the accessibility semantics or the expanded touch target.
+- **`BedrudSheetHandle`**, the drag handle every sheet wears, the chat sheet included. It draws
+  M3's 32×4dp bar centred in a 48dp-tall touch target (`Dimens.minTouchTarget`), as M3's own
+  handle does. It replaces `BottomSheetDefaults.DragHandle`, whose ripple splashed a
+  rectangle across its whole area and whose "Drag Handle" label named the widget rather than its
+  action. A handle with somewhere to go when tapped (the chat sheet toggles its height) takes
+  `onClick` and a label saying what the tap does; a single-height sheet's handle takes neither, and
+  is dragged like the rest of the sheet. The call's controls panel draws the same bar in a 16dp
+  tap strip of its own instead, 8dp of it above the bar: a 48dp handle grew that bar from 72dp to
+  108dp and covered the bottom of the video. Its options also open with a swipe up anywhere on the
+  bar.
 - **`BedrudShapeTokens.sheetTop`**, which is already M3's 28dp `extraLarge` top corners — the token
   names the default rather than departing from it.
 - **`BottomSheetDefaults.ContainerColor`** (`surfaceContainerLow`), with no override available.
@@ -408,23 +416,21 @@ reconnecting ring — one state, one colour. Hairlines inside the call's menus a
   a fullscreen tile is open, so state held inside it would restart on the way back and announce a
   connection made long ago.
 - **Controls panel** (`MeetingControlsPanel`): a floating pill — camera, screen share, mic, chat,
-  hang-up — with a **drag handle** on top. Tapping the handle, or swiping up anywhere on it, grows
-  the pill into the room options; the handle, the scrim, Back and a swipe down all put it away.
-  There is no "⋯" button.
+  hang-up — with a **drag handle** on top. Tapping the handle, or swiping up anywhere on the bar,
+  opens the room options. There is no "⋯" button.
 
-  **The one place in the app that is not a `BedrudBottomSheet`**, deliberately. As a sheet, the
-  options arrived as a *second* surface carrying its own copy of the controls, sliding up over the
-  real bar and settling higher: the same five buttons existed twice at two elevations, the row your
-  thumb rested on jumped, and at the end of the dismissal both were briefly on screen at once.
-  Here there is one surface, anchored to the bottom, so the options unfold **above** the controls
-  and the controls never move — the pill just becomes taller. That anchoring is why the panel reads
-  bottom-up: the row you were already touching stays its floor.
+  The options are an ordinary **`BedrudBottomSheet`** titled "More options", like every other sheet,
+  and are put away the way every sheet is: dragged down, the scrim, or Back. They used to grow out
+  of the pill instead, as the one surface in the app that was not a sheet, and read as custom
+  beside the others: floating, outlined, rounded on all sides, untitled, with its own row inset.
+  The sheet carries **only the options, never a copy of the call controls**. An earlier sheet did,
+  and the same five buttons then sat twice on screen at two elevations; that, not the sheet itself,
+  was what went wrong.
 
-  It also owns its motion, which a sheet could not. `ModalBottomSheet` hides on Material's
-  `FastEffects` — measured on a real device at 117 ms, starting at full velocity with no ease-in,
-  against a 250 ms eased open — so it left twice as fast as it arrived and felt yanked away.
-  `MotionScheme` is `internal` in material3 1.4.0, so the timing cannot be themed; the panel uses
-  `Motion.meetingOptionsExpandMs` / `meetingOptionsCollapseMs` instead, both eased at both ends.
+  The pill version also owned its motion, because `ModalBottomSheet` hides on Material's
+  `FastEffects` (measured at 117 ms with no ease-in, against a 250 ms eased open) and
+  `MotionScheme` is `internal` in material3 1.4.0. The options sheet now leaves at that same speed
+  as every other sheet in the app; consistency with them was preferred over its own timing.
 - **Grid** (`MeetingVideoGrid`): the local participant **always** has a tile, camera on or off —
   it is where the speaking ring proves the room is receiving you, so it cannot be conditional.
   (This reverses the original "self-tile only while the camera is on" rule from #104.) There is
@@ -489,8 +495,10 @@ reconnecting ring — one state, one colour. Hairlines inside the call's menus a
   place the content overflowed by exactly one handle and took the input dock off the screen with it.
   The composer is **built on the controls bar's own shell** — `MeetingBarSurface`, the shared
   composable that owns the margin, corner, fill, hairline and lift of every floating bar over the
-  call — with the same 48dp control band on the same 12dp paddings, so both bars measure 72dp and
-  their bottom edges land on the same pixel. The two sit in the same place on screen and swap with
+  call — with the same 48dp control band on the same 12dp side and bottom paddings, so their
+  bottom edges land on the same pixel. The composer is 72dp; the controls bar is 76dp, because its
+  top is the handle's 16dp tap strip rather than a 12dp padding, so its top edge moves 4dp when
+  the two swap. That was traded for a handle a finger can find. The two sit in the same place on screen and swap with
   each other, so they are the same object with different contents, and they read as the same
   sentence: secondary controls, a pill middle, a pill primary. They drifted apart once (12dp lower,
   16dp shorter, flat, bottom-hung text) precisely because each kept its own copies of these values;
@@ -627,12 +635,9 @@ reconnecting ring — one state, one colour. Hairlines inside the call's menus a
   reacted to may well predate this device's join. Nothing is re-synced on join, so a reaction or a
   vote cast before arriving is one this device never sees; the other clients have the same hole, and
   closing it means changing the shared protocol rather than this app.
-- **More options** (`MeetingControlsPanel`): not a sheet at all — the controls bar itself grows to
-  hold them, so there is no second copy of the row to style and nothing to restyle mid-drag. The
-  options sit above the controls, which stay exactly where they were. Rows and controls share the
-  one surface with spacing between them rather than a rule: a divider inside a container this small
-  would cut the bar in half rather than group anything. See **Controls panel** under Meeting chrome for why this one screen
-  leaves the sheet standard. Deafen uses a **crossed headphone**, matching the badge on the tiles —
+- **More options** (`MeetingControlsPanel`): a standard `BedrudBottomSheet` titled "More options",
+  opened from the controls bar's handle, holding the options and none of the call controls. See
+  **Controls panel** under Meeting chrome for why it is a sheet again. Deafen uses a **crossed headphone**, matching the badge on the tiles —
   deafening is about what reaches your ears, where a speaker icon says something about the room.
 - **Deafened badge**: drawn on **whoever is deafened**, not only on your own tile. Deafen is part
   of the room's shared presence — every client announces it and reads it back — so a person who
@@ -754,12 +759,11 @@ reconnecting ring — one state, one colour. Hairlines inside the call's menus a
   the slot back. It fires again after a reconnect, which is when it is needed most.
 - **Sheets**: long-press a tile → `MeetingParticipantSheet` (per-viewer volume slider, local
   mute / don't-watch / pin / fullscreen; admins get kick/ban plus the dev-hinted room mute /
-  room deafen / chat mute, #108). The top-bar invite entry, the "+N" tile and the more-options
-  "Invite a friend" row all open `MeetingInviteSheet` (participant avatar grid, share targets —
-  system share, copy, inline QR, email, Telegram, WhatsApp — and the raw link). The controls
-  bar's handle expands it into `MeetingControlsPanel`, which keeps the five call controls at its
-  foot and lists deafen, hide-all-cameras (viewer-side data saver), audio settings, the
-  dev-hinted noise suppression (#106), invite, and admin room settings above them. The output picker uses
+  room deafen / chat mute, #108). The top-bar invite entry and the "+N" tile open
+  `MeetingInviteSheet` (participant avatar grid, share targets — system share, copy, inline QR,
+  email, Telegram, WhatsApp — and the raw link). The controls bar's handle opens the "More options"
+  sheet in `MeetingControlsPanel`: deafen, hide-all-cameras (viewer-side data saver), audio
+  settings, the dev-hinted noise suppression (#106), and admin room settings. The output picker uses
   trailing radios. `MeetingRecordingBanner` and the dot that opened it are **switched off** behind
   `RecordingIndicatorEnabled` (#107): the server has no egress client and registers no recording
   routes, so nothing in the app can be recording, and a permanently lit privacy light above a
