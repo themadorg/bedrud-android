@@ -19,6 +19,11 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.Stable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -28,6 +33,7 @@ import com.bedrud.app.ui.theme.Alpha
 import com.bedrud.app.ui.theme.BedrudShapeTokens
 import com.bedrud.app.ui.theme.Dimens
 import com.bedrud.app.ui.theme.typeCentered
+import kotlinx.coroutines.launch
 
 /**
  * The app's bottom sheet. Every sheet in the app is one of these.
@@ -49,15 +55,31 @@ import com.bedrud.app.ui.theme.typeCentered
  * experimental Material type in the signature, forcing `@OptIn` onto every screen that shows a
  * sheet — re-leaking the Material detail this component exists to contain. Sheets are dismissed
  * the way the rest of the app dismisses them: the caller stops composing them.
+ *
+ * A sheet that closes itself — a picker after a pick, an action row that has done its job — calls
+ * [BedrudSheetScope.dismiss] rather than its own `onDismiss`. Stopping composition directly removes
+ * the sheet in one frame, so it vanished instead of sliding away the way a drag or the scrim puts
+ * it away; `dismiss` slides it down first and then calls [onDismiss], M3's documented order.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BedrudBottomSheet(
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
-    content: @Composable ColumnScope.() -> Unit,
+    content: @Composable BedrudSheetScope.() -> Unit,
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val coroutineScope = rememberCoroutineScope()
+    val currentOnDismiss by rememberUpdatedState(onDismiss)
+    val slideAway = remember(sheetState, coroutineScope) {
+        {
+            coroutineScope.launch { sheetState.hide() }.invokeOnCompletion {
+                // A drag that catches the sheet on its way down leaves it open, and open it stays.
+                if (!sheetState.isVisible) currentOnDismiss()
+            }
+            Unit
+        }
+    }
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -78,9 +100,22 @@ fun BedrudBottomSheet(
                 .padding(horizontal = Dimens.sheetPadding)
                 .padding(bottom = Dimens.space24),
             verticalArrangement = Arrangement.spacedBy(Dimens.space4),
-            content = content,
-        )
+        ) {
+            val columnScope = this
+            remember(columnScope, slideAway) { BedrudSheetScope(columnScope, slideAway) }.content()
+        }
     }
+}
+
+/** What a [BedrudBottomSheet]'s content can do besides lay itself out in a column. */
+@Stable
+class BedrudSheetScope internal constructor(
+    columnScope: ColumnScope,
+    private val slideAway: () -> Unit,
+) : ColumnScope by columnScope {
+
+    /** Slides the sheet down, then calls its `onDismiss`. */
+    fun dismiss() = slideAway()
 }
 
 /**

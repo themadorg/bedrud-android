@@ -61,7 +61,7 @@ fun InstanceSwitcherSheet(
                     isActive = instance.id == activeId,
                     onSelect = {
                         instanceManager.switchTo(instance.id)
-                        onDismiss()
+                        dismiss()
                     }
                 )
             }
@@ -76,7 +76,7 @@ fun InstanceSwitcherSheet(
             title = stringResource(R.string.instance_button_addServer),
             contentColor = MaterialTheme.colorScheme.primary,
             onClick = {
-                onDismiss()
+                dismiss()
                 onAddInstance()
             }
         )

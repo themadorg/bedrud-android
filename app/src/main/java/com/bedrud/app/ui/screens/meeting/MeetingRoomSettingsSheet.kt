@@ -82,7 +82,7 @@ fun MeetingRoomSettingsSheet(
                         }
                         if (saved) {
                             onSaved(localIsPublic, newSettings)
-                            onDismiss()
+                            dismiss()
                         }
                     } finally {
                         isSaving = false
