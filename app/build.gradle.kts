@@ -4,6 +4,10 @@ plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.plugin.compose")
     id("org.jetbrains.kotlin.plugin.serialization")
+    // Writes every runtime dependency's licence into R.raw.aboutlibraries at build time, for the
+    // in-app Licenses screen. Read from the dependency graph, so a new library is listed without
+    // anyone remembering to add it.
+    id("com.mikepenz.aboutlibraries.plugin.android")
 }
 
 val keystorePropertiesFile = rootProject.file("keystore.properties")
@@ -211,6 +215,15 @@ kotlin {
     jvmToolchain(17)
 }
 
+// The bundled fonts are files in res/font rather than dependencies, so the plugin cannot find
+// them. aboutlibraries/ adds them by hand: libraries/ names each font, and licenses/ carries the
+// font's own OFL.txt, copyright line included, exactly as its project publishes it.
+aboutLibraries {
+    collect {
+        configPath = file("aboutlibraries")
+    }
+}
+
 dependencies {
     // Compose BOM
     val composeBom = platform("androidx.compose:compose-bom:2026.09.00")
@@ -264,6 +277,9 @@ dependencies {
     // (Play Services' own code scanner needs its module fetched over network on first use, which
     // is unreliable on restricted networks -- see AddInstanceScreen.kt for what was tried first)
     implementation("com.journeyapps:zxing-android-embedded:4.3.0")
+
+    // Licenses screen -- draws the list the AboutLibraries plugin above generates
+    implementation("com.mikepenz:aboutlibraries-compose-m3:15.2.0")
 
     // Testing
     testImplementation("junit:junit:4.13.2")
