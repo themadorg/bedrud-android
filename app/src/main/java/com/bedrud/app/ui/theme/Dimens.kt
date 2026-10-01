@@ -106,7 +106,7 @@ object Dimens {
     // centre (wide tail left, sharp tip right, measured on a device capture), so a geometrically
     // centred plane reads as sitting off towards the tail. Half the imbalance, towards the tip.
     val meetingSendIconNudge = 1.5.dp
-    val meetingHandleWidth = 32.dp       // controls-bar drag handle (M3 sheet handle metrics)
+    val meetingHandleWidth = 32.dp       // sheet and controls-bar handle (M3 sheet handle metrics)
     val meetingHandleHeight = 4.dp
     // The mic pill's status arc. Thinner than a normal strong border: the arc travels around the
     // pill, and movement already draws the eye — weight on top of it only shouts over chrome that
