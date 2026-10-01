@@ -369,6 +369,7 @@
   <string name="meeting_sheet_disableAllCamerasDescription">Deja de mostrar el vídeo entrante, solo para ti</string>
   <string name="meeting_sheet_noiseSuppression">Supresión de ruido</string>
   <string name="meeting_sheet_audioSettings">Ajustes de audio</string>
+  <string name="meeting_sheet_moreOptions">Más opciones</string>
   <string name="meeting_recording_title">Grabación de sala activa</string>
   <string name="meeting_recording_message">En esta sala se graban todos los chats, cámaras, pantallas compartidas y audio.</string>
   <string name="meeting_recording_acknowledge">Entendido</string>

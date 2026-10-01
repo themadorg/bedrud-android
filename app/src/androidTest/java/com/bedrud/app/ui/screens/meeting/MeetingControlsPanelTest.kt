@@ -2,8 +2,10 @@ package com.bedrud.app.ui.screens.meeting
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.ui.test.assertHeightIsAtLeast
+import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
+import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.unit.dp
 import androidx.test.platform.app.InstrumentationRegistry
@@ -23,12 +25,16 @@ class MeetingControlsPanelTest {
 
     private val moreOptions = context.getString(R.string.meeting_contentDescription_moreOptions)
 
-    private fun showPanel(onExpandedChange: (Boolean) -> Unit = {}) {
+    private fun showPanel(
+        expanded: Boolean = false,
+        onExpandedChange: (Boolean) -> Unit = {},
+        onOpenAudioSettings: () -> Unit = {},
+    ) {
         compose.setContent {
             BedrudTheme {
                 Box {
                     MeetingControlsPanel(
-                        expanded = false,
+                        expanded = expanded,
                         onExpandedChange = onExpandedChange,
                         isMicEnabled = true,
                         isCameraEnabled = false,
@@ -45,7 +51,7 @@ class MeetingControlsPanelTest {
                         onEndCall = {},
                         onToggleDeafen = {},
                         onToggleHideAllIncomingVideo = {},
-                        onOpenAudioSettings = {},
+                        onOpenAudioSettings = onOpenAudioSettings,
                         onOpenNoiseSuppression = {},
                         onOpenRoomSettings = {},
                     )
@@ -70,6 +76,31 @@ class MeetingControlsPanelTest {
         compose.onNodeWithContentDescription(moreOptions).performClick()
 
         assertEquals(true, requested)
+    }
+
+    /** The options open as a sheet like every other, titled, rather than as a grown pill. */
+    @Test
+    fun shouldShowOptionsAsTitledSheetWhenExpanded() {
+        showPanel(expanded = true)
+
+        compose.onNodeWithText(context.getString(R.string.meeting_sheet_moreOptions))
+            .assertIsDisplayed()
+    }
+
+    @Test
+    fun shouldCloseOptionsWhenOneLeadsElsewhere() {
+        var requested: Boolean? = null
+        var openedAudioSettings = false
+        showPanel(
+            expanded = true,
+            onExpandedChange = { requested = it },
+            onOpenAudioSettings = { openedAudioSettings = true },
+        )
+
+        compose.onNodeWithText(context.getString(R.string.meeting_sheet_audioSettings)).performClick()
+
+        assertEquals(false, requested)
+        assertEquals(true, openedAudioSettings)
     }
 
     private companion object {

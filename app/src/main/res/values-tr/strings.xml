@@ -368,6 +368,7 @@
   <string name="meeting_sheet_disableAllCamerasDescription">Gelen videoyu yalnızca senin için gizler</string>
   <string name="meeting_sheet_noiseSuppression">Gürültü bastırma</string>
   <string name="meeting_sheet_audioSettings">Ses ayarları</string>
+  <string name="meeting_sheet_moreOptions">Diğer seçenekler</string>
   <string name="meeting_recording_title">Oda kaydı etkin</string>
   <string name="meeting_recording_message">Bu odada tüm sohbetler, kameralar, ekran paylaşımları ve ses kaydedilir.</string>
   <string name="meeting_recording_acknowledge">Anladım</string>

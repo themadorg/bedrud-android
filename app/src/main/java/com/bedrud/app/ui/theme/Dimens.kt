@@ -112,7 +112,7 @@ object Dimens {
     // pill, and movement already draws the eye — weight on top of it only shouts over chrome that
     // is otherwise tonal surfaces and hairlines.
     val meetingMicRingStroke = 1.dp
-    val meetingHandleSwipeThreshold = 24.dp // upward drag distance that opens the options sheet
+    val meetingHandleSwipeThreshold = 24.dp // upward drag on the controls bar that opens the options sheet
     val meetingFullscreenAvatar = 96.dp  // avatar circle when a participant is viewed fullscreen
     val meetingMicPillMaxWidth = 136.dp  // mic pill cap (both modes): sides never squeeze at this width
     val meetingSliderThumb = 20.dp       // compact round slider thumb (in-call sliders)

@@ -368,6 +368,7 @@
   <string name="meeting_sheet_disableAllCamerasDescription">Blendet eingehendes Video nur für dich aus</string>
   <string name="meeting_sheet_noiseSuppression">Rauschunterdrückung</string>
   <string name="meeting_sheet_audioSettings">Audioeinstellungen</string>
+  <string name="meeting_sheet_moreOptions">Weitere Optionen</string>
   <string name="meeting_recording_title">Raumaufnahme aktiv</string>
   <string name="meeting_recording_message">In diesem Raum werden alle Chats, Kameras, Bildschirmfreigaben und Audio aufgezeichnet.</string>
   <string name="meeting_recording_acknowledge">Verstanden</string>
