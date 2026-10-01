@@ -242,6 +242,9 @@
   <string name="settings_section_about">Über</string>
   <string name="settings_label_version">Version</string>
   <string name="settings_label_build">Build</string>
+  <string name="settings_label_licenses">Open-Source-Lizenzen</string>
+  <string name="settings_button_closeLicense">Schließen</string>
+  <string name="settings_label_allLibraries">Alle Bibliotheken</string>
   <string name="call_channel_name">Aktive Anrufe</string>
   <string name="call_channel_description">Benachrichtigungen über laufende Anrufe</string>
   <string name="call_action_mute">Stummschalten</string>

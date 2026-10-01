@@ -239,6 +239,9 @@
   <string name="settings_section_about">このアプリについて</string>
   <string name="settings_label_version">バージョン</string>
   <string name="settings_label_build">ビルド</string>
+  <string name="settings_label_licenses">オープンソースライセンス</string>
+  <string name="settings_button_closeLicense">閉じる</string>
+  <string name="settings_label_allLibraries">すべてのライブラリ</string>
   <string name="call_channel_name">アクティブ通話</string>
   <string name="call_channel_description">通話中通知</string>
   <string name="call_action_mute">ミュート</string>
