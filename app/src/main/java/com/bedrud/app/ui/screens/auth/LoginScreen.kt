@@ -124,6 +124,8 @@ internal fun SignInMethodButton(
 /**
  * The guest way in: a name field and the button that joins under that name. [enabled] is false
  * while another sign-in is in flight; the button also waits for a name of [MinGuestNameLength].
+ * On a server that turns guest sign-in off only the button stays, saying so: a greyed name field
+ * would still look like somewhere to type a name nothing can use.
  */
 @Composable
 internal fun GuestSignIn(
@@ -134,16 +136,18 @@ internal fun GuestSignIn(
     loading: Boolean,
     onContinue: () -> Unit,
 ) {
-    BedrudTextField(
-        value = name,
-        onValueChange = onNameChange,
-        label = stringResource(R.string.auth_label_displayName),
-        placeholder = stringResource(R.string.auth_placeholder_displayName),
-        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Go),
-        keyboardActions = KeyboardActions(onGo = { onContinue() }),
-        enabled = enabled && serverAllows
-    )
-    Spacer(Modifier.height(Dimens.space12))
+    if (serverAllows) {
+        BedrudTextField(
+            value = name,
+            onValueChange = onNameChange,
+            label = stringResource(R.string.auth_label_displayName),
+            placeholder = stringResource(R.string.auth_placeholder_displayName),
+            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Go),
+            keyboardActions = KeyboardActions(onGo = { onContinue() }),
+            enabled = enabled
+        )
+        Spacer(Modifier.height(Dimens.space12))
+    }
     SignInMethodButton(
         label = stringResource(R.string.auth_button_continueAsGuest),
         offLabel = stringResource(R.string.auth_button_guestOff),
@@ -160,9 +164,10 @@ internal fun GuestSignIn(
  * password (opens a dedicated form), passkey (one tap), OAuth providers, or continue as a guest
  * (name inline) — plus a sign-up link. Which methods appear and are enabled is driven by the
  * server's public settings ([com.bedrud.app.models.PublicSettings]); a method the server has
- * disabled is shown greyed, its button saying it is off, and OAuth shows only the providers the server
- * configured. On a failed settings fetch everything falls back to enabled so a blip never blocks
- * sign-in. The email/password form lives on its own screen; passkey and guest sign-in happen here.
+ * disabled is shown greyed, its button saying it is off (guest sign-in also loses its name field),
+ * and OAuth shows only the providers the server configured. On a failed settings fetch everything
+ * falls back to enabled so a blip never blocks sign-in. The email/password form lives on its own
+ * screen; passkey and guest sign-in happen here.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
