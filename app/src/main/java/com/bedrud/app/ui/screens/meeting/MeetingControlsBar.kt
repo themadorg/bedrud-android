@@ -197,7 +197,8 @@ internal fun MeetingCallControlsRow(
 
 /**
  * The pull-up affordance above the controls. Sized like the M3 sheet drag handle, wrapped in a
- * larger clickable area so it is also a tap target, with the more-options semantics.
+ * 16dp-tall clickable strip so it is also a tap target, with the more-options semantics. Not the
+ * sheets' 48dp: that grew the bar from 72dp to 108dp and covered the bottom of the video.
  */
 @Composable
 internal fun MeetingPanelHandle(
@@ -212,7 +213,9 @@ internal fun MeetingPanelHandle(
             .clip(BedrudShapeTokens.pill)
             .clickable(onClick = onClick)
             .padding(horizontal = Dimens.space16)
-            .padding(top = Dimens.space4, bottom = Dimens.space4)
+            // The air above the bar reaches the pill's top edge and is part of the tap strip, so
+            // a finger aimed at the bar's edge still lands on the handle.
+            .padding(top = Dimens.space8, bottom = Dimens.space4)
             .semantics { contentDescription = description },
         contentAlignment = Alignment.Center,
     ) {
