@@ -49,6 +49,7 @@ fun MeetingChatPollSheet(
 ) {
     var question by remember { mutableStateOf("") }
     val options = remember { mutableStateListOf("", "") }
+    var isSent by remember { mutableStateOf(false) }
     val poll = newPoll(question, options.toList())
 
     BedrudBottomSheet(onDismiss = onDismiss) {
@@ -108,7 +109,18 @@ fun MeetingChatPollSheet(
         BedrudButton(
             text = stringResource(R.string.meeting_chat_poll_send),
             enabled = poll != null,
-            onClick = { poll?.let(onCreate) },
+            onClick = {
+                // The sheet is still on screen while it slides away, and a second tap there would
+                // send the same poll twice. Ignored rather than disabled, so the button does not
+                // flash grey on its way out.
+                if (!isSent) {
+                    poll?.let {
+                        isSent = true
+                        onCreate(it)
+                        dismiss()
+                    }
+                }
+            },
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(top = Dimens.space4),

@@ -58,6 +58,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import org.json.JSONObject
 
 enum class ConnectionState {
@@ -132,6 +134,11 @@ class RoomManager(
     private val _isDeafened = MutableStateFlow(settingsStore.getDeafened())
     val isDeafened: StateFlow<Boolean> = _isDeafened.asStateFlow()
     private var micMutedBeforeDeafen = false
+
+    // The deafen state the mic was last brought in line with, and the lock that keeps each toggle's
+    // mic change and announcement from starting before the previous toggle's are done.
+    private var micFollowsDeafen = settingsStore.getDeafened()
+    private val deafenFollowUp = Mutex()
 
     // Who has silenced the room for themselves. Unlike a local mute this is the participant's own
     // state, announced by them, so it is the same set on every client.
@@ -885,6 +892,7 @@ class RoomManager(
         _isScreenShareEnabled.value = false
         _isDeafened.value = settingsStore.getDeafened()
         micMutedBeforeDeafen = false
+        micFollowsDeafen = _isDeafened.value
         _locallyMutedIdentities.value = emptySet()
         _deafenedIdentities.value = emptySet()
         deafenedByMetadata = emptySet()
@@ -954,6 +962,7 @@ class RoomManager(
             _isDeafened.value = false
             settingsStore.setDeafened(false)
             reapplyAllVolumes()
+            micFollowsDeafen = false
         }
         val localParticipant = _room?.localParticipant ?: return
         if (localParticipant.isMicrophoneEnabled == enabled) {
@@ -988,6 +997,7 @@ class RoomManager(
             _isDeafened.value = false
             settingsStore.setDeafened(false)
             reapplyAllVolumes()
+            micFollowsDeafen = false
         }
         setTrackEnabled(
             enabled = active,
@@ -1026,24 +1036,38 @@ class RoomManager(
         syncVoiceGate()
     }
 
-    suspend fun toggleDeafen() {
-        val deafening = !_isDeafened.value
-        settingsStore.setDeafened(deafening)
-        advertiseDeafened(deafening)
-        if (deafening) {
-            micMutedBeforeDeafen = !_isMicEnabled.value
-            _isDeafened.value = true
-            reapplyAllVolumes()
-            if (_isMicEnabled.value) {
-                setMicrophoneEnabled(false)
-            }
-        } else {
-            _isDeafened.value = false
-            reapplyAllVolumes()
-            if (!micMutedBeforeDeafen) {
+    /**
+     * Brings the mic and the room in line with deafen as it stands now, not as it stood at the tap
+     * that queued this. Taps that cancel each other out leave the mic alone, and whether the mic was
+     * already muted is read only once the previous toggle's mic change has landed; read at the tap,
+     * it would still see the mic from before that change, and the mic would stay muted on the way
+     * out of deafen.
+     */
+    private suspend fun followDeafen() {
+        val deafened = _isDeafened.value
+        if (deafened != micFollowsDeafen) {
+            if (deafened) {
+                micMutedBeforeDeafen = !_isMicEnabled.value
+                if (_isMicEnabled.value) setMicrophoneEnabled(false)
+            } else if (!micMutedBeforeDeafen) {
                 setMicrophoneEnabled(true)
             }
+            micFollowsDeafen = deafened
         }
+        advertiseDeafened(deafened)
+    }
+
+    /**
+     * Flips deafen here at once, then tells the room. The announcement used to come first, and it
+     * can stall for seconds while the outgoing connection is not up; the tap seemed to do nothing,
+     * and was lost outright if the screen that launched it went away meanwhile. The rest runs on
+     * the call's own scope, so it outlives the screen, and one toggle at a time, in tap order.
+     */
+    fun toggleDeafen() {
+        settingsStore.setDeafened(!_isDeafened.value)
+        _isDeafened.value = !_isDeafened.value
+        reapplyAllVolumes()
+        eventScope?.launch { deafenFollowUp.withLock { followDeafen() } }
     }
 
     // Muted-for-me only: does not call the server and does not affect what other participants hear.
