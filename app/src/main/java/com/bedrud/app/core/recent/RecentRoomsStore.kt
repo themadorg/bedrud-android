@@ -63,6 +63,13 @@ class RecentRoomsStore(private val prefs: SharedPreferences) {
         saveRooms(updated)
     }
 
+    /** Forgets every recent on the server [instanceId], for when that server is removed. */
+    fun removeServer(instanceId: String) {
+        val updated = _rooms.value.filterNot { it.instanceId == instanceId }
+        _rooms.value = updated
+        saveRooms(updated)
+    }
+
     fun clear() {
         _rooms.value = emptyList()
         prefs.edit().remove(KEY_ROOMS).apply()

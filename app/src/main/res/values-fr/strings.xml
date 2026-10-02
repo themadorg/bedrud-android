@@ -52,7 +52,6 @@
   <string name="auth_divider_orContinueWith">ou continuer avec</string>
   <string name="auth_hint_methodDisabled">Non activé sur ce serveur</string>
   <string name="auth_oauth_continueWithFormat">Continuer avec %1$s</string>
-  <string name="instance_title_servers">Serveurs</string>
   <string name="instance_title_addServer">Ajouter un serveur</string>
   <string name="instance_title_switchServer">Changer de serveur</string>
   <string name="instance_subtitle_connectToServer">Connectez-vous à un serveur pour commencer</string>
@@ -66,9 +65,15 @@
   <string name="instance_warning_insecure">La connexion ne sera pas chiffrée. À utiliser uniquement pour les serveurs locaux ou de développement.</string>
   <string name="instance_error_duplicate">Un serveur avec cette adresse existe déjà.</string>
   <string name="instance_button_addServer">Ajouter le serveur</string>
-  <string name="instance_status_active">Actif</string>
-  <string name="instance_empty_noServers">Aucun serveur configuré</string>
+  <string name="instance_status_inUse">Utilisé</string>
   <string name="instance_default_serverName">Serveur</string>
+  <string name="instance_button_edit">Modifier</string>
+  <string name="instance_button_done">Terminé</string>
+  <string name="instance_contentDescription_removeServer">Supprimer <xliff:g id="serverName" example="Bedrud">%1$s</xliff:g></string>
+  <string name="instance_dialog_removeTitle">Supprimer <xliff:g id="serverName" example="Bedrud">%1$s</xliff:g> ?</string>
+  <string name="instance_dialog_removeMessage">Vous en serez déconnecté sur cet appareil, et ses salles récentes seront effacées. Vous pourrez l\'ajouter à nouveau à tout moment.</string>
+  <string name="instance_dialog_removeActiveMessage">Vous utilisez ce serveur en ce moment. Vous en serez déconnecté sur cet appareil, et l\'app passera à <xliff:g id="serverName" example="Bedrud">%1$s</xliff:g>.</string>
+  <string name="instance_dialog_removeLastMessage">C\'est votre seul serveur. Vous en serez déconnecté sur cet appareil, et il vous sera demandé d\'ajouter un serveur.</string>
   <string name="instance_default_displayName" translatable="false">Bedrud</string>
   <!-- First-run server chooser -->
   <string name="instance_choice_default_title">Serveur officiel</string>
