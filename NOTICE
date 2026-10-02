@@ -16,3 +16,8 @@ Roboto is licensed under the SIL Open Font License, Version 1.1.
 
 Each font file carries its copyright notice and a link to the license in its name table. The
 license text is available at https://openfontlicense.org.
+
+The app shows the full list under Settings > About > Open-source licenses: every library it ships
+with, read from its dependencies at build time, and both fonts above with their copyright notices
+and the full text of the SIL Open Font License. The font entries live in app/aboutlibraries/; a
+font added to the app needs an entry there and a paragraph here.

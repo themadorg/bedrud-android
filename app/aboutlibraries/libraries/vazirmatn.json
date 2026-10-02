@@ -1,0 +1,16 @@
+{
+  "uniqueId": "font:vazirmatn",
+  "artifactVersion": "33.003",
+  "name": "Vazirmatn",
+  "description": "The app's typeface, in every language.",
+  "website": "https://github.com/rastikerdar/vazirmatn",
+  "developers": [
+    {
+      "name": "The Vazirmatn Project Authors",
+      "organisationUrl": "https://github.com/rastikerdar/vazirmatn"
+    }
+  ],
+  "licenses": [
+    "OFL-1.1-Vazirmatn"
+  ]
+}

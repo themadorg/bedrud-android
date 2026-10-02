@@ -250,6 +250,9 @@
   <string name="settings_section_about">О приложении</string>
   <string name="settings_label_version">Версия</string>
   <string name="settings_label_build">Сборка</string>
+  <string name="settings_label_licenses">Лицензии открытого ПО</string>
+  <string name="settings_button_closeLicense">Закрыть</string>
+  <string name="settings_label_allLibraries">Все библиотеки</string>
   <string name="call_channel_name">Активные звонки</string>
   <string name="call_channel_description">Уведомления о текущих звонках</string>
   <string name="call_action_mute">Отключить</string>
