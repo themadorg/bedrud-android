@@ -302,7 +302,6 @@
   <string name="meeting_sheet_deafen">Taub schalten</string>
   <string name="meeting_sheet_tools">Werkzeuge</string>
   <string name="meeting_sheet_report">Missbrauch melden</string>
-  <string name="meeting_contentDescription_audioSource">Audioquelle</string>
   <string name="meeting_audio_sheet_title">Audioausgabe auswählen</string>
   <string name="meeting_audio_device_speaker">Lautsprecher</string>
   <string name="meeting_audio_device_earpiece">Telefon</string>
