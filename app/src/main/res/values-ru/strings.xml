@@ -308,7 +308,6 @@
   <string name="meeting_sheet_deafen">Оглушить</string>
   <string name="meeting_sheet_tools">Инструменты</string>
   <string name="meeting_sheet_report">Сообщить о нарушении</string>
-  <string name="meeting_contentDescription_audioSource">Источник звука</string>
   <string name="meeting_audio_sheet_title">Выбор вывода звука</string>
   <string name="meeting_audio_device_speaker">Динамик</string>
   <string name="meeting_audio_device_earpiece">Телефон</string>

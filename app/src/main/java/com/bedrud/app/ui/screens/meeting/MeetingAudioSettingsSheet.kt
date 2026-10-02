@@ -304,7 +304,7 @@ fun MeetingInputModeSheet(
 
 /**
  * Noise-suppression picker. Off/Device apply on the next join (the audio device module is built
- * per connection); the richer modes stay dev-hinted until #106.
+ * per connection). Richer modes, such as RNNoise, are tracked in #106.
  */
 @Composable
 fun MeetingNoiseSuppressionSheet(

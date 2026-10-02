@@ -303,7 +303,6 @@
   <string name="meeting_sheet_deafen">Assourdir</string>
   <string name="meeting_sheet_tools">Outils</string>
   <string name="meeting_sheet_report">Signaler un abus</string>
-  <string name="meeting_contentDescription_audioSource">Source audio</string>
   <string name="meeting_audio_sheet_title">Sélectionner la sortie audio</string>
   <string name="meeting_audio_device_speaker">Haut-parleur</string>
   <string name="meeting_audio_device_earpiece">Téléphone</string>
