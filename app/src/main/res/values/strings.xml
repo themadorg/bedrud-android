@@ -233,11 +233,13 @@
   <string name="settings_label_signInMethod">Sign-in method</string>
   <string name="settings_provider_email">Email</string>
   <string name="settings_provider_passkey">Passkey</string>
+  <string name="settings_provider_guest">Guest</string>
   <string name="settings_label_role">Role</string>
   <string name="settings_role_admin">Admin</string>
   <string name="settings_role_user">User</string>
   <string name="settings_section_security">Security</string>
   <string name="settings_password_unavailable">Password change is not available for <xliff:g id="provider" example="Google">%1$s</xliff:g> sign-in.</string>
+  <string name="settings_password_unavailable_guest">Guest accounts have no password to change.</string>
   <string name="settings_label_currentPassword">Current password</string>
   <string name="settings_label_newPassword">New password</string>
   <string name="settings_label_confirmNewPassword">Confirm new password</string>

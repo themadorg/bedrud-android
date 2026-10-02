@@ -71,6 +71,12 @@ import com.bedrud.app.ui.theme.typeCentered
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 
+/**
+ * Every card spans the page. Sized to its content instead, a card holding one short sentence (the
+ * Security card for an account with no password) stands narrower than the rest.
+ */
+private val SettingsCardModifier = Modifier.fillMaxWidth()
+
 @Composable
 private fun AppLanguage.displayName(): String = labelResId?.let { stringResource(it) } ?: label
 
@@ -79,7 +85,19 @@ private fun AppLanguage.displayName(): String = labelResId?.let { stringResource
 private fun signInMethodLabel(method: SignInMethod): String = when (method) {
     SignInMethod.Email -> stringResource(R.string.settings_provider_email)
     SignInMethod.Passkey -> stringResource(R.string.settings_provider_passkey)
+    SignInMethod.Guest -> stringResource(R.string.settings_provider_guest)
     is SignInMethod.Provider -> method.name
+}
+
+/**
+ * Why the Security card offers no password change. An identity provider's name slots into one
+ * shared sentence, since a brand reads the same in every language; a guest gets a sentence of its
+ * own, because a translated noun dropped into that sentence cannot agree with it in every language.
+ */
+@Composable
+internal fun passwordUnavailableMessage(method: SignInMethod): String = when (method) {
+    SignInMethod.Guest -> stringResource(R.string.settings_password_unavailable_guest)
+    else -> stringResource(R.string.settings_password_unavailable, signInMethodLabel(method))
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -120,7 +138,7 @@ fun SettingsContent(
             verticalArrangement = Arrangement.spacedBy(Dimens.space16)
         ) {
             // Appearance
-            BedrudOutlinedCard {
+            BedrudOutlinedCard(modifier = SettingsCardModifier) {
                 Column(modifier = Modifier.padding(Dimens.cardPadding)) {
                     CardSectionHeader(stringResource(R.string.settings_section_appearance))
                     Spacer(modifier = Modifier.height(Dimens.space12))
@@ -195,7 +213,7 @@ fun SettingsContent(
             }
 
             // Notifications
-            BedrudOutlinedCard {
+            BedrudOutlinedCard(modifier = SettingsCardModifier) {
                 Column {
                     CardSectionHeader(
                         stringResource(R.string.settings_section_notifications),
@@ -221,7 +239,7 @@ fun SettingsContent(
 
             // Account Info
             if (currentUser != null) {
-                BedrudOutlinedCard {
+                BedrudOutlinedCard(modifier = SettingsCardModifier) {
                     Column {
                         // The admin mark sits centred on the header's letters, at the small icon
                         // size a mark beside a label takes elsewhere; it used to hang from the top
@@ -302,13 +320,13 @@ fun SettingsContent(
             }
 
             // Change Password
-            BedrudOutlinedCard {
+            BedrudOutlinedCard(modifier = SettingsCardModifier) {
                 Column(modifier = Modifier.padding(Dimens.cardPadding)) {
                     CardSectionHeader(stringResource(R.string.settings_section_security))
                     Spacer(modifier = Modifier.height(Dimens.space12))
 
                     if (!signInMethod.hasPassword) {
-                        Text(stringResource(R.string.settings_password_unavailable, signInMethodLabel(signInMethod)),
+                        Text(passwordUnavailableMessage(signInMethod),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant)
                     } else {
@@ -373,7 +391,7 @@ fun SettingsContent(
             }
 
             // About
-            BedrudOutlinedCard {
+            BedrudOutlinedCard(modifier = SettingsCardModifier) {
                 Column {
                     CardSectionHeader(
                         stringResource(R.string.settings_section_about),

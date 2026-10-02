@@ -225,11 +225,13 @@
   <string name="settings_label_signInMethod">登录方式</string>
   <string name="settings_provider_email">邮箱</string>
   <string name="settings_provider_passkey">密钥</string>
+  <string name="settings_provider_guest">访客</string>
   <string name="settings_label_role">角色</string>
   <string name="settings_role_admin">管理员</string>
   <string name="settings_role_user">用户</string>
   <string name="settings_section_security">安全</string>
   <string name="settings_password_unavailable"><xliff:g id="provider" example="Google">%1$s</xliff:g> 登录不支持更改密码。</string>
+  <string name="settings_password_unavailable_guest">访客账户没有可更改的密码。</string>
   <string name="settings_label_currentPassword">当前密码</string>
   <string name="settings_label_newPassword">新密码</string>
   <string name="settings_label_confirmNewPassword">确认新密码</string>

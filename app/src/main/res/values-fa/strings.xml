@@ -225,11 +225,13 @@
   <string name="settings_label_signInMethod">روش ورود</string>
   <string name="settings_provider_email">ایمیل</string>
   <string name="settings_provider_passkey">Passkey</string>
+  <string name="settings_provider_guest">مهمان</string>
   <string name="settings_label_role">نقش</string>
   <string name="settings_role_admin">مدیر</string>
   <string name="settings_role_user">کاربر</string>
   <string name="settings_section_security">امنیت</string>
   <string name="settings_password_unavailable">تغییر رمز عبور برای ورود با <xliff:g id="provider" example="Google">%1$s</xliff:g> در دسترس نیست.</string>
+  <string name="settings_password_unavailable_guest">حساب‌های مهمان رمز عبوری برای تغییر ندارند.</string>
   <string name="settings_label_currentPassword">رمز عبور فعلی</string>
   <string name="settings_label_newPassword">رمز عبور جدید</string>
   <string name="settings_label_confirmNewPassword">تایید رمز عبور جدید</string>

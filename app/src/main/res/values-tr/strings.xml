@@ -228,11 +228,13 @@
   <string name="settings_label_signInMethod">Giriş yöntemi</string>
   <string name="settings_provider_email">E-posta</string>
   <string name="settings_provider_passkey">Anahtar</string>
+  <string name="settings_provider_guest">Misafir</string>
   <string name="settings_label_role">Rol</string>
   <string name="settings_role_admin">Yönetici</string>
   <string name="settings_role_user">Kullanıcı</string>
   <string name="settings_section_security">Güvenlik</string>
   <string name="settings_password_unavailable"><xliff:g id="provider" example="Google">%1$s</xliff:g> girişi için şifre değişikliği mevcut değil.</string>
+  <string name="settings_password_unavailable_guest">Misafir hesaplarının değiştirilecek bir şifresi yoktur.</string>
   <string name="settings_label_currentPassword">Mevcut şifre</string>
   <string name="settings_label_newPassword">Yeni şifre</string>
   <string name="settings_label_confirmNewPassword">Yeni şifreyi onayla</string>

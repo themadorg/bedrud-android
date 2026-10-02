@@ -25,6 +25,13 @@ class SignInMethodTest {
     }
 
     @Test
+    fun `signInMethodOf reads a guest account as guest, not as an identity provider`() {
+        // An identity provider is shown by its own name, which would put the server's English
+        // word "Guest" on screen in every language.
+        assertEquals(SignInMethod.Guest, signInMethodOf("guest"))
+    }
+
+    @Test
     fun `signInMethodOf keeps an identity provider's own name`() {
         assertEquals(SignInMethod.Provider("Google"), signInMethodOf("google"))
     }
@@ -34,6 +41,7 @@ class SignInMethodTest {
         assertTrue(signInMethodOf(null).hasPassword)
         assertTrue(signInMethodOf("local").hasPassword)
         assertTrue(signInMethodOf("passkey").hasPassword)
+        assertFalse(signInMethodOf("guest").hasPassword)
         assertFalse(signInMethodOf("google").hasPassword)
     }
 }
