@@ -23,6 +23,7 @@
   <string name="auth_title_createAccount">Hesap Oluştur</string>
   <string name="auth_error_passwordMismatch">Şifreler eşleşmiyor</string>
   <string name="auth_subtitle_hubChoose">Hesabınıza giriş yapın veya misafir olarak devam edin.</string>
+  <string name="auth_subtitle_hubSignIn">Hesabınıza giriş yapın.</string>
   <string name="auth_button_signInWithEmail">E-posta ile giriş yap</string>
   <string name="auth_button_continueAsGuest">Misafir olarak devam et</string>
   <string name="auth_divider_or">veya</string>
@@ -49,7 +50,8 @@
   <string name="auth_notice_verifyEmail">Hesabınızı doğrulamak için lütfen e-postanızı kontrol edin</string>
   <string name="auth_notice_verifyBeforeSignIn">Giriş yapmadan önce lütfen e-postanızı doğrulayın</string>
   <string name="auth_divider_orContinueWith">veya şununla devam et</string>
-  <string name="auth_hint_methodDisabled">Bu sunucuda etkin değil</string>
+  <string name="auth_button_passkeyOff">Anahtarla giriş kapalı</string>
+  <string name="auth_button_guestOff">Misafir girişi kapalı</string>
   <string name="auth_oauth_continueWithFormat">%1$s ile devam et</string>
   <string name="instance_title_servers">Sunucular</string>
   <string name="instance_title_addServer">Yeni Sunucu Ekle</string>

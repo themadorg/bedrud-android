@@ -23,6 +23,7 @@
   <string name="auth_title_createAccount">Konto erstellen</string>
   <string name="auth_error_passwordMismatch">Passwörter stimmen nicht überein</string>
   <string name="auth_subtitle_hubChoose">Melden Sie sich bei Ihrem Konto an oder fahren Sie als Gast fort.</string>
+  <string name="auth_subtitle_hubSignIn">Melden Sie sich bei Ihrem Konto an.</string>
   <string name="auth_button_signInWithEmail">Mit E-Mail anmelden</string>
   <string name="auth_button_continueAsGuest">Als Gast fortfahren</string>
   <string name="auth_divider_or">oder</string>
@@ -49,7 +50,8 @@
   <string name="auth_notice_verifyEmail">Bitte prüfen Sie Ihre E-Mails, um Ihr Konto zu bestätigen</string>
   <string name="auth_notice_verifyBeforeSignIn">Bitte bestätigen Sie Ihre E-Mail-Adresse, bevor Sie sich anmelden</string>
   <string name="auth_divider_orContinueWith">oder weiter mit</string>
-  <string name="auth_hint_methodDisabled">Auf diesem Server nicht aktiviert</string>
+  <string name="auth_button_passkeyOff">Anmeldung mit Passkey ist deaktiviert</string>
+  <string name="auth_button_guestOff">Gastzugang ist deaktiviert</string>
   <string name="auth_oauth_continueWithFormat">Weiter mit %1$s</string>
   <string name="instance_title_servers">Server</string>
   <string name="instance_title_addServer">Neuen Server hinzufügen</string>
