@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -97,18 +96,4 @@ fun BedrudCompactTopBar(
             actions()
         }
     }
-}
-
-/** Compact icon button for top bar / panel headers. */
-@Composable
-fun BedrudCompactIconButton(
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-    content: @Composable () -> Unit,
-) {
-    androidx.compose.material3.IconButton(
-        onClick = onClick,
-        modifier = modifier.size(Dimens.avatar),
-        content = content,
-    )
 }

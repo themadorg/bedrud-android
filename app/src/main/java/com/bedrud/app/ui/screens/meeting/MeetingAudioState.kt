@@ -4,8 +4,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.Bluetooth
 import androidx.compose.material.icons.filled.Headphones
-import androidx.compose.material.icons.filled.Mic
-import androidx.compose.material.icons.filled.MicOff
 import androidx.compose.material.icons.filled.Phone
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -91,8 +89,3 @@ fun audioDeviceIcon(device: AudioDevice): ImageVector =
         is AudioDevice.Speakerphone -> Icons.AutoMirrored.Filled.VolumeUp
         is AudioDevice.Earpiece -> Icons.Default.Phone
     }
-
-fun meetingAudioButtonIcon(isMicEnabled: Boolean, selectedDevice: AudioDevice?): ImageVector {
-    if (!isMicEnabled) return Icons.Default.MicOff
-    return selectedDevice?.let(::audioDeviceIcon) ?: Icons.Default.Mic
-}
