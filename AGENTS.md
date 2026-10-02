@@ -192,6 +192,12 @@ Both paths hold a request they cannot serve yet rather than dropping it, for rea
 - **Below 34:** Telecom silently ignores a route set before it has sent the connection its first
   audio-state callback, so the route waits for `onCallAudioStateChanged`.
 
+**Mute travels one way.** Telecom tells the connection when a headset or car mutes the call
+(`onMuteStateChanged`, API 34+), and `CallService` applies it to the microphone once the room is
+connected. Nothing travels back: `android.telecom.Connection` has no mute setter at any API level
+from 28 to 37 — mute is set from Telecom's side, through `InCallService.setMuted` — so the app's own
+microphone toggles are not reported to Telecom, and nothing should pretend to report them.
+
 `PhoneAccount.CAPABILITY_SELF_MANAGED` is deprecated as of compileSdk 37 and still in use: it has
 no replacement on these classes, only `androidx.core.telecom`'s `CallsManager`, which would
 replace `CallConnectionService` outright. Tracked separately, not with the routing APIs.
