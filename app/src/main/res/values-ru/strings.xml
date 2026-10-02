@@ -376,6 +376,7 @@
   <string name="meeting_sheet_disableAllCamerasDescription">Перестаёт показывать входящее видео только у вас</string>
   <string name="meeting_sheet_noiseSuppression">Шумоподавление</string>
   <string name="meeting_sheet_audioSettings">Настройки звука</string>
+  <string name="meeting_sheet_moreOptions">Дополнительно</string>
   <string name="meeting_recording_title">Идёт запись комнаты</string>
   <string name="meeting_recording_message">В этой комнате записываются все чаты, камеры, демонстрации экрана и звук.</string>
   <string name="meeting_recording_acknowledge">Понятно</string>

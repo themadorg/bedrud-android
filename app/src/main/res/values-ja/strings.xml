@@ -367,6 +367,7 @@
   <string name="meeting_sheet_disableAllCamerasDescription">受信映像の表示を自分だけ停止します</string>
   <string name="meeting_sheet_noiseSuppression">ノイズ抑制</string>
   <string name="meeting_sheet_audioSettings">オーディオ設定</string>
+  <string name="meeting_sheet_moreOptions">その他のオプション</string>
   <string name="meeting_recording_title">ルーム録画中</string>
   <string name="meeting_recording_message">このルームでは、すべてのチャット、カメラ、画面共有、音声が記録されます。</string>
   <string name="meeting_recording_acknowledge">了解</string>

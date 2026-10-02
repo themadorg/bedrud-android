@@ -78,7 +78,7 @@ object Dimens {
     /**
      * How far the tile grid stops short of the bottom, to clear the floating controls bar.
      *
-     * The bar takes 84dp off that edge — 72dp tall (12 + 48 + 12) sitting 12dp above the safe area
+     * The bar takes 88dp off that edge — 76dp tall (16 + 48 + 12) sitting 12dp above the safe area
      * — so this is that plus the gap wanted between the last tile and the bar. Written as the sum
      * rather than a round number, because it went stale twice while the bar was being resized.
      */
@@ -90,9 +90,9 @@ object Dimens {
     val meetingSpeakingRingMax = 3.dp    // ...and at the loudest
     val meetingIndicatorDot = 8.dp       // top-bar dots (recording, reconnecting)
     val meetingBarPaddingH = 10.dp       // controls bar inner horizontal padding
-    // Bottom inset of the controls bar, mirroring the drag-handle block above the row so the
-    // 48dp controls sit centred. 12 + 48 + 12 puts the bar at 72dp — the same height as the chat
-    // dock that replaces it, so the bottom edge does not jump when chat opens.
+    // Bottom inset of the controls bar and the chat dock that replaces it, and the dock's top inset
+    // too: 12 + 48 + 12 is the dock's 72dp. The controls bar's top is its 16dp handle strip instead,
+    // 76dp in all, so its top edge moves 4dp when chat opens; the bottom edges still coincide.
     val meetingBarPaddingV = 12.dp
     val meetingBarItemGap = 8.dp         // gap between controls bar buttons
     val meetingMediaButtonWidth = 56.dp  // camera/mic toggles (wider, rectangular)
@@ -106,13 +106,13 @@ object Dimens {
     // centre (wide tail left, sharp tip right, measured on a device capture), so a geometrically
     // centred plane reads as sitting off towards the tail. Half the imbalance, towards the tip.
     val meetingSendIconNudge = 1.5.dp
-    val meetingHandleWidth = 32.dp       // controls-bar drag handle (M3 sheet handle metrics)
+    val meetingHandleWidth = 32.dp       // sheet and controls-bar handle (M3 sheet handle metrics)
     val meetingHandleHeight = 4.dp
     // The mic pill's status arc. Thinner than a normal strong border: the arc travels around the
     // pill, and movement already draws the eye — weight on top of it only shouts over chrome that
     // is otherwise tonal surfaces and hairlines.
     val meetingMicRingStroke = 1.dp
-    val meetingHandleSwipeThreshold = 24.dp // upward drag distance that opens the options sheet
+    val meetingHandleSwipeThreshold = 24.dp // upward drag on the controls bar that opens the options sheet
     val meetingFullscreenAvatar = 96.dp  // avatar circle when a participant is viewed fullscreen
     val meetingMicPillMaxWidth = 136.dp  // mic pill cap (both modes): sides never squeeze at this width
     val meetingSliderThumb = 20.dp       // compact round slider thumb (in-call sliders)
