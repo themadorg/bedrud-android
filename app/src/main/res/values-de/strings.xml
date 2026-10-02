@@ -13,7 +13,7 @@
   <string name="auth_label_fullName">Vollständiger Name</string>
   <string name="auth_label_confirmPassword">Passwort bestätigen</string>
   <string name="auth_label_displayName">Anzeigename</string>
-  <string name="auth_placeholder_displayName">Wie sollen wir Sie nennen?</string>
+  <string name="auth_placeholder_displayName">Wie sollen wir dich nennen?</string>
   <string name="auth_button_signIn">Anmelden</string>
   <string name="auth_button_signUp">Registrieren</string>
   <string name="auth_button_signInWithPasskey">Mit Passkey anmelden</string>
@@ -22,32 +22,32 @@
   <string name="auth_link_alreadyHaveAccount">Bereits ein Konto? Anmelden</string>
   <string name="auth_title_createAccount">Konto erstellen</string>
   <string name="auth_error_passwordMismatch">Passwörter stimmen nicht überein</string>
-  <string name="auth_subtitle_hubChoose">Melden Sie sich bei Ihrem Konto an oder fahren Sie als Gast fort.</string>
+  <string name="auth_subtitle_hubChoose">Melde dich bei deinem Konto an oder fahre als Gast fort.</string>
   <string name="auth_button_signInWithEmail">Mit E-Mail anmelden</string>
   <string name="auth_button_continueAsGuest">Als Gast fortfahren</string>
   <string name="auth_divider_or">oder</string>
   <string name="auth_prompt_noAccount">Noch kein Konto?</string>
-  <string name="auth_error_loginFailed">Anmeldung fehlgeschlagen. Bitte überprüfen Sie Ihre Anmeldedaten.</string>
-  <string name="auth_email_subtitle">Melden Sie sich bei Ihrem Konto an</string>
+  <string name="auth_error_loginFailed">Anmeldung fehlgeschlagen. Bitte überprüfe deine Anmeldedaten.</string>
+  <string name="auth_email_subtitle">Melde dich bei deinem Konto an</string>
   <string name="auth_forgot_link">Passwort vergessen?</string>
   <string name="auth_forgot_action">Zurücksetzen</string>
   <string name="auth_forgot_title">Passwort zurücksetzen</string>
-  <string name="auth_forgot_description">Geben Sie Ihre E-Mail-Adresse ein und wir senden Ihnen einen Link zum Zurücksetzen Ihres Passworts.</string>
+  <string name="auth_forgot_description">Gib deine E-Mail-Adresse ein und wir senden dir einen Link zum Zurücksetzen deines Passworts.</string>
   <string name="auth_forgot_submit">Link zum Zurücksetzen senden</string>
-  <string name="auth_forgot_sent">Wenn ein Konto für %1$s existiert, haben wir einen Link zum Zurücksetzen des Passworts gesendet. Überprüfen Sie Ihre E-Mails.</string>
-  <string name="auth_register_subtitle">Registrieren Sie ein neues Konto</string>
+  <string name="auth_forgot_sent">Wenn ein Konto für %1$s existiert, haben wir einen Link zum Zurücksetzen des Passworts gesendet. Überprüfe deine E-Mails.</string>
+  <string name="auth_register_subtitle">Registriere dich für ein neues Konto</string>
   <string name="auth_hint_passwordMinLength">Mindestens %1$d Zeichen</string>
-  <string name="auth_error_emailInvalid">Geben Sie eine gültige E-Mail-Adresse ein</string>
-  <string name="auth_error_guestFailed">Beitritt als Gast nicht möglich. Bitte versuchen Sie es erneut.</string>
+  <string name="auth_error_emailInvalid">Gib eine gültige E-Mail-Adresse ein</string>
+  <string name="auth_error_guestFailed">Beitritt als Gast nicht möglich. Bitte versuche es erneut.</string>
   <plurals name="auth_error_nameTooShort">
-    <item quantity="one">Bitte geben Sie mindestens %1$d Zeichen ein.</item>
-    <item quantity="other">Bitte geben Sie mindestens %1$d Zeichen ein.</item>
+    <item quantity="one">Bitte gib mindestens %1$d Zeichen ein.</item>
+    <item quantity="other">Bitte gib mindestens %1$d Zeichen ein.</item>
   </plurals>
-  <string name="auth_error_generic">Etwas ist schiefgelaufen. Bitte versuchen Sie es erneut.</string>
-  <string name="auth_error_registrationFailed">Registrierung fehlgeschlagen. Bitte versuchen Sie es erneut.</string>
-  <string name="auth_error_signInFailed">Anmeldung fehlgeschlagen. Bitte versuchen Sie es erneut.</string>
-  <string name="auth_notice_verifyEmail">Bitte prüfen Sie Ihre E-Mails, um Ihr Konto zu bestätigen</string>
-  <string name="auth_notice_verifyBeforeSignIn">Bitte bestätigen Sie Ihre E-Mail-Adresse, bevor Sie sich anmelden</string>
+  <string name="auth_error_generic">Etwas ist schiefgelaufen. Bitte versuche es erneut.</string>
+  <string name="auth_error_registrationFailed">Registrierung fehlgeschlagen. Bitte versuche es erneut.</string>
+  <string name="auth_error_signInFailed">Anmeldung fehlgeschlagen. Bitte versuche es erneut.</string>
+  <string name="auth_notice_verifyEmail">Bitte prüfe deine E-Mails, um dein Konto zu bestätigen</string>
+  <string name="auth_notice_verifyBeforeSignIn">Bitte bestätige deine E-Mail-Adresse, bevor du dich anmeldest</string>
   <string name="auth_divider_orContinueWith">oder weiter mit</string>
   <string name="auth_hint_methodDisabled">Auf diesem Server nicht aktiviert</string>
   <string name="auth_oauth_continueWithFormat">Weiter mit %1$s</string>
@@ -55,8 +55,8 @@
   <string name="instance_title_addServer">Neuen Server hinzufügen</string>
   <string name="instance_title_switchServer">Server wechseln</string>
   <string name="instance_subtitle_connectToServer">Mit einem Server verbinden, um loszulegen</string>
-  <string name="instance_subtitle_yourServers">Ihre Server</string>
-  <string name="instance_subtitle_tapToSignIn">Tippen Sie auf einen Server, um sich anzumelden.</string>
+  <string name="instance_subtitle_yourServers">Deine Server</string>
+  <string name="instance_subtitle_tapToSignIn">Tippe auf einen Server, um dich anzumelden.</string>
   <string name="instance_label_serverAddress">Serveradresse</string>
   <string name="instance_placeholder_serverAddress" translatable="false">meet.example.com</string>
   <string name="instance_label_displayName">Anzeigename</string>
@@ -83,7 +83,7 @@
   <string name="dashboard_join_invalidInput">Gib einen Raumnamen oder einen gültigen Meeting-Link ein.</string>
   <string name="dashboard_join_unknownServer">Füge zuerst den Server dieses Links hinzu.</string>
   <string name="dashboard_dialog_createTitle">Raum erstellen</string>
-  <string name="dashboard_dialog_createDescription">Geben Sie einen Namen für Ihren Raum ein oder lassen Sie das Feld leer für einen automatisch generierten Namen.</string>
+  <string name="dashboard_dialog_createDescription">Gib einen Namen für deinen Raum ein oder lass das Feld leer für einen automatisch generierten Namen.</string>
   <string name="dashboard_label_roomName">Raumname (optional)</string>
   <string name="dashboard_contentDescription_createRoom">Raum erstellen</string>
   <string name="dashboard_contentDescription_settings">Einstellungen</string>
@@ -99,10 +99,10 @@
   <string name="meeting_state_connectionFailedMessage">Kann keine Verbindung zum Meeting herstellen</string>
   <string name="meeting_button_goBack">Zurück</string>
   <string name="meeting_dialog_kickTitle">Teilnehmer kicken</string>
-  <string name="meeting_dialog_kickMessage">Sind Sie sicher, dass Sie <xliff:g id="participantName" example="John Doe">%1$s</xliff:g> aus dem Raum kicken möchten?</string>
+  <string name="meeting_dialog_kickMessage">Möchtest du <xliff:g id="participantName" example="John Doe">%1$s</xliff:g> wirklich aus dem Raum kicken?</string>
   <string name="meeting_dialog_followRoomTitle">Diesen Anruf verlassen?</string>
-  <string name="meeting_dialog_followRoomMessage">Sie verlassen <xliff:g id="currentRoom" example="obd-hzpi-dfv">%1$s</xliff:g> und treten <xliff:g id="nextRoom" example="oqc-qpka-bvw">%2$s</xliff:g> bei.</string>
-  <string name="meeting_dialog_followRoomOnServerMessage">Sie verlassen <xliff:g id="currentRoom" example="obd-hzpi-dfv">%1$s</xliff:g> und treten <xliff:g id="nextRoom" example="oqc-qpka-bvw">%2$s</xliff:g> auf <xliff:g id="serverName" example="Bedrud">%3$s</xliff:g> bei.</string>
+  <string name="meeting_dialog_followRoomMessage">Du verlässt <xliff:g id="currentRoom" example="obd-hzpi-dfv">%1$s</xliff:g> und trittst <xliff:g id="nextRoom" example="oqc-qpka-bvw">%2$s</xliff:g> bei.</string>
+  <string name="meeting_dialog_followRoomOnServerMessage">Du verlässt <xliff:g id="currentRoom" example="obd-hzpi-dfv">%1$s</xliff:g> und trittst <xliff:g id="nextRoom" example="oqc-qpka-bvw">%2$s</xliff:g> auf <xliff:g id="serverName" example="Bedrud">%3$s</xliff:g> bei.</string>
   <string name="meeting_button_leaveAndJoin">Verlassen und beitreten</string>
   <string name="meeting_action_mute">Stummschalten</string>
   <string name="meeting_action_unmute">Stummschaltung aufheben</string>
@@ -110,13 +110,13 @@
   <string name="meeting_action_enableVideo">Video aktivieren</string>
   <string name="meeting_action_kick">Kicken</string>
   <string name="meeting_dialog_banTitle">Teilnehmer bannen</string>
-  <string name="meeting_dialog_banMessage">Sind Sie sicher, dass Sie <xliff:g id="participantName" example="John Doe">%1$s</xliff:g> aus dem Raum bannen möchten?</string>
+  <string name="meeting_dialog_banMessage">Möchtest du <xliff:g id="participantName" example="John Doe">%1$s</xliff:g> wirklich aus dem Raum bannen?</string>
   <string name="meeting_action_ban">Bannen</string>
   <string name="meeting_panel_participants">Teilnehmer (<xliff:g id="count" example="5">%1$d</xliff:g>)</string>
   <string name="meeting_panel_chat">Chat</string>
-  <string name="meeting_label_you">Sie</string>
-  <string name="meeting_state_kickedTitle">Sie wurden entfernt</string>
-  <string name="meeting_state_kickedMessage">Ein Moderator hat Sie aus diesem Meeting entfernt.</string>
+  <string name="meeting_label_you">Du</string>
+  <string name="meeting_state_kickedTitle">Du wurdest entfernt</string>
+  <string name="meeting_state_kickedMessage">Ein Moderator hat dich aus diesem Meeting entfernt.</string>
   <string name="meeting_button_backToDashboard">Zurück zur Übersicht</string>
   <string name="meeting_chat_uploading">Hochladen…</string>
   <string name="meeting_chat_placeholder">Nachricht eingeben…</string>
@@ -146,7 +146,7 @@
   <string name="meeting_chat_reactions">Reaktionen</string>
   <string name="meeting_chat_shareChooser">Nachricht teilen</string>
   <string name="meeting_chat_linkUnopenable">Keine App kann diesen Link öffnen</string>
-  <string name="meeting_chat_linkCurrentRoom">Sie sind bereits in diesem Raum</string>
+  <string name="meeting_chat_linkCurrentRoom">Du bist bereits in diesem Raum</string>
   <plurals name="meeting_chat_reactionCount">
     <item quantity="one">%1$d Reaktion</item>
     <item quantity="other">%1$d Reaktionen</item>
@@ -207,9 +207,9 @@
   <string name="admin_error_saveSettingsFailed">Einstellungen konnten nicht gespeichert werden</string>
   <string name="admin_error_createTokenFailed">Einladungstoken konnte nicht erstellt werden</string>
   <string name="admin_dialog_banTitle">Benutzer bannen?</string>
-  <string name="admin_dialog_banMessage">Sind Sie sicher, dass Sie <xliff:g id="userName" example="John Doe">%1$s</xliff:g> bannen möchten?</string>
+  <string name="admin_dialog_banMessage">Möchtest du <xliff:g id="userName" example="John Doe">%1$s</xliff:g> wirklich bannen?</string>
   <string name="admin_dialog_deleteTokenTitle">Einladungstoken löschen?</string>
-  <string name="admin_dialog_deleteTokenMessage">Sind Sie sicher, dass Sie dieses Einladungstoken löschen möchten? Das kann nicht rückgängig gemacht werden.</string>
+  <string name="admin_dialog_deleteTokenMessage">Möchtest du dieses Einladungstoken wirklich löschen? Das kann nicht rückgängig gemacht werden.</string>
   <string name="admin_error_deleteTokenFailed">Einladungstoken konnte nicht gelöscht werden</string>
   <string name="common_action_copy">Kopieren</string>
   <string name="common_action_share">Teilen</string>
