@@ -68,6 +68,12 @@ class CallConnectionService : ConnectionService() {
         // connection, flushed from onCallAudioStateChanged.
         private var pendingLegacyRoute: CallAudioRoute? = null
 
+        // Below API 34: picks the mute changes out of onCallAudioStateChanged, where they arrive
+        // mixed in with every routing change. From 34 onMuteStateChanged carries them instead.
+        private val audioStateMuteFilter = CallAudioStateMuteFilter(
+            reportsMuteSeparately = Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE
+        )
+
         /**
          * Returns [endpoint]'s type, for the selector to match a wanted output against.
          */
@@ -145,13 +151,18 @@ class CallConnectionService : ConnectionService() {
             onDisconnect()
         }
 
+        // Mute travels one way: Telecom tells the connection when a headset or car mutes the call,
+        // but a self-managed Connection has no setter to tell Telecom back, so the app's own mic
+        // toggles are not reported to it. API 34+ only; below that, the mute arrives inside
+        // onCallAudioStateChanged.
         override fun onMuteStateChanged(isMuted: Boolean) {
             muteListener?.invoke(isMuted)
         }
 
         // Deprecated alongside setAudioRoute, and kept for the devices below API 34 that have no
         // endpoint callbacks. Telecom still delivers this to a self-managed Connection, and it is
-        // the only signal that routing requests will now be honoured there.
+        // the only signal that routing requests will now be honoured there, and the only place a
+        // headset's or car's mute reaches the call.
         @Suppress("OVERRIDE_DEPRECATION")
         override fun onCallAudioStateChanged(state: android.telecom.CallAudioState?) {
             // LiveKit manages capture/playback; system routes call audio.
@@ -161,6 +172,11 @@ class CallConnectionService : ConnectionService() {
                     "supportedRouteMask=${state?.supportedRouteMask} " +
                     "isMuted=${state?.isMuted}"
             )
+            state?.let { audioState ->
+                audioStateMuteFilter.onAudioStateChanged(audioState.isMuted)?.let { isMuted ->
+                    muteListener?.invoke(isMuted)
+                }
+            }
             // Telecom silently ignores setAudioRoute() calls made before it has sent this
             // connection its first audio-state callback (observed: a request made right after
             // the Connection is created has no effect, even though activeConnection is already
@@ -261,15 +277,6 @@ class CallConnectionService : ConnectionService() {
             }
             activeConnection = null
             pendingRoute = null
-        }
-
-        fun updateMuteState(muted: Boolean) {
-            Log.d(TAG, "updateMuteState muted=$muted activeConnection=${activeConnection != null}")
-            try {
-                activeConnection?.setActive()
-            } catch (e: Exception) {
-                Log.e(TAG, "Failed to update mute state", e)
-            }
         }
 
         /**

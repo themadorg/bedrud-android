@@ -68,7 +68,8 @@ app/src/main/java/com/bedrud/app/
 │   ├── pip/PipState.kt         PiP state holder
 │   └── call/                   CallService + CallConnectionService (telecom integration),
 │                               CallAudioRoute + CallEndpointSelector (which output the call
-│                               is routed to), ProximityScreenLock (screen off at an ear)
+│                               is routed to), CallAudioStateMuteFilter (a headset's mute
+│                               below API 34), ProximityScreenLock (screen off at an ear)
 ├── models/                     Data classes (Gson-serialized)
 └── ui/
     ├── theme/                  Design tokens: Color, Theme, Type, Shape, Dimens, Elevation, Motion
@@ -191,6 +192,15 @@ Both paths hold a request they cannot serve yet rather than dropping it, for rea
   `CallEndpointSelector` holds the wanted output until one appears, and serves it once.
 - **Below 34:** Telecom silently ignores a route set before it has sent the connection its first
   audio-state callback, so the route waits for `onCallAudioStateChanged`.
+
+**Mute travels one way.** Telecom tells the connection when a headset or car mutes the call, and
+`CallService` applies it to the microphone once the room is connected. From API 34 that arrives
+through `onMuteStateChanged`; below 34 that callback does not exist, and the mute rides inside the
+`CallAudioState` given to `onCallAudioStateChanged`, which Telecom re-sends for every routing change
+too. `CallAudioStateMuteFilter` passes on only a mute that differs from the last one seen there,
+and nothing at all from API 34, where `onMuteStateChanged` already carries every change. Nothing travels back: `android.telecom.Connection` has no mute setter at any API level
+from 28 to 37 — mute is set from Telecom's side, through `InCallService.setMuted` — so the app's own
+microphone toggles are not reported to Telecom, and nothing should pretend to report them.
 
 `PhoneAccount.CAPABILITY_SELF_MANAGED` is deprecated as of compileSdk 37 and still in use: it has
 no replacement on these classes, only `androidx.core.telecom`'s `CallsManager`, which would
