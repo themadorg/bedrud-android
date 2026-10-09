@@ -33,8 +33,16 @@ Brand seeds:
 - **Tertiary — teal `#14B8A6`** — accents, "recommended"/info affordances, highlight states.
 - **Secondary — muted rose** — lower-emphasis components that still tie to the brand.
 - **Neutrals — warm stone** — surfaces/text read as part of the rose family, not clinical grey.
-- **Error — red `#DC2626`** — reserved for errors and irreversible/destructive actions.
+- **Error — red `#B91C1C` (light) / `#EF4444` (dark)** — reserved for errors and irreversible/destructive actions.
 - **Warning — amber `#B45309` (light) / `#FBBF24` (dark)** — non-critical cautions (e.g. insecure http). M3 has no warning role, so it's a custom extended-color token (`MaterialTheme.bedrudColors.warning`, from `ExtendedColors.kt`); never use error-red for a warning.
+- **Recording — the same red as error** — the dot that says a room is being recorded (`MaterialTheme.bedrudColors.recording`). Recording is red by convention, not because anything failed, so it has its own extended-color token instead of borrowing `error`, and stays where it is if the error red moves.
+
+**The error colour never speaks alone.** Rose and red share a hue family, so red on screen does
+not say by itself whether something is selected or something failed. The error red sits darker
+than the rose primary in both themes, and `ThemeTest` holds the two apart by measured distance;
+but distance is only half of it. An error always comes with words — the message itself, or a
+field's `supportingText` — and may add an error icon beside them, as under the add-server picker.
+A destructive control drawn in the error colour carries its own icon or label.
 
 The full Material 3 role set is specified for light **and** dark (primary/secondary/tertiary + their
 containers, the surface-tonal levels `surfaceContainerLowest…Highest`, `inverse*`, `outline`, `scrim`),
