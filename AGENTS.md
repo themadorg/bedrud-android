@@ -182,6 +182,12 @@ the other, and a client that reads must merge both: metadata answers for everyon
 nothing since you arrived, and a live announcement overrides it. Writing metadata needs a
 permission the token may not grant, so the presence message is the half that always lands.
 
+Deafening itself never waits for either. `RoomManager.toggleDeafen` flips the state, the volumes
+and the saved setting at once, and only then queues the mic change and the announcement on the
+call's own scope, one toggle at a time in tap order. Sending can stall for seconds while the
+outgoing connection is not up, and when the announcement came first, the tap seemed to do nothing
+and was lost if the screen went away in the meantime.
+
 ## Call Audio Routing
 
 Which output a meeting is heard on is decided by Telecom, not by `AudioManager`. `CallAudioSwitch`

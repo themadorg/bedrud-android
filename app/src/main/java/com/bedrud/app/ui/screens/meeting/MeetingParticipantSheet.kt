@@ -190,7 +190,7 @@ fun MeetingParticipantSheet(
             contentColor = colors.onButton,
             onClick = {
                 onToggleLocalMute()
-                onDismiss()
+                dismiss()
             },
         )
         BedrudSheetActionRow(
@@ -202,7 +202,7 @@ fun MeetingParticipantSheet(
             contentColor = colors.onButton,
             onClick = {
                 onToggleVideoDisabled()
-                onDismiss()
+                dismiss()
             },
         )
         BedrudSheetActionRow(
@@ -213,7 +213,7 @@ fun MeetingParticipantSheet(
             contentColor = colors.onButton,
             onClick = {
                 onTogglePin()
-                onDismiss()
+                dismiss()
             },
         )
         BedrudSheetActionRow(
@@ -222,7 +222,7 @@ fun MeetingParticipantSheet(
             contentColor = colors.onButton,
             onClick = {
                 onFullscreen()
-                onDismiss()
+                dismiss()
             },
         )
 

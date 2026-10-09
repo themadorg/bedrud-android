@@ -286,7 +286,7 @@ fun MeetingInputModeSheet(
             colors = colors,
             onClick = {
                 onSelect(MeetingInputMode.PUSH_TO_TALK)
-                onDismiss()
+                dismiss()
             },
         )
         ModeRow(
@@ -296,7 +296,7 @@ fun MeetingInputModeSheet(
             colors = colors,
             onClick = {
                 onSelect(MeetingInputMode.VOICE_ACTIVITY)
-                onDismiss()
+                dismiss()
             },
         )
     }
@@ -332,7 +332,7 @@ fun MeetingNoiseSuppressionSheet(
             colors = colors,
             onClick = {
                 onSelect(NoiseSuppressionMode.OFF)
-                onDismiss()
+                dismiss()
             },
         )
         ModeRow(
@@ -342,7 +342,7 @@ fun MeetingNoiseSuppressionSheet(
             colors = colors,
             onClick = {
                 onSelect(NoiseSuppressionMode.DEVICE)
-                onDismiss()
+                dismiss()
             },
         )
     }

@@ -820,7 +820,7 @@ fun MeetingScreen(
                                     onToggleScreenShare = toggleScreenShareAction,
                                     onToggleChat = toggleChatAction,
                                     onEndCall = endCallAction,
-                                    onToggleDeafen = { scope.launch { roomManager.toggleDeafen() } },
+                                    onToggleDeafen = { roomManager.toggleDeafen() },
                                     onToggleHideAllIncomingVideo = {
                                         hideAllIncomingVideo = !hideAllIncomingVideo
                                     },
