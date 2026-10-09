@@ -1,12 +1,11 @@
 package com.bedrud.app.ui.screens.instance
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toPixelMap
 import androidx.compose.ui.test.SemanticsNodeInteraction
@@ -73,19 +72,23 @@ class InstanceSwitcherSheetTest {
             nameColor = MaterialTheme.colorScheme.onSurface
             addressColor = MaterialTheme.colorScheme.onSurfaceVariant
             badgeColor = MaterialTheme.colorScheme.tertiaryContainer
-            // On the sheet's own colour, as it is drawn in the app.
-            Column(modifier = Modifier.background(sheetColor)) {
-                InstanceSwitcherContent(
-                    instances = servers,
-                    activeId = serverInUse.id,
-                    serverAfterRemoving = { id -> servers.firstOrNull { it.id != id } },
-                    onSelect = { selected += it },
-                    onRemove = { server ->
-                        removed += server
-                        servers = servers - server
-                    },
-                    onAddInstance = {},
-                )
+            // On a surface of the sheet's own colour, as it is drawn in the app. The surface also
+            // supplies the content colour the server name takes, as the sheet's does; a bare
+            // background leaves the name in the default black, which only passes in light theme.
+            Surface(color = sheetColor) {
+                Column {
+                    InstanceSwitcherContent(
+                        instances = servers,
+                        activeId = serverInUse.id,
+                        serverAfterRemoving = { id -> servers.firstOrNull { it.id != id } },
+                        onSelect = { selected += it },
+                        onRemove = { server ->
+                            removed += server
+                            servers = servers - server
+                        },
+                        onAddInstance = {},
+                    )
+                }
             }
         }
     }
