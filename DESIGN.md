@@ -217,10 +217,10 @@ password; a set form (new and confirm, under a line saying why) for a passkey ac
 one; and the sentence above for an account that cannot have a password. A passkey account is created
 without a password, and the server stamps `passwordChangedAt` whenever it gives an existing account
 one, so a passkey account without the stamp has none. The stamp is not read for an email account,
-which has a password from sign-up but is not stamped until it first changes it. Settings reloads the
-account from `auth/me` each time it opens, because the record stored at sign-in can be out of date: a
-password set on another device, or a record stored by a version of the app that did not keep the
-stamp.
+which has a password from sign-up but is not stamped until it first changes it. The signed-in screens
+(`MainScreen`) reload the account from `auth/me` when they open, because the record stored at sign-in
+can be out of date: a password set on another device, or a record stored by a version of the app that
+did not keep the stamp or the account's access levels.
 
 **Text sets a floor, not a height.** A container that holds text takes a minimum height —
 `heightIn(min = …)`, or the component's own `defaultMinSize` — never a fixed `height(…)`. Text grows
@@ -420,6 +420,13 @@ suggestion; the fix was to delete the knob, not to re-tune it.
 The sheet state is not a parameter either: exposing it would put an experimental Material type in
 the signature and force `@OptIn` onto every screen that shows a sheet. Outside this component,
 `ModalBottomSheet` is referenced only by the chat sheet, for the reasons above.
+
+**A sheet that closes itself calls `dismiss()`, never its own `onDismiss`.** The content of every
+`BedrudBottomSheet` runs in a `BedrudSheetScope`, whose `dismiss()` slides the sheet down and only
+then calls `onDismiss` — M3's documented hide-then-dismiss order. Calling `onDismiss` from inside
+removes the sheet from composition in one frame, so a picker vanished the moment something was
+picked instead of sliding away the way a drag or the scrim puts it away. A sheet that sends
+something on its way out ignores a second tap during the slide, since it is still on screen.
 
 **Actions inside a sheet are a list, not a stack of cards.** `BedrudSheetActionRow` follows the M3
 list-item spec — 56dp one-line, 72dp when it carries a supporting line, `iconMd` leading icon — and
@@ -895,6 +902,14 @@ zh) — **not** inline in composables. Every string must be translated in all lo
 lint fails CI on `MissingTranslation`, so shipping English-only is not an option. RTL is fully supported:
 `LocaleHelper` and `BedrudTheme` set the layout direction from the active `AppLanguage`, while the
 typeface does not vary by locale at all — see [Typography](#typography-typekt).
+
+**German addresses the reader as *du*.** Every German string uses the informal *du*, *dich*, *dir*
+and *dein*, never the formal *Sie*, *Ihnen* or *Ihr*: Bedrud is a calling and chat app, which is
+where readers expect *du*, and the shorter forms fit its buttons and snackbars better. The register
+was once split by screen — *Sie* on sign-in and in most dialogs, *du* in the call — so a reader met
+both within a minute. Where a string reads naturally without addressing anyone ("Raum erstellen",
+"Passwort zurücksetzen"), it does not address anyone. `GermanStringsTest` fails on any string in
+`values-de/strings.xml` carrying a formal pronoun.
 
 **Which language, and when.** A first run follows the device, because nothing has been picked yet and
 `AppLanguage.SYSTEM` is the default; a pick in Settings holds from that moment on, and picking System

@@ -46,7 +46,6 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -70,7 +69,6 @@ import com.bedrud.app.ui.theme.Dimens
 import com.bedrud.app.ui.theme.Elevation
 import com.bedrud.app.models.ChangePasswordRequest
 import com.bedrud.app.core.api.apiAction
-import com.bedrud.app.core.api.refreshCurrentUser
 import com.bedrud.app.ui.theme.typeCentered
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
@@ -122,16 +120,6 @@ fun SettingsContent(
     val authManager = instanceManager.authManager.collectAsState().value
     val currentUser by (authManager?.currentUser ?: kotlinx.coroutines.flow.MutableStateFlow(null)).collectAsState()
     val signInMethod = signInMethodOf(currentUser?.provider, currentUser?.passwordChangedAt)
-
-    // Settings shows the account as the server has it now, not as it was stored at sign-in: a
-    // record stored by an older version of the app lacks fields, and one changed on another device
-    // is out of date. Keyed on the AuthManager, which is replaced along with the server; the
-    // Retrofit proxy is no key, since it is not even equal to itself.
-    LaunchedEffect(authManager) {
-        val manager = authManager ?: return@LaunchedEffect
-        val api = instanceManager.authApi.value ?: return@LaunchedEffect
-        refreshCurrentUser(api, manager)
-    }
 
     var currentPassword by remember { mutableStateOf("") }
     var newPassword by remember { mutableStateOf("") }

@@ -24,6 +24,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import com.bedrud.app.R
+import com.bedrud.app.core.api.refreshCurrentUser
 import com.bedrud.app.core.instance.InstanceManager
 import com.bedrud.app.core.rooms.JoinFailureRelay
 import com.bedrud.app.ui.components.BedrudSnackbarHost
@@ -54,6 +55,17 @@ fun MainScreen(
         authManager?.currentUser ?: kotlinx.coroutines.flow.MutableStateFlow(null)
     }.collectAsState()
     val isAdmin = currentUser?.isAdmin == true
+
+    // The signed-in screens show the account as the server has it now, not as it was stored at
+    // sign-in: a record stored by an older version of the app lacks fields (its access levels, so
+    // an admin would get no Admin tab), and one changed on another device is out of date. Keyed
+    // on the AuthManager, which is replaced along with the server; the Retrofit proxy is no key,
+    // since it is not even equal to itself.
+    LaunchedEffect(authManager) {
+        val manager = authManager ?: return@LaunchedEffect
+        val api = instanceManager.authApi.value ?: return@LaunchedEffect
+        refreshCurrentUser(api, manager)
+    }
 
     val tabs = buildList {
         add(
