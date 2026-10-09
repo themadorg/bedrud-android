@@ -3,6 +3,7 @@ package com.bedrud.app.ui.components
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.exclude
@@ -13,6 +14,7 @@ import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -46,10 +48,12 @@ val BedrudTabScaffoldContentInsets: WindowInsets
 fun BedrudCompactTopBar(
     title: String,
     modifier: Modifier = Modifier,
+    navigationIcon: (@Composable () -> Unit)? = null,
     actions: @Composable RowScope.() -> Unit = {},
 ) {
     BedrudCompactTopBar(
         modifier = modifier,
+        navigationIcon = navigationIcon,
         actions = actions,
         title = {
             val titleStyle = MaterialTheme.typography.headlineSmall
@@ -68,10 +72,14 @@ fun BedrudCompactTopBar(
  * Slot-based variant: the caller supplies the title content, so pages that need a richer title
  * (e.g. the rooms header's two-tone, server-colored name) can render their own composable while
  * keeping the shared status-bar padding, height, and actions layout.
+ *
+ * A screen pushed on top of another passes a [navigationIcon], the back arrow. It sits where
+ * Material's small top app bar puts one: 4dp in from the start edge, with the title 4dp after it.
  */
 @Composable
 fun BedrudCompactTopBar(
     modifier: Modifier = Modifier,
+    navigationIcon: (@Composable () -> Unit)? = null,
     actions: @Composable RowScope.() -> Unit = {},
     title: @Composable () -> Unit,
 ) {
@@ -85,13 +93,17 @@ fun BedrudCompactTopBar(
                 .statusBarsPadding()
                 .heightIn(min = Dimens.topBarHeight)
                 .padding(
-                    start = Dimens.space16,
+                    start = if (navigationIcon != null) Dimens.space4 else Dimens.space16,
                     end = Dimens.space4,
                     top = Dimens.space2,
                     bottom = Dimens.space2,
                 ),
             verticalAlignment = Alignment.CenterVertically,
         ) {
+            if (navigationIcon != null) {
+                navigationIcon()
+                Spacer(modifier = Modifier.width(Dimens.space4))
+            }
             Box(modifier = Modifier.weight(1f)) { title() }
             actions()
         }

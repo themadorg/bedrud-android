@@ -256,6 +256,9 @@
   <string name="settings_section_about">Acerca de</string>
   <string name="settings_label_version">Versión</string>
   <string name="settings_label_build">Compilación</string>
+  <string name="settings_label_licenses">Licencias de código abierto</string>
+  <string name="settings_button_closeLicense">Cerrar</string>
+  <string name="settings_label_allLibraries">Todas las bibliotecas</string>
   <string name="call_channel_name">Llamadas activas</string>
   <string name="call_channel_description">Notificaciones de llamadas en curso</string>
   <string name="call_action_mute">Silenciar</string>

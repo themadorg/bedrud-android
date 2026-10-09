@@ -311,7 +311,9 @@ than standing at full strength beside a greyed-out one.
 - **`BedrudCompactTopBar`** — compact status-bar-aware header. Takes either a `title: String` or a
   slot `title` composable (the rooms header uses the slot for its "{server} rooms" name, in a single
   neutral tone, with a trailing chevron marking it as the server switcher's entry point), plus an
-  `actions` row.
+  `actions` row. A screen pushed over the tabs (Open-source licenses) passes a `navigationIcon`, the
+  auto-mirrored back arrow, placed where Material's small top app bar puts one: 4dp from the start
+  edge, the title 4dp after it.
 - **`BedrudSnackbarHost`** — Material 3 snackbar with the rounded shape token; used across the auth
   screens and the rooms dashboard.
 - **Selectable cards** (e.g. the server chooser) — a `selectableGroup()` of `Surface`s marked

@@ -36,6 +36,8 @@ For the server, web app, and other platforms, see the [main Bedrud project](http
 - **Admin moderation** — kick and ban controls for room hosts
 - **Flexible sign-in** — email/password, guest access, OAuth, and FIDO2 passkeys
 - **Localized** — 10 languages with right-to-left (Arabic, Persian) support
+- **Open-source licenses** — Settings › About lists the main projects the app is built on, with
+  every other library it ships one tap further, each opening its full license text
 
 ## Requirements
 

@@ -1,6 +1,7 @@
 package com.bedrud.app.ui.screens.settings
 
 import android.app.Activity
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -13,6 +14,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.NavigateNext
 import androidx.compose.material.icons.filled.AdminPanelSettings
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenuItem
@@ -105,6 +107,7 @@ internal fun passwordUnavailableMessage(method: SignInMethod): String = when (me
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsContent(
+    onOpenLicenses: () -> Unit,
     modifier: Modifier = Modifier,
     settingsStore: SettingsStore = koinInject(),
     instanceManager: InstanceManager = koinInject()
@@ -480,6 +483,32 @@ fun SettingsContent(
                             )
                         },
                         colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+                    )
+
+                    HorizontalDivider(
+                        modifier = Modifier.padding(horizontal = Dimens.space16),
+                        color = MaterialTheme.colorScheme.outlineVariant
+                    )
+
+                    // The one row in the card that leads somewhere, so it alone carries the
+                    // chevron the room cards use for the same promise.
+                    ListItem(
+                        headlineContent = {
+                            Text(
+                                stringResource(R.string.settings_label_licenses),
+                                modifier = Modifier.typeCentered(LocalTextStyle.current)
+                            )
+                        },
+                        trailingContent = {
+                            Icon(
+                                Icons.AutoMirrored.Filled.NavigateNext,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(Dimens.iconMd)
+                            )
+                        },
+                        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                        modifier = Modifier.clickable(onClick = onOpenLicenses)
                     )
                 }
             }

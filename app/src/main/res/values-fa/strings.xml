@@ -252,6 +252,9 @@
   <string name="settings_section_about">درباره</string>
   <string name="settings_label_version">نسخه</string>
   <string name="settings_label_build">ساخت</string>
+  <string name="settings_label_licenses">مجوزهای متن‌باز</string>
+  <string name="settings_button_closeLicense">بستن</string>
+  <string name="settings_label_allLibraries">همه کتابخانه‌ها</string>
   <string name="call_channel_name">تماس‌های فعال</string>
   <string name="call_channel_description">اعلان‌های تماس جاری</string>
   <string name="call_action_mute">قطع صدا</string>

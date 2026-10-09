@@ -252,6 +252,9 @@
   <string name="settings_section_about">关于</string>
   <string name="settings_label_version">版本</string>
   <string name="settings_label_build">构建</string>
+  <string name="settings_label_licenses">开源许可</string>
+  <string name="settings_button_closeLicense">关闭</string>
+  <string name="settings_label_allLibraries">所有库</string>
   <string name="call_channel_name">正在通话</string>
   <string name="call_channel_description">通话中的通知</string>
   <string name="call_action_mute">静音</string>

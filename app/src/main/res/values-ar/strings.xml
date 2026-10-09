@@ -267,6 +267,9 @@
   <string name="settings_section_about">حول</string>
   <string name="settings_label_version">الإصدار</string>
   <string name="settings_label_build">البنية</string>
+  <string name="settings_label_licenses">تراخيص المصادر المفتوحة</string>
+  <string name="settings_button_closeLicense">إغلاق</string>
+  <string name="settings_label_allLibraries">جميع المكتبات</string>
   <string name="call_channel_name">المكالمات النشطة</string>
   <string name="call_channel_description">إشعارات المكالمات الجارية</string>
   <string name="call_action_mute">كتم</string>

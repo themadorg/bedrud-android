@@ -255,6 +255,9 @@
   <string name="settings_section_about">Hakkında</string>
   <string name="settings_label_version">Sürüm</string>
   <string name="settings_label_build">Yapı</string>
+  <string name="settings_label_licenses">Açık kaynak lisansları</string>
+  <string name="settings_button_closeLicense">Kapat</string>
+  <string name="settings_label_allLibraries">Tüm kütüphaneler</string>
   <string name="call_channel_name">Aktif Aramalar</string>
   <string name="call_channel_description">Devam eden arama bildirimleri</string>
   <string name="call_action_mute">Sessiz</string>
