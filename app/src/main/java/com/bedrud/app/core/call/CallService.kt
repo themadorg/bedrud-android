@@ -155,7 +155,6 @@ class CallService : Service() {
         serviceScope?.launch {
             rm.isMicEnabled.collectLatest { micEnabled ->
                 updateForegroundNotification(isMuted = !micEnabled)
-                CallConnectionService.updateMuteState(!micEnabled)
             }
         }
 

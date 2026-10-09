@@ -33,12 +33,19 @@ class InstanceStore(private val prefs: SharedPreferences) {
         }
     }
 
+    /**
+     * The server that becomes active when the active server [id] is removed: the first other saved
+     * server, or null when [id] is the only one. The confirmation that asks before a removal names
+     * it, so it and [removeInstance] must never disagree.
+     */
+    fun serverAfterRemoving(id: String): Instance? = _instances.value.firstOrNull { it.id != id }
+
     fun removeInstance(id: String) {
+        val newActive = serverAfterRemoving(id)?.id
         val updated = _instances.value.filter { it.id != id }
         _instances.value = updated
         saveInstances(updated)
         if (_activeInstanceId.value == id) {
-            val newActive = updated.firstOrNull()?.id
             _activeInstanceId.value = newActive
             prefs.edit().putString(KEY_ACTIVE_ID, newActive).apply()
         }
