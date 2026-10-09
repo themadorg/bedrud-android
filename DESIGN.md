@@ -346,6 +346,12 @@ than standing at full strength beside a greyed-out one.
   chevron is the auto-mirrored `NavigateNext` for the same reason. The name and its status line sit
   `space4` apart, since the card's fixed height would otherwise push all its spare room above and
   below them.
+- **Switch rows** — the whole row is the switch: a tap on its label toggles it, and a screen reader
+  meets one switch named by its label. `BedrudSwitchListItem` is the row inside a card's list
+  (Settings' notifications); `BedrudSwitchRow` is the row inside a dialog or sheet's form (the room
+  settings switches), which keeps the 48dp touch-target height its switch no longer reserves, and
+  takes a `supportingContent` slot under its label — where a locked toggle's "coming soon" badge goes.
+  The `Switch` inside either takes no click of its own (`onCheckedChange = null`).
 - **`DevOnly` / `DevHintBadge`** — see below.
 
 ## Dialogs
@@ -811,7 +817,9 @@ reconnecting ring — one state, one colour. Hairlines inside the call's menus a
   bar's handle expands it into `MeetingControlsPanel`, which keeps the five call controls at its
   foot and lists deafen, hide-all-cameras (viewer-side data saver), audio settings, the
   dev-hinted noise suppression (#106), invite, and admin room settings above them. The output picker uses
-  trailing radios. `MeetingRecordingBanner` and the dot that opened it are **switched off** behind
+  trailing radios, and like the input-mode and noise-suppression pickers it closes on a pick; the
+  output list inside the full audio settings sheet stays open, since that sheet also holds the volume
+  and input settings. `MeetingRecordingBanner` and the dot that opened it are **switched off** behind
   `RecordingIndicatorEnabled` (#107): the server has no egress client and registers no recording
   routes, so nothing in the app can be recording, and a permanently lit privacy light above a
   banner claiming every camera and message is captured is worse than none at all. The UI is kept

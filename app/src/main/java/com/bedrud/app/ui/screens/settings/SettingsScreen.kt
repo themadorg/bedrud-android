@@ -21,6 +21,7 @@ import androidx.compose.material3.DropdownMenuItem
 import com.bedrud.app.ui.components.BedrudButton
 import com.bedrud.app.ui.components.BedrudOutlinedCard
 import com.bedrud.app.ui.components.BedrudPasswordField
+import com.bedrud.app.ui.components.BedrudSwitchListItem
 import com.bedrud.app.ui.components.BedrudTextField
 import com.bedrud.app.core.auth.PasswordPolicy
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -42,7 +43,6 @@ import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 
 import androidx.compose.runtime.Composable
@@ -234,20 +234,10 @@ fun SettingsContent(
                         stringResource(R.string.settings_section_notifications),
                         modifier = Modifier.padding(start = Dimens.cardPadding, top = Dimens.cardPadding, end = Dimens.cardPadding, bottom = Dimens.space8)
                     )
-                    ListItem(
-                        headlineContent = {
-                            Text(
-                                stringResource(R.string.settings_label_enableNotifications),
-                                modifier = Modifier.typeCentered(LocalTextStyle.current)
-                            )
-                        },
-                        trailingContent = {
-                            Switch(
-                                checked = notificationsEnabled,
-                                onCheckedChange = { settingsStore.setNotificationsEnabled(it) }
-                            )
-                        },
-                        colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+                    BedrudSwitchListItem(
+                        label = stringResource(R.string.settings_label_enableNotifications),
+                        checked = notificationsEnabled,
+                        onCheckedChange = { settingsStore.setNotificationsEnabled(it) }
                     )
                 }
             }
