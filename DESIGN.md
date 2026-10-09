@@ -389,11 +389,17 @@ snackbar's `BedrudShapeTokens.snackbar` corners.
 ## Bottom sheets (`BedrudBottomSheet`)
 
 Every sheet in the app goes through **`BedrudBottomSheet`** so they share one container, one drag
-handle, one shape, one set of insets, and one gutter. Those are **fixed, not defaulted** — the
-component takes no colour, shape or state parameters at all:
+handle, one shape, one set of insets, and one gutter. The one exception is the in-call chat
+(`MeetingChatSheet`, under **Chat** in [Meeting chrome](#meeting-chrome)): it needs three heights and
+its handle drawn inside its own content, so it builds its own `ModalBottomSheet` from the same
+shape, container colour and handle. Those are **fixed, not defaulted** — the component takes no
+colour, shape or state parameters at all:
 
-- **Material's drag handle**, not a hand-drawn bar. A bare `Box` can match the 32×4dp look but
-  carries none of the accessibility semantics or the expanded touch target.
+- **`BedrudSheetHandle`**, not Material's `BottomSheetDefaults.DragHandle`. Material's handle
+  pressed as a rounded rectangle splashing across its whole touch area, reading as a button rather
+  than a grip, and announced itself as "Drag Handle", naming the widget instead of saying what it
+  does. A sheet with one height gets a plain bar; the chat sheet, where a tap changes the height,
+  gives it a click and a label saying so.
 - **`BedrudShapeTokens.sheetTop`**, which is already M3's 28dp `extraLarge` top corners — the token
   names the default rather than departing from it.
 - **`BottomSheetDefaults.ContainerColor`** (`surfaceContainerLow`), with no override available.
@@ -410,8 +416,8 @@ equally opaque over video, so a darker container bought nothing anywhere. A defa
 suggestion; the fix was to delete the knob, not to re-tune it.
 
 The sheet state is not a parameter either: exposing it would put an experimental Material type in
-the signature and force `@OptIn` onto every screen that shows a sheet. `ModalBottomSheet` is now
-referenced in exactly one file.
+the signature and force `@OptIn` onto every screen that shows a sheet. Outside this component,
+`ModalBottomSheet` is referenced only by the chat sheet, for the reasons above.
 
 **Actions inside a sheet are a list, not a stack of cards.** `BedrudSheetActionRow` follows the M3
 list-item spec — 56dp one-line, 72dp when it carries a supporting line, `iconMd` leading icon — and
@@ -469,7 +475,7 @@ reconnecting ring — one state, one colour. Hairlines inside the call's menus a
   the pill into the room options; the handle, the scrim, Back and a swipe down all put it away.
   There is no "⋯" button.
 
-  **The one place in the app that is not a `BedrudBottomSheet`**, deliberately. As a sheet, the
+  **Not a sheet at all**, deliberately. As a sheet, the
   options arrived as a *second* surface carrying its own copy of the controls, sliding up over the
   real bar and settling higher: the same five buttons existed twice at two elevations, the row your
   thumb rested on jumped, and at the end of the dismissal both were briefly on screen at once.
@@ -816,7 +822,7 @@ reconnecting ring — one state, one colour. Hairlines inside the call's menus a
   system share, copy, inline QR, email, Telegram, WhatsApp — and the raw link). The controls
   bar's handle expands it into `MeetingControlsPanel`, which keeps the five call controls at its
   foot and lists deafen, hide-all-cameras (viewer-side data saver), audio settings, the
-  dev-hinted noise suppression (#106), invite, and admin room settings above them. The output picker uses
+  noise suppression (Off / Device; richer modes are tracked in #106), invite, and admin room settings above them. The output picker uses
   trailing radios, and like the input-mode and noise-suppression pickers it closes on a pick; the
   output list inside the full audio settings sheet stays open, since that sheet also holds the volume
   and input settings. `MeetingRecordingBanner` and the dot that opened it are **switched off** behind
