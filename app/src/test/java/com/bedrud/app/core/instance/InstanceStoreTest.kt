@@ -73,6 +73,56 @@ class InstanceStoreTest {
     }
 
     @Test
+    fun `should name the first other saved server as the one taking over from a removed server`() {
+        val i1 = Instance(id = "i1", serverURL = "https://a.com", displayName = "A")
+        val i2 = Instance(id = "i2", serverURL = "https://b.com", displayName = "B")
+        val i3 = Instance(id = "i3", serverURL = "https://c.com", displayName = "C")
+        store.addInstance(i1)
+        store.addInstance(i2)
+        store.addInstance(i3)
+
+        assertEquals(i2, store.serverAfterRemoving("i1"))
+        assertEquals(i1, store.serverAfterRemoving("i2"))
+        assertEquals(i1, store.serverAfterRemoving("i3"))
+    }
+
+    @Test
+    fun `should name no server as taking over from the only saved server`() {
+        store.addInstance(Instance(id = "i1", serverURL = "https://a.com", displayName = "A"))
+
+        assertNull(store.serverAfterRemoving("i1"))
+    }
+
+    @Test
+    fun `should make the server it names active when the active server is removed`() {
+        val i1 = Instance(id = "i1", serverURL = "https://a.com", displayName = "A")
+        val i2 = Instance(id = "i2", serverURL = "https://b.com", displayName = "B")
+        val i3 = Instance(id = "i3", serverURL = "https://c.com", displayName = "C")
+        store.addInstance(i1)
+        store.addInstance(i2)
+        store.addInstance(i3)
+        store.setActive("i2")
+        val named = store.serverAfterRemoving("i2")
+
+        store.removeInstance("i2")
+
+        assertEquals(named, store.activeInstance)
+    }
+
+    @Test
+    fun `should keep the active server when another server is removed`() {
+        val i1 = Instance(id = "i1", serverURL = "https://a.com", displayName = "A")
+        val i2 = Instance(id = "i2", serverURL = "https://b.com", displayName = "B")
+        store.addInstance(i1)
+        store.addInstance(i2)
+        store.setActive("i2")
+
+        store.removeInstance("i1")
+
+        assertEquals(i2, store.activeInstance)
+    }
+
+    @Test
     fun `setActive with valid id updates activeInstanceId`() {
         val i1 = Instance(id = "i1", serverURL = "https://a.com", displayName = "A")
         val i2 = Instance(id = "i2", serverURL = "https://b.com", displayName = "B")

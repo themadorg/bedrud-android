@@ -238,7 +238,7 @@ fun EmailLoginScreen(
  * shows the uniform confirmation.
  */
 @Composable
-private fun ForgotPasswordSheet(
+internal fun ForgotPasswordSheet(
     initialEmail: String,
     onDismiss: () -> Unit,
     onSubmit: suspend (String) -> Result<Unit>,
@@ -304,6 +304,8 @@ private fun ForgotPasswordSheet(
                 },
                 label = stringResource(R.string.auth_label_email),
                 isError = currentError != null,
+                // On the field itself, as every other form reports an error.
+                supportingText = currentError?.let { { Text(it) } },
                 keyboardOptions = KeyboardOptions(
                     keyboardType = KeyboardType.Email,
                     imeAction = ImeAction.Go
@@ -312,15 +314,6 @@ private fun ForgotPasswordSheet(
                 autofill = ContentType.EmailAddress,
                 textDirection = TextDirection.Ltr
             )
-
-            if (currentError != null) {
-                Spacer(Modifier.height(Dimens.space8))
-                Text(
-                    text = currentError,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.error
-                )
-            }
 
             Spacer(Modifier.height(Dimens.space24))
 

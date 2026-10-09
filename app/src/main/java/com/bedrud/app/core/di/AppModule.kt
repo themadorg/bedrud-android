@@ -15,7 +15,7 @@ val appModule = module {
     single { InstanceStore(androidContext()) }
     single { RecentRoomsStore(androidContext()) }
     single { SettingsStore(androidContext()) }
-    single { InstanceManager(androidApplication(), get(), get()) }
+    single { InstanceManager(androidApplication(), get(), get(), get()) }
     single { PipStateHolder() }
     single { JoinFailureRelay() }
     single { SignInNoticeRelay() }

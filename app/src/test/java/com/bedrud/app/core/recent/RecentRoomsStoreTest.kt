@@ -28,6 +28,20 @@ class RecentRoomsStoreTest {
     }
 
     @Test
+    fun `should forget every recent on a removed server and keep the others`() {
+        val prefs = InMemorySharedPreferences()
+        val store = RecentRoomsStore(prefs)
+        store.add("room-a", "inst-1")
+        store.add("room-b", "inst-2")
+        store.add("room-c", "inst-1")
+
+        store.removeServer("inst-1")
+
+        assertEquals(listOf("room-b"), store.rooms.value.map { it.roomName })
+        assertEquals(listOf("room-b"), RecentRoomsStore(prefs).rooms.value.map { it.roomName })
+    }
+
+    @Test
     fun `recentRoomsNotInApiList keeps active-server rooms not already in the API list`() {
         val recent = listOf(
             RecentRoom("room-a", "inst-1"),

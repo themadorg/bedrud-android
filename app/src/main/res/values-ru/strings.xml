@@ -23,6 +23,7 @@
   <string name="auth_title_createAccount">Создать аккаунт</string>
   <string name="auth_error_passwordMismatch">Пароли не совпадают</string>
   <string name="auth_subtitle_hubChoose">Войдите в свою учётную запись или продолжите как гость.</string>
+  <string name="auth_subtitle_hubSignIn">Войдите в свою учётную запись.</string>
   <string name="auth_button_signInWithEmail">Вход по электронной почте</string>
   <string name="auth_button_continueAsGuest">Продолжить как гость</string>
   <string name="auth_divider_or">или</string>
@@ -52,9 +53,9 @@
   <string name="auth_notice_verifyEmail">Проверьте почту, чтобы подтвердить аккаунт</string>
   <string name="auth_notice_verifyBeforeSignIn">Подтвердите почту, прежде чем входить</string>
   <string name="auth_divider_orContinueWith">или продолжить через</string>
-  <string name="auth_hint_methodDisabled">Недоступно на этом сервере</string>
+  <string name="auth_button_passkeyOff">Вход с помощью ключа отключён</string>
+  <string name="auth_button_guestOff">Гостевой вход отключён</string>
   <string name="auth_oauth_continueWithFormat">Продолжить через %1$s</string>
-  <string name="instance_title_servers">Серверы</string>
   <string name="instance_title_addServer">Добавить сервер</string>
   <string name="instance_title_switchServer">Сменить сервер</string>
   <string name="instance_subtitle_connectToServer">Подключитесь к серверу, чтобы начать</string>
@@ -68,9 +69,15 @@
   <string name="instance_warning_insecure">Соединение не будет зашифровано. Используйте только для локальных или тестовых серверов.</string>
   <string name="instance_error_duplicate">Сервер с таким адресом уже существует.</string>
   <string name="instance_button_addServer">Добавить сервер</string>
-  <string name="instance_status_active">Активен</string>
-  <string name="instance_empty_noServers">Нет настроенных серверов</string>
+  <string name="instance_status_inUse">Используется</string>
   <string name="instance_default_serverName">Сервер</string>
+  <string name="instance_button_edit">Изменить</string>
+  <string name="instance_button_done">Готово</string>
+  <string name="instance_contentDescription_removeServer">Удалить <xliff:g id="serverName" example="Bedrud">%1$s</xliff:g></string>
+  <string name="instance_dialog_removeTitle">Удалить <xliff:g id="serverName" example="Bedrud">%1$s</xliff:g>?</string>
+  <string name="instance_dialog_removeMessage">Вы выйдете из него на этом устройстве, а его недавние комнаты будут очищены. Вы сможете добавить его снова в любое время.</string>
+  <string name="instance_dialog_removeActiveMessage">Сейчас вы используете этот сервер. Вы выйдете из него на этом устройстве, и приложение переключится на <xliff:g id="serverName" example="Bedrud">%1$s</xliff:g>.</string>
+  <string name="instance_dialog_removeLastMessage">Это ваш единственный сервер. Вы выйдете из него на этом устройстве, и вам будет предложено добавить сервер.</string>
   <string name="instance_default_displayName" translatable="false">Bedrud</string>
   <!-- First-run server chooser -->
   <string name="instance_choice_default_title">Официальный сервер</string>
@@ -255,6 +262,9 @@
   <string name="settings_section_about">О приложении</string>
   <string name="settings_label_version">Версия</string>
   <string name="settings_label_build">Сборка</string>
+  <string name="settings_label_licenses">Лицензии открытого ПО</string>
+  <string name="settings_button_closeLicense">Закрыть</string>
+  <string name="settings_label_allLibraries">Все библиотеки</string>
   <string name="call_channel_name">Активные звонки</string>
   <string name="call_channel_description">Уведомления о текущих звонках</string>
   <string name="call_action_mute">Отключить</string>
@@ -313,7 +323,6 @@
   <string name="meeting_sheet_deafen">Оглушить</string>
   <string name="meeting_sheet_tools">Инструменты</string>
   <string name="meeting_sheet_report">Сообщить о нарушении</string>
-  <string name="meeting_contentDescription_audioSource">Источник звука</string>
   <string name="meeting_audio_sheet_title">Выбор вывода звука</string>
   <string name="meeting_audio_device_speaker">Динамик</string>
   <string name="meeting_audio_device_earpiece">Телефон</string>

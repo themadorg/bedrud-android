@@ -23,6 +23,7 @@
   <string name="auth_title_createAccount">Hesap Oluştur</string>
   <string name="auth_error_passwordMismatch">Şifreler eşleşmiyor</string>
   <string name="auth_subtitle_hubChoose">Hesabınıza giriş yapın veya misafir olarak devam edin.</string>
+  <string name="auth_subtitle_hubSignIn">Hesabınıza giriş yapın.</string>
   <string name="auth_button_signInWithEmail">E-posta ile giriş yap</string>
   <string name="auth_button_continueAsGuest">Misafir olarak devam et</string>
   <string name="auth_divider_or">veya</string>
@@ -50,9 +51,9 @@
   <string name="auth_notice_verifyEmail">Hesabınızı doğrulamak için lütfen e-postanızı kontrol edin</string>
   <string name="auth_notice_verifyBeforeSignIn">Giriş yapmadan önce lütfen e-postanızı doğrulayın</string>
   <string name="auth_divider_orContinueWith">veya şununla devam et</string>
-  <string name="auth_hint_methodDisabled">Bu sunucuda etkin değil</string>
+  <string name="auth_button_passkeyOff">Anahtarla giriş kapalı</string>
+  <string name="auth_button_guestOff">Misafir girişi kapalı</string>
   <string name="auth_oauth_continueWithFormat">%1$s ile devam et</string>
-  <string name="instance_title_servers">Sunucular</string>
   <string name="instance_title_addServer">Yeni Sunucu Ekle</string>
   <string name="instance_title_switchServer">Sunucu Değiştir</string>
   <string name="instance_subtitle_connectToServer">Başlamak için bir sunucuya bağlanın</string>
@@ -66,9 +67,15 @@
   <string name="instance_warning_insecure">Bağlantı şifrelenmeyecek. Yalnızca yerel veya geliştirme sunucuları için kullanın.</string>
   <string name="instance_error_duplicate">Bu adrese sahip bir sunucu zaten var.</string>
   <string name="instance_button_addServer">Sunucu Ekle</string>
-  <string name="instance_status_active">Aktif</string>
-  <string name="instance_empty_noServers">Yapılandırılmış sunucu yok</string>
+  <string name="instance_status_inUse">Kullanımda</string>
   <string name="instance_default_serverName">Sunucu</string>
+  <string name="instance_button_edit">Düzenle</string>
+  <string name="instance_button_done">Bitti</string>
+  <string name="instance_contentDescription_removeServer">Kaldır: <xliff:g id="serverName" example="Bedrud">%1$s</xliff:g></string>
+  <string name="instance_dialog_removeTitle"><xliff:g id="serverName" example="Bedrud">%1$s</xliff:g> kaldırılsın mı?</string>
+  <string name="instance_dialog_removeMessage">Bu cihazda bu sunucudaki oturumunuz kapatılacak ve son odaları temizlenecek. İstediğiniz zaman yeniden ekleyebilirsiniz.</string>
+  <string name="instance_dialog_removeActiveMessage">Şu anda bu sunucuyu kullanıyorsunuz. Bu cihazda oturumunuz kapatılacak ve uygulama <xliff:g id="serverName" example="Bedrud">%1$s</xliff:g> sunucusuna geçecek.</string>
+  <string name="instance_dialog_removeLastMessage">Bu, tek sunucunuz. Bu cihazda oturumunuz kapatılacak ve bir sunucu eklemeniz istenecek.</string>
   <string name="instance_default_displayName" translatable="false">Bedrud</string>
   <!-- First-run server chooser -->
   <string name="instance_choice_default_title">Resmi sunucu</string>
@@ -249,6 +256,9 @@
   <string name="settings_section_about">Hakkında</string>
   <string name="settings_label_version">Sürüm</string>
   <string name="settings_label_build">Yapı</string>
+  <string name="settings_label_licenses">Açık kaynak lisansları</string>
+  <string name="settings_button_closeLicense">Kapat</string>
+  <string name="settings_label_allLibraries">Tüm kütüphaneler</string>
   <string name="call_channel_name">Aktif Aramalar</string>
   <string name="call_channel_description">Devam eden arama bildirimleri</string>
   <string name="call_action_mute">Sessiz</string>
@@ -307,7 +317,6 @@
   <string name="meeting_sheet_deafen">Sağırlaştır</string>
   <string name="meeting_sheet_tools">Araçlar</string>
   <string name="meeting_sheet_report">Kötüye kullanımı bildir</string>
-  <string name="meeting_contentDescription_audioSource">Ses kaynağı</string>
   <string name="meeting_audio_sheet_title">Ses Çıkışını Seç</string>
   <string name="meeting_audio_device_speaker">Hoparlör</string>
   <string name="meeting_audio_device_earpiece">Telefon</string>

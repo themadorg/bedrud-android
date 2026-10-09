@@ -23,6 +23,7 @@
   <string name="auth_title_createAccount">إنشاء حساب</string>
   <string name="auth_error_passwordMismatch">كلمتا المرور غير متطابقتين</string>
   <string name="auth_subtitle_hubChoose">سجّل الدخول إلى حسابك أو تابع كضيف.</string>
+  <string name="auth_subtitle_hubSignIn">سجّل الدخول إلى حسابك.</string>
   <string name="auth_button_signInWithEmail">تسجيل الدخول بالبريد الإلكتروني</string>
   <string name="auth_button_continueAsGuest">المتابعة كضيف</string>
   <string name="auth_divider_or">أو</string>
@@ -54,9 +55,9 @@
   <string name="auth_notice_verifyEmail">يرجى التحقق من بريدك الإلكتروني لتفعيل حسابك</string>
   <string name="auth_notice_verifyBeforeSignIn">يرجى تفعيل بريدك الإلكتروني قبل تسجيل الدخول</string>
   <string name="auth_divider_orContinueWith">أو تابع عبر</string>
-  <string name="auth_hint_methodDisabled">غير مُفعّل على هذا الخادم</string>
+  <string name="auth_button_passkeyOff">تسجيل الدخول بالمفتاح مُعطّل</string>
+  <string name="auth_button_guestOff">الدخول كضيف مُعطّل</string>
   <string name="auth_oauth_continueWithFormat">المتابعة عبر %1$s</string>
-  <string name="instance_title_servers">الخوادم</string>
   <string name="instance_title_addServer">إضافة خادم جديد</string>
   <string name="instance_title_switchServer">تبديل الخادم</string>
   <string name="instance_subtitle_connectToServer">اتصل بخادم للبدء</string>
@@ -70,9 +71,15 @@
   <string name="instance_warning_insecure">لن يتم تشفير الاتصال. استخدم فقط للخوادم المحلية أو التطويرية.</string>
   <string name="instance_error_duplicate">يوجد خادم بهذا العنوان بالفعل.</string>
   <string name="instance_button_addServer">إضافة خادم</string>
-  <string name="instance_status_active">نشط</string>
-  <string name="instance_empty_noServers">لا توجد خوادم مهيأة</string>
+  <string name="instance_status_inUse">قيد الاستخدام</string>
   <string name="instance_default_serverName">خادم</string>
+  <string name="instance_button_edit">تعديل</string>
+  <string name="instance_button_done">تم</string>
+  <string name="instance_contentDescription_removeServer">إزالة <xliff:g id="serverName" example="Bedrud">%1$s</xliff:g></string>
+  <string name="instance_dialog_removeTitle">إزالة <xliff:g id="serverName" example="Bedrud">%1$s</xliff:g>؟</string>
+  <string name="instance_dialog_removeMessage">سيتم تسجيل خروجك منه على هذا الجهاز، وستُمسح غرفه الأخيرة. يمكنك إضافته مرة أخرى في أي وقت.</string>
+  <string name="instance_dialog_removeActiveMessage">أنت تستخدم هذا الخادم الآن. سيتم تسجيل خروجك منه على هذا الجهاز، وسينتقل التطبيق إلى <xliff:g id="serverName" example="Bedrud">%1$s</xliff:g>.</string>
+  <string name="instance_dialog_removeLastMessage">هذا خادمك الوحيد. سيتم تسجيل خروجك منه على هذا الجهاز، وسيُطلب منك إضافة خادم.</string>
   <string name="instance_default_displayName" translatable="false">Bedrud</string>
   <!-- First-run server chooser -->
   <string name="instance_choice_default_title">الخادم الرسمي</string>
@@ -261,6 +268,9 @@
   <string name="settings_section_about">حول</string>
   <string name="settings_label_version">الإصدار</string>
   <string name="settings_label_build">البنية</string>
+  <string name="settings_label_licenses">تراخيص المصادر المفتوحة</string>
+  <string name="settings_button_closeLicense">إغلاق</string>
+  <string name="settings_label_allLibraries">جميع المكتبات</string>
   <string name="call_channel_name">المكالمات النشطة</string>
   <string name="call_channel_description">إشعارات المكالمات الجارية</string>
   <string name="call_action_mute">كتم</string>
@@ -319,7 +329,6 @@
   <string name="meeting_sheet_deafen">كتم السماع</string>
   <string name="meeting_sheet_tools">الأدوات</string>
   <string name="meeting_sheet_report">الإبلاغ عن إساءة</string>
-  <string name="meeting_contentDescription_audioSource">مصدر الصوت</string>
   <string name="meeting_audio_sheet_title">اختر مخرج الصوت</string>
   <string name="meeting_audio_device_speaker">مكبر الصوت</string>
   <string name="meeting_audio_device_earpiece">الهاتف</string>
