@@ -46,7 +46,7 @@ fun MeetingAudioSourceSheet(
                 // open instead, since that sheet holds the volume and input settings too.
                 val pick = {
                     audioState.selectDevice(audioHandler, device)
-                    onDismiss()
+                    dismiss()
                 }
                 BedrudSheetActionRow(
                     icon = audioDeviceIcon(device),

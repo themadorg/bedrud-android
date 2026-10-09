@@ -426,6 +426,13 @@ The sheet state is not a parameter either: exposing it would put an experimental
 the signature and force `@OptIn` onto every screen that shows a sheet. Outside this component,
 `ModalBottomSheet` is referenced only by the chat sheet, for the reasons above.
 
+**A sheet that closes itself calls `dismiss()`, never its own `onDismiss`.** The content of every
+`BedrudBottomSheet` runs in a `BedrudSheetScope`, whose `dismiss()` slides the sheet down and only
+then calls `onDismiss` — M3's documented hide-then-dismiss order. Calling `onDismiss` from inside
+removes the sheet from composition in one frame, so a picker vanished the moment something was
+picked instead of sliding away the way a drag or the scrim puts it away. A sheet that sends
+something on its way out ignores a second tap during the slide, since it is still on screen.
+
 **Actions inside a sheet are a list, not a stack of cards.** `BedrudSheetActionRow` follows the M3
 list-item spec — 56dp one-line, 72dp when it carries a supporting line, `iconMd` leading icon — and
 is deliberately **not** wrapped in a per-row filled or outlined container. M3 reserves per-item

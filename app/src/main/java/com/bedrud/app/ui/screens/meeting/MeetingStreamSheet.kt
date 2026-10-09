@@ -51,7 +51,7 @@ fun MeetingStreamSheet(
             contentColor = colors.onButton,
             onClick = {
                 onLeaveStream()
-                onDismiss()
+                dismiss()
             },
         )
     }
