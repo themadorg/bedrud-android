@@ -41,6 +41,13 @@ fun MeetingAudioSourceSheet(
                 val selected = audioState.selectedDevice?.let { current ->
                     current::class == device::class && current.name == device.name
                 } == true
+                // A pick closes the picker, as the input-mode and noise-suppression pickers do: it
+                // asks one question. The output list inside the full audio settings sheet stays
+                // open instead, since that sheet holds the volume and input settings too.
+                val pick = {
+                    audioState.selectDevice(audioHandler, device)
+                    dismiss()
+                }
                 BedrudSheetActionRow(
                     icon = audioDeviceIcon(device),
                     title = audioDeviceLabel(device),
@@ -52,14 +59,14 @@ fun MeetingAudioSourceSheet(
                     trailing = {
                         RadioButton(
                             selected = selected,
-                            onClick = { audioState.selectDevice(audioHandler, device) },
+                            onClick = pick,
                             colors = RadioButtonDefaults.colors(
                                 selectedColor = colors.accent,
                                 unselectedColor = colors.onButtonVariant,
                             ),
                         )
                     },
-                    onClick = { audioState.selectDevice(audioHandler, device) },
+                    onClick = pick,
                 )
             }
         }

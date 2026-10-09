@@ -169,7 +169,8 @@ private fun RecordingDot(onClick: () -> Unit) {
             modifier = Modifier
                 .size(Dimens.meetingIndicatorDot)
                 .clip(CircleShape)
-                .background(MaterialTheme.colorScheme.error)
+                // Red by convention, not because anything failed, so not the error role.
+                .background(MaterialTheme.bedrudColors.recording)
                 .semantics { contentDescription = description },
         )
     }
