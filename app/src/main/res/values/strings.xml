@@ -23,6 +23,7 @@
   <string name="auth_title_createAccount">Create Account</string>
   <string name="auth_error_passwordMismatch">Passwords do not match</string>
   <string name="auth_subtitle_hubChoose">Sign in to your account, or continue as a guest.</string>
+  <string name="auth_subtitle_hubSignIn">Sign in to your account.</string>
   <string name="auth_button_signInWithEmail">Sign in with email</string>
   <string name="auth_button_continueAsGuest">Continue as guest</string>
   <string name="auth_divider_or">or</string>
@@ -39,7 +40,8 @@
   <string name="auth_notice_verifyEmail">Please check your email to verify your account</string>
   <string name="auth_notice_verifyBeforeSignIn">Please verify your email before signing in</string>
   <string name="auth_divider_orContinueWith">or continue with</string>
-  <string name="auth_hint_methodDisabled">Not enabled on this server</string>
+  <string name="auth_button_passkeyOff">Passkey sign-in is off</string>
+  <string name="auth_button_guestOff">Guest sign-in is off</string>
   <string name="auth_oauth_continueWithFormat">Continue with %1$s</string>
   <string name="auth_email_subtitle">Sign in to your account</string>
   <string name="auth_forgot_link">Forgot password?</string>
@@ -51,7 +53,6 @@
   <string name="auth_register_subtitle">Sign up for a new account</string>
   <string name="auth_hint_passwordMinLength">At least %1$d characters</string>
   <string name="auth_error_emailInvalid">Enter a valid email address</string>
-  <string name="instance_title_servers">Servers</string>
   <string name="instance_title_addServer">Add New Server</string>
   <string name="instance_title_switchServer">Switch Server</string>
   <string name="instance_subtitle_connectToServer">Connect to a server to get started</string>
@@ -65,10 +66,17 @@
   <string name="instance_warning_insecure">Connection will not be encrypted. Only use for local or development servers.</string>
   <string name="instance_error_duplicate">A server with this address already exists.</string>
   <string name="instance_button_addServer">Add Server</string>
-  <string name="instance_status_active">Active</string>
-  <string name="instance_empty_noServers">No servers configured</string>
+  <string name="instance_status_inUse">In use</string>
   <string name="instance_default_serverName">Server</string>
   <string name="instance_default_displayName" translatable="false">Bedrud</string>
+  <!-- Removing a saved server, from the server switcher's edit mode -->
+  <string name="instance_button_edit">Edit</string>
+  <string name="instance_button_done">Done</string>
+  <string name="instance_contentDescription_removeServer">Remove <xliff:g id="serverName" example="Bedrud">%1$s</xliff:g></string>
+  <string name="instance_dialog_removeTitle">Remove <xliff:g id="serverName" example="Bedrud">%1$s</xliff:g>?</string>
+  <string name="instance_dialog_removeMessage">You\'ll be signed out of it on this device, and its recent rooms are cleared. You can add it again anytime.</string>
+  <string name="instance_dialog_removeActiveMessage">You\'re using this server now. You\'ll be signed out of it on this device, and the app moves to <xliff:g id="serverName" example="Bedrud">%1$s</xliff:g>.</string>
+  <string name="instance_dialog_removeLastMessage">It\'s your only server. You\'ll be signed out of it on this device, and asked to add a server.</string>
   <!-- First-run server chooser -->
   <string name="instance_choice_default_title">Official server</string>
   <string name="instance_choice_default_tag">Default</string>
@@ -233,20 +241,29 @@
   <string name="settings_label_signInMethod">Sign-in method</string>
   <string name="settings_provider_email">Email</string>
   <string name="settings_provider_passkey">Passkey</string>
+  <string name="settings_provider_guest">Guest</string>
   <string name="settings_label_role">Role</string>
   <string name="settings_role_admin">Admin</string>
   <string name="settings_role_user">User</string>
   <string name="settings_section_security">Security</string>
   <string name="settings_password_unavailable">Password change is not available for <xliff:g id="provider" example="Google">%1$s</xliff:g> sign-in.</string>
+  <string name="settings_password_unavailable_guest">Guest accounts have no password to change.</string>
   <string name="settings_label_currentPassword">Current password</string>
   <string name="settings_label_newPassword">New password</string>
   <string name="settings_label_confirmNewPassword">Confirm new password</string>
   <string name="settings_button_changePassword">Change Password</string>
   <string name="settings_password_changeSuccess">Password changed successfully</string>
   <string name="settings_password_changeFailed">Failed to change password</string>
+  <string name="settings_password_setIntro">You sign in with a passkey. Set a password to sign in with your email too.</string>
+  <string name="settings_button_setPassword">Set Password</string>
+  <string name="settings_password_setSuccess">Password set successfully</string>
+  <string name="settings_password_setFailed">Failed to set password</string>
   <string name="settings_section_about">About</string>
   <string name="settings_label_version">Version</string>
   <string name="settings_label_build">Build</string>
+  <string name="settings_label_licenses">Open-source licenses</string>
+  <string name="settings_button_closeLicense">Close</string>
+  <string name="settings_label_allLibraries">All libraries</string>
   <string name="call_phone_account_label" translatable="false">Bedrud</string>
   <string name="call_channel_name">Active Calls</string>
   <string name="call_channel_description">Ongoing call notifications</string>

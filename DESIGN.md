@@ -33,8 +33,16 @@ Brand seeds:
 - **Tertiary — teal `#14B8A6`** — accents, "recommended"/info affordances, highlight states.
 - **Secondary — muted rose** — lower-emphasis components that still tie to the brand.
 - **Neutrals — warm stone** — surfaces/text read as part of the rose family, not clinical grey.
-- **Error — red `#DC2626`** — reserved for errors and irreversible/destructive actions.
+- **Error — red `#B91C1C` (light) / `#EF4444` (dark)** — reserved for errors and irreversible/destructive actions.
 - **Warning — amber `#B45309` (light) / `#FBBF24` (dark)** — non-critical cautions (e.g. insecure http). M3 has no warning role, so it's a custom extended-color token (`MaterialTheme.bedrudColors.warning`, from `ExtendedColors.kt`); never use error-red for a warning.
+- **Recording — the same red as error** — the dot that says a room is being recorded (`MaterialTheme.bedrudColors.recording`). Recording is red by convention, not because anything failed, so it has its own extended-color token instead of borrowing `error`, and stays where it is if the error red moves.
+
+**The error colour never speaks alone.** Rose and red share a hue family, so red on screen does
+not say by itself whether something is selected or something failed. The error red sits darker
+than the rose primary in both themes, and `ThemeTest` holds the two apart by measured distance;
+but distance is only half of it. An error always comes with words — the message itself, or a
+field's `supportingText` — and may add an error icon beside them, as under the add-server picker.
+A destructive control drawn in the error colour carries its own icon or label.
 
 The full Material 3 role set is specified for light **and** dark (primary/secondary/tertiary + their
 containers, the surface-tonal levels `surfaceContainerLowest…Highest`, `inverse*`, `outline`, `scrim`),
@@ -128,9 +136,9 @@ Three forms correct it, and which one a site uses is not a matter of taste:
 
 | | when | why |
 |---|---|---|
-| `Modifier.typeCentered(style)` | **one line** of text centred against something that is **not text** — a button label in its fixed-height container, a navigation label under its icon, a chip's or a badge's label, a list item's line beside its switch, a top bar's title beside its actions, a label paired with an icon | one number per text style, so peer labels keep a shared baseline |
+| `Modifier.typeCentered(style)` | **one line** of text centred against something that is **not text** — a button label in its fixed-height container, a navigation label under its icon, a chip's label, a list item's line beside its switch, a top bar's title beside its actions, a label paired with an icon | one number per text style, so peer labels keep a shared baseline |
 | `Modifier.typeCentered(firstLine, lastLine)` | **a block of lines centred as one** — a title over its supporting line beside an icon or avatar. The same call goes on every line of the block, or once on the column holding them | only the room above the first line's capitals and below the last line's baseline decide where the block's letters sit. Correcting each line by its own style adds together corrections that should partly cancel: 22sp over 14sp on the profile card measured 4px low that way, 0.5px as a block |
-| `Modifier.inkCentered(text, style)` | **one glyph or short word alone in a shape** — an avatar's initial, a reaction's emoji, the `!` in an error dot, a count in a badge, the "or" between two rules | that string's own ink is the whole of what must look centred, and it may be nothing like a capital |
+| `Modifier.inkCentered(text, style)` | **one glyph or short word alone in a shape** — an avatar's initial, a reaction's emoji, the `!` in an error dot, a badge's label or count, the "or" between two rules | that string's own ink is the whole of what must look centred, and it may be nothing like a capital: a Persian badge label centred on a capital left its tails hanging and sat 1.5dp low in its pill |
 
 **`typeCentered` must be applied to every such site, not the convenient ones.** Its only real risk is
 partiality: a corrected `BedrudButton` label measured 5px below the plain `TextButton` beside it in
@@ -138,7 +146,8 @@ the same dialog — two controls that had agreed with each other until one of th
 sign-in screen's "No account yet?" sat 5px above the "Sign Up" beside it for the same reason, until
 the prompt was corrected along with the button.
 
-**A line with a shape beside it inside a block** — the profile card's name and its admin badge — moves
+**A line with a shape beside it inside a block** — the profile card's name and its admin badge, a
+server switcher row's name and its "In use" badge — moves
 with the block, and the shape is raised by that line's own correction to meet its letters, rather
 than the line lowered to meet the shape. Lowering the line would move it out of the block.
 
@@ -196,8 +205,22 @@ and a sheet's title `titleMedium`.
 The account's details — its ID, sign-in method and role — are shown once, in Settings. The sign-in
 method is read through `signInMethodOf` (`core/auth/SignInMethod.kt`), never printed as the server
 stores it: the server calls an email-and-password account "local", which is not a word for anyone to
-read, so the app's two methods are named in the app's language and an identity provider by its own
-name.
+read, so the methods the app itself offers — email, passkey and continuing as a guest — are named in
+the app's language, and an identity provider by its own name. For an account with no password to
+change, the Security card slots an identity provider's name into one shared sentence, but gives a
+guest a sentence of its own: a translated noun dropped into that sentence cannot agree with it in
+every language.
+
+The Security card offers one of three things, all decided by `signInMethodOf` from the account's
+`provider` and `passwordChangedAt`: a change form (current, new and confirm) for an account with a
+password; a set form (new and confirm, under a line saying why) for a passkey account that never set
+one; and the sentence above for an account that cannot have a password. A passkey account is created
+without a password, and the server stamps `passwordChangedAt` whenever it gives an existing account
+one, so a passkey account without the stamp has none. The stamp is not read for an email account,
+which has a password from sign-up but is not stamped until it first changes it. Settings reloads the
+account from `auth/me` each time it opens, because the record stored at sign-in can be out of date: a
+password set on another device, or a record stored by a version of the app that did not keep the
+stamp.
 
 **Text sets a floor, not a height.** A container that holds text takes a minimum height —
 `heightIn(min = …)`, or the component's own `defaultMinSize` — never a fixed `height(…)`. Text grows
@@ -288,11 +311,26 @@ than standing at full strength beside a greyed-out one.
 - **`BedrudCompactTopBar`** — compact status-bar-aware header. Takes either a `title: String` or a
   slot `title` composable (the rooms header uses the slot for its "{server} rooms" name, in a single
   neutral tone, with a trailing chevron marking it as the server switcher's entry point), plus an
-  `actions` row.
+  `actions` row. A screen pushed over the tabs (Open-source licenses) passes a `navigationIcon`, the
+  auto-mirrored back arrow, placed where Material's small top app bar puts one: 4dp from the start
+  edge, the title 4dp after it.
 - **`BedrudSnackbarHost`** — Material 3 snackbar with the rounded shape token; used across the auth
   screens and the rooms dashboard.
 - **Selectable cards** (e.g. the server chooser) — a `selectableGroup()` of `Surface`s marked
-  `selectable(role = RadioButton)`, selection shown by a radio **and** a primary border.
+  `selectable(role = RadioButton)`, selection shown by a radio **and** a primary border. The radio
+  keeps to the card's top-end corner, as far from the top as from the side; the title and badge
+  lead the content, which is centred in a shared minimum height (`Dimens.serverCardMinHeight`).
+  Centring keeps the titles level only while every card's content is the same height, so in the
+  server chooser each address sits in a row as tall as the scan button, whether or not the card has
+  one; content of different heights centred each title at a different height. The own-server
+  card's address row carries its QR scan as a trailing filled tonal icon button at Material's
+  extra-small size (`Dimens.iconButtonExtraSmall`, square corners from `shapes.medium`), centred on
+  one column with the radio above it, and the gap over both address rows gives back what centring
+  an address in that row adds, so each address sits as far under its title as a bare line would.
+  A plain `http://` address's warning sits under the address, inside that card; a server that could
+  not be reached is reported under both cards. The server chooser's two cards are the first-run screen's one decision, so they
+  are set larger than other cards: 18sp semi-bold titles over 17sp addresses, both between the type
+  scale's steps and named in `AddInstanceScreen.kt`. Every other card title stays `titleMedium`.
 - **Per-server color** — `parseInstanceColor("#RRGGBB")` in `ui/theme/InstanceColor.kt` is the single
   source of truth for an instance's accent color (the sign-in server header, the profile's server
   row and the server switcher). The initial on it is always `OnInstanceColor`, a dark tone: every
@@ -308,6 +346,12 @@ than standing at full strength beside a greyed-out one.
   chevron is the auto-mirrored `NavigateNext` for the same reason. The name and its status line sit
   `space4` apart, since the card's fixed height would otherwise push all its spare room above and
   below them.
+- **Switch rows** — the whole row is the switch: a tap on its label toggles it, and a screen reader
+  meets one switch named by its label. `BedrudSwitchListItem` is the row inside a card's list
+  (Settings' notifications); `BedrudSwitchRow` is the row inside a dialog or sheet's form (the room
+  settings switches), which keeps the 48dp touch-target height its switch no longer reserves, and
+  takes a `supportingContent` slot under its label — where a locked toggle's "coming soon" badge goes.
+  The `Switch` inside either takes no click of its own (`onCheckedChange = null`).
 - **`DevOnly` / `DevHintBadge`** — see below.
 
 ## Dialogs
@@ -390,6 +434,19 @@ units of a sheet or dialog surface (`#2b2624`), so a default `OutlinedButton` bo
 perceptually invisible there. Outlined controls read correctly on the app background
 (`Stone950`) and disappear on raised surfaces. If an outline is genuinely needed on a raised
 surface, give it an explicit colour with real contrast.
+
+**The server switcher marks the server in use with a badge, and removes servers in an edit mode.**
+The server in use carries an "In use" `BedrudBadge` after its name — the badge the add-server
+screen marks an added server with — rather than the trailing check a picker uses. Being in use is
+a state, not a choice being made in the sheet, and the trailing slot is taken by the remove button
+while editing. The Edit button (a `GHOST` `BedrudButton` beside the sheet title, reading Done while
+on) gives every row that remove button, the admin lists' destructive icon button (`Delete`, error
+tint), and stops the rows switching servers, so a tap beside it does nothing. This differs from
+the dashboard's room cards, which remove by swipe and long press, on purpose: removing a server
+signs out of it, so it sits behind a visible, deliberate mode rather than a gesture. Removal asks
+first through `ConfirmDialog`, naming the server, what goes with it, and — for the server in use —
+which server the app moves to. The sheet stays in edit mode after removing another server, and
+closes after removing the one in use.
 
 ## Meeting chrome
 
@@ -768,7 +825,9 @@ reconnecting ring — one state, one colour. Hairlines inside the call's menus a
   bar's handle expands it into `MeetingControlsPanel`, which keeps the five call controls at its
   foot and lists deafen, hide-all-cameras (viewer-side data saver), audio settings, the
   noise suppression (Off / Device; richer modes are tracked in #106), invite, and admin room settings above them. The output picker uses
-  trailing radios. `MeetingRecordingBanner` and the dot that opened it are **switched off** behind
+  trailing radios, and like the input-mode and noise-suppression pickers it closes on a pick; the
+  output list inside the full audio settings sheet stays open, since that sheet also holds the volume
+  and input settings. `MeetingRecordingBanner` and the dot that opened it are **switched off** behind
   `RecordingIndicatorEnabled` (#107): the server has no egress client and registers no recording
   routes, so nothing in the app can be recording, and a permanently lit privacy light above a
   banner claiming every camera and message is captured is worse than none at all. The UI is kept

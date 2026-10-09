@@ -10,7 +10,9 @@ import com.bedrud.app.core.api.TokenAuthenticator
 import com.bedrud.app.core.api.plainRetrofit
 import com.bedrud.app.core.auth.AuthManager
 import com.bedrud.app.core.auth.PasskeyManager
+import com.bedrud.app.core.auth.deleteInstancePrefs
 import com.bedrud.app.core.livekit.RoomManager
+import com.bedrud.app.core.recent.RecentRoomsStore
 import com.bedrud.app.models.HealthResponse
 import com.bedrud.app.models.Instance
 import com.bedrud.app.models.PublicSettings
@@ -43,6 +45,7 @@ class InstanceManager(
     private val application: Application,
     val store: InstanceStore,
     private val settingsStore: SettingsStore,
+    private val recentRooms: RecentRoomsStore,
 ) {
     private val _authManager = MutableStateFlow<AuthManager?>(null)
     val authManager: StateFlow<AuthManager?> = _authManager.asStateFlow()
@@ -154,12 +157,21 @@ class InstanceManager(
         rebuild()
     }
 
+    /**
+     * Removes the saved server [id] along with everything this device keeps for it: its sign-in
+     * and its recent rooms. The clients are rebuilt only when [id] was the active server, so
+     * removing another server leaves whatever the active one is doing untouched.
+     */
     fun removeInstance(id: String) {
-        if (store.activeInstanceId.value == id) {
+        val wasActive = store.activeInstanceId.value == id
+        if (wasActive) {
+            // Through the live AuthManager, so everything watching this sign-in sees it end.
             _authManager.value?.logout()
         }
+        deleteInstancePrefs(application, id)
+        recentRooms.removeServer(id)
         store.removeInstance(id)
-        rebuild()
+        if (wasActive) rebuild()
     }
 
     suspend fun checkHealth(serverURL: String): HealthResponse {

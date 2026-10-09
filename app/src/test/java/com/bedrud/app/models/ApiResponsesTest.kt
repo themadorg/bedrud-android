@@ -4,6 +4,9 @@ import com.google.gson.Gson
 import org.junit.Assert.*
 import org.junit.Test
 
+/** When a user's password last changed, as the server writes the time. */
+private const val PASSWORD_CHANGED_AT = "2026-09-01T10:00:00Z"
+
 class ApiResponsesTest {
 
     private val gson = Gson()
@@ -29,6 +32,34 @@ class ApiResponsesTest {
         assertEquals("ref", resp.tokens.refreshToken)
         assertEquals("u1", resp.user.id)
         assertEquals("Alice", resp.user.name)
+    }
+
+    @Test
+    fun `LoginResponse Gson deserialization keeps when the password last changed`() {
+        // The server stamps this whenever a password is set, which is how a passkey account that
+        // has one is told from one that does not.
+        val json = """
+            {
+                "tokens": {"accessToken": "acc", "refreshToken": "ref"},
+                "user": {"id": "u1", "email": "a@b.com", "name": "Alice", "provider": "passkey",
+                         "passwordChangedAt": "$PASSWORD_CHANGED_AT"}
+            }
+        """.trimIndent()
+        val resp = gson.fromJson(json, LoginResponse::class.java)
+        assertEquals(PASSWORD_CHANGED_AT, resp.user.passwordChangedAt)
+    }
+
+    @Test
+    fun `LoginResponse Gson deserialization reads a null password change as never`() {
+        val json = """
+            {
+                "tokens": {"accessToken": "acc", "refreshToken": "ref"},
+                "user": {"id": "u1", "email": "a@b.com", "name": "Alice", "provider": "passkey",
+                         "passwordChangedAt": null}
+            }
+        """.trimIndent()
+        val resp = gson.fromJson(json, LoginResponse::class.java)
+        assertNull(resp.user.passwordChangedAt)
     }
 
     @Test
@@ -72,11 +103,11 @@ class ApiResponsesTest {
     }
 
     @Test
-    fun `MeResponse Gson deserialization`() {
+    fun `User Gson deserialization of an auth-me body`() {
         val json = """
             {"id":"u1","email":"a@b.com","name":"Alice","avatarUrl":"https://img.com/a.png","isAdmin":true,"provider":"google"}
         """.trimIndent()
-        val resp = gson.fromJson(json, MeResponse::class.java)
+        val resp = gson.fromJson(json, User::class.java)
         assertEquals("u1", resp.id)
         assertEquals("a@b.com", resp.email)
         assertEquals("Alice", resp.name)

@@ -55,7 +55,7 @@ app/src/main/java/com/bedrud/app/
 ├── BedrudApplication.kt        Koin init + instance migration
 ├── MainActivity.kt             NavHost, routes, deep links, PiP
 ├── core/
-│   ├── di/AppModule.kt         Koin module (4 singletons)
+│   ├── di/AppModule.kt         Koin module: the app-wide singletons
 │   ├── instance/               Multi-instance: InstanceStore → InstanceManager
 │   ├── auth/                   AuthManager (encrypted prefs), PasskeyManager, OAuthLoginHandler
 │   ├── api/                    Retrofit interfaces: AuthApi, RoomApi, AdminApi + ApiClientFactory
@@ -77,8 +77,20 @@ app/src/main/java/com/bedrud/app/
 ```
 
 **Navigation routes** in `Routes` object, `MainActivity.kt`:
-`ADD_INSTANCE → LOGIN → {EMAIL_LOGIN, REGISTER} → MAIN (bottom nav) → MEETING/{roomName}`
+`ADD_INSTANCE → LOGIN → {EMAIL_LOGIN, REGISTER} → MAIN (bottom nav) → {MEETING/{roomName}, LICENSES}`
 (LOGIN is the sign-in hub: email/password opens EMAIL_LOGIN, passkey + continue-as-guest happen inline. EMAIL_LOGIN also offers password recovery — "Forgot password?" requests a reset email via `auth/forgot-password`; the reset link itself is completed on the server's web page. REGISTER is the account-creation form, reached from the hub's "No account yet? Sign up" prompt (shown only when the server's `registrationEnabled` is set); it posts to `auth/register` and, on success, immediately signs the new account in.)
+
+LICENSES is the Open-source licenses screen, reached from the last row of Settings' About card. Its
+list is generated, not written: the AboutLibraries Gradle plugin reads every runtime dependency's
+license into `R.raw.aboutlibraries` at build time, so a new library appears without anyone adding
+it. The bundled fonts are files rather than dependencies, so they are added by hand in
+`app/aboutlibraries/`: `libraries/` names each font and `licenses/` holds each font's own `OFL.txt`,
+copyright line included, exactly as its project publishes it. A font added to `res/font` needs an
+entry there and a paragraph in `NOTICE`. The screen opens on the main projects (`MainProjects` in
+`LicensesScreen.kt`: LiveKit, WebRTC, Compose Material 3 and the two fonts) with an "All libraries"
+row under them that opens the rest. The rest is folded away, never dropped: most of those
+libraries are Apache 2.0, which asks for its licence to travel with every copy. Licence texts stay in English in every language and run
+left to right in an RTL one; only the row's label and the dialog's button are translated.
 
 No ViewModels. State in `MutableStateFlow` on manager classes (RoomManager, AuthManager, InstanceManager) and screen-level stores (SettingsStore). Collected in composables via `collectAsState()`.
 
@@ -95,6 +107,8 @@ App connects to user-chosen Bedrud server instances, not fixed backend.
 
 Switching instances: `instanceManager.switchTo(id)` → sets active → rebuilds all clients → UI reacts to StateFlow changes. `InstanceSwitcherSheet` is the shared bottom sheet for this, reachable from the Profile tab's Server section and from tapping the rooms dashboard's header title.
 
+Removing a server happens in the same sheet, behind its Edit button, and always asks first. `instanceManager.removeInstance(id)` deletes what the device keeps for that server whichever server is active: its credential files (`deleteInstancePrefs`, both the Keystore file and any legacy one) and its recent rooms. It rebuilds the clients only when the removed server was the active one — removing another server must not replace the `RoomManager` of the one in use. The server that takes over from a removed active one comes from `InstanceStore.serverAfterRemoving`, which the confirmation also reads to name it, so the dialog and the removal cannot disagree; with none left, the auth router sends the app to Add server.
+
 The rooms dashboard (`DashboardContent`) shows the **active** server and nothing else: its rooms from the API, plus the rooms this device has visited on it that the API does not list (`recentRoomsNotInApiList`, reading `RecentRoomsStore`). Recents from other servers are left out on purpose. Its **All** tab holds both, ordered as described below; **My Rooms** is the subset the user created. The way to a room on another server from here is the quick-join box: a pasted link to a room on another server the user has added prompts a confirm-and-switch (`switchTo` + join) rather than switching silently, and a link to a server that has not been added is turned away with a snackbar asking to add it first. When the switch lands on a server with nobody signed in, the room waits for the sign-in and opens after it (see [Deep Links](#deep-links)).
 
 Both the "3 hours ago" a card prints and its position in either tab come from one number, `resolveRoomActivityAt` in `core/rooms/RoomActivity.kt`: the server's `lastActivityAt` for the room, which it stamps on every participant's join, falling back to this device's own visit from `RecentRoomsStore`. The server's answer wins because it covers everyone — a room somebody else was in an hour ago says so on a device that has never opened it, which local history alone could never report. `sortByActivity` orders both tabs by that same number and leaves rooms nothing can date at the end in server order, so a card's rank never contradicts the time it prints. A recent card is a room the active server does not list at all, so local history remains the only thing that can date one.
@@ -108,8 +122,11 @@ A room is written to `RecentRoomsStore` when its call actually starts (`MeetingS
 Retrofit + OkHttp + Gson (not kotlinx-serialization for HTTP). `kotlin-serialization` plugin enabled but used elsewhere.
 
 - `AuthInterceptor` — attaches `Authorization: Bearer <token>` to every request
-- `TokenAuthenticator` — handles 401 by refreshing token synchronously (on a plain Retrofit, so the refresh cannot recurse back through the authenticator that triggered it), retries once, forces logout on failure
-- `plainRetrofit(baseURL, timeoutSeconds)` (`core/api/ApiClient.kt`) — the client with no session attached, for the two calls that must not carry one: the token refresh above, and `InstanceManager.checkHealth`, which probes a server the app has no account on yet. Build a session-less client through it rather than hand-rolling a `Retrofit.Builder()`.
+- `TokenAuthenticator` — handles 401 by refreshing token synchronously (on a plain Retrofit, so the refresh cannot recurse back through the authenticator that triggered it) and retries once; a retry refused again signs out. How a refresh ends decides whether the session does:
+  - **One refresh at a time.** The server rotates the refresh token on every refresh and turns the old one down from then on, so refreshes are serialized, and a request that failed on an access token another request has since replaced retries with the replacement instead of spending the old refresh token a second time. Without this, two requests out on the same expired session each refreshed, and the second refresh signed out the session the first had just renewed.
+  - **Signed out only when the server refuses the token:** any 4xx from `auth/refresh` except 408 and 429. The server answers 400 when no token reached it, 401 for one that is expired, revoked or already rotated, 403 for an account that can no longer sign in, and 409 when a concurrent refresh rotated it first.
+  - **Kept through a failure that says nothing about the token.** A refresh that never reached the server fails its call with that `IOException`, which the screen reports as the network failure it is; a 5xx, 408 or 429 hands the original 401 back. Both leave the stored tokens for the next request to refresh with.
+- `plainRetrofit(baseURL, timeoutSeconds)` (`core/api/ApiClient.kt`) — the client with no session attached, for the two calls that must not carry one: the token refresh above, and `InstanceManager.checkHealth`, which probes a server the app has no account on yet. Build a session-less client through it rather than hand-rolling a `Retrofit.Builder()`. In a debug build it logs each call's request line and status only (`Level.BASIC`), enough to trace a sign-out to its refresh while keeping the tokens in the refresh's bodies out of logcat.
 - Base URL format: `https://host/api/` (trailing slash appended by `ApiClientFactory` and `plainRetrofit`)
 - Gson is lenient for every client, from one `lenientGson()` in `ApiClient.kt` — a payload parses the same way whichever client fetched it
 
@@ -189,6 +206,12 @@ Both paths hold a request they cannot serve yet rather than dropping it, for rea
 - **Below 34:** Telecom silently ignores a route set before it has sent the connection its first
   audio-state callback, so the route waits for `onCallAudioStateChanged`.
 
+**Mute travels one way.** Telecom tells the connection when a headset or car mutes the call
+(`onMuteStateChanged`, API 34+), and `CallService` applies it to the microphone once the room is
+connected. Nothing travels back: `android.telecom.Connection` has no mute setter at any API level
+from 28 to 37 — mute is set from Telecom's side, through `InCallService.setMuted` — so the app's own
+microphone toggles are not reported to Telecom, and nothing should pretend to report them.
+
 `PhoneAccount.CAPABILITY_SELF_MANAGED` is deprecated as of compileSdk 37 and still in use: it has
 no replacement on these classes, only `androidx.core.telecom`'s `CallsManager`, which would
 replace `CallConnectionService` outright. Tracked separately, not with the routing APIs.
@@ -228,7 +251,7 @@ assumed gone; removing it earlier signs out everyone who has not upgraded throug
 ## Key Conventions
 
 - **Design tokens:** All sizes/spacing/curves/colors/motion come from `ui/theme/` (`Dimens`, `BedrudShapeTokens`, `Elevation`, `Motion`, `MaterialTheme.colorScheme/typography/shapes`). No raw `n.dp` or hex literals in `ui/screens/**` or `ui/components/**`. See [DESIGN.md](DESIGN.md).
-- **Centred text:** Vazirmatn's box sits 0.156em off its own letters, so text centred against anything that is not text carries a correction from `ui/theme/TextInk.kt` — `Modifier.typeCentered(style)` for a label (button, navigation, chip, list item line, label beside an icon), `Modifier.typeCentered(firstLine, lastLine)` on every line of a block centred as one (a title over its supporting line beside an avatar), `Modifier.inkCentered(text, style)` for one glyph alone in a shape (avatar initial, reaction emoji, badge count). A new button or label needs `typeCentered` too: the correction's only real failure mode is being applied to some text and not the text beside it. `BedrudTextField` corrects its label only; its placeholder and typed value stay uncorrected, on purpose. Full rules in DESIGN.md.
+- **Centred text:** Vazirmatn's box sits 0.156em off its own letters, so text centred against anything that is not text carries a correction from `ui/theme/TextInk.kt` — `Modifier.typeCentered(style)` for a label (button, navigation, chip, list item line, label beside an icon), `Modifier.typeCentered(firstLine, lastLine)` on every line of a block centred as one (a title over its supporting line beside an avatar), `Modifier.inkCentered(text, style)` for one glyph or short word alone in a shape (avatar initial, reaction emoji, a badge's label or count). A new button or label needs `typeCentered` too: the correction's only real failure mode is being applied to some text and not the text beside it. `BedrudTextField` corrects its label only; its placeholder and typed value stay uncorrected, on purpose. Full rules in DESIGN.md.
 - **Buttons:** Use `BedrudButton` with `BedrudButtonVariant` enum (PRIMARY, SECONDARY, TONAL, OUTLINE, GHOST, DESTRUCTIVE). Height/shape/padding are token-driven (`Dimens.buttonHeight`, `BedrudShapeTokens.button`); grow via `Modifier.heightIn(min = Dimens.buttonHeightLarge)` for a full CTA — a floor, never a fixed `height(…)`, so a label that wraps at a large font scale grows the button instead of being clipped.
 - **Cards:** Use `BedrudOutlinedCard` — outline-first, tonal surface, minimal elevation.
 - **Colors:** Always `MaterialTheme.colorScheme.*`. Rose (`#E11D48`) primary + teal (`#14B8A6`) tertiary on warm neutrals; the full M3 role set (light+dark) is mapped in `ui/theme/Theme.kt` from the ramps in `Color.kt`. `dynamicColor` is off by default. Because the primary is a rose and the error is a red, those two roles share a hue family and only distance keeps a selected control from reading as a broken one — `ThemeTest` measures them apart and also measures `error` and `onError` against what each is drawn on, so moving either role needs the numbers re-run rather than eyeballed.
