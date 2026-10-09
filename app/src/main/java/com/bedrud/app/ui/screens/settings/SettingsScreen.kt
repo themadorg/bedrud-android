@@ -1,6 +1,7 @@
 package com.bedrud.app.ui.screens.settings
 
 import android.app.Activity
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -13,12 +14,14 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.NavigateNext
 import androidx.compose.material.icons.filled.AdminPanelSettings
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenuItem
 import com.bedrud.app.ui.components.BedrudButton
 import com.bedrud.app.ui.components.BedrudOutlinedCard
 import com.bedrud.app.ui.components.BedrudPasswordField
+import com.bedrud.app.ui.components.BedrudSwitchListItem
 import com.bedrud.app.ui.components.BedrudTextField
 import com.bedrud.app.core.auth.PasswordPolicy
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -40,7 +43,6 @@ import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 
 import androidx.compose.runtime.Composable
@@ -103,6 +105,7 @@ internal fun passwordUnavailableMessage(method: SignInMethod): String = when (me
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsContent(
+    onOpenLicenses: () -> Unit,
     modifier: Modifier = Modifier,
     settingsStore: SettingsStore = koinInject(),
     instanceManager: InstanceManager = koinInject()
@@ -219,20 +222,10 @@ fun SettingsContent(
                         stringResource(R.string.settings_section_notifications),
                         modifier = Modifier.padding(start = Dimens.cardPadding, top = Dimens.cardPadding, end = Dimens.cardPadding, bottom = Dimens.space8)
                     )
-                    ListItem(
-                        headlineContent = {
-                            Text(
-                                stringResource(R.string.settings_label_enableNotifications),
-                                modifier = Modifier.typeCentered(LocalTextStyle.current)
-                            )
-                        },
-                        trailingContent = {
-                            Switch(
-                                checked = notificationsEnabled,
-                                onCheckedChange = { settingsStore.setNotificationsEnabled(it) }
-                            )
-                        },
-                        colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+                    BedrudSwitchListItem(
+                        label = stringResource(R.string.settings_label_enableNotifications),
+                        checked = notificationsEnabled,
+                        onCheckedChange = { settingsStore.setNotificationsEnabled(it) }
                     )
                 }
             }
@@ -468,6 +461,32 @@ fun SettingsContent(
                             )
                         },
                         colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+                    )
+
+                    HorizontalDivider(
+                        modifier = Modifier.padding(horizontal = Dimens.space16),
+                        color = MaterialTheme.colorScheme.outlineVariant
+                    )
+
+                    // The one row in the card that leads somewhere, so it alone carries the
+                    // chevron the room cards use for the same promise.
+                    ListItem(
+                        headlineContent = {
+                            Text(
+                                stringResource(R.string.settings_label_licenses),
+                                modifier = Modifier.typeCentered(LocalTextStyle.current)
+                            )
+                        },
+                        trailingContent = {
+                            Icon(
+                                Icons.AutoMirrored.Filled.NavigateNext,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(Dimens.iconMd)
+                            )
+                        },
+                        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                        modifier = Modifier.clickable(onClick = onOpenLicenses)
                     )
                 }
             }

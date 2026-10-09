@@ -1,0 +1,16 @@
+{
+  "uniqueId": "font:roboto",
+  "artifactVersion": "3.015",
+  "name": "Roboto",
+  "description": "A subset covering Cyrillic and Greek, drawn where Vazirmatn has no letters.",
+  "website": "https://github.com/googlefonts/roboto-classic",
+  "developers": [
+    {
+      "name": "The Roboto Project Authors",
+      "organisationUrl": "https://github.com/googlefonts/roboto-classic"
+    }
+  ],
+  "licenses": [
+    "OFL-1.1-Roboto"
+  ]
+}

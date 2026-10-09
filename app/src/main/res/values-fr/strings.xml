@@ -23,6 +23,7 @@
   <string name="auth_title_createAccount">Créer un compte</string>
   <string name="auth_error_passwordMismatch">Les mots de passe ne correspondent pas</string>
   <string name="auth_subtitle_hubChoose">Connectez-vous à votre compte ou continuez en tant qu’invité.</string>
+  <string name="auth_subtitle_hubSignIn">Connectez-vous à votre compte.</string>
   <string name="auth_button_signInWithEmail">Se connecter avec un e-mail</string>
   <string name="auth_button_continueAsGuest">Continuer en tant qu’invité</string>
   <string name="auth_divider_or">ou</string>
@@ -50,9 +51,9 @@
   <string name="auth_notice_verifyEmail">Veuillez consulter votre e-mail pour vérifier votre compte</string>
   <string name="auth_notice_verifyBeforeSignIn">Veuillez vérifier votre e-mail avant de vous connecter</string>
   <string name="auth_divider_orContinueWith">ou continuer avec</string>
-  <string name="auth_hint_methodDisabled">Non activé sur ce serveur</string>
+  <string name="auth_button_passkeyOff">Connexion avec Passkey désactivée</string>
+  <string name="auth_button_guestOff">Accès invité désactivé</string>
   <string name="auth_oauth_continueWithFormat">Continuer avec %1$s</string>
-  <string name="instance_title_servers">Serveurs</string>
   <string name="instance_title_addServer">Ajouter un serveur</string>
   <string name="instance_title_switchServer">Changer de serveur</string>
   <string name="instance_subtitle_connectToServer">Connectez-vous à un serveur pour commencer</string>
@@ -66,9 +67,15 @@
   <string name="instance_warning_insecure">La connexion ne sera pas chiffrée. À utiliser uniquement pour les serveurs locaux ou de développement.</string>
   <string name="instance_error_duplicate">Un serveur avec cette adresse existe déjà.</string>
   <string name="instance_button_addServer">Ajouter le serveur</string>
-  <string name="instance_status_active">Actif</string>
-  <string name="instance_empty_noServers">Aucun serveur configuré</string>
+  <string name="instance_status_inUse">Utilisé</string>
   <string name="instance_default_serverName">Serveur</string>
+  <string name="instance_button_edit">Modifier</string>
+  <string name="instance_button_done">Terminé</string>
+  <string name="instance_contentDescription_removeServer">Supprimer <xliff:g id="serverName" example="Bedrud">%1$s</xliff:g></string>
+  <string name="instance_dialog_removeTitle">Supprimer <xliff:g id="serverName" example="Bedrud">%1$s</xliff:g> ?</string>
+  <string name="instance_dialog_removeMessage">Vous en serez déconnecté sur cet appareil, et ses salles récentes seront effacées. Vous pourrez l\'ajouter à nouveau à tout moment.</string>
+  <string name="instance_dialog_removeActiveMessage">Vous utilisez ce serveur en ce moment. Vous en serez déconnecté sur cet appareil, et l\'app passera à <xliff:g id="serverName" example="Bedrud">%1$s</xliff:g>.</string>
+  <string name="instance_dialog_removeLastMessage">C\'est votre seul serveur. Vous en serez déconnecté sur cet appareil, et il vous sera demandé d\'ajouter un serveur.</string>
   <string name="instance_default_displayName" translatable="false">Bedrud</string>
   <!-- First-run server chooser -->
   <string name="instance_choice_default_title">Serveur officiel</string>
@@ -249,6 +256,9 @@
   <string name="settings_section_about">À propos</string>
   <string name="settings_label_version">Version</string>
   <string name="settings_label_build">Build</string>
+  <string name="settings_label_licenses">Licences open source</string>
+  <string name="settings_button_closeLicense">Fermer</string>
+  <string name="settings_label_allLibraries">Toutes les bibliothèques</string>
   <string name="call_channel_name">Appels actifs</string>
   <string name="call_channel_description">Notifications d\'appel en cours</string>
   <string name="call_action_mute">Mettre en sourdine</string>
@@ -307,7 +317,6 @@
   <string name="meeting_sheet_deafen">Assourdir</string>
   <string name="meeting_sheet_tools">Outils</string>
   <string name="meeting_sheet_report">Signaler un abus</string>
-  <string name="meeting_contentDescription_audioSource">Source audio</string>
   <string name="meeting_audio_sheet_title">Sélectionner la sortie audio</string>
   <string name="meeting_audio_device_speaker">Haut-parleur</string>
   <string name="meeting_audio_device_earpiece">Téléphone</string>

@@ -17,7 +17,6 @@ import com.bedrud.app.core.audio.NoiseSuppressionMode
 import com.bedrud.app.core.audio.SpeechLevelTracker
 import com.bedrud.app.core.audio.VoiceGateProcessor
 import com.bedrud.app.core.audio.VoiceReachMonitor
-import com.bedrud.app.core.call.CallConnectionService
 import com.bedrud.app.core.meeting.chat.ChatChunkAssembler
 import com.bedrud.app.core.meeting.chat.ChatPoll
 import com.bedrud.app.core.meeting.chat.ChatReactions
@@ -496,7 +495,6 @@ class RoomManager(
                 errorFlow = _micMediaError,
                 sync = ::syncMicrophoneState,
                 setEnabled = { setMicrophonePublishing(room.localParticipant, it) },
-                onApplied = { CallConnectionService.updateMuteState(!it) },
                 reportEnableFailure = false,
             )
 
@@ -586,10 +584,7 @@ class RoomManager(
                         is RoomEvent.TrackMuted -> {
                             if (event.participant == room.localParticipant) {
                                 when (event.publication.source) {
-                                    Track.Source.MICROPHONE -> {
-                                        _isMicEnabled.value = false
-                                        CallConnectionService.updateMuteState(true)
-                                    }
+                                    Track.Source.MICROPHONE -> _isMicEnabled.value = false
                                     Track.Source.CAMERA -> _isCameraEnabled.value = false
                                     else -> Unit
                                 }
@@ -602,7 +597,6 @@ class RoomManager(
                                     Track.Source.MICROPHONE -> {
                                         _isMicEnabled.value = true
                                         _micMediaError.value = false
-                                        CallConnectionService.updateMuteState(false)
                                     }
                                     Track.Source.CAMERA -> {
                                         _isCameraEnabled.value = true
@@ -905,14 +899,13 @@ class RoomManager(
         val localParticipant = _room?.localParticipant ?: return
         val enabled = localParticipant.isMicrophoneEnabled
         _isMicEnabled.value = enabled
-        CallConnectionService.updateMuteState(!enabled)
     }
 
     /**
      * Applies enable/disable to a local track publisher and keeps its paired flows honest:
      * [stateFlow] reflects what actually published, [errorFlow] flags an enable that didn't take,
      * and a thrown failure resyncs state from the SDK via [sync]. [onApplied] runs with the
-     * settled value on the success path (telecom mute state, participant version bumps).
+     * settled value on the success path (participant version bumps).
      * [reportEnableFailure] controls whether a silent non-publish also surfaces in [_error] —
      * the connect-time mic restore only flags it, the user-initiated toggles announce it.
      */
@@ -969,7 +962,6 @@ class RoomManager(
             errorFlow = _micMediaError,
             sync = ::syncMicrophoneState,
             setEnabled = { setMicrophonePublishing(localParticipant, it) },
-            onApplied = { CallConnectionService.updateMuteState(!it) },
         )
     }
 
@@ -997,7 +989,6 @@ class RoomManager(
             errorFlow = _micMediaError,
             sync = ::syncMicrophoneState,
             setEnabled = { setMicrophonePublishing(localParticipant, it) },
-            onApplied = { CallConnectionService.updateMuteState(!it) },
         )
     }
 

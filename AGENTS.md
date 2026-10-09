@@ -55,7 +55,7 @@ app/src/main/java/com/bedrud/app/
 ├── BedrudApplication.kt        Koin init + instance migration
 ├── MainActivity.kt             NavHost, routes, deep links, PiP
 ├── core/
-│   ├── di/AppModule.kt         Koin module (4 singletons)
+│   ├── di/AppModule.kt         Koin module: the app-wide singletons
 │   ├── instance/               Multi-instance: InstanceStore → InstanceManager
 │   ├── auth/                   AuthManager (encrypted prefs), PasskeyManager, OAuthLoginHandler
 │   ├── api/                    Retrofit interfaces: AuthApi, RoomApi, AdminApi + ApiClientFactory
@@ -72,13 +72,25 @@ app/src/main/java/com/bedrud/app/
 ├── models/                     Data classes (Gson-serialized)
 └── ui/
     ├── theme/                  Design tokens: Color, Theme, Type, Shape, Dimens, Elevation, Motion
-    ├── components/             BedrudButton (5 variants), BedrudCard, DevOnly/DevHintBadge
+    ├── components/             BedrudButton (5 variants), BedrudOutlinedCard, DevOnly/DevHintBadge
     └── screens/                Compose screens per route
 ```
 
 **Navigation routes** in `Routes` object, `MainActivity.kt`:
-`ADD_INSTANCE → LOGIN → {EMAIL_LOGIN, REGISTER} → MAIN (bottom nav) → MEETING/{roomName}`
+`ADD_INSTANCE → LOGIN → {EMAIL_LOGIN, REGISTER} → MAIN (bottom nav) → {MEETING/{roomName}, LICENSES}`
 (LOGIN is the sign-in hub: email/password opens EMAIL_LOGIN, passkey + continue-as-guest happen inline. EMAIL_LOGIN also offers password recovery — "Forgot password?" requests a reset email via `auth/forgot-password`; the reset link itself is completed on the server's web page. REGISTER is the account-creation form, reached from the hub's "No account yet? Sign up" prompt (shown only when the server's `registrationEnabled` is set); it posts to `auth/register` and, on success, immediately signs the new account in.)
+
+LICENSES is the Open-source licenses screen, reached from the last row of Settings' About card. Its
+list is generated, not written: the AboutLibraries Gradle plugin reads every runtime dependency's
+license into `R.raw.aboutlibraries` at build time, so a new library appears without anyone adding
+it. The bundled fonts are files rather than dependencies, so they are added by hand in
+`app/aboutlibraries/`: `libraries/` names each font and `licenses/` holds each font's own `OFL.txt`,
+copyright line included, exactly as its project publishes it. A font added to `res/font` needs an
+entry there and a paragraph in `NOTICE`. The screen opens on the main projects (`MainProjects` in
+`LicensesScreen.kt`: LiveKit, WebRTC, Compose Material 3 and the two fonts) with an "All libraries"
+row under them that opens the rest. The rest is folded away, never dropped: most of those
+libraries are Apache 2.0, which asks for its licence to travel with every copy. Licence texts stay in English in every language and run
+left to right in an RTL one; only the row's label and the dialog's button are translated.
 
 No ViewModels. State in `MutableStateFlow` on manager classes (RoomManager, AuthManager, InstanceManager) and screen-level stores (SettingsStore). Collected in composables via `collectAsState()`.
 
@@ -94,6 +106,8 @@ App connects to user-chosen Bedrud server instances, not fixed backend.
 - `AddInstanceScreen`'s custom-server field can also be filled by scanning a QR code instead of typing; the scanned text goes through the same `ServerUrlCanonicalizer` as manual/pasted input. Scanning uses ZXing (`com.journeyapps:zxing-android-embedded`) — a pure on-device decoder with no Play Services dependency, chosen after Google Play Services' own code scanner proved unreliable in practice: its module is fetched over network on first use and failed outright (`MlKitException: Failed to scan code`) in a network-restricted test environment. ZXing needs the CAMERA permission this app already holds for calls; its own capture activity requests it if somehow missing. **Standard follow-up work, not done here:** this only decodes a QR code — nothing in this Android-only repo generates one. For "point your camera at the admin's screen" onboarding to actually work, a self-hosted Bedrud server's admin panel needs its own page that renders a QR code encoding its own address. That's backend/admin-UI work; this repo only has the Android client (backend was stripped out, see git history).
 
 Switching instances: `instanceManager.switchTo(id)` → sets active → rebuilds all clients → UI reacts to StateFlow changes. `InstanceSwitcherSheet` is the shared bottom sheet for this, reachable from the Profile tab's Server section and from tapping the rooms dashboard's header title.
+
+Removing a server happens in the same sheet, behind its Edit button, and always asks first. `instanceManager.removeInstance(id)` deletes what the device keeps for that server whichever server is active: its credential files (`deleteInstancePrefs`, both the Keystore file and any legacy one) and its recent rooms. It rebuilds the clients only when the removed server was the active one — removing another server must not replace the `RoomManager` of the one in use. The server that takes over from a removed active one comes from `InstanceStore.serverAfterRemoving`, which the confirmation also reads to name it, so the dialog and the removal cannot disagree; with none left, the auth router sends the app to Add server.
 
 The rooms dashboard (`DashboardContent`) shows the **active** server and nothing else: its rooms from the API, plus the rooms this device has visited on it that the API does not list (`recentRoomsNotInApiList`, reading `RecentRoomsStore`). Recents from other servers are left out on purpose. Its **All** tab holds both, ordered as described below; **My Rooms** is the subset the user created. The way to a room on another server from here is the quick-join box: a pasted link to a room on another server the user has added prompts a confirm-and-switch (`switchTo` + join) rather than switching silently, and a link to a server that has not been added is turned away with a snackbar asking to add it first. When the switch lands on a server with nobody signed in, the room waits for the sign-in and opens after it (see [Deep Links](#deep-links)).
 
@@ -192,6 +206,12 @@ Both paths hold a request they cannot serve yet rather than dropping it, for rea
 - **Below 34:** Telecom silently ignores a route set before it has sent the connection its first
   audio-state callback, so the route waits for `onCallAudioStateChanged`.
 
+**Mute travels one way.** Telecom tells the connection when a headset or car mutes the call
+(`onMuteStateChanged`, API 34+), and `CallService` applies it to the microphone once the room is
+connected. Nothing travels back: `android.telecom.Connection` has no mute setter at any API level
+from 28 to 37 — mute is set from Telecom's side, through `InCallService.setMuted` — so the app's own
+microphone toggles are not reported to Telecom, and nothing should pretend to report them.
+
 `PhoneAccount.CAPABILITY_SELF_MANAGED` is deprecated as of compileSdk 37 and still in use: it has
 no replacement on these classes, only `androidx.core.telecom`'s `CallsManager`, which would
 replace `CallConnectionService` outright. Tracked separately, not with the routing APIs.
@@ -231,9 +251,9 @@ assumed gone; removing it earlier signs out everyone who has not upgraded throug
 ## Key Conventions
 
 - **Design tokens:** All sizes/spacing/curves/colors/motion come from `ui/theme/` (`Dimens`, `BedrudShapeTokens`, `Elevation`, `Motion`, `MaterialTheme.colorScheme/typography/shapes`). No raw `n.dp` or hex literals in `ui/screens/**` or `ui/components/**`. See [DESIGN.md](DESIGN.md).
-- **Centred text:** Vazirmatn's box sits 0.156em off its own letters, so text centred against anything that is not text carries a correction from `ui/theme/TextInk.kt` — `Modifier.typeCentered(style)` for a label (button, navigation, chip, list item line, label beside an icon), `Modifier.typeCentered(firstLine, lastLine)` on every line of a block centred as one (a title over its supporting line beside an avatar), `Modifier.inkCentered(text, style)` for one glyph alone in a shape (avatar initial, reaction emoji, badge count). A new button or label needs `typeCentered` too: the correction's only real failure mode is being applied to some text and not the text beside it. `BedrudTextField` corrects its label only; its placeholder and typed value stay uncorrected, on purpose. Full rules in DESIGN.md.
+- **Centred text:** Vazirmatn's box sits 0.156em off its own letters, so text centred against anything that is not text carries a correction from `ui/theme/TextInk.kt` — `Modifier.typeCentered(style)` for a label (button, navigation, chip, list item line, label beside an icon), `Modifier.typeCentered(firstLine, lastLine)` on every line of a block centred as one (a title over its supporting line beside an avatar), `Modifier.inkCentered(text, style)` for one glyph or short word alone in a shape (avatar initial, reaction emoji, a badge's label or count). A new button or label needs `typeCentered` too: the correction's only real failure mode is being applied to some text and not the text beside it. `BedrudTextField` corrects its label only; its placeholder and typed value stay uncorrected, on purpose. Full rules in DESIGN.md.
 - **Buttons:** Use `BedrudButton` with `BedrudButtonVariant` enum (PRIMARY, SECONDARY, OUTLINE, GHOST, DESTRUCTIVE). Height/shape/padding are token-driven (`Dimens.buttonHeight`, `BedrudShapeTokens.button`); grow via `Modifier.heightIn(min = Dimens.buttonHeightLarge)` for a full CTA — a floor, never a fixed `height(…)`, so a label that wraps at a large font scale grows the button instead of being clipped.
-- **Cards:** Use `BedrudCard` / `BedrudOutlinedCard` — outline-first, tonal surface, minimal elevation.
+- **Cards:** Use `BedrudOutlinedCard` — outline-first, tonal surface, minimal elevation.
 - **Colors:** Always `MaterialTheme.colorScheme.*`. Rose (`#E11D48`) primary + teal (`#14B8A6`) tertiary on warm neutrals; the full M3 role set (light+dark) is mapped in `ui/theme/Theme.kt` from the ramps in `Color.kt`. `dynamicColor` is off by default. Because the primary is a rose and the error is a red, those two roles share a hue family and only distance keeps a selected control from reading as a broken one — `ThemeTest` measures them apart and also measures `error` and `onError` against what each is drawn on, so moving either role needs the numbers re-run rather than eyeballed.
 - **Serialization:** `@SerializedName` annotations on model fields (Gson). Snake_case from server ↔ camelCase in Kotlin.
 - **DI:** Koin. Single module (`appModule`). Inject with `by inject()` in Activities, `by koinViewModel()` or `koinInject()` in composables.

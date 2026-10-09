@@ -45,6 +45,7 @@ fun MainScreen(
     onJoinRoom: (String) -> Unit,
     onLogout: () -> Unit,
     onNavigateToAddInstance: () -> Unit,
+    onNavigateToLicenses: () -> Unit,
     instanceManager: InstanceManager = koinInject(),
     settingsStore: SettingsStore = koinInject(),
     joinFailureRelay: JoinFailureRelay = koinInject(),
@@ -150,6 +151,7 @@ fun MainScreen(
                 instanceManager = instanceManager
             )
             2 -> SettingsContent(
+                onOpenLicenses = onNavigateToLicenses,
                 modifier = Modifier.padding(contentPadding)
             )
             3 -> if (isAdmin) {

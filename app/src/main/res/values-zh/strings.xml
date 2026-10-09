@@ -23,6 +23,7 @@
   <string name="auth_title_createAccount">创建账户</string>
   <string name="auth_error_passwordMismatch">密码不匹配</string>
   <string name="auth_subtitle_hubChoose">登录您的账户，或以访客身份继续。</string>
+  <string name="auth_subtitle_hubSignIn">登录您的账户。</string>
   <string name="auth_button_signInWithEmail">使用邮箱登录</string>
   <string name="auth_button_continueAsGuest">以访客身份继续</string>
   <string name="auth_divider_or">或</string>
@@ -48,9 +49,9 @@
   <string name="auth_notice_verifyEmail">请查收邮件以验证您的账户</string>
   <string name="auth_notice_verifyBeforeSignIn">登录前请先验证您的邮箱</string>
   <string name="auth_divider_orContinueWith">或使用以下方式继续</string>
-  <string name="auth_hint_methodDisabled">此服务器未启用</string>
+  <string name="auth_button_passkeyOff">密钥登录已关闭</string>
+  <string name="auth_button_guestOff">访客登录已关闭</string>
   <string name="auth_oauth_continueWithFormat">使用 %1$s 继续</string>
-  <string name="instance_title_servers">服务器</string>
   <string name="instance_title_addServer">添加新服务器</string>
   <string name="instance_title_switchServer">切换服务器</string>
   <string name="instance_subtitle_connectToServer">连接服务器以开始使用</string>
@@ -64,9 +65,15 @@
   <string name="instance_warning_insecure">连接将不会被加密。仅用于本地或开发服务器。</string>
   <string name="instance_error_duplicate">此地址的服务器已存在。</string>
   <string name="instance_button_addServer">添加服务器</string>
-  <string name="instance_status_active">活跃</string>
-  <string name="instance_empty_noServers">未配置服务器</string>
+  <string name="instance_status_inUse">使用中</string>
   <string name="instance_default_serverName">服务器</string>
+  <string name="instance_button_edit">编辑</string>
+  <string name="instance_button_done">完成</string>
+  <string name="instance_contentDescription_removeServer">移除 <xliff:g id="serverName" example="Bedrud">%1$s</xliff:g></string>
+  <string name="instance_dialog_removeTitle">移除 <xliff:g id="serverName" example="Bedrud">%1$s</xliff:g>？</string>
+  <string name="instance_dialog_removeMessage">你将在此设备上退出该服务器，其最近的房间也会被清除。你可以随时重新添加。</string>
+  <string name="instance_dialog_removeActiveMessage">你正在使用此服务器。你将在此设备上退出登录，应用会切换到 <xliff:g id="serverName" example="Bedrud">%1$s</xliff:g>。</string>
+  <string name="instance_dialog_removeLastMessage">这是你唯一的服务器。你将在此设备上退出登录，并需要添加一个服务器。</string>
   <string name="instance_default_displayName" translatable="false">Bedrud</string>
   <!-- First-run server chooser -->
   <string name="instance_choice_default_title">官方服务器</string>
@@ -245,6 +252,9 @@
   <string name="settings_section_about">关于</string>
   <string name="settings_label_version">版本</string>
   <string name="settings_label_build">构建</string>
+  <string name="settings_label_licenses">开源许可</string>
+  <string name="settings_button_closeLicense">关闭</string>
+  <string name="settings_label_allLibraries">所有库</string>
   <string name="call_channel_name">正在通话</string>
   <string name="call_channel_description">通话中的通知</string>
   <string name="call_action_mute">静音</string>
@@ -303,7 +313,6 @@
   <string name="meeting_sheet_deafen">拒听</string>
   <string name="meeting_sheet_tools">工具</string>
   <string name="meeting_sheet_report">举报滥用</string>
-  <string name="meeting_contentDescription_audioSource">音频源</string>
   <string name="meeting_audio_sheet_title">选择音频输出</string>
   <string name="meeting_audio_device_speaker">扬声器</string>
   <string name="meeting_audio_device_earpiece">听筒</string>

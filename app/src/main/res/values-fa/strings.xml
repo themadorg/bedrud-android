@@ -23,6 +23,7 @@
   <string name="auth_title_createAccount">ایجاد حساب کاربری</string>
   <string name="auth_error_passwordMismatch">رمزهای عبور مطابقت ندارند</string>
   <string name="auth_subtitle_hubChoose">وارد حساب خود شوید یا به‌عنوان مهمان ادامه دهید.</string>
+  <string name="auth_subtitle_hubSignIn">وارد حساب خود شوید.</string>
   <string name="auth_button_signInWithEmail">ورود با ایمیل</string>
   <string name="auth_button_continueAsGuest">ادامه به‌عنوان مهمان</string>
   <string name="auth_divider_or">یا</string>
@@ -49,9 +50,9 @@
   <string name="auth_notice_verifyEmail">لطفاً برای تأیید حساب خود، ایمیلتان را بررسی کنید</string>
   <string name="auth_notice_verifyBeforeSignIn">لطفاً پیش از ورود، ایمیل خود را تأیید کنید</string>
   <string name="auth_divider_orContinueWith">یا ادامه با</string>
-  <string name="auth_hint_methodDisabled">در این سرور فعال نیست</string>
+  <string name="auth_button_passkeyOff">ورود با Passkey غیرفعال است</string>
+  <string name="auth_button_guestOff">ورود مهمان غیرفعال است</string>
   <string name="auth_oauth_continueWithFormat">ادامه با %1$s</string>
-  <string name="instance_title_servers">سرورها</string>
   <string name="instance_title_addServer">افزودن سرور جدید</string>
   <string name="instance_title_switchServer">تغییر سرور</string>
   <string name="instance_subtitle_connectToServer">برای شروع به یک سرور متصل شوید</string>
@@ -64,9 +65,15 @@
   <string name="instance_warning_insecure">اتصال رمزگذاری نخواهد شد. فقط برای سرورهای محلی یا توسعه استفاده کنید.</string>
   <string name="instance_error_duplicate">سروری با این آدرس از قبل وجود دارد.</string>
   <string name="instance_button_addServer">افزودن سرور</string>
-  <string name="instance_status_active">فعال</string>
-  <string name="instance_empty_noServers">هیچ سروری پیکربندی نشده است</string>
+  <string name="instance_status_inUse">در حال استفاده</string>
   <string name="instance_default_serverName">سرور</string>
+  <string name="instance_button_edit">ویرایش</string>
+  <string name="instance_button_done">تمام</string>
+  <string name="instance_contentDescription_removeServer">حذف <xliff:g id="serverName" example="Bedrud">%1$s</xliff:g></string>
+  <string name="instance_dialog_removeTitle"><xliff:g id="serverName" example="Bedrud">%1$s</xliff:g> حذف شود؟</string>
+  <string name="instance_dialog_removeMessage">در این دستگاه از آن خارج می‌شوید و اتاق‌های اخیرش پاک می‌شود. هر وقت خواستید می‌توانید دوباره اضافه‌اش کنید.</string>
+  <string name="instance_dialog_removeActiveMessage">الان از این سرور استفاده می‌کنید. در این دستگاه از آن خارج می‌شوید و برنامه به <xliff:g id="serverName" example="Bedrud">%1$s</xliff:g> می‌رود.</string>
+  <string name="instance_dialog_removeLastMessage">این تنها سرور شماست. در این دستگاه از آن خارج می‌شوید و از شما خواسته می‌شود سروری اضافه کنید.</string>
   <!-- First-run server chooser -->
   <string name="instance_choice_default_title">سرور رسمی</string>
   <string name="instance_choice_default_tag">پیش‌فرض</string>
@@ -245,6 +252,9 @@
   <string name="settings_section_about">درباره</string>
   <string name="settings_label_version">نسخه</string>
   <string name="settings_label_build">ساخت</string>
+  <string name="settings_label_licenses">مجوزهای متن‌باز</string>
+  <string name="settings_button_closeLicense">بستن</string>
+  <string name="settings_label_allLibraries">همه کتابخانه‌ها</string>
   <string name="call_channel_name">تماس‌های فعال</string>
   <string name="call_channel_description">اعلان‌های تماس جاری</string>
   <string name="call_action_mute">قطع صدا</string>
@@ -303,7 +313,6 @@
   <string name="meeting_sheet_deafen">قطع شنیدن</string>
   <string name="meeting_sheet_tools">ابزارها</string>
   <string name="meeting_sheet_report">گزارش سوءاستفاده</string>
-  <string name="meeting_contentDescription_audioSource">منبع صدا</string>
   <string name="meeting_audio_sheet_title">انتخاب خروجی صدا</string>
   <string name="meeting_audio_device_speaker">بلندگو</string>
   <string name="meeting_audio_device_earpiece">گوشی</string>

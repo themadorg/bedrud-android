@@ -15,7 +15,7 @@ render natively on GitHub.
 | **Language / UI** | Kotlin · Jetpack Compose · Material 3 |
 | **Size** | ~11.3k LOC main · ~2k LOC tests |
 | **SDK** | minSdk 28 · compile/target 36 · JDK 17 |
-| **DI** | Koin (`appModule`, 5 singletons) — **no ViewModels** |
+| **DI** | Koin (`appModule`, the app-wide singletons) — **no ViewModels** |
 | **HTTP** | Retrofit + OkHttp + **Gson** |
 | **Media** | LiveKit Android 2.25 |
 | **Package root** | `app/src/main/java/com/bedrud/app/` |
@@ -242,7 +242,6 @@ monorepo*, not this app — verify against source before trusting them.
 | **Correctness** | OAuth can't refresh | `MainActivity` saves an empty refresh token (`saveTokens(token, "")`). The first `401` after expiry finds no refresh token and forces a logout. |
 | **Design drift** | `DESIGN.md` describes the web app | It prescribes "Rose + Teal, 0px radius." The Android theme is actually shadcn **slate/navy** (`#0F172A`), and components are **rounded** (8–28dp). Don't apply it here. |
 | **Multi-instance** | Deep links hardwired to `bedrud.com` | The manifest's `autoVerify` intent filters only match `bedrud.com`, yet the app connects to arbitrary servers. Other instances' `/m/` links won't App-Link-verify. |
-| **Stale doc** | `AGENTS.md` predates i18n | It says "no strings.xml." There are now 10 locales + RTL fonts — but the migration is **partial**: `LoginScreen` still hardcodes English. It also miscounts Koin singletons (5, not 4). |
 | **Telecom** | Mute state isn't truly synced | `CallConnectionService.updateMuteState(muted)` ignores its argument and only calls `setActive()`, so the OS call's mute never reflects the real mic. |
 | **Environment** | No Android SDK assumed | A checkout without `ANDROID_HOME` / `local.properties` can't run `./gradlew` tasks until an SDK is configured. |
 

@@ -143,7 +143,8 @@ fun rememberInkCenteringOffset(text: String, style: TextStyle): Dp {
 /**
  * Moves a `Text` drawing [text] at [style] so that string's own letters sit centred.
  *
- * For **one glyph centred in a shape** — an avatar's initial, a reaction's emoji. There is nothing
+ * For **one glyph centred in a shape** — an avatar's initial, a reaction's emoji, a badge's label
+ * alone in its pill. There is nothing
  * beside it to line up with, the glyph the caller passes is the whole of what has to look centred,
  * and its ink may be nothing like a capital's: an emoji fills the em box, and a CJK ideograph
  * arrives from a fallback font whose line box is taller than Vazirmatn's. Measuring the glyph is
@@ -196,7 +197,7 @@ fun rememberTypeCenteringOffset(style: TextStyle): Dp =
  * Moves a `Text` at [style] so the type's letters sit centred, by the same amount for every string.
  *
  * For **text centred against something that is not text** — a button label in its fixed-height
- * container, a navigation label under its icon, a chip's or a badge's label, a list item's line
+ * container, a navigation label under its icon, a chip's label, a list item's line
  * beside its switch, a hint in a field beside an icon, any label paired with an icon. Peer labels
  * keep a shared baseline because the correction does not depend on which word each one happens to
  * be. For two or more lines centred as one, use the block form, which takes the first and last
