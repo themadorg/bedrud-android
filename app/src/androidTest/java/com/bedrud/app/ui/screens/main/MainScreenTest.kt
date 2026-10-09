@@ -9,6 +9,7 @@ import com.bedrud.app.R
 import com.bedrud.app.core.auth.AuthManager
 import com.bedrud.app.core.instance.InstanceManager
 import com.bedrud.app.core.instance.InstanceStore
+import com.bedrud.app.core.recent.RecentRoomsStore
 import com.bedrud.app.core.rooms.JoinFailureRelay
 import com.bedrud.app.models.Instance
 import com.bedrud.app.models.User
@@ -24,8 +25,9 @@ private const val TEST_INSTANCE_ID = "main-screen-test-account"
 private const val TEST_SERVER_URL = "https://example.invalid/"
 private const val TEST_SERVER_NAME = "Example"
 
-/** A file of its own, so the test never touches the servers the app has saved. */
+/** Files of their own, so the test never touches the servers or rooms the app has saved. */
 private const val TEST_INSTANCES_PREFS = "main_screen_test_instances"
+private const val TEST_RECENTS_PREFS = "main_screen_test_recents"
 
 /** Accesses as the server sends them for each level an account can hold. */
 private val SUPERADMIN_ACCESSES = listOf("user", "superadmin")
@@ -45,7 +47,8 @@ class MainScreenTest {
         AuthManager(context, TEST_INSTANCE_ID).saveUser(
             User(id = TEST_INSTANCE_ID, email = "account@example.invalid", name = TEST_SERVER_NAME, accesses = accesses)
         )
-        return InstanceManager(context.applicationContext as Application, instances, SettingsStore(context))
+        val recentRooms = RecentRoomsStore(context.getSharedPreferences(TEST_RECENTS_PREFS, Context.MODE_PRIVATE))
+        return InstanceManager(context.applicationContext as Application, instances, SettingsStore(context), recentRooms)
     }
 
     /** Shows the signed-in screens for whoever [instanceManager] has signed in. */
@@ -55,6 +58,7 @@ class MainScreenTest {
                 onJoinRoom = {},
                 onLogout = {},
                 onNavigateToAddInstance = {},
+                onNavigateToLicenses = {},
                 instanceManager = instanceManager,
                 settingsStore = SettingsStore(context),
                 joinFailureRelay = JoinFailureRelay(),
@@ -66,6 +70,7 @@ class MainScreenTest {
     fun forgetAccount() {
         AuthManager(context, TEST_INSTANCE_ID).logout()
         context.deleteSharedPreferences(TEST_INSTANCES_PREFS)
+        context.deleteSharedPreferences(TEST_RECENTS_PREFS)
     }
 
     @Test
