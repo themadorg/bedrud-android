@@ -68,11 +68,12 @@ app/src/main/java/com/bedrud/app/
 │   ├── pip/PipState.kt         PiP state holder
 │   └── call/                   CallService + CallConnectionService (telecom integration),
 │                               CallAudioRoute + CallEndpointSelector (which output the call
-│                               is routed to), ProximityScreenLock (screen off at an ear)
+│                               is routed to), CallAudioStateMuteFilter (a headset's mute
+│                               below API 34), ProximityScreenLock (screen off at an ear)
 ├── models/                     Data classes (Gson-serialized)
 └── ui/
     ├── theme/                  Design tokens: Color, Theme, Type, Shape, Dimens, Elevation, Motion
-    ├── components/             BedrudButton (5 variants), BedrudOutlinedCard, DevOnly/DevHintBadge
+    ├── components/             BedrudButton (6 variants), BedrudOutlinedCard, DevOnly/DevHintBadge
     └── screens/                Compose screens per route
 ```
 
@@ -181,6 +182,12 @@ the other, and a client that reads must merge both: metadata answers for everyon
 nothing since you arrived, and a live announcement overrides it. Writing metadata needs a
 permission the token may not grant, so the presence message is the half that always lands.
 
+Deafening itself never waits for either. `RoomManager.toggleDeafen` flips the state, the volumes
+and the saved setting at once, and only then queues the mic change and the announcement on the
+call's own scope, one toggle at a time in tap order. Sending can stall for seconds while the
+outgoing connection is not up, and when the announcement came first, the tap seemed to do nothing
+and was lost if the screen went away in the meantime.
+
 ## Call Audio Routing
 
 Which output a meeting is heard on is decided by Telecom, not by `AudioManager`. `CallAudioSwitch`
@@ -206,9 +213,12 @@ Both paths hold a request they cannot serve yet rather than dropping it, for rea
 - **Below 34:** Telecom silently ignores a route set before it has sent the connection its first
   audio-state callback, so the route waits for `onCallAudioStateChanged`.
 
-**Mute travels one way.** Telecom tells the connection when a headset or car mutes the call
-(`onMuteStateChanged`, API 34+), and `CallService` applies it to the microphone once the room is
-connected. Nothing travels back: `android.telecom.Connection` has no mute setter at any API level
+**Mute travels one way.** Telecom tells the connection when a headset or car mutes the call, and
+`CallService` applies it to the microphone once the room is connected. From API 34 that arrives
+through `onMuteStateChanged`; below 34 that callback does not exist, and the mute rides inside the
+`CallAudioState` given to `onCallAudioStateChanged`, which Telecom re-sends for every routing change
+too. `CallAudioStateMuteFilter` passes on only a mute that differs from the last one seen there,
+and nothing at all from API 34, where `onMuteStateChanged` already carries every change. Nothing travels back: `android.telecom.Connection` has no mute setter at any API level
 from 28 to 37 — mute is set from Telecom's side, through `InCallService.setMuted` — so the app's own
 microphone toggles are not reported to Telecom, and nothing should pretend to report them.
 
@@ -252,7 +262,7 @@ assumed gone; removing it earlier signs out everyone who has not upgraded throug
 
 - **Design tokens:** All sizes/spacing/curves/colors/motion come from `ui/theme/` (`Dimens`, `BedrudShapeTokens`, `Elevation`, `Motion`, `MaterialTheme.colorScheme/typography/shapes`). No raw `n.dp` or hex literals in `ui/screens/**` or `ui/components/**`. See [DESIGN.md](DESIGN.md).
 - **Centred text:** Vazirmatn's box sits 0.156em off its own letters, so text centred against anything that is not text carries a correction from `ui/theme/TextInk.kt` — `Modifier.typeCentered(style)` for a label (button, navigation, chip, list item line, label beside an icon), `Modifier.typeCentered(firstLine, lastLine)` on every line of a block centred as one (a title over its supporting line beside an avatar), `Modifier.inkCentered(text, style)` for one glyph or short word alone in a shape (avatar initial, reaction emoji, a badge's label or count). A new button or label needs `typeCentered` too: the correction's only real failure mode is being applied to some text and not the text beside it. `BedrudTextField` corrects its label only; its placeholder and typed value stay uncorrected, on purpose. Full rules in DESIGN.md.
-- **Buttons:** Use `BedrudButton` with `BedrudButtonVariant` enum (PRIMARY, SECONDARY, OUTLINE, GHOST, DESTRUCTIVE). Height/shape/padding are token-driven (`Dimens.buttonHeight`, `BedrudShapeTokens.button`); grow via `Modifier.heightIn(min = Dimens.buttonHeightLarge)` for a full CTA — a floor, never a fixed `height(…)`, so a label that wraps at a large font scale grows the button instead of being clipped.
+- **Buttons:** Use `BedrudButton` with `BedrudButtonVariant` enum (PRIMARY, SECONDARY, TONAL, OUTLINE, GHOST, DESTRUCTIVE). Height/shape/padding are token-driven (`Dimens.buttonHeight`, `BedrudShapeTokens.button`); grow via `Modifier.heightIn(min = Dimens.buttonHeightLarge)` for a full CTA — a floor, never a fixed `height(…)`, so a label that wraps at a large font scale grows the button instead of being clipped.
 - **Cards:** Use `BedrudOutlinedCard` — outline-first, tonal surface, minimal elevation.
 - **Colors:** Always `MaterialTheme.colorScheme.*`. Rose (`#E11D48`) primary + teal (`#14B8A6`) tertiary on warm neutrals; the full M3 role set (light+dark) is mapped in `ui/theme/Theme.kt` from the ramps in `Color.kt`. `dynamicColor` is off by default. Because the primary is a rose and the error is a red, those two roles share a hue family and only distance keeps a selected control from reading as a broken one — `ThemeTest` measures them apart and also measures `error` and `onError` against what each is drawn on, so moving either role needs the numbers re-run rather than eyeballed.
 - **Serialization:** `@SerializedName` annotations on model fields (Gson). Snake_case from server ↔ camelCase in Kotlin.

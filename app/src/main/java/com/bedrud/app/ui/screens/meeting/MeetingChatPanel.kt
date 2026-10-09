@@ -539,10 +539,7 @@ fun MeetingChatPanel(
     if (isComposingPoll) {
         MeetingChatPollSheet(
             onDismiss = { isComposingPoll = false },
-            onCreate = { poll ->
-                isComposingPoll = false
-                onSendPoll(poll)
-            },
+            onCreate = onSendPoll,
         )
     }
 

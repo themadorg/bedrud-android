@@ -286,7 +286,7 @@ fun MeetingInputModeSheet(
             colors = colors,
             onClick = {
                 onSelect(MeetingInputMode.PUSH_TO_TALK)
-                onDismiss()
+                dismiss()
             },
         )
         ModeRow(
@@ -296,7 +296,7 @@ fun MeetingInputModeSheet(
             colors = colors,
             onClick = {
                 onSelect(MeetingInputMode.VOICE_ACTIVITY)
-                onDismiss()
+                dismiss()
             },
         )
     }
@@ -304,7 +304,7 @@ fun MeetingInputModeSheet(
 
 /**
  * Noise-suppression picker. Off/Device apply on the next join (the audio device module is built
- * per connection); the richer modes stay dev-hinted until #106.
+ * per connection). Richer modes, such as RNNoise, are tracked in #106.
  */
 @Composable
 fun MeetingNoiseSuppressionSheet(
@@ -332,7 +332,7 @@ fun MeetingNoiseSuppressionSheet(
             colors = colors,
             onClick = {
                 onSelect(NoiseSuppressionMode.OFF)
-                onDismiss()
+                dismiss()
             },
         )
         ModeRow(
@@ -342,7 +342,7 @@ fun MeetingNoiseSuppressionSheet(
             colors = colors,
             onClick = {
                 onSelect(NoiseSuppressionMode.DEVICE)
-                onDismiss()
+                dismiss()
             },
         )
     }

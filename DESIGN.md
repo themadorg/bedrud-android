@@ -217,10 +217,10 @@ password; a set form (new and confirm, under a line saying why) for a passkey ac
 one; and the sentence above for an account that cannot have a password. A passkey account is created
 without a password, and the server stamps `passwordChangedAt` whenever it gives an existing account
 one, so a passkey account without the stamp has none. The stamp is not read for an email account,
-which has a password from sign-up but is not stamped until it first changes it. Settings reloads the
-account from `auth/me` each time it opens, because the record stored at sign-in can be out of date: a
-password set on another device, or a record stored by a version of the app that did not keep the
-stamp.
+which has a password from sign-up but is not stamped until it first changes it. The signed-in screens
+(`MainScreen`) reload the account from `auth/me` when they open, because the record stored at sign-in
+can be out of date: a password set on another device, or a record stored by a version of the app that
+did not keep the stamp or the account's access levels.
 
 **Text sets a floor, not a height.** A container that holds text takes a minimum height —
 `heightIn(min = …)`, or the component's own `defaultMinSize` — never a fixed `height(…)`. Text grows
@@ -389,8 +389,11 @@ snackbar's `BedrudShapeTokens.snackbar` corners.
 ## Bottom sheets (`BedrudBottomSheet`)
 
 Every sheet in the app goes through **`BedrudBottomSheet`** so they share one container, one drag
-handle, one shape, one set of insets, and one gutter. Those are **fixed, not defaulted** — the
-component takes no colour, shape or state parameters at all:
+handle, one shape, one set of insets, and one gutter. The one exception is the in-call chat
+(`MeetingChatSheet`, under **Chat** in [Meeting chrome](#meeting-chrome)): it needs three heights and
+its handle drawn inside its own content, so it builds its own `ModalBottomSheet` from the same
+shape, container colour and handle. Those are **fixed, not defaulted** — the component takes no
+colour, shape or state parameters at all:
 
 - **`BedrudSheetHandle`**, the drag handle every sheet wears, the chat sheet included. It draws
   M3's 32×4dp bar centred in a 48dp-tall touch target (`Dimens.minTouchTarget`), as M3's own
@@ -418,8 +421,15 @@ equally opaque over video, so a darker container bought nothing anywhere. A defa
 suggestion; the fix was to delete the knob, not to re-tune it.
 
 The sheet state is not a parameter either: exposing it would put an experimental Material type in
-the signature and force `@OptIn` onto every screen that shows a sheet. `ModalBottomSheet` is now
-referenced in exactly one file.
+the signature and force `@OptIn` onto every screen that shows a sheet. Outside this component,
+`ModalBottomSheet` is referenced only by the chat sheet, for the reasons above.
+
+**A sheet that closes itself calls `dismiss()`, never its own `onDismiss`.** The content of every
+`BedrudBottomSheet` runs in a `BedrudSheetScope`, whose `dismiss()` slides the sheet down and only
+then calls `onDismiss` — M3's documented hide-then-dismiss order. Calling `onDismiss` from inside
+removes the sheet from composition in one frame, so a picker vanished the moment something was
+picked instead of sliding away the way a drag or the scrim puts it away. A sheet that sends
+something on its way out ignores a second tap during the slide, since it is still on screen.
 
 **Actions inside a sheet are a list, not a stack of cards.** `BedrudSheetActionRow` follows the M3
 list-item spec — 56dp one-line, 72dp when it carries a supporting line, `iconMd` leading icon — and
@@ -820,7 +830,8 @@ reconnecting ring — one state, one colour. Hairlines inside the call's menus a
   `MeetingInviteSheet` (participant avatar grid, share targets — system share, copy, inline QR,
   email, Telegram, WhatsApp — and the raw link). The controls bar's handle opens the "More options"
   sheet in `MeetingControlsPanel`: deafen, hide-all-cameras (viewer-side data saver), audio
-  settings, the dev-hinted noise suppression (#106), and admin room settings. The output picker uses
+  settings, noise suppression (Off / Device; richer modes are tracked in #106), and admin room
+  settings. The output picker uses
   trailing radios, and like the input-mode and noise-suppression pickers it closes on a pick; the
   output list inside the full audio settings sheet stays open, since that sheet also holds the volume
   and input settings. `MeetingRecordingBanner` and the dot that opened it are **switched off** behind
@@ -891,6 +902,14 @@ zh) — **not** inline in composables. Every string must be translated in all lo
 lint fails CI on `MissingTranslation`, so shipping English-only is not an option. RTL is fully supported:
 `LocaleHelper` and `BedrudTheme` set the layout direction from the active `AppLanguage`, while the
 typeface does not vary by locale at all — see [Typography](#typography-typekt).
+
+**German addresses the reader as *du*.** Every German string uses the informal *du*, *dich*, *dir*
+and *dein*, never the formal *Sie*, *Ihnen* or *Ihr*: Bedrud is a calling and chat app, which is
+where readers expect *du*, and the shorter forms fit its buttons and snackbars better. The register
+was once split by screen — *Sie* on sign-in and in most dialogs, *du* in the call — so a reader met
+both within a minute. Where a string reads naturally without addressing anyone ("Raum erstellen",
+"Passwort zurücksetzen"), it does not address anyone. `GermanStringsTest` fails on any string in
+`values-de/strings.xml` carrying a formal pronoun.
 
 **Which language, and when.** A first run follows the device, because nothing has been picked yet and
 `AppLanguage.SYSTEM` is the default; a pick in Settings holds from that moment on, and picking System

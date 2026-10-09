@@ -256,17 +256,17 @@ fun InstanceSwitcherSheet(
             serverAfterRemoving = instanceManager.store::serverAfterRemoving,
             onSelect = { instance ->
                 instanceManager.switchTo(instance.id)
-                onDismiss()
+                dismiss()
             },
             onRemove = { instance ->
                 // Removing the server in use moves the app on, to the next server or to Add
                 // server, so the sheet goes with it; removing another leaves it open for more.
                 val wasActive = instance.id == activeId
                 instanceManager.removeInstance(instance.id)
-                if (wasActive) onDismiss()
+                if (wasActive) dismiss()
             },
             onAddInstance = {
-                onDismiss()
+                dismiss()
                 onAddInstance()
             }
         )

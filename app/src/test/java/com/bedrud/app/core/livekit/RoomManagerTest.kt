@@ -1,9 +1,52 @@
 package com.bedrud.app.core.livekit
 
+import android.app.Application
+import android.content.Context
+import com.bedrud.app.testutil.InMemorySharedPreferences
+import com.bedrud.app.ui.screens.settings.SettingsStore
+import io.mockk.every
+import io.mockk.mockk
 import org.junit.Assert.*
 import org.junit.Test
 
 class RoomManagerTest {
+
+    private fun roomManager(settingsStore: SettingsStore = settingsStore()): RoomManager =
+        RoomManager(mockk<Application>(relaxed = true), settingsStore)
+
+    private fun settingsStore(): SettingsStore {
+        val preferences = InMemorySharedPreferences()
+        val context = mockk<Context> {
+            every { getSharedPreferences(any(), any()) } returns preferences
+        }
+        return SettingsStore(context)
+    }
+
+    /**
+     * Deafening used to wait for the room to hear about it first, and that announcement can stall
+     * for seconds while the outgoing connection is not up. The toggle now lands before anything
+     * goes over the network.
+     */
+    @Test
+    fun `should deafen at once when toggled`() {
+        val settings = settingsStore()
+        val manager = roomManager(settings)
+
+        manager.toggleDeafen()
+
+        assertTrue(manager.isDeafened.value)
+        assertTrue(settings.getDeafened())
+    }
+
+    @Test
+    fun `should end where it started after two quick toggles`() {
+        val manager = roomManager()
+
+        manager.toggleDeafen()
+        manager.toggleDeafen()
+
+        assertFalse(manager.isDeafened.value)
+    }
 
     @Test
     fun `ChatMessage data class init and defaults`() {

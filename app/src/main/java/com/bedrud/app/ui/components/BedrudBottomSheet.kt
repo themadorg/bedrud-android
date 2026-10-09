@@ -19,6 +19,11 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.Stable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -28,9 +33,12 @@ import com.bedrud.app.ui.theme.Alpha
 import com.bedrud.app.ui.theme.BedrudShapeTokens
 import com.bedrud.app.ui.theme.Dimens
 import com.bedrud.app.ui.theme.typeCentered
+import kotlinx.coroutines.launch
 
 /**
- * The app's bottom sheet. Every sheet in the app is one of these.
+ * The app's bottom sheet. Every sheet in the app is one of these except the in-call chat
+ * (`MeetingChatSheet`), which needs three heights and its handle inside its own content, and so
+ * builds its own `ModalBottomSheet` from the same shape, container colour and handle.
  *
  * Container, drag handle, shape, insets and gutter are **fixed, not defaulted**. There is
  * deliberately no colour parameter: a default is a suggestion, and the one sheet that took the
@@ -39,8 +47,8 @@ import com.bedrud.app.ui.theme.typeCentered
  * lift a sheet off the background, and it is opaque over video just the same, so there is no case
  * where a darker container buys anything.
  *
- * The handle is [BedrudSheetHandle], shared with the call's controls bar and the chat sheet, rather
- * than M3's own. The Material one pressed as a rounded rectangle splashing across its whole touch
+ * The handle is [BedrudSheetHandle], shared with the chat sheet, rather than M3's own. The call's
+ * controls bar still draws its own, `MeetingPanelHandle`; sharing it is tracked in #209. The Material one pressed as a rounded rectangle splashing across its whole touch
  * area, and announced itself as "Drag Handle" — a label Android shows on long press, naming the
  * widget instead of saying what it does. The shape token stays: [BedrudShapeTokens.sheetTop] is
  * already M3's 28dp `extraLarge` top corners, just named.
@@ -49,15 +57,31 @@ import com.bedrud.app.ui.theme.typeCentered
  * experimental Material type in the signature, forcing `@OptIn` onto every screen that shows a
  * sheet — re-leaking the Material detail this component exists to contain. Sheets are dismissed
  * the way the rest of the app dismisses them: the caller stops composing them.
+ *
+ * A sheet that closes itself — a picker after a pick, an action row that has done its job — calls
+ * [BedrudSheetScope.dismiss] rather than its own `onDismiss`. Stopping composition directly removes
+ * the sheet in one frame, so it vanished instead of sliding away the way a drag or the scrim puts
+ * it away; `dismiss` slides it down first and then calls [onDismiss], M3's documented order.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BedrudBottomSheet(
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
-    content: @Composable ColumnScope.() -> Unit,
+    content: @Composable BedrudSheetScope.() -> Unit,
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val coroutineScope = rememberCoroutineScope()
+    val currentOnDismiss by rememberUpdatedState(onDismiss)
+    val slideAway = remember(sheetState, coroutineScope) {
+        {
+            coroutineScope.launch { sheetState.hide() }.invokeOnCompletion {
+                // A drag that catches the sheet on its way down leaves it open, and open it stays.
+                if (!sheetState.isVisible) currentOnDismiss()
+            }
+            Unit
+        }
+    }
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -78,9 +102,22 @@ fun BedrudBottomSheet(
                 .padding(horizontal = Dimens.sheetPadding)
                 .padding(bottom = Dimens.space24),
             verticalArrangement = Arrangement.spacedBy(Dimens.space4),
-            content = content,
-        )
+        ) {
+            val columnScope = this
+            remember(columnScope, slideAway) { BedrudSheetScope(columnScope, slideAway) }.content()
+        }
     }
+}
+
+/** What a [BedrudBottomSheet]'s content can do besides lay itself out in a column. */
+@Stable
+class BedrudSheetScope internal constructor(
+    columnScope: ColumnScope,
+    private val slideAway: () -> Unit,
+) : ColumnScope by columnScope {
+
+    /** Slides the sheet down, then calls its `onDismiss`. */
+    fun dismiss() = slideAway()
 }
 
 /**
