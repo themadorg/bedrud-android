@@ -15,6 +15,7 @@ import com.bedrud.app.core.auth.AuthManager
 import com.bedrud.app.core.auth.SignInMethod
 import com.bedrud.app.core.instance.InstanceManager
 import com.bedrud.app.core.instance.InstanceStore
+import com.bedrud.app.core.recent.RecentRoomsStore
 import com.bedrud.app.models.Instance
 import com.bedrud.app.models.User
 import com.bedrud.app.testutil.FontScales
@@ -36,8 +37,9 @@ private const val PASSWORD_CHANGED_AT = "2026-09-01T10:00:00Z"
 private const val CURRENT_PASSWORD = "the-current-password-1234"
 private const val NEW_PASSWORD = "a-new-password-1234"
 
-/** A file of its own, so the test never touches the servers the app has saved. */
+/** Files of their own, so the test never touches the servers or rooms the app has saved. */
 private const val TEST_INSTANCES_PREFS = "settings_screen_test_instances"
+private const val TEST_RECENTS_PREFS = "settings_screen_test_recents"
 
 /** How far apart two widths may be and still count as equal, in pixels. */
 private const val WIDTH_TOLERANCE_PX = 0.5f
@@ -62,7 +64,8 @@ class SettingsScreenTest {
         val instances = InstanceStore(context.getSharedPreferences(TEST_INSTANCES_PREFS, Context.MODE_PRIVATE))
         instances.addInstance(Instance(id = TEST_INSTANCE_ID, serverURL = TEST_SERVER_URL, displayName = TEST_SERVER_NAME))
         AuthManager(context, TEST_INSTANCE_ID).saveUser(user)
-        return InstanceManager(context.applicationContext as Application, instances, SettingsStore(context))
+        val recentRooms = RecentRoomsStore(context.getSharedPreferences(TEST_RECENTS_PREFS, Context.MODE_PRIVATE))
+        return InstanceManager(context.applicationContext as Application, instances, SettingsStore(context), recentRooms)
     }
 
     /** An [InstanceManager] whose only server has a guest signed in. */
@@ -84,7 +87,11 @@ class SettingsScreenTest {
     /** Shows Settings for whoever [instanceManager] has signed in. */
     private fun showSettings(instanceManager: InstanceManager) {
         compose.setThemedContentAt(FontScales.Default) {
-            SettingsContent(settingsStore = SettingsStore(context), instanceManager = instanceManager)
+            SettingsContent(
+                onOpenLicenses = {},
+                settingsStore = SettingsStore(context),
+                instanceManager = instanceManager,
+            )
         }
     }
 
@@ -103,6 +110,7 @@ class SettingsScreenTest {
     fun forgetAccount() {
         AuthManager(context, TEST_INSTANCE_ID).logout()
         context.deleteSharedPreferences(TEST_INSTANCES_PREFS)
+        context.deleteSharedPreferences(TEST_RECENTS_PREFS)
     }
 
     @Test
