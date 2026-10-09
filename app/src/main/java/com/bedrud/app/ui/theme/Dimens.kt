@@ -34,7 +34,15 @@ object Dimens {
     val minTouchTarget = 48.dp
     val fieldMinHeight = 56.dp
     val cardPadding = 16.dp
-    val serverCardMinHeight = 112.dp   // roomy tap target for the server-choice cards
+    // A roomy tap target for the server-choice cards, and tall enough that the radio in a card's
+    // corner stands clear of the scan button centred under it.
+    val serverCardMinHeight = 128.dp
+    // Material's extra-small icon button: a 32dp container around a 20dp icon. Material 3 1.4 has
+    // the size but keeps it internal. It is laid out at 32dp, so it sits beside one line of text
+    // without making the row taller; the 48dp touch target comes from Compose's own expansion of a
+    // small pointer target, as for the meeting tiles' corner actions.
+    val iconButtonExtraSmall = 32.dp
+    val iconButtonExtraSmallIcon = 20.dp
     val borderThin = 1.dp
     val borderStrong = 2.dp
 

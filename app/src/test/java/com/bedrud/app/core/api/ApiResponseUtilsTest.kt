@@ -9,12 +9,17 @@ import com.google.gson.JsonObject
 import kotlinx.coroutines.runBlocking
 import okhttp3.ResponseBody.Companion.toResponseBody
 import okhttp3.mockwebserver.MockResponse
+import okhttp3.mockwebserver.SocketPolicy
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import retrofit2.Response
+import java.net.HttpURLConnection
+
+/** When a user's password last changed, as the server writes the time. */
+private const val PASSWORD_CHANGED_AT = "2026-09-01T10:00:00Z"
 
 class ApiResponseUtilsTest : MockApiTest() {
 
@@ -25,6 +30,14 @@ class ApiResponseUtilsTest : MockApiTest() {
     fun setUp() {
         authApi = api()
         authManager = AuthManager(InMemorySharedPreferences())
+    }
+
+    /** Signs in a passkey account whose stored record says it never set a password. */
+    private fun signInPasskeyUser(): User {
+        val user = User(id = "u1", email = "a@b.com", name = "Alice", provider = "passkey")
+        authManager.saveTokens("acc", "ref")
+        authManager.saveUser(user)
+        return user
     }
 
     @Test
@@ -94,6 +107,41 @@ class ApiResponseUtilsTest : MockApiTest() {
         assertEquals("acc", authManager.getAccessToken())
         assertEquals("ref", authManager.getRefreshToken())
         assertEquals("Alice", authManager.currentUser.value?.name)
+    }
+
+    @Test
+    fun `refreshCurrentUser stores the server's record of the signed-in user`() = runBlocking {
+        val stored = signInPasskeyUser()
+        val serverRecord = stored.copy(passwordChangedAt = PASSWORD_CHANGED_AT)
+        server.enqueue(MockResponse().setBody(gson.toJson(serverRecord)).setResponseCode(200))
+
+        refreshCurrentUser(authApi, authManager)
+
+        assertRequest("GET", "/auth/me")
+        assertEquals(serverRecord, authManager.currentUser.value)
+    }
+
+    @Test
+    fun `refreshCurrentUser keeps the stored user when the server answers with an error`() = runBlocking {
+        val stored = signInPasskeyUser()
+        server.enqueue(
+            MockResponse().setBody("""{"error":"Failed to get user"}""")
+                .setResponseCode(HttpURLConnection.HTTP_INTERNAL_ERROR)
+        )
+
+        refreshCurrentUser(authApi, authManager)
+
+        assertEquals(stored, authManager.currentUser.value)
+    }
+
+    @Test
+    fun `refreshCurrentUser keeps the stored user when the server cannot be reached`() = runBlocking {
+        val stored = signInPasskeyUser()
+        server.enqueue(MockResponse().setSocketPolicy(SocketPolicy.DISCONNECT_AT_START))
+
+        refreshCurrentUser(authApi, authManager)
+
+        assertEquals(stored, authManager.currentUser.value)
     }
 
     @Test

@@ -5,11 +5,11 @@ import com.bedrud.app.models.ForgotPasswordRequest
 import com.bedrud.app.models.GuestLoginRequest
 import com.bedrud.app.models.LoginRequest
 import com.bedrud.app.models.LoginResponse
-import com.bedrud.app.models.MeResponse
 import com.bedrud.app.models.PublicSettings
 import com.bedrud.app.models.RefreshTokenRequest
 import com.bedrud.app.models.RefreshTokenResponse
 import com.bedrud.app.models.RegisterRequest
+import com.bedrud.app.models.User
 import com.google.gson.JsonObject
 import retrofit2.Response
 import retrofit2.http.Body
@@ -31,8 +31,9 @@ interface AuthApi {
     @POST("auth/refresh")
     suspend fun refreshToken(@Body request: RefreshTokenRequest): Response<RefreshTokenResponse>
 
+    /** The signed-in user, in the same shape a sign-in's `user` arrives in. */
     @GET("auth/me")
-    suspend fun getMe(): Response<MeResponse>
+    suspend fun getMe(): Response<User>
 
     @GET("auth/settings")
     suspend fun getPublicSettings(): Response<PublicSettings>

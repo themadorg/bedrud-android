@@ -23,6 +23,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.toArgb
+import androidx.lifecycle.compose.dropUnlessResumed
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -44,6 +45,7 @@ import com.bedrud.app.ui.screens.instance.AddInstanceScreen
 import com.bedrud.app.ui.screens.main.MainScreen
 import com.bedrud.app.ui.screens.meeting.MeetingScreen
 import com.bedrud.app.ui.screens.settings.AppAppearance
+import com.bedrud.app.ui.screens.settings.LicensesScreen
 import com.bedrud.app.ui.screens.settings.SettingsStore
 import com.bedrud.app.ui.theme.BedrudTheme
 import com.bedrud.app.ui.theme.SystemBarDarkScrim
@@ -212,6 +214,7 @@ object Routes {
     const val EMAIL_LOGIN = "email_login"
     const val REGISTER = "register"
     const val MAIN = "main"
+    const val LICENSES = "licenses"
     const val MEETING = "meeting/{roomName}"
 
     fun meeting(roomName: String): String = "meeting/$roomName"
@@ -256,18 +259,9 @@ fun BedrudNavHost(
         manager.saveTokens(token, "")
         // Best-effort: the token is already saved, so a failed fetch just means no cached profile
         // yet. Must not throw — this runs directly in a LaunchedEffect.
-        val body = apiBody("", onError = {}) { api.getMe() }
-        if (body != null) {
-            manager.saveUser(
-                com.bedrud.app.models.User(
-                    id = body.id,
-                    email = body.email,
-                    name = body.name,
-                    avatarUrl = body.avatarUrl,
-                    isAdmin = body.isAdmin,
-                    provider = body.provider
-                )
-            )
+        val user = apiBody("", onError = {}) { api.getMe() }
+        if (user != null) {
+            manager.saveUser(user)
         }
         oauthToken.value = null
     }
@@ -384,8 +378,17 @@ fun BedrudNavHost(
                 },
                 onNavigateToAddInstance = {
                     navController.navigate(Routes.ADD_INSTANCE)
+                },
+                onNavigateToLicenses = {
+                    navController.navigate(Routes.LICENSES)
                 }
             )
+        }
+
+        composable(Routes.LICENSES) {
+            // A second tap on the arrow while the screen animates out would pop Main as well and
+            // leave the back stack empty; dropUnlessResumed ignores taps once the entry is leaving.
+            LicensesScreen(onBack = dropUnlessResumed { navController.popBackStack() })
         }
 
         composable(
