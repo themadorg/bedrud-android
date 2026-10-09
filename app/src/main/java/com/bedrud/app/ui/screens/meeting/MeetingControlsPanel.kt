@@ -43,6 +43,7 @@ import com.bedrud.app.core.audio.MeetingInputMode
 import com.bedrud.app.core.audio.MeetingVoiceAlert
 import com.bedrud.app.core.livekit.ConnectionState
 import com.bedrud.app.ui.components.BedrudSheetActionRow
+import com.bedrud.app.ui.components.BedrudSheetHandle
 import com.bedrud.app.ui.theme.Dimens
 import com.bedrud.app.ui.theme.Motion
 
@@ -52,13 +53,13 @@ private const val ScrimAlpha = 0.32f
 /**
  * The in-call controls, and the room options that grow out of them.
  *
- * This is deliberately **not** a [com.bedrud.app.ui.components.BedrudBottomSheet], the one place in
- * the app that departs from the sheet standard. As a sheet, the options arrived as a second surface
- * carrying its own copy of the controls, sliding up over the real bar and settling at a different
- * height: the same five buttons appeared twice, at two elevations, and the row your thumb was
- * resting on jumped. Here there is one surface. It is anchored to the bottom, so the options unfold
- * *above* the controls and the controls themselves never move — the pill simply becomes taller,
- * which is what the sheet only ever claimed to do.
+ * This is deliberately **not** a sheet at all, [com.bedrud.app.ui.components.BedrudBottomSheet] or
+ * otherwise. As a sheet, the options arrived as a second surface carrying its own copy of the
+ * controls, sliding up over the real bar and settling at a different height: the same five
+ * buttons appeared twice, at two elevations, and the row your thumb was resting on jumped. Here
+ * there is one surface. It is anchored to the bottom, so the options unfold *above* the controls
+ * and the controls themselves never move — the pill simply becomes taller, which is what the sheet
+ * only ever claimed to do.
  *
  * That anchoring is also why the options read bottom-up rather than top-down: the row you were
  * already touching stays the panel's floor, and everything new appears above it.
@@ -141,9 +142,11 @@ fun BoxScope.MeetingControlsPanel(
         },
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            MeetingPanelHandle(
-                color = colors.onButtonVariant,
+            BedrudSheetHandle(
                 onClick = { onExpandedChange(!expanded) },
+                onClickLabel = stringResource(R.string.meeting_contentDescription_moreOptions),
+                // Inside the pill the handle sits above the controls, not above spare sheet edge.
+                verticalPadding = Dimens.space4,
             )
 
             AnimatedVisibility(

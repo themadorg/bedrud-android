@@ -13,12 +13,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.unit.Dp
 import com.bedrud.app.ui.theme.BedrudShapeTokens
 import com.bedrud.app.ui.theme.Dimens
 
 /**
- * The grab bar every sheet in the app wears, and the one the call's controls bar already drew for
- * itself. One handle, one shape, one press feedback.
+ * The grab bar every sheet in the app wears, and the one on top of the call's controls bar. One
+ * handle, one shape, one press feedback.
  *
  * Replaces M3's `BottomSheetDefaults.DragHandle`, which was kept for a while on the grounds that it
  * carried the accessibility semantics a bare `Box` does not. It carried two other things with it:
@@ -29,12 +30,17 @@ import com.bedrud.app.ui.theme.Dimens
  * Clipping to the pill *before* the click makes the ripple follow the shape. [onClick] is optional:
  * a sheet with one height has nothing for a tap to do, so it gets a plain bar with no ripple and no
  * semantics at all — the sheet is still dragged and dismissed the usual ways.
+ *
+ * [verticalPadding] is the grab area above and below the bar. A sheet has room to spare at its top
+ * edge; the controls bar wears the handle inside its own pill, where the full default would push
+ * the controls down, so it passes less.
  */
 @Composable
 fun BedrudSheetHandle(
     modifier: Modifier = Modifier,
     onClick: (() -> Unit)? = null,
     onClickLabel: String? = null,
+    verticalPadding: Dp = Dimens.space12,
 ) {
     Box(
         modifier = modifier
@@ -48,7 +54,7 @@ fun BedrudSheetHandle(
                         .semantics { if (onClickLabel != null) contentDescription = onClickLabel }
                 }
             }
-            .padding(horizontal = Dimens.space16, vertical = Dimens.space12),
+            .padding(horizontal = Dimens.space16, vertical = verticalPadding),
         contentAlignment = Alignment.Center,
     ) {
         Box(
@@ -63,5 +69,5 @@ fun BedrudSheetHandle(
     }
 }
 
-/** Present without competing with the sheet's own content — the weight the call's handle uses. */
+/** Present without competing with what sits below it, on a sheet and on the controls bar alike. */
 private const val HandleAlpha = 0.55f

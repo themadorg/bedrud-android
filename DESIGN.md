@@ -405,8 +405,10 @@ colour, shape or state parameters at all:
 - **`BedrudSheetHandle`**, not Material's `BottomSheetDefaults.DragHandle`. Material's handle
   pressed as a rounded rectangle splashing across its whole touch area, reading as a button rather
   than a grip, and announced itself as "Drag Handle", naming the widget instead of saying what it
-  does. A sheet with one height gets a plain bar; the chat sheet, where a tap changes the height,
-  gives it a click and a label saying so.
+  does. A sheet with one height gets a plain bar; the chat sheet and the call's controls panel,
+  where a tap changes the height, give it a click and a label saying so. The controls panel wears
+  the same handle with a tighter vertical padding, because there it sits inside the pill, directly
+  above the controls.
 - **`BedrudShapeTokens.sheetTop`**, which is already M3's 28dp `extraLarge` top corners — the token
   names the default rather than departing from it.
 - **`BottomSheetDefaults.ContainerColor`** (`surfaceContainerLow`), with no override available.
