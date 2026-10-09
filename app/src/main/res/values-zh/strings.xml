@@ -310,7 +310,6 @@
   <string name="meeting_sheet_deafen">拒听</string>
   <string name="meeting_sheet_tools">工具</string>
   <string name="meeting_sheet_report">举报滥用</string>
-  <string name="meeting_contentDescription_audioSource">音频源</string>
   <string name="meeting_audio_sheet_title">选择音频输出</string>
   <string name="meeting_audio_device_speaker">扬声器</string>
   <string name="meeting_audio_device_earpiece">听筒</string>
