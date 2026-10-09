@@ -15,7 +15,7 @@ render natively on GitHub.
 | **Language / UI** | Kotlin · Jetpack Compose · Material 3 |
 | **Size** | ~11.3k LOC main · ~2k LOC tests |
 | **SDK** | minSdk 28 · compile/target 36 · JDK 17 |
-| **DI** | Koin (`appModule`, 5 singletons) — **no ViewModels** |
+| **DI** | Koin (`appModule`, the app-wide singletons) — **no ViewModels** |
 | **HTTP** | Retrofit + OkHttp + **Gson** |
 | **Media** | LiveKit Android 2.25 |
 | **Package root** | `app/src/main/java/com/bedrud/app/` |
@@ -238,7 +238,6 @@ state and the plan; this table only says where to look.
 |---|---|---|
 | **Sign-in** | An OAuth sign-in stores no refresh token (`saveTokens(token, "")`), so it is signed out when its first access token expires. Needs the server to send one. | #254 |
 | **Deep links** | The `/m/` and `/c/` App Links name `bedrud.com`, not the host the app ships, and that host answers `assetlinks.json` with its web page. | #128 |
-| **Telecom** | `CallConnectionService.updateMuteState(muted)` ignores its argument and only re-asserts `setActive()`. | #255 |
 
 A checkout without `ANDROID_HOME` or `local.properties` cannot run `./gradlew` until an SDK is
 configured; `make doctor` says what is missing.

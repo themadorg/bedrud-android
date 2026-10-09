@@ -64,6 +64,9 @@ fun legacySecurePrefs(context: Context, fileName: String): SharedPreferences =
 /** The file name [EncryptedSharedPreferences] used for an instance's credentials. */
 fun legacyInstancePrefsName(instanceId: String) = "bedrud_secure_$instanceId"
 
+/** The file name an instance's credentials are kept under, sealed by [KeystoreCipher]. */
+fun instancePrefsName(instanceId: String) = "bedrud_keystore_$instanceId"
+
 /**
  * The encrypted per-instance auth prefs file — the single file name convention [AuthManager]
  * reads from and migration writes into.
@@ -74,7 +77,7 @@ fun legacyInstancePrefsName(instanceId: String) = "bedrud_secure_$instanceId"
  * part-way simply happens again on the next open.
  */
 fun secureInstancePrefs(context: Context, instanceId: String): SharedPreferences {
-    val prefs = securePrefs(context, "bedrud_keystore_$instanceId")
+    val prefs = securePrefs(context, instancePrefsName(instanceId))
     migrateLegacyInstancePrefs(context, instanceId, prefs)
     return prefs
 }
@@ -113,3 +116,17 @@ private fun migrateLegacyInstancePrefs(
 /** Whether a shared preferences file has been written yet, without creating it by asking. */
 private fun sharedPrefsFileExists(context: Context, fileName: String): Boolean =
     File(File(context.applicationInfo.dataDir, "shared_prefs"), "$fileName.xml").exists()
+
+/**
+ * Deletes every file an instance's credentials have been kept in, for when that server is removed.
+ *
+ * Each file is emptied by a blocking commit before it goes. Its in-memory copy outlives the file,
+ * so without that a later read would still find the tokens; and a save still queued by apply()
+ * would write the file back after the delete, where the commit waits for it instead.
+ */
+fun deleteInstancePrefs(context: Context, instanceId: String) {
+    listOf(instancePrefsName(instanceId), legacyInstancePrefsName(instanceId)).forEach { fileName ->
+        context.getSharedPreferences(fileName, Context.MODE_PRIVATE).editBlocking { clear() }
+        context.deleteSharedPreferences(fileName)
+    }
+}
