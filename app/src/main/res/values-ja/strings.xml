@@ -40,6 +40,7 @@
   <string name="auth_hint_passwordMinLength">%1$d文字以上</string>
   <string name="auth_error_emailInvalid">有効なメールアドレスを入力してください</string>
   <string name="auth_error_guestFailed">ゲストとして参加できませんでした。もう一度お試しください。</string>
+  <string name="auth_notice_passwordChanged">パスワードを変更しました。新しいパスワードでサインインしてください。</string>
   <plurals name="auth_error_nameTooShort">
     <item quantity="other">%1$d文字以上入力してください。</item>
   </plurals>

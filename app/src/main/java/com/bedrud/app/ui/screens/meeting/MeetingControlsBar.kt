@@ -26,7 +26,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
@@ -192,39 +191,6 @@ internal fun MeetingCallControlsRow(
                 MeetEndCallButton(colors = colors, onClick = onEndCall)
             }
         }
-    }
-}
-
-/**
- * The pull-up affordance above the controls. Sized like the M3 sheet drag handle, wrapped in a
- * 16dp-tall clickable strip so it is also a tap target, with the more-options semantics. Not the
- * sheets' 48dp: that grew the bar from 72dp to 108dp and covered the bottom of the video.
- */
-@Composable
-internal fun MeetingPanelHandle(
-    color: Color,
-    onClick: () -> Unit,
-) {
-    val description = stringResource(R.string.meeting_contentDescription_moreOptions)
-    Box(
-        modifier = Modifier
-            // Clip before clickable so the press ripple follows the shape instead of
-            // splashing as a rectangle.
-            .clip(BedrudShapeTokens.pill)
-            .clickable(onClick = onClick)
-            .padding(horizontal = Dimens.space16)
-            // The air above the bar reaches the pill's top edge and is part of the tap strip, so
-            // a finger aimed at the bar's edge still lands on the handle.
-            .padding(top = Dimens.space8, bottom = Dimens.space4)
-            .semantics { contentDescription = description },
-        contentAlignment = Alignment.Center,
-    ) {
-        Box(
-            modifier = Modifier
-                .width(Dimens.meetingHandleWidth)
-                .height(Dimens.meetingHandleHeight)
-                .background(color.copy(alpha = DragHandleAlpha), CircleShape),
-        )
     }
 }
 
@@ -631,10 +597,6 @@ internal fun MicLevelBars(
         }
     }
 }
-
-// The bar's own pull-up handle, not a sheet's: the shared sheet scaffold fixes its handle, so this
-// one carries its own tint. Matches the sheet handle's weight against the chrome.
-private const val DragHandleAlpha = 0.55f
 
 private const val MeterBarCount = 4
 private val MeterBarScales = floatArrayOf(0.55f, 1f, 0.8f, 0.45f)

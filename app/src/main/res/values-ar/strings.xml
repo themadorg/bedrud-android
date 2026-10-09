@@ -40,6 +40,7 @@
   <string name="auth_hint_passwordMinLength">%1$d حرفًا على الأقل</string>
   <string name="auth_error_emailInvalid">أدخل بريدًا إلكترونيًا صالحًا</string>
   <string name="auth_error_guestFailed">تعذّر الانضمام كضيف. يرجى المحاولة مرة أخرى.</string>
+  <string name="auth_notice_passwordChanged">تم تغيير كلمة المرور. سجّل الدخول بكلمة المرور الجديدة.</string>
   <plurals name="auth_error_nameTooShort">
     <item quantity="zero">الرجاء إدخال %1$d حرف على الأقل.</item>
     <item quantity="one">الرجاء إدخال حرف واحد على الأقل.</item>

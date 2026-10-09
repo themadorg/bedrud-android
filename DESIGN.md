@@ -222,6 +222,13 @@ which has a password from sign-up but is not stamped until it first changes it. 
 can be out of date: a password set on another device, or a record stored by a version of the app that
 did not keep the stamp or the account's access levels.
 
+A password change, or a first password set, ends every session of the account on the server, this
+one included. Settings therefore signs straight back in with the new password
+(`signBackInAfterPasswordChange` in `core/api/ApiResponseUtils.kt`) and confirms the change only once
+that has worked, so the user stays where they are. When it fails, the user is signed out at once, and
+the sign-in screen they land on says why: the reason travels there through `SignInNoticeRelay`,
+because the Settings screen that signed out is gone by the time it could show anything.
+
 **Text sets a floor, not a height.** A container that holds text takes a minimum height —
 `heightIn(min = …)`, or the component's own `defaultMinSize` — never a fixed `height(…)`. Text grows
 with the reader's font-size setting, up to 2× since Android 14, and a fixed box clips it: the rooms
@@ -401,10 +408,10 @@ colour, shape or state parameters at all:
   rectangle across its whole area and whose "Drag Handle" label named the widget rather than its
   action. A handle with somewhere to go when tapped (the chat sheet toggles its height) takes
   `onClick` and a label saying what the tap does; a single-height sheet's handle takes neither, and
-  is dragged like the rest of the sheet. The call's controls panel draws the same bar in a 16dp
-  tap strip of its own instead, 8dp of it above the bar: a 48dp handle grew that bar from 72dp to
-  108dp and covered the bottom of the video. Its options also open with a swipe up anywhere on the
-  bar.
+  is dragged like the rest of the sheet. The call's controls panel wears the same handle in a 16dp
+  tap strip instead, passed as its `strip`, 8dp of it above the bar: a 48dp handle grew that bar
+  from 72dp to 108dp and covered the bottom of the video. Its options also open with a swipe up
+  anywhere on the bar.
 - **`BedrudShapeTokens.sheetTop`**, which is already M3's 28dp `extraLarge` top corners — the token
   names the default rather than departing from it.
 - **`BottomSheetDefaults.ContainerColor`** (`surfaceContainerLow`), with no override available.

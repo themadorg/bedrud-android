@@ -3,6 +3,7 @@ package com.bedrud.app.ui.screens.meeting
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -27,6 +28,7 @@ import com.bedrud.app.core.audio.MeetingVoiceAlert
 import com.bedrud.app.core.livekit.ConnectionState
 import com.bedrud.app.ui.components.BedrudBottomSheet
 import com.bedrud.app.ui.components.BedrudSheetActionRow
+import com.bedrud.app.ui.components.BedrudSheetHandle
 import com.bedrud.app.ui.components.BedrudSheetTitle
 import com.bedrud.app.ui.theme.Dimens
 
@@ -159,9 +161,13 @@ fun BoxScope.MeetingControlsPanel(
         },
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            MeetingPanelHandle(
-                color = colors.onButtonVariant,
+            BedrudSheetHandle(
                 onClick = { onExpandedChange(true) },
+                onClickLabel = stringResource(R.string.meeting_contentDescription_moreOptions),
+                // A 16dp strip rather than the sheets' 48dp, which covered the bottom of the video.
+                // The air above the bar reaches the pill's top edge and is part of the strip, so a
+                // finger aimed at the bar's edge still lands on the handle.
+                strip = PaddingValues(top = Dimens.space8, bottom = Dimens.space4),
             )
 
             MeetingCallControlsRow(
