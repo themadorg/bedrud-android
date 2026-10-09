@@ -35,7 +35,7 @@ amber outline**; **dashed arrows** are events / reverse data flow.
 5. [Joining a meeting](#4-joining-a-meeting)
 6. [The stage protocol](#5-the-stage-protocol)
 7. [Authentication](#6-authentication)
-8. [Where the docs and the code disagree](#7-where-the-docs-and-the-code-disagree)
+8. [Known risks](#7-known-risks)
 
 ---
 
@@ -232,18 +232,18 @@ Twitter/X.
 
 ---
 
-## 7. Where the docs and the code disagree
+## 7. Known risks
 
-Onboarding traps found while reading. Several docs in this repo describe the *former
-monorepo*, not this app — verify against source before trusting them.
+Defects found while reading the code, each tracked in its own issue. The issue holds the current
+state and the plan; this table only says where to look.
 
-| Severity | Issue | Detail |
+| Area | Risk | Tracked in |
 |---|---|---|
-| **Correctness** | OAuth can't refresh | `MainActivity` saves an empty refresh token (`saveTokens(token, "")`). The first `401` after expiry finds no refresh token and forces a logout. |
-| **Design drift** | `DESIGN.md` describes the web app | It prescribes "Rose + Teal, 0px radius." The Android theme is actually shadcn **slate/navy** (`#0F172A`), and components are **rounded** (8–28dp). Don't apply it here. |
-| **Multi-instance** | Deep links hardwired to `bedrud.com` | The manifest's `autoVerify` intent filters only match `bedrud.com`, yet the app connects to arbitrary servers. Other instances' `/m/` links won't App-Link-verify. |
-| **Telecom** | Mute state isn't truly synced | `CallConnectionService.updateMuteState(muted)` ignores its argument and only calls `setActive()`, so the OS call's mute never reflects the real mic. |
-| **Environment** | No Android SDK assumed | A checkout without `ANDROID_HOME` / `local.properties` can't run `./gradlew` tasks until an SDK is configured. |
+| **Sign-in** | An OAuth sign-in stores no refresh token (`saveTokens(token, "")`), so it is signed out when its first access token expires. Needs the server to send one. | #254 |
+| **Deep links** | The `/m/` and `/c/` App Links name `bedrud.com`, not the host the app ships, and that host answers `assetlinks.json` with its web page. | #128 |
+
+A checkout without `ANDROID_HOME` or `local.properties` cannot run `./gradlew` until an SDK is
+configured; `make doctor` says what is missing.
 
 ---
 
