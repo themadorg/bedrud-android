@@ -128,9 +128,9 @@ Three forms correct it, and which one a site uses is not a matter of taste:
 
 | | when | why |
 |---|---|---|
-| `Modifier.typeCentered(style)` | **one line** of text centred against something that is **not text** — a button label in its fixed-height container, a navigation label under its icon, a chip's or a badge's label, a list item's line beside its switch, a top bar's title beside its actions, a label paired with an icon | one number per text style, so peer labels keep a shared baseline |
+| `Modifier.typeCentered(style)` | **one line** of text centred against something that is **not text** — a button label in its fixed-height container, a navigation label under its icon, a chip's label, a list item's line beside its switch, a top bar's title beside its actions, a label paired with an icon | one number per text style, so peer labels keep a shared baseline |
 | `Modifier.typeCentered(firstLine, lastLine)` | **a block of lines centred as one** — a title over its supporting line beside an icon or avatar. The same call goes on every line of the block, or once on the column holding them | only the room above the first line's capitals and below the last line's baseline decide where the block's letters sit. Correcting each line by its own style adds together corrections that should partly cancel: 22sp over 14sp on the profile card measured 4px low that way, 0.5px as a block |
-| `Modifier.inkCentered(text, style)` | **one glyph or short word alone in a shape** — an avatar's initial, a reaction's emoji, the `!` in an error dot, a count in a badge, the "or" between two rules | that string's own ink is the whole of what must look centred, and it may be nothing like a capital |
+| `Modifier.inkCentered(text, style)` | **one glyph or short word alone in a shape** — an avatar's initial, a reaction's emoji, the `!` in an error dot, a badge's label or count, the "or" between two rules | that string's own ink is the whole of what must look centred, and it may be nothing like a capital: a Persian badge label centred on a capital left its tails hanging and sat 1.5dp low in its pill |
 
 **`typeCentered` must be applied to every such site, not the convenient ones.** Its only real risk is
 partiality: a corrected `BedrudButton` label measured 5px below the plain `TextButton` beside it in
@@ -138,7 +138,8 @@ the same dialog — two controls that had agreed with each other until one of th
 sign-in screen's "No account yet?" sat 5px above the "Sign Up" beside it for the same reason, until
 the prompt was corrected along with the button.
 
-**A line with a shape beside it inside a block** — the profile card's name and its admin badge — moves
+**A line with a shape beside it inside a block** — the profile card's name and its admin badge, a
+server switcher row's name and its "In use" badge — moves
 with the block, and the shape is raised by that line's own correction to meet its letters, rather
 than the line lowered to meet the shape. Lowering the line would move it out of the block.
 
@@ -409,6 +410,19 @@ units of a sheet or dialog surface (`#2b2624`), so a default `OutlinedButton` bo
 perceptually invisible there. Outlined controls read correctly on the app background
 (`Stone950`) and disappear on raised surfaces. If an outline is genuinely needed on a raised
 surface, give it an explicit colour with real contrast.
+
+**The server switcher marks the server in use with a badge, and removes servers in an edit mode.**
+The server in use carries an "In use" `BedrudBadge` after its name — the badge the add-server
+screen marks an added server with — rather than the trailing check a picker uses. Being in use is
+a state, not a choice being made in the sheet, and the trailing slot is taken by the remove button
+while editing. The Edit button (a `GHOST` `BedrudButton` beside the sheet title, reading Done while
+on) gives every row that remove button, the admin lists' destructive icon button (`Delete`, error
+tint), and stops the rows switching servers, so a tap beside it does nothing. This differs from
+the dashboard's room cards, which remove by swipe and long press, on purpose: removing a server
+signs out of it, so it sits behind a visible, deliberate mode rather than a gesture. Removal asks
+first through `ConfirmDialog`, naming the server, what goes with it, and — for the server in use —
+which server the app moves to. The sheet stays in edit mode after removing another server, and
+closes after removing the one in use.
 
 ## Meeting chrome
 
