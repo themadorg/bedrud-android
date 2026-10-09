@@ -894,6 +894,14 @@ lint fails CI on `MissingTranslation`, so shipping English-only is not an option
 `LocaleHelper` and `BedrudTheme` set the layout direction from the active `AppLanguage`, while the
 typeface does not vary by locale at all — see [Typography](#typography-typekt).
 
+**German addresses the reader as *du*.** Every German string uses the informal *du*, *dich*, *dir*
+and *dein*, never the formal *Sie*, *Ihnen* or *Ihr*: Bedrud is a calling and chat app, which is
+where readers expect *du*, and the shorter forms fit its buttons and snackbars better. The register
+was once split by screen — *Sie* on sign-in and in most dialogs, *du* in the call — so a reader met
+both within a minute. Where a string reads naturally without addressing anyone ("Raum erstellen",
+"Passwort zurücksetzen"), it does not address anyone. `GermanStringsTest` fails on any string in
+`values-de/strings.xml` carrying a formal pronoun.
+
 **Which language, and when.** A first run follows the device, because nothing has been picked yet and
 `AppLanguage.SYSTEM` is the default; a pick in Settings holds from that moment on, and picking System
 again hands the choice back to the device. The device's language is read from
