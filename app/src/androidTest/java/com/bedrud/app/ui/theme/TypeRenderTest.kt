@@ -1,5 +1,7 @@
 package com.bedrud.app.ui.theme
 
+import android.graphics.Bitmap
+import android.graphics.Canvas
 import android.graphics.Paint
 import android.graphics.fonts.Font
 import android.graphics.text.TextRunShaper
@@ -11,7 +13,7 @@ import androidx.test.filters.SdkSuppress
 import androidx.test.platform.app.InstrumentationRegistry
 import com.bedrud.app.R
 import java.nio.ByteBuffer
-import org.junit.Assert.assertEquals
+import kotlin.math.ceil
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -19,8 +21,8 @@ import org.junit.Test
  * Shapes text in the app's own type scale and asks Android which font drew each glyph.
  *
  * A screenshot only shows that *something* drew the letters. The shaper names the font file behind
- * every glyph, and the weight it was drawn at, so this is what proves Cyrillic comes from the
- * bundled companion rather than from whatever the device's own fallback happens to be.
+ * every glyph, so this is what proves Cyrillic comes from the bundled companion rather than from
+ * whatever the device's own fallback happens to be. Weight is measured on the drawn ink instead.
  *
  * Needs API 31 for `TextRunShaper`, and is skipped below it; the fallback itself works from API 29.
  */
@@ -57,7 +59,38 @@ class TypeRenderTest {
         return drawn == expected
     }
 
-    private fun Font.weightAxis(): Float? = axes?.firstOrNull { it.tag == "wght" }?.styleValue
+    /**
+     * How much ink [text] lays down at [weight]: the summed coverage of every pixel it draws.
+     *
+     * Measured on drawn pixels because newer Android no longer reports a shaped font's variation
+     * axes, so asking the shaper which `wght` it used answers nothing from API 36.
+     */
+    private fun inkAt(text: String, weight: FontWeight): Long {
+        val paint = Paint().apply {
+            typeface = resolver.resolveAsTypeface(fontFamily, weight).value
+            textSize = InkTextSize
+            isAntiAlias = true
+        }
+        val metrics = paint.fontMetricsInt
+        val bitmap = Bitmap.createBitmap(
+            ceil(paint.measureText(text)).toInt() + InkMarginPx * 2,
+            metrics.bottom - metrics.top + InkMarginPx * 2,
+            Bitmap.Config.ALPHA_8,
+        )
+        Canvas(bitmap).drawText(text, InkMarginPx.toFloat(), (InkMarginPx - metrics.top).toFloat(), paint)
+        val pixels = ByteBuffer.allocate(bitmap.byteCount)
+        bitmap.copyPixelsToBuffer(pixels)
+        return pixels.array().sumOf { (it.toInt() and 0xFF).toLong() }
+    }
+
+    /** Fails unless every weight of the scale draws [text] with more ink than the one before it. */
+    private fun assertHeavierAtEveryStep(text: String) {
+        val ink = TypeScaleWeights.map { inkAt(text, it) }
+        assertTrue(
+            "ink at ${TypeScaleWeights.map { it.weight }}: $ink",
+            ink.zipWithNext().all { (lighter, heavier) -> lighter < heavier },
+        )
+    }
 
     @Test
     fun shouldDrawCyrillicWithTheBundledCompanion() {
@@ -90,23 +123,23 @@ class TypeRenderTest {
     }
 
     @Test
-    fun shouldDrawCyrillicAtEveryWeightTheTypeScaleAsksFor() {
-        for (weight in TypeScaleWeights) {
-            val drawn = fontsDrawing(Russian, weight).map { it.weightAxis() }.distinct()
-            assertEquals("at $weight", listOf(weight.weight.toFloat()), drawn)
-        }
+    fun shouldDrawCyrillicHeavierAtEveryWeightTheTypeScaleAsksFor() {
+        assertHeavierAtEveryStep(Russian)
     }
 
     @Test
-    fun shouldDrawLatinAtEveryWeightTheTypeScaleAsksFor() {
-        for (weight in TypeScaleWeights) {
-            val drawn = fontsDrawing(Latin, weight).map { it.weightAxis() }.distinct()
-            assertEquals("at $weight", listOf(weight.weight.toFloat()), drawn)
-        }
+    fun shouldDrawLatinHeavierAtEveryWeightTheTypeScaleAsksFor() {
+        assertHeavierAtEveryStep(Latin)
     }
 
     private companion object {
         const val ShapingTextSize = 40f
+
+        /** Large enough that one step of the weight axis changes the ink by whole pixels. */
+        const val InkTextSize = 120f
+
+        /** Room around the text so no anti-aliased edge is cut off by the bitmap's border. */
+        const val InkMarginPx = 8
         const val Russian = "Привет"
         const val Greek = "Καλημέρα"
         const val StressedVowel = "а́"

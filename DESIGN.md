@@ -114,8 +114,10 @@ character, so mixed-script text takes each letter from the face that has it.
   Japanese and 17.8 MB for Simplified Chinese — too much for two locales in an APK this size. Those
   two still take the device's own face, and follow a themed system font.
 - **Tested from both ends.** `TypeTest` checks the bundled file's coverage and weight axis in CI.
-  `TypeRenderTest` (instrumented, API 31+) asks Android's text shaper which font drew each glyph, at
-  which weight.
+  `TypeRenderTest` (instrumented, API 31+) asks Android's text shaper which font drew each glyph,
+  and checks every weight of the scale draws heavier than the one before it, measured on the drawn
+  ink. It used to read the weight off the shaped font's `wght` axis, which Android stopped reporting
+  by API 36: the axis comes back empty at every weight there, though the weights still render.
 
 **Rejected: keeping the platform sans for Latin.** `Typeface.CustomFallbackBuilder` (API 29+) can
 leave the system font drawing Latin and hand Vazirmatn only the Arabic-script runs, which would
