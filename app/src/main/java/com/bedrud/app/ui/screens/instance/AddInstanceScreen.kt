@@ -32,8 +32,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.ErrorOutline
 import androidx.compose.material.icons.rounded.LockOpen
 import androidx.compose.material.icons.rounded.QrCodeScanner
+import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
@@ -56,15 +56,23 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.layout.layout
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDirection
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.bedrud.app.BuildConfig
 import com.bedrud.app.R
 import com.bedrud.app.core.instance.InstanceManager
@@ -225,59 +233,39 @@ fun AddInstanceScreen(
                         .selectableGroup(),
                     verticalArrangement = Arrangement.spacedBy(Dimens.space16)
                 ) {
-                    ServerChoiceCard(
+                    OfficialServerCard(
                         selected = choice == ServerChoice.DEFAULT,
                         onSelect = {
                             choice = ServerChoice.DEFAULT
                             errorMessage = null
                         },
-                        title = stringResource(R.string.instance_choice_default_title),
                         badge = stringResource(
                             if (isDefaultAdded) R.string.instance_choice_default_addedTag
                             else R.string.instance_choice_default_tag
                         ),
-                    ) { selected ->
-                        val urlStyle = MaterialTheme.typography.bodyLarge.copy(
-                            fontFamily = FontFamily.Monospace,
-                            textDirection = TextDirection.Ltr
-                        )
-                        Text(
-                            text = displayUrl(defaultUrl ?: BuildConfig.DEFAULT_SERVER_HOST),
-                            style = urlStyle,
-                            color = if (selected) MaterialTheme.colorScheme.onSurface
-                            else MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.typeCentered(urlStyle)
-                        )
-                    }
+                        address = displayUrl(defaultUrl ?: BuildConfig.DEFAULT_SERVER_HOST),
+                    )
 
-                    ServerChoiceCard(
+                    CustomServerCard(
                         selected = choice == ServerChoice.CUSTOM,
                         onSelect = {
                             choice = ServerChoice.CUSTOM
                             errorMessage = null
                         },
-                        title = stringResource(R.string.instance_choice_custom_title),
-                        badge = null,
-                    ) { selected ->
-                        CustomServerField(
-                            value = customInput,
-                            onValueChange = {
-                                customInput = it.filterNot(Char::isWhitespace)
-                                errorMessage = null
-                            },
-                            enabled = selected,
-                            focusRequester = customFocusRequester,
-                            // Keyboard action key: dismiss keyboard + run the primary action.
-                            onSubmit = {
-                                keyboardController?.hide()
-                                if (canContinue) submit()
-                            },
-                            onScanQrCode = ::scanQrCode
-                        )
-                        AnimatedVisibility(visible = selected && isInsecure) {
-                            InsecureNote()
-                        }
-                    }
+                        value = customInput,
+                        onValueChange = {
+                            customInput = it.filterNot(Char::isWhitespace)
+                            errorMessage = null
+                        },
+                        focusRequester = customFocusRequester,
+                        // Keyboard action key: dismiss keyboard + run the primary action.
+                        onSubmit = {
+                            keyboardController?.hide()
+                            if (canContinue) submit()
+                        },
+                        onScanQrCode = ::scanQrCode,
+                        isInsecure = isInsecure,
+                    )
                 }
 
                 // Inline error sits directly under the cards.
@@ -370,6 +358,13 @@ private fun BrandHeader(wordmark: String) {
     }
 }
 
+/** A size between the type scale's title steps, for the server cards' titles. */
+private val CardTitleFontSize = 18.sp
+private val CardTitleLineHeight = 24.sp
+
+/** How far a server card's content sits under its title row, unless the content says otherwise. */
+private val CardContentGap = Dimens.space8
+
 @Composable
 private fun ServerChoiceCard(
     selected: Boolean,
@@ -377,6 +372,7 @@ private fun ServerChoiceCard(
     title: String,
     badge: String?,
     modifier: Modifier = Modifier,
+    contentGap: Dp = CardContentGap,
     content: @Composable (selected: Boolean) -> Unit
 ) {
     // Unselected, the card has the same outline as every other card in the app.
@@ -408,28 +404,45 @@ private fun ServerChoiceCard(
                 .defaultMinSize(minHeight = Dimens.serverCardMinHeight)
                 .padding(Dimens.cardPadding)
         ) {
-            // Radio pinned to the top-end corner; the label + value block is centered vertically.
+            // The radio keeps to the card's top-end corner, in a square the size of the scan
+            // button in the card below it: the two centre on one column at the card's end edge,
+            // and the circle sits as far from the card's top as from its side.
             RadioButton(
                 selected = selected,
                 onClick = null,
-                modifier = Modifier.align(Alignment.TopEnd)
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .size(Dimens.iconButtonExtraSmall)
             )
+            // Every card keeps the same roomy minimum height, its content centred in it. Centring
+            // only keeps the titles level because both cards' content is the same height: each
+            // address sits in a row as tall as the scan button (see addressRowGap). When the
+            // official address was one bare line, its title centred lower than the one over the
+            // taller field.
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(end = Dimens.space32)
                     .align(Alignment.CenterStart)
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                // The title row stops short of the radio's column, so a long title or its badge
+                // never runs under the radio; the content under it may reach the card's edge.
+                Row(
+                    modifier = Modifier.padding(end = Dimens.iconButtonExtraSmall + Dimens.space8),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     // Every line in the card is corrected, so the block keeps its spacing and moves
                     // as one; the title is also lined up against the badge beside it.
-                    val titleStyle = MaterialTheme.typography.titleMedium
+                    val titleStyle = MaterialTheme.typography.titleLarge.copy(
+                        fontSize = CardTitleFontSize,
+                        lineHeight = CardTitleLineHeight
+                    )
                     Text(
                         text = title,
                         style = titleStyle,
                         color = if (selected) MaterialTheme.colorScheme.onSurface
                         else MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier
+                            .weight(1f, fill = false)
                             .padding(end = Dimens.space8)
                             .typeCentered(titleStyle)
                     )
@@ -437,12 +450,25 @@ private fun ServerChoiceCard(
                         BedrudBadge(badge)
                     }
                 }
-                Spacer(Modifier.height(Dimens.space8))
+                Spacer(Modifier.height(contentGap))
                 content(selected)
             }
         }
     }
 }
+
+/** A size between the type scale's body and title steps, for the two server addresses. */
+private val ServerAddressFontSize = 17.sp
+private val ServerAddressLineHeight = 24.sp
+
+/** The type both server addresses are drawn in: the official one and the one typed in. */
+@Composable
+private fun serverAddressStyle(): TextStyle = MaterialTheme.typography.bodyLarge.copy(
+    fontFamily = FontFamily.Monospace,
+    fontSize = ServerAddressFontSize,
+    lineHeight = ServerAddressLineHeight,
+    textDirection = TextDirection.Ltr
+)
 
 @Composable
 private fun CustomServerField(
@@ -455,42 +481,21 @@ private fun CustomServerField(
 ) {
     val textColor = if (enabled) MaterialTheme.colorScheme.onSurface
     else MaterialTheme.colorScheme.onSurfaceVariant
-    // Leading icon (matching the dashboard quick-join field's leading search icon) rather than
-    // trailing: a trailing icon ends up floating far from short input text since the field itself
-    // needs weight(1f) to stay fully tappable, which reads as misplaced/disconnected.
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        // IconButton's 48dp touch target centers the 24dp glyph, insetting it (48-24)/2 = 12dp on
-        // each side. Left-shifting the whole thing by that inset lines the glyph up flush with
-        // "Your own server" above it, but leaves the *reported* width at a full 48dp -- so the text
-        // field after it would still start 24dp from the glyph, reading as an oversized gap. This
-        // custom layout keeps the full 48dp touch target (for accessibility) but reports only
-        // iconMd + space8 of width upstream, so the field starts a normal icon-to-text gap away
-        // from the glyph instead of from the touch target's far edge.
-        IconButton(
-            onClick = onScanQrCode,
-            enabled = enabled,
-            modifier = Modifier.layout { measurable, constraints ->
-                val placeable = measurable.measure(constraints)
-                val inset = ((Dimens.minTouchTarget - Dimens.iconMd) / 2).roundToPx()
-                val reportedWidth = (Dimens.iconMd + Dimens.space8).roundToPx()
-                layout(reportedWidth, placeable.height) {
-                    placeable.placeRelative(-inset, 0)
-                }
-            },
-        ) {
-            Icon(
-                Icons.Rounded.QrCodeScanner,
-                contentDescription = stringResource(R.string.instance_contentDescription_scanQr),
-                tint = if (enabled) MaterialTheme.colorScheme.onSurfaceVariant
-                else MaterialTheme.colorScheme.outlineVariant
-            )
-        }
+    // The address sits flush under the card's title, as the official address does, and the scan
+    // button ends at the card's edge under the radio. The button is a trailing action, where
+    // Material puts one; a filled tonal container keeps it findable next to a field that has no
+    // outline of its own.
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(Dimens.space8)
+    ) {
         // Unlike BedrudTextField, both the hint and the typed value are drawn here, so both can be
         // corrected, and by the same amount — the one replaces the other in place.
-        val fieldStyle = MaterialTheme.typography.bodyLarge.copy(
-            fontFamily = FontFamily.Monospace,
-            textDirection = TextDirection.Ltr
-        )
+        val fieldStyle = serverAddressStyle()
+        // An address reads left to right in every language, but it lines up under its title: in a
+        // right-to-left layout that is the right edge, where the official address above it starts.
+        val addressAlign = if (LocalLayoutDirection.current == LayoutDirection.Rtl) TextAlign.Right
+        else TextAlign.Left
         Box(modifier = Modifier.weight(1f)) {
             if (value.isEmpty()) {
                 Text(
@@ -505,7 +510,7 @@ private fun CustomServerField(
                 onValueChange = onValueChange,
                 enabled = enabled,
                 singleLine = true,
-                textStyle = fieldStyle.copy(color = textColor),
+                textStyle = fieldStyle.copy(color = textColor, textAlign = addressAlign),
                 cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
                 keyboardOptions = KeyboardOptions(
                     keyboardType = KeyboardType.Uri,
@@ -516,6 +521,19 @@ private fun CustomServerField(
                     .fillMaxWidth()
                     .focusRequester(focusRequester)
                     .typeCentered(fieldStyle)
+            )
+        }
+        FilledTonalIconButton(
+            onClick = onScanQrCode,
+            enabled = enabled,
+            // Material's square shape for this size: the medium corner.
+            shape = MaterialTheme.shapes.medium,
+            modifier = Modifier.size(Dimens.iconButtonExtraSmall)
+        ) {
+            Icon(
+                Icons.Rounded.QrCodeScanner,
+                contentDescription = stringResource(R.string.instance_contentDescription_scanQr),
+                modifier = Modifier.size(Dimens.iconButtonExtraSmallIcon)
             )
         }
     }
@@ -541,6 +559,95 @@ private fun InsecureNote() {
             color = MaterialTheme.bedrudColors.warning,
             modifier = Modifier.typeCentered(noteStyle)
         )
+    }
+}
+
+/**
+ * The gap between a card's title row and its address row.
+ *
+ * Every address sits in a row as tall as the scan button, centred in it, and the scan button is
+ * taller than one line of the address at most font sizes: the address lands (button - line) / 2
+ * below the row's top. The gap gives that back, which leaves each address as far under its title
+ * as a bare line would sit. The line is measured rather than read off the style: a single line is
+ * laid out shorter than the style's line height, its top and bottom trimmed. From about twice the
+ * default font size the line is the taller one and the gap is the card's usual one.
+ */
+@Composable
+private fun addressRowGap(): Dp {
+    val addressStyle = serverAddressStyle()
+    val addressHint = stringResource(R.string.instance_placeholder_serverAddress)
+    val textMeasurer = rememberTextMeasurer()
+    val addressLinePx = remember(textMeasurer, addressStyle, addressHint) {
+        textMeasurer.measure(addressHint, addressStyle).size.height
+    }
+    val addressLine = with(LocalDensity.current) { addressLinePx.toDp() }
+    val addressDrop = ((Dimens.iconButtonExtraSmall - addressLine) / 2).coerceAtLeast(0.dp)
+    return CardContentGap - addressDrop
+}
+
+/** The official server's card: its address, read-only, under the title and its badge. */
+@Composable
+internal fun OfficialServerCard(
+    selected: Boolean,
+    onSelect: () -> Unit,
+    badge: String,
+    address: String,
+) {
+    ServerChoiceCard(
+        selected = selected,
+        onSelect = onSelect,
+        title = stringResource(R.string.instance_choice_default_title),
+        badge = badge,
+        contentGap = addressRowGap(),
+    ) { cardSelected ->
+        // A row as tall as the other card's scan row, though this one has no button: both cards'
+        // content is then the same height, and centres to the same place.
+        Box(
+            modifier = Modifier.heightIn(min = Dimens.iconButtonExtraSmall),
+            contentAlignment = Alignment.CenterStart
+        ) {
+            val urlStyle = serverAddressStyle()
+            Text(
+                text = address,
+                style = urlStyle,
+                color = if (cardSelected) MaterialTheme.colorScheme.onSurface
+                else MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.typeCentered(urlStyle)
+            )
+        }
+    }
+}
+
+/** The card for the user's own server: the address field, the QR scan, and what is wrong with it. */
+@Composable
+internal fun CustomServerCard(
+    selected: Boolean,
+    onSelect: () -> Unit,
+    value: String,
+    onValueChange: (String) -> Unit,
+    focusRequester: FocusRequester,
+    onSubmit: () -> Unit,
+    onScanQrCode: () -> Unit,
+    isInsecure: Boolean,
+) {
+    ServerChoiceCard(
+        selected = selected,
+        onSelect = onSelect,
+        title = stringResource(R.string.instance_choice_custom_title),
+        badge = null,
+        contentGap = addressRowGap(),
+    ) { cardSelected ->
+        CustomServerField(
+            value = value,
+            onValueChange = onValueChange,
+            enabled = cardSelected,
+            focusRequester = focusRequester,
+            onSubmit = onSubmit,
+            onScanQrCode = onScanQrCode
+        )
+        AnimatedVisibility(visible = cardSelected && isInsecure) {
+            InsecureNote()
+        }
     }
 }
 

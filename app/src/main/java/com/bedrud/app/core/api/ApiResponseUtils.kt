@@ -72,6 +72,19 @@ fun parseRegisterResponse(response: Response<JsonObject>): RegisterOutcome {
     return RegisterOutcome.AccountCreated
 }
 
+/**
+ * Replaces the stored user with the server's current record of it, so what the app shows about the
+ * account follows changes made since sign-in, on another device or in an older version of the app
+ * that stored less of the record.
+ *
+ * Silent on failure: the stored record is still the best the app has, and nothing the user asked
+ * for has failed.
+ */
+suspend fun refreshCurrentUser(authApi: AuthApi, authManager: AuthManager) {
+    val user = apiBody("", onError = {}) { authApi.getMe() } ?: return
+    authManager.replaceUser(user)
+}
+
 suspend fun performLogin(
     authApi: AuthApi,
     authManager: AuthManager,

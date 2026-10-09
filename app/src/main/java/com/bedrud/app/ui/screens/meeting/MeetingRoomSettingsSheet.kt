@@ -10,8 +10,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import com.bedrud.app.R
+import com.bedrud.app.core.toUserMessage
 import com.bedrud.app.core.api.RoomApi
 import com.bedrud.app.core.api.apiAction
 import com.bedrud.app.models.RoomSettings
@@ -40,6 +42,9 @@ fun MeetingRoomSettingsSheet(
 ) {
     val colors = meetingChromeColors()
     val scope = rememberCoroutineScope()
+    val context = LocalContext.current
+    // The dashboard's room-settings dialog reports a failed save in the same words.
+    val saveFailedMessage = stringResource(R.string.dashboard_error_saveSettingsFailed)
 
     var localIsPublic by remember { mutableStateOf(isPublic) }
     var localAllowChat by remember { mutableStateOf(settings.allowChat) }
@@ -74,7 +79,11 @@ fun MeetingRoomSettingsSheet(
                 isSaving = true
                 scope.launch {
                     try {
-                        val saved = apiAction("Failed to save settings", { snackbarHostState.showSnackbar(it) }) {
+                        val saved = apiAction(
+                            saveFailedMessage,
+                            { snackbarHostState.showSnackbar(it) },
+                            classifyError = { it.toUserMessage(context) },
+                        ) {
                             roomApi.updateRoomSettings(
                                 roomId,
                                 UpdateRoomSettingsRequest(isPublic = localIsPublic, settings = newSettings),

@@ -1,6 +1,7 @@
 package com.bedrud.app.ui.screens.settings
 
 import android.app.Activity
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -13,12 +14,14 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.NavigateNext
 import androidx.compose.material.icons.filled.AdminPanelSettings
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenuItem
 import com.bedrud.app.ui.components.BedrudButton
 import com.bedrud.app.ui.components.BedrudOutlinedCard
 import com.bedrud.app.ui.components.BedrudPasswordField
+import com.bedrud.app.ui.components.BedrudSwitchListItem
 import com.bedrud.app.ui.components.BedrudTextField
 import com.bedrud.app.core.auth.PasswordPolicy
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -40,10 +43,10 @@ import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -67,9 +70,16 @@ import com.bedrud.app.ui.theme.Dimens
 import com.bedrud.app.ui.theme.Elevation
 import com.bedrud.app.models.ChangePasswordRequest
 import com.bedrud.app.core.api.apiAction
+import com.bedrud.app.core.api.refreshCurrentUser
 import com.bedrud.app.ui.theme.typeCentered
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
+
+/**
+ * Every card spans the page. Sized to its content instead, a card holding one short sentence (the
+ * Security card for an account with no password) stands narrower than the rest.
+ */
+private val SettingsCardModifier = Modifier.fillMaxWidth()
 
 @Composable
 private fun AppLanguage.displayName(): String = labelResId?.let { stringResource(it) } ?: label
@@ -78,13 +88,26 @@ private fun AppLanguage.displayName(): String = labelResId?.let { stringResource
 @Composable
 private fun signInMethodLabel(method: SignInMethod): String = when (method) {
     SignInMethod.Email -> stringResource(R.string.settings_provider_email)
-    SignInMethod.Passkey -> stringResource(R.string.settings_provider_passkey)
+    is SignInMethod.Passkey -> stringResource(R.string.settings_provider_passkey)
+    SignInMethod.Guest -> stringResource(R.string.settings_provider_guest)
     is SignInMethod.Provider -> method.name
+}
+
+/**
+ * Why the Security card offers no password change. An identity provider's name slots into one
+ * shared sentence, since a brand reads the same in every language; a guest gets a sentence of its
+ * own, because a translated noun dropped into that sentence cannot agree with it in every language.
+ */
+@Composable
+internal fun passwordUnavailableMessage(method: SignInMethod): String = when (method) {
+    SignInMethod.Guest -> stringResource(R.string.settings_password_unavailable_guest)
+    else -> stringResource(R.string.settings_password_unavailable, signInMethodLabel(method))
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsContent(
+    onOpenLicenses: () -> Unit,
     modifier: Modifier = Modifier,
     settingsStore: SettingsStore = koinInject(),
     instanceManager: InstanceManager = koinInject()
@@ -98,7 +121,17 @@ fun SettingsContent(
     val authApi = instanceManager.authApi.collectAsState().value
     val authManager = instanceManager.authManager.collectAsState().value
     val currentUser by (authManager?.currentUser ?: kotlinx.coroutines.flow.MutableStateFlow(null)).collectAsState()
-    val signInMethod = signInMethodOf(currentUser?.provider)
+    val signInMethod = signInMethodOf(currentUser?.provider, currentUser?.passwordChangedAt)
+
+    // Settings shows the account as the server has it now, not as it was stored at sign-in: a
+    // record stored by an older version of the app lacks fields, and one changed on another device
+    // is out of date. Keyed on the AuthManager, which is replaced along with the server; the
+    // Retrofit proxy is no key, since it is not even equal to itself.
+    LaunchedEffect(authManager) {
+        val manager = authManager ?: return@LaunchedEffect
+        val api = instanceManager.authApi.value ?: return@LaunchedEffect
+        refreshCurrentUser(api, manager)
+    }
 
     var currentPassword by remember { mutableStateOf("") }
     var newPassword by remember { mutableStateOf("") }
@@ -120,7 +153,7 @@ fun SettingsContent(
             verticalArrangement = Arrangement.spacedBy(Dimens.space16)
         ) {
             // Appearance
-            BedrudOutlinedCard {
+            BedrudOutlinedCard(modifier = SettingsCardModifier) {
                 Column(modifier = Modifier.padding(Dimens.cardPadding)) {
                     CardSectionHeader(stringResource(R.string.settings_section_appearance))
                     Spacer(modifier = Modifier.height(Dimens.space12))
@@ -195,33 +228,23 @@ fun SettingsContent(
             }
 
             // Notifications
-            BedrudOutlinedCard {
+            BedrudOutlinedCard(modifier = SettingsCardModifier) {
                 Column {
                     CardSectionHeader(
                         stringResource(R.string.settings_section_notifications),
                         modifier = Modifier.padding(start = Dimens.cardPadding, top = Dimens.cardPadding, end = Dimens.cardPadding, bottom = Dimens.space8)
                     )
-                    ListItem(
-                        headlineContent = {
-                            Text(
-                                stringResource(R.string.settings_label_enableNotifications),
-                                modifier = Modifier.typeCentered(LocalTextStyle.current)
-                            )
-                        },
-                        trailingContent = {
-                            Switch(
-                                checked = notificationsEnabled,
-                                onCheckedChange = { settingsStore.setNotificationsEnabled(it) }
-                            )
-                        },
-                        colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+                    BedrudSwitchListItem(
+                        label = stringResource(R.string.settings_label_enableNotifications),
+                        checked = notificationsEnabled,
+                        onCheckedChange = { settingsStore.setNotificationsEnabled(it) }
                     )
                 }
             }
 
             // Account Info
             if (currentUser != null) {
-                BedrudOutlinedCard {
+                BedrudOutlinedCard(modifier = SettingsCardModifier) {
                     Column {
                         // The admin mark sits centred on the header's letters, at the small icon
                         // size a mark beside a label takes elsewhere; it used to hang from the top
@@ -301,23 +324,33 @@ fun SettingsContent(
                 }
             }
 
-            // Change Password
-            BedrudOutlinedCard {
+            // Password: changed, or set for the first time
+            BedrudOutlinedCard(modifier = SettingsCardModifier) {
                 Column(modifier = Modifier.padding(Dimens.cardPadding)) {
                     CardSectionHeader(stringResource(R.string.settings_section_security))
                     Spacer(modifier = Modifier.height(Dimens.space12))
 
-                    if (!signInMethod.hasPassword) {
-                        Text(stringResource(R.string.settings_password_unavailable, signInMethodLabel(signInMethod)),
+                    if (!signInMethod.canHavePassword) {
+                        Text(passwordUnavailableMessage(signInMethod),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant)
                     } else {
-                        BedrudPasswordField(
-                            value = currentPassword,
-                            onValueChange = { currentPassword = it },
-                            label = stringResource(R.string.settings_label_currentPassword)
-                        )
-                        Spacer(modifier = Modifier.height(Dimens.space8))
+                        // A passkey account that never set a password has none to confirm, and the
+                        // server asks for none, so the form sets a first one instead.
+                        val settingFirstPassword = !signInMethod.hasPassword
+                        if (settingFirstPassword) {
+                            Text(stringResource(R.string.settings_password_setIntro),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Spacer(modifier = Modifier.height(Dimens.space12))
+                        } else {
+                            BedrudPasswordField(
+                                value = currentPassword,
+                                onValueChange = { currentPassword = it },
+                                label = stringResource(R.string.settings_label_currentPassword)
+                            )
+                            Spacer(modifier = Modifier.height(Dimens.space8))
+                        }
                         BedrudPasswordField(
                             value = newPassword,
                             onValueChange = { newPassword = it },
@@ -333,10 +366,19 @@ fun SettingsContent(
                         val passwordTooShortMessage =
                             stringResource(R.string.auth_hint_passwordMinLength, PasswordPolicy.MIN_LENGTH)
                         val passwordMismatchMessage = stringResource(R.string.auth_error_passwordMismatch)
-                        val passwordChangedMessage = stringResource(R.string.settings_password_changeSuccess)
-                        val passwordChangeFailedMessage = stringResource(R.string.settings_password_changeFailed)
+                        val passwordSavedMessage = stringResource(
+                            if (settingFirstPassword) R.string.settings_password_setSuccess
+                            else R.string.settings_password_changeSuccess
+                        )
+                        val passwordSaveFailedMessage = stringResource(
+                            if (settingFirstPassword) R.string.settings_password_setFailed
+                            else R.string.settings_password_changeFailed
+                        )
                         BedrudButton(
-                            text = stringResource(R.string.settings_button_changePassword),
+                            text = stringResource(
+                                if (settingFirstPassword) R.string.settings_button_setPassword
+                                else R.string.settings_button_changePassword
+                            ),
                             onClick = {
                                 when {
                                     !PasswordPolicy.meetsMinLength(newPassword) -> scope.launch {
@@ -347,25 +389,29 @@ fun SettingsContent(
                                     }
                                     else -> scope.launch {
                                         val api = authApi ?: run {
-                                            snackbarHostState.showSnackbar(passwordChangeFailedMessage)
+                                            snackbarHostState.showSnackbar(passwordSaveFailedMessage)
                                             return@launch
                                         }
+                                        // Text typed as a current password before the account was
+                                        // found to have none is not sent along.
+                                        val confirmingPassword = if (settingFirstPassword) "" else currentPassword
                                         val changed = apiAction(
-                                            passwordChangeFailedMessage,
+                                            passwordSaveFailedMessage,
                                             { snackbarHostState.showSnackbar(it) }
                                         ) {
-                                            api.changePassword(ChangePasswordRequest(currentPassword, newPassword))
+                                            api.changePassword(ChangePasswordRequest(confirmingPassword, newPassword))
                                         }
                                         if (changed) {
                                             currentPassword = ""
                                             newPassword = ""
                                             confirmPassword = ""
-                                            snackbarHostState.showSnackbar(passwordChangedMessage)
+                                            snackbarHostState.showSnackbar(passwordSavedMessage)
                                         }
                                     }
                                 }
                             },
-                            enabled = currentPassword.isNotBlank() && newPassword.isNotBlank() && confirmPassword.isNotBlank(),
+                            enabled = (settingFirstPassword || currentPassword.isNotBlank()) &&
+                                newPassword.isNotBlank() && confirmPassword.isNotBlank(),
                             modifier = Modifier.fillMaxWidth()
                         )
                     }
@@ -373,7 +419,7 @@ fun SettingsContent(
             }
 
             // About
-            BedrudOutlinedCard {
+            BedrudOutlinedCard(modifier = SettingsCardModifier) {
                 Column {
                     CardSectionHeader(
                         stringResource(R.string.settings_section_about),
@@ -427,6 +473,32 @@ fun SettingsContent(
                             )
                         },
                         colors = ListItemDefaults.colors(containerColor = Color.Transparent)
+                    )
+
+                    HorizontalDivider(
+                        modifier = Modifier.padding(horizontal = Dimens.space16),
+                        color = MaterialTheme.colorScheme.outlineVariant
+                    )
+
+                    // The one row in the card that leads somewhere, so it alone carries the
+                    // chevron the room cards use for the same promise.
+                    ListItem(
+                        headlineContent = {
+                            Text(
+                                stringResource(R.string.settings_label_licenses),
+                                modifier = Modifier.typeCentered(LocalTextStyle.current)
+                            )
+                        },
+                        trailingContent = {
+                            Icon(
+                                Icons.AutoMirrored.Filled.NavigateNext,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(Dimens.iconMd)
+                            )
+                        },
+                        colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                        modifier = Modifier.clickable(onClick = onOpenLicenses)
                     )
                 }
             }

@@ -1,5 +1,6 @@
 package com.bedrud.app.ui.screens.auth
 
+import androidx.annotation.StringRes
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
@@ -83,13 +84,90 @@ private val OAuthOptions = listOf(
 )
 
 /**
+ * The hub's subtitle. It offers continuing as a guest only on a server that allows it: on one that
+ * does not, the words above the buttons would promise what the greyed guest button below refuses.
+ */
+@StringRes
+internal fun hubSubtitle(guestAllowed: Boolean): Int =
+    if (guestAllowed) R.string.auth_subtitle_hubChoose else R.string.auth_subtitle_hubSignIn
+
+/**
+ * One sign-in method's full-width button. When the server has turned the method off
+ * ([serverAllows] false) it is greyed and its own label says so, [offLabel] in place of [label],
+ * rather than keeping the action's name and explaining it in a caption underneath. [enabled] is
+ * everything else that gates it: another sign-in in flight, a guest name still too short.
+ */
+@Composable
+internal fun SignInMethodButton(
+    label: String,
+    offLabel: String,
+    serverAllows: Boolean,
+    enabled: Boolean,
+    loading: Boolean,
+    variant: BedrudButtonVariant,
+    onClick: () -> Unit,
+    leadingIcon: @Composable (() -> Unit)? = null,
+) {
+    BedrudButton(
+        text = if (serverAllows) label else offLabel,
+        onClick = onClick,
+        variant = variant,
+        enabled = enabled && serverAllows,
+        loading = loading,
+        leadingIcon = leadingIcon,
+        modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(min = Dimens.buttonHeightLarge)
+    )
+}
+
+/**
+ * The guest way in: a name field and the button that joins under that name. [enabled] is false
+ * while another sign-in is in flight; the button also waits for a name of [MinGuestNameLength].
+ * On a server that turns guest sign-in off only the button stays, saying so: a greyed name field
+ * would still look like somewhere to type a name nothing can use.
+ */
+@Composable
+internal fun GuestSignIn(
+    name: String,
+    onNameChange: (String) -> Unit,
+    serverAllows: Boolean,
+    enabled: Boolean,
+    loading: Boolean,
+    onContinue: () -> Unit,
+) {
+    if (serverAllows) {
+        BedrudTextField(
+            value = name,
+            onValueChange = onNameChange,
+            label = stringResource(R.string.auth_label_displayName),
+            placeholder = stringResource(R.string.auth_placeholder_displayName),
+            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Go),
+            keyboardActions = KeyboardActions(onGo = { onContinue() }),
+            enabled = enabled
+        )
+        Spacer(Modifier.height(Dimens.space12))
+    }
+    SignInMethodButton(
+        label = stringResource(R.string.auth_button_continueAsGuest),
+        offLabel = stringResource(R.string.auth_button_guestOff),
+        serverAllows = serverAllows,
+        enabled = enabled && name.trim().length >= MinGuestNameLength,
+        loading = loading,
+        variant = BedrudButtonVariant.TONAL,
+        onClick = onContinue,
+    )
+}
+
+/**
  * Sign-in landing / hub for the active server. Presents the ways in as peer choices — email &
  * password (opens a dedicated form), passkey (one tap), OAuth providers, or continue as a guest
  * (name inline) — plus a sign-up link. Which methods appear and are enabled is driven by the
  * server's public settings ([com.bedrud.app.models.PublicSettings]); a method the server has
- * disabled is shown greyed with a short reason, and OAuth shows only the providers the server
- * configured. On a failed settings fetch everything falls back to enabled so a blip never blocks
- * sign-in. The email/password form lives on its own screen; passkey and guest sign-in happen here.
+ * disabled is shown greyed, its button saying it is off (guest sign-in also loses its name field),
+ * and OAuth shows only the providers the server configured. On a failed settings fetch everything
+ * falls back to enabled so a blip never blocks sign-in. The email/password form lives on its own
+ * screen; passkey and guest sign-in happen here.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -191,7 +269,7 @@ fun LoginScreen(
     AuthScreenScaffold(
         snackbarHostState = snackbarHostState,
         activeInstance = activeInstance,
-        subtitle = stringResource(R.string.auth_subtitle_hubChoose),
+        subtitle = stringResource(hubSubtitle(guestAllowed = guestEnabled)),
         onBack = onBack,
         backEnabled = !isBusy,
     ) {
@@ -213,12 +291,14 @@ fun LoginScreen(
                 .heightIn(min = Dimens.buttonHeightLarge)
         )
         Spacer(Modifier.height(Dimens.space12))
-        BedrudButton(
-            text = stringResource(R.string.auth_button_signInWithPasskey),
-            onClick = { signInWithPasskey() },
-            variant = BedrudButtonVariant.OUTLINE,
-            enabled = !isBusy && passkeyEnabled,
+        SignInMethodButton(
+            label = stringResource(R.string.auth_button_signInWithPasskey),
+            offLabel = stringResource(R.string.auth_button_passkeyOff),
+            serverAllows = passkeyEnabled,
+            enabled = !isBusy,
             loading = loadingAction == HubAction.PASSKEY,
+            variant = BedrudButtonVariant.OUTLINE,
+            onClick = { signInWithPasskey() },
             leadingIcon = {
                 Icon(
                     Icons.Filled.Key,
@@ -226,11 +306,7 @@ fun LoginScreen(
                     modifier = Modifier.size(Dimens.iconSm)
                 )
             },
-            modifier = Modifier
-                .fillMaxWidth()
-                .heightIn(min = Dimens.buttonHeightLarge)
         )
-        if (!passkeyEnabled) MethodDisabledHint()
 
         // ── OAuth providers (compact logo row) ──
         if (showOAuthRow) {
@@ -267,30 +343,17 @@ fun LoginScreen(
         Spacer(Modifier.height(Dimens.space24))
 
         // ── Guest sign-in ──
-        BedrudTextField(
-            value = guestName,
-            onValueChange = {
+        GuestSignIn(
+            name = guestName,
+            onNameChange = {
                 guestName = it
                 errorMessage = null
             },
-            label = stringResource(R.string.auth_label_displayName),
-            placeholder = stringResource(R.string.auth_placeholder_displayName),
-            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Go),
-            keyboardActions = KeyboardActions(onGo = { continueAsGuest() }),
-            enabled = !isBusy && guestEnabled
-        )
-        Spacer(Modifier.height(Dimens.space12))
-        BedrudButton(
-            text = stringResource(R.string.auth_button_continueAsGuest),
-            onClick = { continueAsGuest() },
-            variant = BedrudButtonVariant.TONAL,
-            enabled = !isBusy && guestEnabled && guestName.trim().length >= 2,
+            serverAllows = guestEnabled,
+            enabled = !isBusy,
             loading = loadingAction == HubAction.GUEST,
-            modifier = Modifier
-                .fillMaxWidth()
-                .heightIn(min = Dimens.buttonHeightLarge)
+            onContinue = { continueAsGuest() },
         )
-        if (!guestEnabled) MethodDisabledHint()
 
         Spacer(Modifier.height(Dimens.space24))
 
@@ -366,17 +429,6 @@ private fun OAuthProviderButton(
             }
         }
     }
-}
-
-/** Short caption shown under a sign-in method the server has turned off. */
-@Composable
-private fun MethodDisabledHint() {
-    Spacer(Modifier.height(Dimens.space4))
-    Text(
-        text = stringResource(R.string.auth_hint_methodDisabled),
-        style = MaterialTheme.typography.labelSmall,
-        color = MaterialTheme.colorScheme.onSurfaceVariant
-    )
 }
 
 @Composable
