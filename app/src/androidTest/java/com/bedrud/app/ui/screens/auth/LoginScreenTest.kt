@@ -20,6 +20,7 @@ import com.bedrud.app.core.auth.AuthManager
 import com.bedrud.app.core.auth.SignInNoticeRelay
 import com.bedrud.app.core.instance.InstanceManager
 import com.bedrud.app.core.instance.InstanceStore
+import com.bedrud.app.core.recent.RecentRoomsStore
 import com.bedrud.app.models.Instance
 import com.bedrud.app.testutil.FontScales
 import com.bedrud.app.testutil.setThemedContentAt
@@ -34,8 +35,9 @@ private const val TEST_INSTANCE_ID = "login-screen-test-server"
 private const val TEST_SERVER_URL = "https://example.invalid/"
 private const val TEST_SERVER_NAME = "Example"
 
-/** A file of its own, so the test never touches the servers the app has saved. */
+/** Files of their own, so the test never touches the servers or rooms the app has saved. */
 private const val TEST_INSTANCES_PREFS = "login_screen_test_instances"
+private const val TEST_RECENTS_PREFS = "login_screen_test_recents"
 
 /** Long enough for a snackbar to appear, and to leave again once it has been read out. */
 private const val SNACKBAR_TIMEOUT_MILLIS = 10_000L
@@ -86,13 +88,15 @@ class LoginScreenTest {
     private fun signedOut(): InstanceManager {
         val instances = InstanceStore(context.getSharedPreferences(TEST_INSTANCES_PREFS, Context.MODE_PRIVATE))
         instances.addInstance(Instance(id = TEST_INSTANCE_ID, serverURL = TEST_SERVER_URL, displayName = TEST_SERVER_NAME))
-        return InstanceManager(context.applicationContext as Application, instances, SettingsStore(context))
+        val recentRooms = RecentRoomsStore(context.getSharedPreferences(TEST_RECENTS_PREFS, Context.MODE_PRIVATE))
+        return InstanceManager(context.applicationContext as Application, instances, SettingsStore(context), recentRooms)
     }
 
     @After
     fun forgetServer() {
         AuthManager(context, TEST_INSTANCE_ID).logout()
         context.deleteSharedPreferences(TEST_INSTANCES_PREFS)
+        context.deleteSharedPreferences(TEST_RECENTS_PREFS)
     }
 
     @Test
