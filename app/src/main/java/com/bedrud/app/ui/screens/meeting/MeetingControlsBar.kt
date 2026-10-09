@@ -90,9 +90,9 @@ import kotlin.math.PI
 import kotlin.math.sin
 
 /**
- * The five call controls: the row that sits at the foot of [MeetingControlsPanel], collapsed or
- * expanded. It is a composable of its own so the panel's two states share one definition of the
- * buttons — sizes, off-state fills, badge, and the push-to-talk pill included.
+ * The five call controls: the row inside [MeetingControlsPanel]'s bar. A composable of its own so
+ * the buttons have one definition — sizes, off-state fills, badge, and the push-to-talk pill
+ * included.
  */
 @Composable
 internal fun MeetingCallControlsRow(

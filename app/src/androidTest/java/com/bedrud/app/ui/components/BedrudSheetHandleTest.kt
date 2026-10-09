@@ -1,8 +1,11 @@
 package com.bedrud.app.ui.components
 
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.test.assertHasClickAction
+import androidx.compose.ui.test.assertHeightIsAtLeast
+import androidx.compose.ui.test.assertWidthIsAtLeast
 import androidx.compose.ui.test.getUnclippedBoundsInRoot
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -23,39 +26,48 @@ class BedrudSheetHandleTest {
     @get:Rule
     val compose = createComposeRule()
 
-    /** A sheet's handle keeps its roomy grab area above and below the bar. */
+    /** A sheet with one height still lets its handle be grabbed without hunting for a 4dp bar. */
     @Test
-    fun shouldPadBarByTwelveDpAboveAndBelowByDefault() {
+    fun shouldGivePlainHandleFullTouchTargetHeight() {
         compose.setThemedContentAt(FontScales.Default) {
             BedrudSheetHandle(modifier = Modifier.testTag(HandleTag))
         }
 
-        val height = compose.onNodeWithTag(HandleTag).getUnclippedBoundsInRoot().height
-
-        assertEquals(
-            (Dimens.meetingHandleHeight + Dimens.space12 * 2).value,
-            height.value,
-            PositionTolerance.value,
-        )
+        compose.onNodeWithTag(HandleTag).assertHeightIsAtLeast(Dimens.minTouchTarget)
     }
 
-    /**
-     * The call's controls bar sits the handle inside its pill, where 12dp would push the controls
-     * down.
-     */
     @Test
-    fun shouldPadBarByGivenVerticalPadding() {
+    fun shouldGiveTappableHandleFullTouchTargetHeight() {
+        compose.setThemedContentAt(FontScales.Default) {
+            BedrudSheetHandle(onClick = {}, onClickLabel = ClickLabel)
+        }
+
+        compose.onNode(hasClickAction()).assertHeightIsAtLeast(Dimens.minTouchTarget)
+    }
+
+    @Test
+    fun shouldGiveTappableHandleFullTouchTargetWidth() {
+        compose.setThemedContentAt(FontScales.Default) {
+            BedrudSheetHandle(onClick = {}, onClickLabel = ClickLabel)
+        }
+
+        compose.onNode(hasClickAction()).assertWidthIsAtLeast(Dimens.minTouchTarget)
+    }
+
+    /** The call's controls bar wears the handle in a short strip, where 48dp covered the video. */
+    @Test
+    fun shouldPadBarByGivenStripInsteadOfTouchTarget() {
         compose.setThemedContentAt(FontScales.Default) {
             BedrudSheetHandle(
                 modifier = Modifier.testTag(HandleTag),
-                verticalPadding = Dimens.space4,
+                strip = PaddingValues(top = Dimens.space8, bottom = Dimens.space4),
             )
         }
 
         val height = compose.onNodeWithTag(HandleTag).getUnclippedBoundsInRoot().height
 
         assertEquals(
-            (Dimens.meetingHandleHeight + Dimens.space4 * 2).value,
+            (Dimens.meetingHandleHeight + Dimens.space8 + Dimens.space4).value,
             height.value,
             PositionTolerance.value,
         )

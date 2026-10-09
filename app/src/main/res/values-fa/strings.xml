@@ -381,6 +381,7 @@
   <string name="meeting_sheet_disableAllCamerasDescription">نمایش ویدیوی دریافتی را فقط برای شما متوقف می‌کند</string>
   <string name="meeting_sheet_noiseSuppression">حذف نویز</string>
   <string name="meeting_sheet_audioSettings">تنظیمات صدا</string>
+  <string name="meeting_sheet_moreOptions">گزینه‌های بیشتر</string>
   <string name="meeting_recording_title">ضبط اتاق فعال است</string>
   <string name="meeting_recording_message">در این اتاق، همه گفتگوها، دوربین‌ها، اشتراک‌های صفحه و صدا ضبط می‌شوند.</string>
   <string name="meeting_recording_acknowledge">متوجه شدم</string>

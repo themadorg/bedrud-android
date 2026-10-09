@@ -385,6 +385,7 @@
   <string name="meeting_sheet_disableAllCamerasDescription">Cesse d\'afficher la vidéo entrante, pour vous seulement</string>
   <string name="meeting_sheet_noiseSuppression">Réduction du bruit</string>
   <string name="meeting_sheet_audioSettings">Réglages audio</string>
+  <string name="meeting_sheet_moreOptions">Plus d\'options</string>
   <string name="meeting_recording_title">Enregistrement de la salle actif</string>
   <string name="meeting_recording_message">Dans cette salle, tous les chats, caméras, partages d\'écran et l\'audio sont enregistrés.</string>
   <string name="meeting_recording_acknowledge">Compris</string>

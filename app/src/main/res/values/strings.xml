@@ -391,6 +391,7 @@
   <string name="meeting_sheet_disableAllCamerasDescription">Stops showing incoming video, just for you</string>
   <string name="meeting_sheet_noiseSuppression">Noise suppression</string>
   <string name="meeting_sheet_audioSettings">Audio settings</string>
+  <string name="meeting_sheet_moreOptions">More options</string>
   <string name="meeting_recording_title">Room recording active</string>
   <string name="meeting_recording_message">In this room, all chats, cameras, screen shares, and audio are recorded.</string>
   <string name="meeting_recording_acknowledge">Understood</string>

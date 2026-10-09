@@ -381,6 +381,7 @@
   <string name="meeting_sheet_disableAllCamerasDescription">仅对你停止显示传入视频</string>
   <string name="meeting_sheet_noiseSuppression">降噪</string>
   <string name="meeting_sheet_audioSettings">音频设置</string>
+  <string name="meeting_sheet_moreOptions">更多选项</string>
   <string name="meeting_recording_title">房间正在录制</string>
   <string name="meeting_recording_message">在此房间中，所有聊天、摄像头、屏幕共享和音频都会被录制。</string>
   <string name="meeting_recording_acknowledge">知道了</string>
