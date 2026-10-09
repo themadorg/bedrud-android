@@ -40,6 +40,7 @@
   <string name="auth_hint_passwordMinLength">En az %1$d karakter</string>
   <string name="auth_error_emailInvalid">Geçerli bir e-posta adresi girin</string>
   <string name="auth_error_guestFailed">Misafir olarak katılınamadı. Lütfen tekrar deneyin.</string>
+  <string name="auth_notice_passwordChanged">Şifreniz değiştirildi. Yeni şifrenizle giriş yapın.</string>
   <plurals name="auth_error_nameTooShort">
     <item quantity="one">Lütfen en az %1$d karakter girin.</item>
     <item quantity="other">Lütfen en az %1$d karakter girin.</item>

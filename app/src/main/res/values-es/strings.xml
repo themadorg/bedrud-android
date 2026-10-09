@@ -40,6 +40,7 @@
   <string name="auth_hint_passwordMinLength">Al menos %1$d caracteres</string>
   <string name="auth_error_emailInvalid">Introduce un correo electrónico válido</string>
   <string name="auth_error_guestFailed">No se pudo entrar como invitado. Inténtalo de nuevo.</string>
+  <string name="auth_notice_passwordChanged">Tu contraseña ha cambiado. Inicia sesión con tu nueva contraseña.</string>
   <plurals name="auth_error_nameTooShort">
     <item quantity="one">Introduce al menos %1$d carácter.</item>
     <item quantity="many">Introduce al menos %1$d de caracteres.</item>

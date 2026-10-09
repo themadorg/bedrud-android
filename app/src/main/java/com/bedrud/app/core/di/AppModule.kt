@@ -1,5 +1,6 @@
 package com.bedrud.app.core.di
 
+import com.bedrud.app.core.auth.SignInNoticeRelay
 import com.bedrud.app.core.instance.InstanceManager
 import com.bedrud.app.core.instance.InstanceStore
 import com.bedrud.app.core.recent.RecentRoomsStore
@@ -17,4 +18,5 @@ val appModule = module {
     single { InstanceManager(androidApplication(), get(), get(), get()) }
     single { PipStateHolder() }
     single { JoinFailureRelay() }
+    single { SignInNoticeRelay() }
 }

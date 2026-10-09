@@ -40,6 +40,7 @@
   <string name="auth_hint_passwordMinLength">Mindestens %1$d Zeichen</string>
   <string name="auth_error_emailInvalid">Gib eine gültige E-Mail-Adresse ein</string>
   <string name="auth_error_guestFailed">Beitritt als Gast nicht möglich. Bitte versuche es erneut.</string>
+  <string name="auth_notice_passwordChanged">Dein Passwort wurde geändert. Melde dich mit deinem neuen Passwort an.</string>
   <plurals name="auth_error_nameTooShort">
     <item quantity="one">Bitte gib mindestens %1$d Zeichen ein.</item>
     <item quantity="other">Bitte gib mindestens %1$d Zeichen ein.</item>
