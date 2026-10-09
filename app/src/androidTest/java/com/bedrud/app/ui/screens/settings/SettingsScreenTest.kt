@@ -24,10 +24,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
 
-/**
- * The server the test's account is signed in to. `.invalid` never resolves, so the account
- * Settings fetches on opening never arrives and the stored one stays on screen.
- */
+/** The server the test's account is signed in to; `.invalid` never resolves, so nothing is fetched. */
 private const val TEST_INSTANCE_ID = "settings-screen-test-account"
 private const val TEST_SERVER_URL = "https://example.invalid/"
 private const val TEST_SERVER_NAME = "Example"

@@ -138,7 +138,10 @@ flowchart LR
 ```
 
 The **Admin** tab only appears when `currentUser.isAdmin` is true, and carries its own
-nested Overview / Users / Rooms / Settings bottom-nav.
+nested Overview / Users / Rooms / Settings bottom-nav. The server sends no such flag: `isAdmin` is
+read from the user's `accesses`, and is true only for `superadmin`, the one level the server's
+`/admin` routes admit. A plain `admin` would find a tab of refusals, so it gets no tab, and is not
+shown as an admin in Profile or Settings either.
 
 ---
 

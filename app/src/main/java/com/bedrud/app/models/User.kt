@@ -2,14 +2,21 @@ package com.bedrud.app.models
 
 import com.google.gson.annotations.SerializedName
 
+/** The access level of the server's operators, and the only one its admin API admits. */
+private const val SUPERADMIN_ACCESS = "superadmin"
+
 data class User(
     val id: String,
     val email: String,
     val name: String,
     @SerializedName("avatarUrl")
     val avatarUrl: String? = null,
-    @SerializedName("isAdmin")
-    val isAdmin: Boolean = false,
+    /**
+     * The server's access levels for the account: "user", "moderator", "admin", "superadmin" or
+     * "guest". Null in a record stored before the app read them.
+     */
+    @SerializedName("accesses")
+    val accesses: List<String>? = null,
     val provider: String? = null,
     /**
      * When the password was last set, as the server writes the time; null if it never was. Only
@@ -19,7 +26,15 @@ data class User(
      */
     @SerializedName("passwordChangedAt")
     val passwordChangedAt: String? = null
-)
+) {
+    /**
+     * Whether the account can use the server's admin API, and so gets the Admin tab and is shown as
+     * an admin. The server sends no such flag; it admits only `superadmin` to every admin endpoint,
+     * so a plain "admin" would find nothing there but refusals.
+     */
+    val isAdmin: Boolean
+        get() = accesses?.contains(SUPERADMIN_ACCESS) == true
+}
 
 data class AuthTokens(
     @SerializedName("accessToken")

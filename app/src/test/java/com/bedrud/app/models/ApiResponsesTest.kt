@@ -7,6 +7,9 @@ import org.junit.Test
 /** When a user's password last changed, as the server writes the time. */
 private const val PASSWORD_CHANGED_AT = "2026-09-01T10:00:00Z"
 
+/** A superadmin's accesses, as the server sends them. */
+private val SUPERADMIN_ACCESSES = listOf("user", "superadmin")
+
 class ApiResponsesTest {
 
     private val gson = Gson()
@@ -105,13 +108,14 @@ class ApiResponsesTest {
     @Test
     fun `User Gson deserialization of an auth-me body`() {
         val json = """
-            {"id":"u1","email":"a@b.com","name":"Alice","avatarUrl":"https://img.com/a.png","isAdmin":true,"provider":"google"}
+            {"id":"u1","email":"a@b.com","name":"Alice","avatarUrl":"https://img.com/a.png","accesses":["user","superadmin"],"provider":"google"}
         """.trimIndent()
         val resp = gson.fromJson(json, User::class.java)
         assertEquals("u1", resp.id)
         assertEquals("a@b.com", resp.email)
         assertEquals("Alice", resp.name)
         assertEquals("https://img.com/a.png", resp.avatarUrl)
+        assertEquals(SUPERADMIN_ACCESSES, resp.accesses)
         assertTrue(resp.isAdmin)
         assertEquals("google", resp.provider)
     }

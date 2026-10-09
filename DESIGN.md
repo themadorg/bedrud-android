@@ -217,10 +217,10 @@ password; a set form (new and confirm, under a line saying why) for a passkey ac
 one; and the sentence above for an account that cannot have a password. A passkey account is created
 without a password, and the server stamps `passwordChangedAt` whenever it gives an existing account
 one, so a passkey account without the stamp has none. The stamp is not read for an email account,
-which has a password from sign-up but is not stamped until it first changes it. Settings reloads the
-account from `auth/me` each time it opens, because the record stored at sign-in can be out of date: a
-password set on another device, or a record stored by a version of the app that did not keep the
-stamp.
+which has a password from sign-up but is not stamped until it first changes it. The signed-in screens
+(`MainScreen`) reload the account from `auth/me` when they open, because the record stored at sign-in
+can be out of date: a password set on another device, or a record stored by a version of the app that
+did not keep the stamp or the account's access levels.
 
 **Text sets a floor, not a height.** A container that holds text takes a minimum height —
 `heightIn(min = …)`, or the component's own `defaultMinSize` — never a fixed `height(…)`. Text grows
