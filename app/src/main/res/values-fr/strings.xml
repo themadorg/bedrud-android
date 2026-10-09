@@ -242,6 +242,10 @@
   <string name="settings_button_changePassword">Changer le mot de passe</string>
   <string name="settings_password_changeSuccess">Mot de passe modifié</string>
   <string name="settings_password_changeFailed">Échec de la modification du mot de passe</string>
+  <string name="settings_password_setIntro">Vous vous connectez avec une passkey. Définissez un mot de passe pour vous connecter aussi avec votre e-mail.</string>
+  <string name="settings_button_setPassword">Définir le mot de passe</string>
+  <string name="settings_password_setSuccess">Mot de passe défini</string>
+  <string name="settings_password_setFailed">Échec de la définition du mot de passe</string>
   <string name="settings_section_about">À propos</string>
   <string name="settings_label_version">Version</string>
   <string name="settings_label_build">Build</string>

@@ -241,6 +241,10 @@
   <string name="settings_button_changePassword">Passwort ändern</string>
   <string name="settings_password_changeSuccess">Passwort erfolgreich geändert</string>
   <string name="settings_password_changeFailed">Passwortänderung fehlgeschlagen</string>
+  <string name="settings_password_setIntro">Sie melden sich mit einem Passkey an. Legen Sie ein Passwort fest, um sich auch mit Ihrer E-Mail anzumelden.</string>
+  <string name="settings_button_setPassword">Passwort festlegen</string>
+  <string name="settings_password_setSuccess">Passwort erfolgreich festgelegt</string>
+  <string name="settings_password_setFailed">Festlegen des Passworts fehlgeschlagen</string>
   <string name="settings_section_about">Über</string>
   <string name="settings_label_version">Version</string>
   <string name="settings_label_build">Build</string>

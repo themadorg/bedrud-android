@@ -241,6 +241,10 @@
   <string name="settings_button_changePassword">Şifre Değiştir</string>
   <string name="settings_password_changeSuccess">Şifre başarıyla değiştirildi</string>
   <string name="settings_password_changeFailed">Şifre değiştirilemedi</string>
+  <string name="settings_password_setIntro">Anahtarla giriş yapıyorsunuz. E-postanızla da giriş yapmak için bir şifre belirleyin.</string>
+  <string name="settings_button_setPassword">Şifre Belirle</string>
+  <string name="settings_password_setSuccess">Şifre başarıyla belirlendi</string>
+  <string name="settings_password_setFailed">Şifre belirlenemedi</string>
   <string name="settings_section_about">Hakkında</string>
   <string name="settings_label_version">Sürüm</string>
   <string name="settings_label_build">Yapı</string>

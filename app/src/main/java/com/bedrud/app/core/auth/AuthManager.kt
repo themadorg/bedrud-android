@@ -49,6 +49,18 @@ class AuthManager(private val prefs: SharedPreferences) {
         _currentUser.value = user
     }
 
+    /**
+     * Stores a fresher copy of the signed-in account's record, as fetched from the server.
+     *
+     * A copy of any other account is dropped, and so is one arriving once nobody is signed in: a
+     * fetch still out when the user signs out would otherwise bring the account back with no
+     * tokens behind it.
+     */
+    fun replaceUser(user: User) {
+        if (_currentUser.value?.id != user.id) return
+        saveUser(user)
+    }
+
     private fun loadUser(): User? {
         val json = prefs.getString(AuthPrefsKeys.USER, null) ?: return null
         return try {
