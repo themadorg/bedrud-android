@@ -23,6 +23,7 @@
   <string name="auth_title_createAccount">创建账户</string>
   <string name="auth_error_passwordMismatch">密码不匹配</string>
   <string name="auth_subtitle_hubChoose">登录您的账户，或以访客身份继续。</string>
+  <string name="auth_subtitle_hubSignIn">登录您的账户。</string>
   <string name="auth_button_signInWithEmail">使用邮箱登录</string>
   <string name="auth_button_continueAsGuest">以访客身份继续</string>
   <string name="auth_divider_or">或</string>
@@ -48,7 +49,8 @@
   <string name="auth_notice_verifyEmail">请查收邮件以验证您的账户</string>
   <string name="auth_notice_verifyBeforeSignIn">登录前请先验证您的邮箱</string>
   <string name="auth_divider_orContinueWith">或使用以下方式继续</string>
-  <string name="auth_hint_methodDisabled">此服务器未启用</string>
+  <string name="auth_button_passkeyOff">密钥登录已关闭</string>
+  <string name="auth_button_guestOff">访客登录已关闭</string>
   <string name="auth_oauth_continueWithFormat">使用 %1$s 继续</string>
   <string name="instance_title_addServer">添加新服务器</string>
   <string name="instance_title_switchServer">切换服务器</string>

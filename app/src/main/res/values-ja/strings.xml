@@ -23,6 +23,7 @@
   <string name="auth_title_createAccount">アカウント作成</string>
   <string name="auth_error_passwordMismatch">パスワードが一致しません</string>
   <string name="auth_subtitle_hubChoose">アカウントにサインインするか、ゲストとして続行してください。</string>
+  <string name="auth_subtitle_hubSignIn">アカウントにサインインしてください。</string>
   <string name="auth_button_signInWithEmail">メールでサインイン</string>
   <string name="auth_button_continueAsGuest">ゲストとして続行</string>
   <string name="auth_divider_or">または</string>
@@ -48,7 +49,8 @@
   <string name="auth_notice_verifyEmail">アカウントを確認するため、メールをご確認ください</string>
   <string name="auth_notice_verifyBeforeSignIn">サインインする前にメールアドレスを確認してください</string>
   <string name="auth_divider_orContinueWith">またはこちらで続行</string>
-  <string name="auth_hint_methodDisabled">このサーバーでは無効です</string>
+  <string name="auth_button_passkeyOff">パスキーでのサインインはオフです</string>
+  <string name="auth_button_guestOff">ゲストのサインインはオフです</string>
   <string name="auth_oauth_continueWithFormat">%1$sで続行</string>
   <string name="instance_title_addServer">新しいサーバーを追加</string>
   <string name="instance_title_switchServer">サーバーを切り替え</string>

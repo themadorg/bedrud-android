@@ -23,6 +23,7 @@
   <string name="auth_title_createAccount">Создать аккаунт</string>
   <string name="auth_error_passwordMismatch">Пароли не совпадают</string>
   <string name="auth_subtitle_hubChoose">Войдите в свою учётную запись или продолжите как гость.</string>
+  <string name="auth_subtitle_hubSignIn">Войдите в свою учётную запись.</string>
   <string name="auth_button_signInWithEmail">Вход по электронной почте</string>
   <string name="auth_button_continueAsGuest">Продолжить как гость</string>
   <string name="auth_divider_or">или</string>
@@ -51,7 +52,8 @@
   <string name="auth_notice_verifyEmail">Проверьте почту, чтобы подтвердить аккаунт</string>
   <string name="auth_notice_verifyBeforeSignIn">Подтвердите почту, прежде чем входить</string>
   <string name="auth_divider_orContinueWith">или продолжить через</string>
-  <string name="auth_hint_methodDisabled">Недоступно на этом сервере</string>
+  <string name="auth_button_passkeyOff">Вход с помощью ключа отключён</string>
+  <string name="auth_button_guestOff">Гостевой вход отключён</string>
   <string name="auth_oauth_continueWithFormat">Продолжить через %1$s</string>
   <string name="instance_title_addServer">Добавить сервер</string>
   <string name="instance_title_switchServer">Сменить сервер</string>

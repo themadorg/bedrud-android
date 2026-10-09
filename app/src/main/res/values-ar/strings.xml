@@ -23,6 +23,7 @@
   <string name="auth_title_createAccount">إنشاء حساب</string>
   <string name="auth_error_passwordMismatch">كلمتا المرور غير متطابقتين</string>
   <string name="auth_subtitle_hubChoose">سجّل الدخول إلى حسابك أو تابع كضيف.</string>
+  <string name="auth_subtitle_hubSignIn">سجّل الدخول إلى حسابك.</string>
   <string name="auth_button_signInWithEmail">تسجيل الدخول بالبريد الإلكتروني</string>
   <string name="auth_button_continueAsGuest">المتابعة كضيف</string>
   <string name="auth_divider_or">أو</string>
@@ -53,7 +54,8 @@
   <string name="auth_notice_verifyEmail">يرجى التحقق من بريدك الإلكتروني لتفعيل حسابك</string>
   <string name="auth_notice_verifyBeforeSignIn">يرجى تفعيل بريدك الإلكتروني قبل تسجيل الدخول</string>
   <string name="auth_divider_orContinueWith">أو تابع عبر</string>
-  <string name="auth_hint_methodDisabled">غير مُفعّل على هذا الخادم</string>
+  <string name="auth_button_passkeyOff">تسجيل الدخول بالمفتاح مُعطّل</string>
+  <string name="auth_button_guestOff">الدخول كضيف مُعطّل</string>
   <string name="auth_oauth_continueWithFormat">المتابعة عبر %1$s</string>
   <string name="instance_title_addServer">إضافة خادم جديد</string>
   <string name="instance_title_switchServer">تبديل الخادم</string>
