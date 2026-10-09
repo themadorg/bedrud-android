@@ -23,6 +23,7 @@
   <string name="auth_title_createAccount">Konto erstellen</string>
   <string name="auth_error_passwordMismatch">Passwörter stimmen nicht überein</string>
   <string name="auth_subtitle_hubChoose">Melde dich bei deinem Konto an oder fahre als Gast fort.</string>
+  <string name="auth_subtitle_hubSignIn">Melde dich bei deinem Konto an.</string>
   <string name="auth_button_signInWithEmail">Mit E-Mail anmelden</string>
   <string name="auth_button_continueAsGuest">Als Gast fortfahren</string>
   <string name="auth_divider_or">oder</string>
@@ -49,9 +50,9 @@
   <string name="auth_notice_verifyEmail">Bitte prüfe deine E-Mails, um dein Konto zu bestätigen</string>
   <string name="auth_notice_verifyBeforeSignIn">Bitte bestätige deine E-Mail-Adresse, bevor du dich anmeldest</string>
   <string name="auth_divider_orContinueWith">oder weiter mit</string>
-  <string name="auth_hint_methodDisabled">Auf diesem Server nicht aktiviert</string>
+  <string name="auth_button_passkeyOff">Anmeldung mit Passkey ist deaktiviert</string>
+  <string name="auth_button_guestOff">Gastzugang ist deaktiviert</string>
   <string name="auth_oauth_continueWithFormat">Weiter mit %1$s</string>
-  <string name="instance_title_servers">Server</string>
   <string name="instance_title_addServer">Neuen Server hinzufügen</string>
   <string name="instance_title_switchServer">Server wechseln</string>
   <string name="instance_subtitle_connectToServer">Mit einem Server verbinden, um loszulegen</string>
@@ -65,9 +66,15 @@
   <string name="instance_warning_insecure">Die Verbindung wird nicht verschlüsselt. Nur für lokale oder Entwicklungsserver verwenden.</string>
   <string name="instance_error_duplicate">Ein Server mit dieser Adresse existiert bereits.</string>
   <string name="instance_button_addServer">Server hinzufügen</string>
-  <string name="instance_status_active">Aktiv</string>
-  <string name="instance_empty_noServers">Keine Server konfiguriert</string>
+  <string name="instance_status_inUse">In Verwendung</string>
   <string name="instance_default_serverName">Server</string>
+  <string name="instance_button_edit">Bearbeiten</string>
+  <string name="instance_button_done">Fertig</string>
+  <string name="instance_contentDescription_removeServer"><xliff:g id="serverName" example="Bedrud">%1$s</xliff:g> entfernen</string>
+  <string name="instance_dialog_removeTitle"><xliff:g id="serverName" example="Bedrud">%1$s</xliff:g> entfernen?</string>
+  <string name="instance_dialog_removeMessage">Du wirst auf diesem Gerät davon abgemeldet, und seine letzten Räume werden gelöscht. Du kannst ihn jederzeit wieder hinzufügen.</string>
+  <string name="instance_dialog_removeActiveMessage">Du nutzt diesen Server gerade. Du wirst auf diesem Gerät davon abgemeldet, und die App wechselt zu <xliff:g id="serverName" example="Bedrud">%1$s</xliff:g>.</string>
+  <string name="instance_dialog_removeLastMessage">Das ist dein einziger Server. Du wirst auf diesem Gerät davon abgemeldet und gebeten, einen Server hinzuzufügen.</string>
   <string name="instance_default_displayName" translatable="false">Bedrud</string>
   <!-- First-run server chooser -->
   <string name="instance_choice_default_title">Offizieller Server</string>
@@ -228,20 +235,29 @@
   <string name="settings_label_signInMethod">Anmeldemethode</string>
   <string name="settings_provider_email">E-Mail</string>
   <string name="settings_provider_passkey">Passkey</string>
+  <string name="settings_provider_guest">Gast</string>
   <string name="settings_label_role">Rolle</string>
   <string name="settings_role_admin">Administrator</string>
   <string name="settings_role_user">Benutzer</string>
   <string name="settings_section_security">Sicherheit</string>
   <string name="settings_password_unavailable">Passwortänderung ist für die Anmeldung mit <xliff:g id="provider" example="Google">%1$s</xliff:g> nicht verfügbar.</string>
+  <string name="settings_password_unavailable_guest">Gastkonten haben kein Passwort, das geändert werden kann.</string>
   <string name="settings_label_currentPassword">Aktuelles Passwort</string>
   <string name="settings_label_newPassword">Neues Passwort</string>
   <string name="settings_label_confirmNewPassword">Neues Passwort bestätigen</string>
   <string name="settings_button_changePassword">Passwort ändern</string>
   <string name="settings_password_changeSuccess">Passwort erfolgreich geändert</string>
   <string name="settings_password_changeFailed">Passwortänderung fehlgeschlagen</string>
+  <string name="settings_password_setIntro">Du meldest dich mit einem Passkey an. Lege ein Passwort fest, um dich auch mit deiner E-Mail anzumelden.</string>
+  <string name="settings_button_setPassword">Passwort festlegen</string>
+  <string name="settings_password_setSuccess">Passwort erfolgreich festgelegt</string>
+  <string name="settings_password_setFailed">Festlegen des Passworts fehlgeschlagen</string>
   <string name="settings_section_about">Über</string>
   <string name="settings_label_version">Version</string>
   <string name="settings_label_build">Build</string>
+  <string name="settings_label_licenses">Open-Source-Lizenzen</string>
+  <string name="settings_button_closeLicense">Schließen</string>
+  <string name="settings_label_allLibraries">Alle Bibliotheken</string>
   <string name="call_channel_name">Aktive Anrufe</string>
   <string name="call_channel_description">Benachrichtigungen über laufende Anrufe</string>
   <string name="call_action_mute">Stummschalten</string>
@@ -300,7 +316,6 @@
   <string name="meeting_sheet_deafen">Taub schalten</string>
   <string name="meeting_sheet_tools">Werkzeuge</string>
   <string name="meeting_sheet_report">Missbrauch melden</string>
-  <string name="meeting_contentDescription_audioSource">Audioquelle</string>
   <string name="meeting_audio_sheet_title">Audioausgabe auswählen</string>
   <string name="meeting_audio_device_speaker">Lautsprecher</string>
   <string name="meeting_audio_device_earpiece">Telefon</string>

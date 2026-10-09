@@ -1,6 +1,9 @@
 package com.bedrud.app.core.api
 
+import com.bedrud.app.BuildConfig
 import kotlinx.coroutines.runBlocking
+import okhttp3.OkHttpClient
+import okhttp3.logging.HttpLoggingInterceptor
 import okhttp3.mockwebserver.MockResponse
 import org.junit.Assert.assertEquals
 import org.junit.Test
@@ -41,6 +44,20 @@ class PlainRetrofitTest : MockApiTest() {
 
         assertEquals("ok", response.body()?.status)
         assertRequest("GET", "/api/health")
+    }
+
+    @Test
+    fun `logs only a call's request line and status, and only in a debug build`() {
+        val client = plainRetrofit(server.url("/api").toString()).callFactory() as OkHttpClient
+        val expectedLevel = if (BuildConfig.DEBUG) {
+            HttpLoggingInterceptor.Level.BASIC
+        } else {
+            HttpLoggingInterceptor.Level.NONE
+        }
+
+        val logging = client.interceptors.filterIsInstance<HttpLoggingInterceptor>().single()
+
+        assertEquals(expectedLevel, logging.level)
     }
 
     @Test

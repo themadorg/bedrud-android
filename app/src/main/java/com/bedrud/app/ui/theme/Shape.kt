@@ -41,7 +41,6 @@ object BedrudShapeTokens {
     // corner. They were 12dp and 28dp, and side by side the two curves plainly disagreed.
     val videoTile = RoundedCornerShape(BedrudRadius.xxl)   // in-meeting video/participant tiles
     val controlsBar = RoundedCornerShape(BedrudRadius.xxl) // floating in-call controls pill
-    val chatImage = RoundedCornerShape(BedrudRadius.sm)    // image attached to a chat message
 
     /**
      * A chat bubble's corners. Everything is [BedrudRadius.lg], except the corners facing the

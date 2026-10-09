@@ -10,8 +10,11 @@ import androidx.compose.ui.graphics.Color
  * Semantic colors Material 3's [androidx.compose.material3.ColorScheme] has no slot for.
  *
  * A `warning` role (amber) for non-critical cautions — kept distinct from `error` (red), which is
- * reserved for errors and destructive/irreversible actions — and `onScrim`, for controls drawn
- * straight onto the scrim. The scrim is black in both themes, so what sits on it is white in both.
+ * reserved for errors and destructive/irreversible actions — `onScrim`, for controls drawn
+ * straight onto the scrim, and `recording`, the dot that says a room is being recorded. The scrim is
+ * black in both themes, so what sits on it is white in both. Recording is red by convention rather
+ * than because anything failed, so the dot has its own color instead of borrowing `error`: it is
+ * the same red today, and stays put if the error role moves again.
  *
  * Provided via [LocalBedrudColors] in [BedrudTheme]; read through `MaterialTheme.bedrudColors`.
  */
@@ -21,6 +24,7 @@ data class BedrudExtendedColors(
     val warningContainer: Color,
     val onWarningContainer: Color,
     val onScrim: Color,
+    val recording: Color,
 )
 
 val LightExtendedColors = BedrudExtendedColors(
@@ -29,6 +33,7 @@ val LightExtendedColors = BedrudExtendedColors(
     warningContainer = Amber100,
     onWarningContainer = Amber900,
     onScrim = Neutral0,
+    recording = Red700,
 )
 
 val DarkExtendedColors = BedrudExtendedColors(
@@ -37,6 +42,7 @@ val DarkExtendedColors = BedrudExtendedColors(
     warningContainer = Amber900,
     onWarningContainer = Amber100,
     onScrim = Neutral0,
+    recording = Red500,
 )
 
 val LocalBedrudColors = staticCompositionLocalOf { LightExtendedColors }
