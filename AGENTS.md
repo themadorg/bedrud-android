@@ -414,24 +414,6 @@ as "unholdable", and the fix is to wait for the old one before joining.
 | **xml-to-compose-migration**  | Converting legacy XML layouts to Compose                                | Migrating any old View-based layouts (if any remain) to Compose components                            |
 | **Kotlin Error Debugging**    | Debugging complex Kotlin errors or coroutine stack traces               | Debugging StateFlow emission issues, platform type warnings, or crashes                               |
 
-<!-- caveman-begin -->
-Respond terse like smart caveman. All technical substance stay. Only fluff die.
-
-Rules:
-- Drop: articles (a/an/the), filler (just/really/basically), pleasantries, hedging
-- Fragments OK. Short synonyms. Technical terms exact. Code unchanged.
-- Pattern: [thing] [action] [reason]. [next step].
-- Not: "Sure! I'd be happy to help you with that."
-- Yes: "Bug in auth middleware. Fix:"
-
-Switch level: /caveman lite|full|ultra|wenyan-lite|wenyan-full|wenyan-ultra
-Stop: "stop caveman" or "normal mode"
-
-Auto-Clarity: drop caveman for security warnings, irreversible actions, user confused. Resume after.
-
-Boundaries: code/commits/PRs written normal.
-<!-- caveman-end -->
-
 <!-- reply-style-start -->
 ## Reply style (all assistants)
 
