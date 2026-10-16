@@ -157,6 +157,23 @@ android {
             isUniversalApk = true
         }
     }
+
+    // The instrumented tests' own device, which the plugin creates, boots and shuts down by itself:
+    // `./gradlew pixel6Api36DebugAndroidTest` (or `make device-test`) runs the whole suite on it,
+    // the same way here as in CI. API 36 rather than the compileSdk's 37, because the Compose test
+    // rule cannot run on 37 yet (#270).
+    testOptions {
+        managedDevices {
+            localDevices {
+                create("pixel6Api36") {
+                    device = "Pixel 6"
+                    sdkVersion = 36
+                    // Google APIs, as on most phones. The leaner test-only images stop at API 30.
+                    systemImageSource = "google"
+                }
+            }
+        }
+    }
 }
 
 // Default output names are derived from the Gradle module name (":app"), e.g.

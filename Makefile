@@ -46,7 +46,7 @@ TAG_GLOB := [0-9]*.[0-9]*.[0-9]*
 
 .DEFAULT_GOAL := help
 .PHONY: help doctor build build-dev build-release install install-dev run \
-        drive screen shot uninstall uninstall-dev logcat lint test check coverage clean version \
+        drive screen shot uninstall uninstall-dev logcat lint test check coverage device-test clean version \
         tag-patch tag-minor tag-major tag-push release-beta release-stable \
         release-status bump dispatch
 
@@ -166,6 +166,9 @@ check: lint test ## lint + test: everything pr-build.yml gates a PR on
 
 coverage: ## Unit tests, then which lines they ran, in app/build/reports/coverage/test/debug/index.html
 	$(GRADLEW) createDebugUnitTestCoverageReport
+
+device-test: ## Instrumented tests on an API 36 emulator Gradle creates and shuts down itself - the task CI runs
+	$(GRADLEW) pixel6Api36DebugAndroidTest
 
 clean: ## Delete build outputs
 	$(GRADLEW) clean
