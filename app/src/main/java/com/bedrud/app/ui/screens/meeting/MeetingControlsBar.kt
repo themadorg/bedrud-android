@@ -68,6 +68,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
@@ -319,6 +320,11 @@ private fun MicPill(
             // empty space trailing them — the control looked broken rather than compact. Centring
             // costs a small horizontal shift when the label itself changes length, which is a far
             // smaller thing to notice than a permanently lopsided pill.
+            //
+            // The width-holding copies are hidden from accessibility as well as from sight: the key
+            // otherwise handed a screen reader every one of them, "Speak, Muted, Push to talk,
+            // Talking…", ahead of the label it actually shows.
+            val holdsWidthOnly = Modifier.alpha(0f).clearAndSetSemantics {}
             Box(
                 modifier = Modifier.padding(horizontal = Dimens.space12),
                 contentAlignment = Alignment.Center,
@@ -327,25 +333,25 @@ private fun MicPill(
                     contentColor = Color.Transparent,
                     icon = Icons.Default.Mic,
                     textRes = R.string.meeting_ptt_speak,
-                    modifier = Modifier.alpha(0f),
+                    modifier = holdsWidthOnly,
                 )
                 PillContent(
                     contentColor = Color.Transparent,
                     icon = Icons.Default.Mic,
                     textRes = R.string.meeting_ptt_muted,
-                    modifier = Modifier.alpha(0f),
+                    modifier = holdsWidthOnly,
                 )
                 PillContent(
                     contentColor = Color.Transparent,
                     icon = Icons.Default.Mic,
                     textRes = R.string.meeting_audio_mode_pushToTalk,
-                    modifier = Modifier.alpha(0f),
+                    modifier = holdsWidthOnly,
                 )
                 PillContent(
                     contentColor = Color.Transparent,
                     icon = Icons.Default.Mic,
                     textRes = R.string.meeting_ptt_talking,
-                    modifier = Modifier.alpha(0f),
+                    modifier = holdsWidthOnly,
                 )
                 // Whether the room hears you is the tile ring's job now, so the pill only says
                 // whether the microphone is open.
