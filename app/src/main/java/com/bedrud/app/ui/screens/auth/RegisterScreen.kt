@@ -23,6 +23,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.autofill.ContentType
 import androidx.compose.ui.focus.FocusDirection
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
@@ -36,6 +37,7 @@ import com.bedrud.app.core.api.performLogin
 import com.bedrud.app.core.auth.PasswordPolicy
 import com.bedrud.app.core.auth.isValidEmail
 import com.bedrud.app.core.instance.InstanceManager
+import com.bedrud.app.core.toUserMessage
 import com.bedrud.app.models.RegisterRequest
 import com.bedrud.app.ui.components.BedrudButton
 import com.bedrud.app.ui.components.BedrudButtonVariant
@@ -65,6 +67,7 @@ fun RegisterScreen(
     val activeInstance = instanceManager.store.activeInstance
 
     val scope = rememberCoroutineScope()
+    val context = LocalContext.current
     val focusManager = LocalFocusManager.current
     val snackbarHostState = remember { SnackbarHostState() }
 
@@ -76,7 +79,6 @@ fun RegisterScreen(
     var isLoading by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
 
-    val genericMessage = stringResource(R.string.auth_error_generic)
     val registrationFailedMessage = stringResource(R.string.auth_error_registrationFailed)
     val signInFailedMessage = stringResource(R.string.auth_error_signInFailed)
     val verifyEmailMessage = stringResource(R.string.auth_notice_verifyEmail)
@@ -139,7 +141,7 @@ fun RegisterScreen(
                     }
                 }
             } catch (e: Exception) {
-                errorMessage = e.message ?: genericMessage
+                errorMessage = e.toUserMessage(context)
             } finally {
                 isLoading = false
             }
