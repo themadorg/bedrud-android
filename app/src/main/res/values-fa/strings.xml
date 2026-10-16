@@ -391,6 +391,11 @@
   <string name="meeting_invite_qrDescription">کد QR پیوند اتاق</string>
   <string name="meeting_invite_appNotInstalled">این برنامه نصب نیست</string>
   <string name="common_hint_comingSoon">به‌زودی</string>
+  <string name="common_contentDescription_info">اطلاعات</string>
+  <string name="common_contentDescription_success">موفق</string>
+  <string name="common_contentDescription_warning">هشدار</string>
+  <string name="common_contentDescription_error">خطا</string>
+  <string name="common_contentDescription_dismiss">بستن</string>
   <string name="meeting_stream_watch">تماشای پخش</string>
   <string name="meeting_stream_leave">خروج از پخش</string>
   <string name="meeting_stream_youArePresenting">در حال ارائه هستید</string>

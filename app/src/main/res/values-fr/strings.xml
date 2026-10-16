@@ -395,6 +395,11 @@
   <string name="meeting_invite_qrDescription">Code QR du lien de la salle</string>
   <string name="meeting_invite_appNotInstalled">Cette appli n\'est pas installée</string>
   <string name="common_hint_comingSoon">Bientôt disponible</string>
+  <string name="common_contentDescription_info">Information</string>
+  <string name="common_contentDescription_success">Succès</string>
+  <string name="common_contentDescription_warning">Avertissement</string>
+  <string name="common_contentDescription_error">Erreur</string>
+  <string name="common_contentDescription_dismiss">Fermer</string>
   <string name="meeting_stream_watch">Regarder le flux</string>
   <string name="meeting_stream_leave">Quitter le flux</string>
   <string name="meeting_stream_youArePresenting">Vous présentez</string>

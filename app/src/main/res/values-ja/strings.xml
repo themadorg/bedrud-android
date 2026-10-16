@@ -391,6 +391,11 @@
   <string name="meeting_invite_qrDescription">ルームリンクのQRコード</string>
   <string name="meeting_invite_appNotInstalled">そのアプリはインストールされていません</string>
   <string name="common_hint_comingSoon">近日公開</string>
+  <string name="common_contentDescription_info">情報</string>
+  <string name="common_contentDescription_success">成功</string>
+  <string name="common_contentDescription_warning">警告</string>
+  <string name="common_contentDescription_error">エラー</string>
+  <string name="common_contentDescription_dismiss">閉じる</string>
   <string name="meeting_stream_watch">ストリームを見る</string>
   <string name="meeting_stream_leave">ストリームから退出</string>
   <string name="meeting_stream_youArePresenting">画面を共有中です</string>

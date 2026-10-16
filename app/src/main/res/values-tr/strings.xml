@@ -394,6 +394,11 @@
   <string name="meeting_invite_qrDescription">Oda bağlantısı QR kodu</string>
   <string name="meeting_invite_appNotInstalled">Bu uygulama yüklü değil</string>
   <string name="common_hint_comingSoon">Çok yakında</string>
+  <string name="common_contentDescription_info">Bilgi</string>
+  <string name="common_contentDescription_success">Başarılı</string>
+  <string name="common_contentDescription_warning">Uyarı</string>
+  <string name="common_contentDescription_error">Hata</string>
+  <string name="common_contentDescription_dismiss">Kapat</string>
   <string name="meeting_stream_watch">Yayını izle</string>
   <string name="meeting_stream_leave">Yayından ayrıl</string>
   <string name="meeting_stream_youArePresenting">Sunum yapıyorsunuz</string>

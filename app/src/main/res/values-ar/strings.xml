@@ -406,6 +406,11 @@
   <string name="meeting_invite_qrDescription">رمز QR لرابط الغرفة</string>
   <string name="meeting_invite_appNotInstalled">هذا التطبيق غير مثبّت</string>
   <string name="common_hint_comingSoon">قريبًا</string>
+  <string name="common_contentDescription_info">معلومات</string>
+  <string name="common_contentDescription_success">نجاح</string>
+  <string name="common_contentDescription_warning">تحذير</string>
+  <string name="common_contentDescription_error">خطأ</string>
+  <string name="common_contentDescription_dismiss">إغلاق</string>
   <string name="meeting_stream_watch">مشاهدة البث</string>
   <string name="meeting_stream_leave">مغادرة البث</string>
   <string name="meeting_stream_youArePresenting">أنت تعرض الآن</string>

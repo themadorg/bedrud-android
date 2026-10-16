@@ -401,6 +401,11 @@
   <string name="meeting_invite_qrDescription">Room link QR code</string>
   <string name="meeting_invite_appNotInstalled">That app isn\'t installed</string>
   <string name="common_hint_comingSoon">Coming soon</string>
+  <string name="common_contentDescription_info">Information</string>
+  <string name="common_contentDescription_success">Success</string>
+  <string name="common_contentDescription_warning">Warning</string>
+  <string name="common_contentDescription_error">Error</string>
+  <string name="common_contentDescription_dismiss">Dismiss</string>
   <string name="meeting_invite_telegram" translatable="false">Telegram</string>
   <string name="meeting_invite_whatsapp" translatable="false">WhatsApp</string>
   <string name="meeting_stream_watch">Watch stream</string>

@@ -394,6 +394,11 @@
   <string name="meeting_invite_qrDescription">QR-Code des Raumlinks</string>
   <string name="meeting_invite_appNotInstalled">Diese App ist nicht installiert</string>
   <string name="common_hint_comingSoon">Bald verfügbar</string>
+  <string name="common_contentDescription_info">Information</string>
+  <string name="common_contentDescription_success">Erfolg</string>
+  <string name="common_contentDescription_warning">Warnung</string>
+  <string name="common_contentDescription_error">Fehler</string>
+  <string name="common_contentDescription_dismiss">Schließen</string>
   <string name="meeting_stream_watch">Stream ansehen</string>
   <string name="meeting_stream_leave">Stream verlassen</string>
   <string name="meeting_stream_youArePresenting">Du präsentierst gerade</string>
