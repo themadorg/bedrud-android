@@ -91,6 +91,9 @@ class MainActivity : ComponentActivity() {
      * drawn as it is now and labelled with what a tap does, and hanging up. Both go to
      * [CallService], as the call notification's controls do. The window grows from the tile it will
      * show; without that, Android draws the app's icon over it while it opens.
+     *
+     * From Android 12 the window opens by itself whenever the app is left during a call, and grows
+     * out of the app with the system's own animation; [onUserLeaveHint] opens it on older versions.
      */
     private fun pictureInPictureParams(window: PipWindow): PictureInPictureParams {
         val muteAction = if (pipStateHolder.isMicEnabled.value) {
@@ -105,6 +108,9 @@ class MainActivity : ComponentActivity() {
             .setActions(listOf(muteAction, hangUpAction))
             .apply {
                 window.sourceRect?.let { setSourceRectHint(Rect(it.left, it.top, it.right, it.bottom)) }
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                    setAutoEnterEnabled(pipStateHolder.isInMeeting.value)
+                }
             }
             .build()
     }
@@ -165,10 +171,10 @@ class MainActivity : ComponentActivity() {
         handleOAuthCallback(intent)
 
         // Kept current while the activity lives, so the window opens with its microphone control
-        // as it is, in the shape of what it shows, and from where that is on screen; a mute from
-        // inside the window, or from anywhere else, turns it over.
+        // as it is, in the shape of what it shows, from where that is on screen, and by itself only
+        // during a call; a mute from inside the window, or from anywhere else, turns it over.
         lifecycleScope.launch {
-            combine(pipStateHolder.isMicEnabled, pipStateHolder.window) { _, _ -> }
+            combine(pipStateHolder.isMicEnabled, pipStateHolder.isInMeeting, pipStateHolder.window) { _, _, _ -> }
                 .collect { withPictureInPictureParams(::setPictureInPictureParams) }
         }
 
@@ -258,7 +264,8 @@ class MainActivity : ComponentActivity() {
 
     override fun onUserLeaveHint() {
         super.onUserLeaveHint()
-        if (pipStateHolder.isInMeeting.value) {
+        // From Android 12 the window opens by itself; see pictureInPictureParams.
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S && pipStateHolder.isInMeeting.value) {
             withPictureInPictureParams { enterPictureInPictureMode(it) }
         }
     }

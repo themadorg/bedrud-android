@@ -1,9 +1,12 @@
 package com.bedrud.app.core.pip
 
+import com.bedrud.app.core.livekit.ConnectionState
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
-/** The shape of the picture-in-picture window, and where it grows from. */
+/** The shape of the picture-in-picture window, where it grows from, and when it may open. */
 class PipWindowTest {
 
     @Test
@@ -57,5 +60,19 @@ class PipWindowTest {
             PipBounds(left = 0, top = 350, right = 1600, bottom = 1250),
             pipSourceRect(tile, PipAspect(16, 9)),
         )
+    }
+
+    @Test
+    fun `should open while the call is connected or reconnecting`() {
+        assertTrue(armsPictureInPicture(ConnectionState.CONNECTED))
+        assertTrue(armsPictureInPicture(ConnectionState.RECONNECTING))
+    }
+
+    /** Joining asks for the camera and microphone, and that dialog must not send the app to a window. */
+    @Test
+    fun `should not open before the call has connected or after it has ended`() {
+        assertFalse(armsPictureInPicture(ConnectionState.CONNECTING))
+        assertFalse(armsPictureInPicture(ConnectionState.DISCONNECTED))
+        assertFalse(armsPictureInPicture(ConnectionState.FAILED))
     }
 }

@@ -1,5 +1,7 @@
 package com.bedrud.app.core.pip
 
+import com.bedrud.app.core.livekit.ConnectionState
+
 /** A window shape, as a width over a height. */
 data class PipAspect(val width: Int, val height: Int) {
     val ratio: Float get() = width.toFloat() / height
@@ -57,3 +59,11 @@ internal fun pipSourceRect(bounds: PipBounds, aspect: PipAspect): PipBounds {
     val top = bounds.top + (height - fittedHeight) / 2
     return PipBounds(left, top, left + fittedWidth, top + fittedHeight)
 }
+
+/**
+ * Whether leaving the app now opens the picture-in-picture window: while the call is connected,
+ * and through a reconnect, which is the same call. Not while joining, whose camera and microphone
+ * prompt counts as leaving the app on some phones.
+ */
+internal fun armsPictureInPicture(state: ConnectionState): Boolean =
+    state == ConnectionState.CONNECTED || state == ConnectionState.RECONNECTING

@@ -87,6 +87,7 @@ import com.bedrud.app.core.meeting.VideoAspect
 import com.bedrud.app.core.pip.PipBounds
 import com.bedrud.app.core.pip.PipStateHolder
 import com.bedrud.app.core.pip.PipWindow
+import com.bedrud.app.core.pip.armsPictureInPicture
 import com.bedrud.app.core.pip.pipAspect
 import com.bedrud.app.core.pip.pipSourceRect
 import com.bedrud.app.ui.screens.settings.SettingsStore
@@ -172,12 +173,12 @@ fun MeetingScreen(
         }
     }
 
-    // Arm auto-PiP only while the call is actually connected. MainActivity.onUserLeaveHint reads
-    // this flag, and the camera/mic permission dialog fires onUserLeaveHint on some devices
-    // (One UI, notably) — flagging from composition start sent the join flow into PiP while the
-    // user was still in the app.
+    // Arm auto-PiP only once the call has connected, and through a reconnect, which is the same
+    // call. MainActivity reads this flag, and the camera/mic permission dialog fires
+    // onUserLeaveHint on some devices (One UI, notably) — flagging from composition start sent the
+    // join flow into PiP while the user was still in the app.
     DisposableEffect(connectionState) {
-        pipStateHolder.setInMeeting(connectionState == ConnectionState.CONNECTED)
+        pipStateHolder.setInMeeting(armsPictureInPicture(connectionState))
         onDispose {
             pipStateHolder.setInMeeting(false)
         }
