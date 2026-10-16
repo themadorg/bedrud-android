@@ -309,12 +309,19 @@ class CallConnectionService : ConnectionService() {
         fun roomUri(roomName: String): Uri =
             Uri.parse("$SCHEME://$ROOM_URI_AUTHORITY/${Uri.encode(roomName)}")
 
-        private fun parseRoomName(address: Uri?): String? {
+        /**
+         * The room a call address names, or null when it names none; the inverse of [roomUri].
+         *
+         * `lastPathSegment` comes back already decoded. Decoding it again turned a `%` in a room's
+         * name into a broken character, and a name that spelled out an escape, like `%20`, into
+         * something else entirely.
+         */
+        internal fun parseRoomName(address: Uri?): String? {
             address ?: return null
             return when (address.scheme) {
-                SCHEME -> address.lastPathSegment?.let(Uri::decode)?.takeIf { it.isNotBlank() }
+                SCHEME -> address.lastPathSegment?.takeIf { it.isNotBlank() }
                 "tel" -> address.schemeSpecificPart?.takeIf { it.isNotBlank() }
-                else -> address.lastPathSegment?.let(Uri::decode)?.takeIf { it.isNotBlank() }
+                else -> address.lastPathSegment?.takeIf { it.isNotBlank() }
                     ?: address.schemeSpecificPart?.takeIf { it.isNotBlank() }
             }
         }
