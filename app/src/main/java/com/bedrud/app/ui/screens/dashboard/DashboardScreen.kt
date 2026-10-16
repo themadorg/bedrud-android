@@ -47,7 +47,6 @@ import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FloatingActionButton
@@ -142,6 +141,7 @@ import com.bedrud.app.models.User
 import com.bedrud.app.models.UserRoomResponse
 import com.bedrud.app.ui.components.InitialsAvatar
 import com.bedrud.app.ui.components.BedrudButton
+import com.bedrud.app.ui.components.BedrudLoadingIndicator
 import com.bedrud.app.ui.components.BedrudButtonVariant
 import com.bedrud.app.ui.components.BedrudCompactTopBar
 import com.bedrud.app.ui.components.BedrudOutlinedCard
@@ -702,7 +702,7 @@ fun DashboardContent(
                     Box(
                         modifier = Modifier.fillMaxSize(),
                         contentAlignment = Alignment.Center
-                    ) { CircularProgressIndicator() }
+                    ) { BedrudLoadingIndicator() }
                 } else {
                     // Header height, captured so the empty state below can be centered against the
                     // full screen rather than just the space left over beneath it.

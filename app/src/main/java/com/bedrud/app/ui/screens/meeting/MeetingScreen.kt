@@ -28,7 +28,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ContentCopy
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -69,6 +68,7 @@ import com.bedrud.app.core.recent.RecentRoomsStore
 import com.bedrud.app.core.rooms.JoinFailureRelay
 import com.bedrud.app.core.toUserMessage
 import com.bedrud.app.ui.components.BedrudButton
+import com.bedrud.app.ui.components.BedrudLoadingIndicator
 import com.bedrud.app.ui.components.BedrudButtonVariant
 import com.bedrud.app.ui.components.BedrudScaffoldContentInsets
 import com.bedrud.app.ui.components.BedrudSnackbarHost
@@ -449,7 +449,7 @@ fun MeetingScreen(
                     contentAlignment = Alignment.Center
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        CircularProgressIndicator()
+                        BedrudLoadingIndicator()
                         Spacer(modifier = Modifier.height(Dimens.space16))
                         Text(
                             text = if (connectionState == ConnectionState.CONNECTING)

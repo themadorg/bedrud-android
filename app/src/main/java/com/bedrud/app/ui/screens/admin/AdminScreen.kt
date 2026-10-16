@@ -31,8 +31,8 @@ import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Token
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import com.bedrud.app.ui.components.BedrudButton
+import com.bedrud.app.ui.components.BedrudLoadingIndicator
 import com.bedrud.app.ui.components.BedrudOutlinedCard
 import com.bedrud.app.ui.components.BedrudSnackbarHost
 import com.bedrud.app.ui.components.BedrudSnackbarKind
@@ -347,7 +347,7 @@ private fun AdminTabScaffold(
     )
 }
 
-/** The centered spinner every admin tab shows while its content loads. */
+/** The centered loading indicator every admin tab shows while its content loads. */
 @Composable
 private fun AdminLoadingIndicator() {
     Box(
@@ -356,7 +356,7 @@ private fun AdminLoadingIndicator() {
             .height(200.dp),
         contentAlignment = Alignment.Center
     ) {
-        CircularProgressIndicator()
+        BedrudLoadingIndicator()
     }
 }
 
