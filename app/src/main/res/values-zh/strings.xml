@@ -305,6 +305,10 @@
   <string name="meeting_error_screenShareFailed">无法开始屏幕共享。</string>
   <string name="meeting_error_roomNoLongerExists">此房间已不存在</string>
   <string name="meeting_error_joinFailed">加入房间失败</string>
+  <string name="meeting_error_restartFailed">无法重新开始房间</string>
+  <string name="meeting_dialog_restartTitle">此会议已结束</string>
+  <string name="meeting_dialog_restartMessage">要重新开始 <xliff:g id="roomName" example="weekly-sync">%1$s</xliff:g> 吗？链接和设置保持不变。</string>
+  <string name="meeting_action_startAgain">重新开始</string>
   <string name="meeting_error_endForEveryoneFailed">无法为所有人结束会议</string>
   <string name="meeting_action_leaveAnyway">仍然离开</string>
   <string name="meeting_share_chooserTitle">分享会议链接</string>

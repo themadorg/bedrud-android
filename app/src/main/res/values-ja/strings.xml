@@ -305,6 +305,10 @@
   <string name="meeting_error_screenShareFailed">画面共有を開始できませんでした。</string>
   <string name="meeting_error_roomNoLongerExists">このルームは存在しません</string>
   <string name="meeting_error_joinFailed">ルームへの参加に失敗しました</string>
+  <string name="meeting_error_restartFailed">ルームをもう一度開始できませんでした</string>
+  <string name="meeting_dialog_restartTitle">このミーティングは終了しました</string>
+  <string name="meeting_dialog_restartMessage"><xliff:g id="roomName" example="weekly-sync">%1$s</xliff:g> をもう一度開始しますか？リンクと設定はそのままです。</string>
+  <string name="meeting_action_startAgain">もう一度開始</string>
   <string name="meeting_error_endForEveryoneFailed">全員の会議を終了できませんでした</string>
   <string name="meeting_action_leaveAnyway">それでも退室</string>
   <string name="meeting_share_chooserTitle">ミーティングリンクを共有</string>

@@ -309,6 +309,10 @@
   <string name="meeting_error_screenShareFailed">Impossible de démarrer le partage d\'écran.</string>
   <string name="meeting_error_roomNoLongerExists">Cette salle n\'existe plus</string>
   <string name="meeting_error_joinFailed">Impossible de rejoindre la salle</string>
+  <string name="meeting_error_restartFailed">Impossible de relancer la salle</string>
+  <string name="meeting_dialog_restartTitle">Cette réunion est terminée</string>
+  <string name="meeting_dialog_restartMessage">Relancer <xliff:g id="roomName" example="weekly-sync">%1$s</xliff:g> ? Son lien et ses paramètres restent les mêmes.</string>
+  <string name="meeting_action_startAgain">Relancer</string>
   <string name="meeting_error_endForEveryoneFailed">Impossible de terminer la réunion pour tout le monde</string>
   <string name="meeting_action_leaveAnyway">Quitter quand même</string>
   <string name="meeting_share_chooserTitle">Partager le lien de la réunion</string>

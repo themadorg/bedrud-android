@@ -58,6 +58,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.core.content.ContextCompat
 import com.bedrud.app.R
 import com.bedrud.app.core.api.apiAction
+import com.bedrud.app.core.api.apiBody
 import com.bedrud.app.core.api.parseApiErrorMessage
 import com.bedrud.app.core.call.CallService
 import com.bedrud.app.core.toUserMessage
@@ -67,6 +68,8 @@ import com.bedrud.app.core.deeplink.resolveChatLink
 import com.bedrud.app.core.instance.InstanceManager
 import com.bedrud.app.core.recent.RecentRoomsStore
 import com.bedrud.app.core.rooms.JoinFailureRelay
+import com.bedrud.app.core.rooms.isEndedOwnRoom
+import com.bedrud.app.core.rooms.restartRequest
 import com.bedrud.app.core.toUserMessage
 import com.bedrud.app.ui.components.BedrudButton
 import com.bedrud.app.ui.components.BedrudLoadingIndicator
@@ -149,6 +152,7 @@ fun MeetingScreen(
     val permissionsRequiredMessage = stringResource(R.string.meeting_error_permissionsRequired)
     val roomNoLongerExistsMessage = stringResource(R.string.meeting_error_roomNoLongerExists)
     val joinFailedMessage = stringResource(R.string.meeting_error_joinFailed)
+    val restartFailedMessage = stringResource(R.string.meeting_error_restartFailed)
     val endForEveryoneFailedMessage = stringResource(R.string.meeting_error_endForEveryoneFailed)
     val leaveAnywayLabel = stringResource(R.string.meeting_action_leaveAnyway)
     val linkCopiedMessage = stringResource(R.string.meeting_toast_linkCopied)
@@ -279,6 +283,9 @@ fun MeetingScreen(
 
     var roomInfo by remember { mutableStateOf<JoinRoomResponse?>(null) }
     var isJoining by remember { mutableStateOf(true) }
+    // The server's answer when this is the joiner's own room and its call has ended, held while
+    // they are asked whether to start it again.
+    var endedRoom by remember { mutableStateOf<JoinRoomResponse?>(null) }
 
     fun startMeetingCall(info: JoinRoomResponse) {
         CallService.start(
@@ -378,6 +385,41 @@ fun MeetingScreen(
         onLeave()
     }
 
+    // Goes on with a join the server answered with a call to connect to.
+    fun proceedWithJoin(info: JoinRoomResponse, reattaching: Boolean) {
+        roomInfo = info
+        if (reattaching) {
+            isJoining = false
+        } else {
+            permissionLauncher.launch(requiredPermissions)
+        }
+    }
+
+    // Starts the joiner's own ended room again under its name, then joins it as if it had never
+    // ended. The room list comes first, because only it says whether the room was public: a failed
+    // list stops here rather than bring a public room back as a private one nobody else can join.
+    suspend fun restartEndedRoom(ended: JoinRoomResponse) {
+        var failure: String? = null
+        val keepFailure: suspend (String) -> Unit = { failure = it }
+        val classify: (Throwable) -> String = { it.toUserMessage(context) }
+        val ownRooms = apiBody(restartFailedMessage, keepFailure, classify) { roomApi.listRooms() }
+        val restarted = ownRooms != null && apiAction(restartFailedMessage, keepFailure, classify) {
+            roomApi.createRoom(restartRequest(ended, ownRooms))
+        }
+        val joined = if (restarted) {
+            apiBody(joinFailedMessage, keepFailure, classify) {
+                roomApi.joinRoom(JoinRoomRequest(roomName = roomName))
+            }
+        } else {
+            null
+        }
+        if (joined?.token != null && joined.livekitHost != null) {
+            proceedWithJoin(joined, reattaching = false)
+        } else {
+            failJoin(failure ?: joinFailedMessage, isGone = false)
+        }
+    }
+
     // Join room via API and connect to LiveKit (or reattach to an ongoing call)
     LaunchedEffect(roomName) {
         // Even when reattaching to a call CallService already has running in the
@@ -392,13 +434,11 @@ fun MeetingScreen(
             val response = roomApi.joinRoom(JoinRoomRequest(roomName = roomName))
             if (response.isSuccessful) {
                 val info = response.body()
-                if (info?.token != null && info.livekitHost != null) {
-                    roomInfo = info
-                    if (reattaching) {
-                        isJoining = false
-                    } else {
-                        permissionLauncher.launch(requiredPermissions)
-                    }
+                if (info != null && isEndedOwnRoom(info)) {
+                    // Not a failure: the joiner's own room is over and theirs to start again.
+                    endedRoom = info
+                } else if (info?.token != null && info.livekitHost != null) {
+                    proceedWithJoin(info, reattaching)
                 } else {
                     // A 2xx with no usable token says the same thing a 410 does.
                     failJoin(roomNoLongerExistsMessage, isGone = true)
@@ -441,6 +481,26 @@ fun MeetingScreen(
         error?.let {
             snackbarHostState.showMessage(it, BedrudSnackbarKind.ERROR)
         }
+    }
+
+    // Starting the room again loses nothing, so its button is not the destructive one. Declining
+    // leaves without a message: nothing failed, and the room stays where it was, ready for next time.
+    endedRoom?.let { ended ->
+        ConfirmDialog(
+            title = stringResource(R.string.meeting_dialog_restartTitle),
+            message = stringResource(R.string.meeting_dialog_restartMessage, roomName),
+            confirmLabel = stringResource(R.string.meeting_action_startAgain),
+            confirmVariant = BedrudButtonVariant.PRIMARY,
+            onConfirm = {
+                endedRoom = null
+                scope.launch { restartEndedRoom(ended) }
+            },
+            onDismiss = {
+                endedRoom = null
+                isJoining = false
+                onLeave()
+            },
+        )
     }
 
     Scaffold(

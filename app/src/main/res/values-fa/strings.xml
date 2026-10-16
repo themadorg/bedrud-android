@@ -305,6 +305,10 @@
   <string name="meeting_error_screenShareFailed">شروع اشتراک‌گذاری صفحه ممکن نشد.</string>
   <string name="meeting_error_roomNoLongerExists">این اتاق دیگر وجود ندارد</string>
   <string name="meeting_error_joinFailed">پیوستن به اتاق ناموفق بود</string>
+  <string name="meeting_error_restartFailed">شروع دوبارهٔ اتاق ناموفق بود</string>
+  <string name="meeting_dialog_restartTitle">این جلسه تمام شده است</string>
+  <string name="meeting_dialog_restartMessage"><xliff:g id="roomName" example="weekly-sync">%1$s</xliff:g> دوباره شروع شود؟ پیوند و تنظیماتش همان می‌ماند.</string>
+  <string name="meeting_action_startAgain">شروع دوباره</string>
   <string name="meeting_error_endForEveryoneFailed">پایان دادن به جلسه برای همه ممکن نشد</string>
   <string name="meeting_action_leaveAnyway">به هر حال خروج</string>
   <string name="meeting_share_chooserTitle">اشتراک لینک جلسه</string>

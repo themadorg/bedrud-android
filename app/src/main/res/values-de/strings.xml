@@ -308,6 +308,10 @@
   <string name="meeting_error_screenShareFailed">Bildschirmfreigabe konnte nicht gestartet werden.</string>
   <string name="meeting_error_roomNoLongerExists">Dieser Raum existiert nicht mehr</string>
   <string name="meeting_error_joinFailed">Beitritt zum Raum fehlgeschlagen</string>
+  <string name="meeting_error_restartFailed">Raum konnte nicht erneut gestartet werden</string>
+  <string name="meeting_dialog_restartTitle">Dieses Meeting ist beendet</string>
+  <string name="meeting_dialog_restartMessage"><xliff:g id="roomName" example="weekly-sync">%1$s</xliff:g> erneut starten? Link und Einstellungen bleiben gleich.</string>
+  <string name="meeting_action_startAgain">Erneut starten</string>
   <string name="meeting_error_endForEveryoneFailed">Das Meeting konnte nicht für alle beendet werden</string>
   <string name="meeting_action_leaveAnyway">Trotzdem verlassen</string>
   <string name="meeting_share_chooserTitle">Meeting-Link teilen</string>
