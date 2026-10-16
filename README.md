@@ -16,6 +16,8 @@ For the server, web app, and other platforms, see the [main Bedrud project](http
 ## Features
 
 - **Video & audio meetings** — WebRTC rooms powered by the [LiveKit Android SDK](https://github.com/livekit/client-sdk-android)
+- **Start a room again** — a room ends soon after everyone leaves; opening one of your own ended
+  rooms offers to start it again, with the same link and settings
 - **Connect to multiple servers** — add several Bedrud instances and switch between them; each keeps its own login
 - **Remove a server** — Edit in the server switcher removes a saved server, signing out of it and forgetting its recent rooms
 - **Add a server by QR** — scan a Bedrud server's QR code to fill in its URL instead of typing it
