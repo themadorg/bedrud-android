@@ -74,6 +74,12 @@ object Dimens {
     // ── Brand ──
     val brandMark = 72.dp
 
+    // ── Loading ──
+    // Material 3's loading indicator tokens: a 48dp box around a 38dp shape, which leaves the
+    // shape's points room to turn without reaching past the box.
+    val loadingIndicator = 48.dp
+    val loadingIndicatorShape = 38.dp
+
     // ── Meeting ──
     /**
      * The inset every floating surface on the call screen shares — the tile grid, the screenshare

@@ -239,6 +239,9 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.11.0")
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.11.0")
     implementation("androidx.navigation:navigation-compose:2.10.1")
+    // Polygon morphing for BedrudLoadingIndicator. The same library Material 3's own morphing
+    // indicator is drawn with; that indicator itself is not in a stable Material 3 release yet.
+    implementation("androidx.graphics:graphics-shapes:1.1.0")
 
     // Kotlin
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.11.0")

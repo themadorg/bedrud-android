@@ -1,6 +1,8 @@
 package com.bedrud.app.ui.theme
 
 import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
 
 /**
  * Motion tokens — durations + easing for UI transitions (selection, expand/collapse, emphasis),
@@ -50,6 +52,23 @@ object Motion {
      * while this one reports a problem and should ease in and out rather than blink at you.
      */
     const val meetingMicRingFadeMs = 240
+
+    /** How long the loading indicator stays on each shape, its morph into the next included. */
+    const val loadingMorphIntervalMs = 650L
+
+    /** One whole turn of the loading indicator, on top of the quarter turn each morph adds. */
+    const val loadingTurnMs = 4666
+
+    /**
+     * The spring each of the loading indicator's morphs settles with. Bouncy enough to overshoot a
+     * little, which makes the shape feel alive rather than tweened; the raised threshold ends it once
+     * what is left of the wobble is too small to see, well inside [loadingMorphIntervalMs].
+     */
+    val loadingMorphSpring = spring(
+        dampingRatio = 0.6f,
+        stiffness = Spring.StiffnessLow,
+        visibilityThreshold = 0.1f,
+    )
 
     val standardEasing = FastOutSlowInEasing
 }
