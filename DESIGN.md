@@ -67,6 +67,10 @@ because the default cannot follow the app.
 - Body text on surfaces uses `onSurface`; secondary text uses `onSurfaceVariant` — both meet WCAG AA.
 - Primary CTA is rose `#E11D48` (AA on white; dark mode lifts to `#FB7185`).
 - Every interactive element has a visible focus/selection state and a ≥48dp touch target (`Dimens.minTouchTarget`).
+- **What is drawn invisibly to hold a size is hidden from accessibility too.** `alpha(0f)` hides a
+  copy from sight but not from a screen reader, so a copy kept only for its measurements also takes
+  `clearAndSetSemantics {}`. The mic pill lays out all four of its labels to keep one width, and
+  it handed a screen reader every one of them ahead of the one it shows.
 
 ## Typography (`Type.kt`)
 
