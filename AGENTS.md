@@ -14,8 +14,10 @@ Instrumented Compose tests live in `app/src/androidTest/`. CI runs the whole sui
 that touches the app, as the "Instrumented tests" job in `pr-build.yml`, on an API 36 emulator the
 Android Gradle plugin creates, boots and shuts down itself: the `pixel6Api36` managed device in
 `app/build.gradle.kts`. API 36 because the Compose test rule cannot run on 37 yet (#270). The job is
-not a required check yet. The same run works locally; its first run downloads the API 36 Google
-APIs system image:
+split into three shards on parallel runners, each running its share of the tests through the
+runner's `numShards` and `shardIndex` arguments, because the runner has no GPU and the whole suite
+on one emulator drawing in software took about 12 minutes. It is not a required check yet. The
+same run works locally, unsharded; its first run downloads the API 36 Google APIs system image:
 
 ```bash
 make device-test                 # ./gradlew pixel6Api36DebugAndroidTest
