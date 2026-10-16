@@ -750,7 +750,15 @@ reconnecting ring — one state, one colour. Hairlines inside the call's menus a
   whoever joined first), else the first other participant, and you only when alone. The window
   carries two controls, the microphone (drawn as it is, labelled with what a tap does) and hang
   up, sent to `CallService` exactly as the call notification's are; ending the call closes the
-  window instead of leaving it on the dashboard.
+  window instead of leaving it on the dashboard. From Android 12 the window opens by itself while a
+  call is connected or reconnecting (`setAutoEnterEnabled`, `armsPictureInPicture`), so the app
+  shrinks straight into it; before, the app closed into its icon and the window appeared seconds
+  later. Older versions keep `onUserLeaveHint`, which they have no alternative to. The window takes
+  the shape of what it shows (`pipAspect` in `core/pip/PipWindow.kt`): the video's own, portrait or
+  landscape, within the 1:2.39 to 2.39:1 Android allows, and square for an avatar and its name. It
+  grows from that person's tile in the grid (`pipSourceRect`, the tile cropped to the window's
+  shape); without a source rectangle in that shape, Android draws the app's icon over the window
+  while it opens.
 - **Audio input** (`MeetingAudioSettingsSheet`): output device + output volume (the voice-call
   stream the hardware keys drive), and the input mode. **Push to talk** turns the mic slot into a
   hold-to-talk pill — outlined idle, filled while transmitting — enabling the mic only while held
