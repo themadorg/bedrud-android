@@ -53,11 +53,20 @@ jobs:
   # The instrumented tests, on the emulator app/build.gradle.kts defines (pixel6Api36), which
   # Gradle creates, boots and shuts down itself - the same task `make device-test` runs locally.
   # Not a required check yet: it should prove stable over a few PRs before it can block a merge.
+  #
+  # Split into shards on parallel runners, one per matrix entry. The runner has no GPU, so the
+  # emulator draws in software and the whole suite took about 12 minutes on one. The test runner
+  # gives each shard its share of the tests, and together the shards run every test once.
   instrumented-tests:
-    name: Instrumented tests
+    name: Instrumented tests (${{ matrix.shard }} of ${{ strategy.job-total }})
     runs-on: ubuntu-24.04
     # A wedged emulator would otherwise hold the runner for GitHub's default six hours.
     timeout-minutes: 60
+    strategy:
+      # A failing shard must not cancel the others, or their results go with it.
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3]
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -83,13 +92,18 @@ jobs:
 
       # The runner has no GPU, so the emulator draws in software.
       - name: Run instrumented tests
-        run: ./gradlew pixel6Api36DebugAndroidTest -Pandroid.testoptions.manageddevices.emulator.gpu=swiftshader_indirect --no-daemon
+        run: >-
+          ./gradlew pixel6Api36DebugAndroidTest
+          -Pandroid.testoptions.manageddevices.emulator.gpu=swiftshader_indirect
+          -Pandroid.testInstrumentationRunnerArguments.numShards=${{ strategy.job-total }}
+          -Pandroid.testInstrumentationRunnerArguments.shardIndex=${{ strategy.job-index }}
+          --no-daemon
 
       - name: Upload test report
         if: failure()
         uses: actions/upload-artifact@v7
         with:
-          name: instrumented-tests-pr-${{ github.event.pull_request.number }}
+          name: instrumented-tests-pr-${{ github.event.pull_request.number }}-shard-${{ matrix.shard }}
           path: app/build/reports/androidTests/managedDevice/
           retention-days: 14
 
