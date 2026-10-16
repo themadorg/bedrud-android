@@ -8,7 +8,7 @@ For the server, web app, and other platforms, see the [main Bedrud project](http
 
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
 [![Android](https://img.shields.io/badge/Android-API%2028+-3DDC84?logo=android&logoColor=white)](#requirements)
-[![Kotlin](https://img.shields.io/badge/Kotlin-2.3-7F52FF?logo=kotlin&logoColor=white)](https://kotlinlang.org)
+[![Kotlin](https://img.shields.io/badge/Kotlin-7F52FF?logo=kotlin&logoColor=white)](https://kotlinlang.org)
 [![Compose](https://img.shields.io/badge/Jetpack%20Compose-Material%203-4285F4?logo=jetpackcompose&logoColor=white)](https://developer.android.com/jetpack/compose)
 
 ---
@@ -171,7 +171,7 @@ is collected with `collectAsState()`.
 | Networking     | Retrofit + OkHttp (Gson)                                      |
 | Realtime media | LiveKit Android SDK                                           |
 | Calls          | Self-managed telecom `ConnectionService` (foreground service) |
-| Auth storage   | `EncryptedSharedPreferences`, per instance                    |
+| Auth storage   | `EncryptedPrefs`, sealed by an Android Keystore AES-GCM key, per instance |
 | Passkeys       | AndroidX Credential Manager + Play Services FIDO              |
 | Images         | Coil                                                          |
 
@@ -184,16 +184,19 @@ Source layout (`app/src/main/java/com/bedrud/app/`):
 ```
 core/
   api/        Retrofit services + DTOs
+  audio/      voice gate, speech detection, meeting sounds
   auth/       login, tokens, passkeys
   call/       telecom ConnectionService (meetings-as-calls)
-  chat/       in-meeting chat
+  chat/       chat images: upload, decoding, saving
   deeplink/   /m/ and /c/ link handling
   di/         Koin modules
   instance/   multi-server management
   livekit/    RoomManager — LiveKit lifecycle
-  meeting/    meeting logic (chat wire, video aspect)
+  meeting/    chat and presence wire formats, video aspect
   pip/        picture-in-picture state
+  prefs/      SharedPreferences helpers
   recent/     recent rooms
+  rooms/      room activity, rooms waiting to open, join failures
 ui/
   components/ shared Compose widgets
   screens/    auth, dashboard, instance, main, meeting, admin, profile, settings
