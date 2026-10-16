@@ -28,6 +28,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.autofill.ContentType
 import androidx.compose.ui.focus.FocusDirection
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
@@ -37,6 +38,7 @@ import com.bedrud.app.R
 import com.bedrud.app.core.auth.PasswordPolicy
 import com.bedrud.app.core.auth.isValidEmail
 import com.bedrud.app.core.instance.InstanceManager
+import com.bedrud.app.core.toUserMessage
 import com.bedrud.app.models.ForgotPasswordRequest
 import com.bedrud.app.models.LoginRequest
 import com.bedrud.app.core.api.apiBody
@@ -73,6 +75,7 @@ fun EmailLoginScreen(
     val activeInstance = instanceManager.store.activeInstance
 
     val scope = rememberCoroutineScope()
+    val context = LocalContext.current
     val focusManager = LocalFocusManager.current
     val snackbarHostState = remember { SnackbarHostState() }
 
@@ -121,7 +124,7 @@ fun EmailLoginScreen(
         scope.launch {
             isLoading = true
             try {
-                val body = apiBody(loginFailedMessage, { errorMessage = it }) {
+                val body = apiBody(loginFailedMessage, { errorMessage = it }, { it.toUserMessage(context) }) {
                     authApi.login(LoginRequest(email = email.trim(), password = password))
                 }
                 if (body != null) {
@@ -224,7 +227,8 @@ fun EmailLoginScreen(
                     if (response.isSuccessful) Result.success(Unit)
                     else Result.failure(Exception(genericMessage))
                 } catch (e: Exception) {
-                    Result.failure(e)
+                    // The sheet shows a failure's message as it is, so it carries the app's words.
+                    Result.failure(Exception(e.toUserMessage(context)))
                 }
             },
             onSent = { target ->
