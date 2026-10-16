@@ -72,6 +72,8 @@ app/src/main/java/com/bedrud/app/
 │   ├── chat/                   Image upload for chat attachments (ChatImageUploader) + URL helpers
 │   ├── pip/PipState.kt         PiP state holder
 │   └── call/                   CallService + CallConnectionService (telecom integration),
+│                               CallSession (what a running call decides about its room, apart
+│                               from the service, so a unit test can reach it),
 │                               CallAudioRoute + CallEndpointSelector (which output the call
 │                               is routed to), CallAudioStateMuteFilter (a headset's mute
 │                               below API 34), ProximityScreenLock (screen off at an ear)
@@ -121,7 +123,7 @@ Both the "3 hours ago" a card prints and its position in either tab come from on
 
 The words around that number are not the app's own. `roomActivityAge` (same file) reduces it to a count and a unit — minutes, hours, days, or weeks as the largest — and the card hands those to ICU's `RelativeDateTimeFormatter` for the app's language, which writes the whole phrase from CLDR: "3 hours ago", "vor 3 Stunden", «۳ ساعت پیش». No `strings.xml` entry is involved, because the number, the unit, its plural form, the word order and the digits all change together between languages, and CLDR already has every one of them right.
 
-A room is written to `RecentRoomsStore` when its call actually starts (`MeetingScreen.startMeetingCall`), never when a card is tapped — a room the server has already deleted must not be recorded as visited. The mirror of that: `MeetingScreen` drops the recent when a join is refused with 404/410, so a dead card stops being offered. Why the join failed is reported through `JoinFailureRelay` and shown by `MainScreen`, not by the meeting screen: a failed join leaves that screen at once, and a snackbar raised on a host that is being destroyed is never seen. A call a moderator ends, by kicking or banning, is reported the same way, by `CallService` when LiveKit says the participant was removed: the call can be running with no meeting screen open at all.
+A room is written to `RecentRoomsStore` when its call actually starts (`MeetingScreen.startMeetingCall`), never when a card is tapped — a room the server has already deleted must not be recorded as visited. The mirror of that: `MeetingScreen` drops the recent when a join is refused with 404/410, so a dead card stops being offered. Why the join failed is reported through `JoinFailureRelay` and shown by `MainScreen`, not by the meeting screen: a failed join leaves that screen at once, and a snackbar raised on a host that is being destroyed is never seen. A call a moderator ends, by kicking or banning, is reported the same way, by the call's `CallSession` (through `CallService`) when LiveKit says the participant was removed: the call can be running with no meeting screen open at all.
 
 ## Networking
 
@@ -230,7 +232,7 @@ Both paths hold a request they cannot serve yet rather than dropping it, for rea
   audio-state callback, so the route waits for `onCallAudioStateChanged`.
 
 **Mute travels one way.** Telecom tells the connection when a headset or car mutes the call, and
-`CallService` applies it to the microphone once the room is connected. From API 34 that arrives
+the call's `CallSession` applies it to the microphone once the room is connected. From API 34 that arrives
 through `onMuteStateChanged`; below 34 that callback does not exist, and the mute rides inside the
 `CallAudioState` given to `onCallAudioStateChanged`, which Telecom re-sends for every routing change
 too. `CallAudioStateMuteFilter` passes on only a mute that differs from the last one seen there,
