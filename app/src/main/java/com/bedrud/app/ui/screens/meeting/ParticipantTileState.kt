@@ -59,7 +59,7 @@ fun rememberParticipantTileStates(
         }
     }
 
-private fun Participant.toTileState(
+internal fun Participant.toTileState(
     localIdentity: String?,
     isLocalMicEnabled: Boolean,
 ): ParticipantTileState {

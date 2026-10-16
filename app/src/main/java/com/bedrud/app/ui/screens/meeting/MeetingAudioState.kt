@@ -58,7 +58,7 @@ fun MeetingAudioState.selectDevice(audioHandler: CallAudioSwitch?, device: Audio
  * Fixed list order for the audio output picker: Phone, then Speaker, then everything else
  * (wired/Bluetooth devices), independent of which device is currently preferred/selected.
  */
-private fun List<AudioDevice>.sortedForDisplay(): List<AudioDevice> = sortedBy { device ->
+internal fun List<AudioDevice>.sortedForDisplay(): List<AudioDevice> = sortedBy { device ->
     when (device) {
         is AudioDevice.Earpiece -> 0
         is AudioDevice.Speakerphone -> 1
