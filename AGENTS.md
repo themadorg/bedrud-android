@@ -149,9 +149,16 @@ that shape. Call through `apiBody` / `apiAction` (`core/api/ApiCall.kt`) instead
 
 - report the **server's own explanation** when it sent one (`{"error": "…"}`), since "Not available
   for guest accounts" beats any wording written here;
-- fall back to a **localized** message when it did not — pass `classifyError = { it.toUserMessage(context) }`
-  (`core/ErrorMessages.kt`) so raw exception text never reaches the UI;
+- fall back to the call's own **localized** message when it did not;
+- never show a thrown exception's own text, which is English and technical ("Unable to resolve
+  host …"). Pass `classifyError = { it.toUserMessage(context) }` (`core/ErrorMessages.kt`) so a
+  failure the device can name — no connection, a timeout, a server it cannot reach — says so; with
+  nothing passed, it reads as the fallback message;
 - rethrow `CancellationException` rather than recording a cancelled call as a failure.
+
+A failure caught outside them, such as the passkey flow's `Result` or a hand-made `try`, is reported
+the same way: through `toUserMessage`, never `e.message`. Closing the passkey picker is the one
+failure not reported at all, since it was the reader's own choice.
 
 Two rules go with them. **Local state changes only on success** — `apiAction` returns `false` on a
 refused write, and applying the change first leaves a rejected edit sitting on screen as though it
