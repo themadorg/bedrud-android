@@ -467,6 +467,18 @@ class RoomManagerTest {
         assertTrue(call.sent.any { it.first == ChatWire.CHAT_DATA_TOPIC })
     }
 
+    /** LiveKit reports a packet that did not go out as a failed result rather than an exception. */
+    @Test
+    fun `should report a message that could not be sent, and not show it as sent`() {
+        val call = joined()
+        call.sendResult = Result.failure(IllegalStateException("data channel closed"))
+
+        runBlocking { call.manager.sendChatMessage("hi") }
+
+        assertTrue(call.manager.chatMessages.value.isEmpty())
+        assertEquals(string(R.string.meeting_error_messageSendFailed), call.manager.error.value)
+    }
+
     @Test
     fun `should report a message whose sending threw`() {
         val call = joined()
@@ -500,6 +512,18 @@ class RoomManagerTest {
         runBlocking { call.manager.reactToMessage("message", Reaction) }
 
         assertEquals(Reaction, call.manager.chatMessages.value.single().reactions[LocalIdentity])
+    }
+
+    @Test
+    fun `should report a reaction that could not be sent, and not show it`() {
+        val call = joined(settingsStore(), remote())
+        call.receiveData(ChatWire.CHAT_DATA_TOPIC, ChatWire.encodeChat(OtherName, OtherIdentity, "hello", emptyList(), id = "message").single())
+        call.sendResult = Result.failure(IllegalStateException("data channel closed"))
+
+        runBlocking { call.manager.reactToMessage("message", Reaction) }
+
+        assertTrue(call.manager.chatMessages.value.single().reactions.isEmpty())
+        assertEquals(string(R.string.meeting_error_reactionFailed), call.manager.error.value)
     }
 
     @Test

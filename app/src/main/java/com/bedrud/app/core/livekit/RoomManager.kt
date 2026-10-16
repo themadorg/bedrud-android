@@ -1226,7 +1226,11 @@ class RoomManager(
         }
     }
 
-    /** Publishes on the reliable data channel; false (plus a log line) when publishing throws. */
+    /**
+     * Publishes on the reliable data channel, and says whether it went out. LiveKit reports a packet
+     * it could not send as a failed result rather than by throwing, so either is a failure here;
+     * reading only the exception showed an unsent message as sent.
+     */
     private suspend fun publishData(topic: String, data: ByteArray): Boolean {
         val localParticipant = _room?.localParticipant ?: return false
         return try {
@@ -1234,8 +1238,7 @@ class RoomManager(
                 data = data,
                 reliability = DataPublishReliability.RELIABLE,
                 topic = topic,
-            )
-            true
+            ).onFailure { Log.e(TAG, "Failed to publish data on topic '$topic'", it) }.isSuccess
         } catch (e: Exception) {
             Log.e(TAG, "Failed to publish data on topic '$topic'", e)
             false
