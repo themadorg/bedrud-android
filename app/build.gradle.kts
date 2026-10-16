@@ -238,7 +238,7 @@ dependencies {
     implementation("androidx.activity:activity-compose:1.13.0")
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.11.0")
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.11.0")
-    implementation("androidx.navigation:navigation-compose:2.10.1")
+    implementation("androidx.navigation:navigation-compose:2.10.2")
     // Polygon morphing for BedrudLoadingIndicator. The same library Material 3's own morphing
     // indicator is drawn with; that indicator itself is not in a stable Material 3 release yet.
     implementation("androidx.graphics:graphics-shapes:1.1.0")
@@ -248,7 +248,7 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.11.0")
 
     // LiveKit
-    implementation("io.livekit:livekit-android:2.28.2")
+    implementation("io.livekit:livekit-android:2.29.0")
     implementation("io.livekit:livekit-android-compose-components:2.4.2")
 
     // Retrofit + OkHttp
