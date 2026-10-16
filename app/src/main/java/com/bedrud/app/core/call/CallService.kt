@@ -314,29 +314,17 @@ class CallService : Service() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
 
-        val muteIntent = PendingIntent.getService(
-            this,
-            1,
-            Intent(this, CallService::class.java).apply { action = ACTION_TOGGLE_MUTE },
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
-        )
         val muteAction = NotificationCompat.Action.Builder(
             if (isMuted) android.R.drawable.ic_lock_silent_mode
             else android.R.drawable.ic_lock_silent_mode_off,
             if (isMuted) getString(R.string.call_action_unmute) else getString(R.string.call_action_mute),
-            muteIntent,
+            toggleMuteIntent(this),
         ).build()
 
-        val hangUpIntent = PendingIntent.getService(
-            this,
-            2,
-            Intent(this, CallService::class.java).apply { action = ACTION_HANG_UP },
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
-        )
         val hangUpAction = NotificationCompat.Action.Builder(
             android.R.drawable.ic_menu_close_clear_cancel,
             getString(R.string.call_action_hangUp),
-            hangUpIntent,
+            hangUpIntent(this),
         ).build()
 
         return NotificationCompat.Builder(this, CHANNEL_ID)
@@ -370,6 +358,24 @@ class CallService : Service() {
         private const val EXTRA_AVATAR_URL = "avatar_url"
         const val ACTION_HANG_UP = "com.bedrud.app.HANG_UP"
         const val ACTION_TOGGLE_MUTE = "com.bedrud.app.TOGGLE_MUTE"
+        private const val TOGGLE_MUTE_REQUEST = 1
+        private const val HANG_UP_REQUEST = 2
+
+        private fun actionIntent(context: Context, action: String, requestCode: Int): PendingIntent =
+            PendingIntent.getService(
+                context,
+                requestCode,
+                Intent(context, CallService::class.java).apply { this.action = action },
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+            )
+
+        /** Turns the call's microphone over, from the notification or the picture-in-picture window. */
+        fun toggleMuteIntent(context: Context): PendingIntent =
+            actionIntent(context, ACTION_TOGGLE_MUTE, TOGGLE_MUTE_REQUEST)
+
+        /** Hangs up the call, from the notification or the picture-in-picture window. */
+        fun hangUpIntent(context: Context): PendingIntent =
+            actionIntent(context, ACTION_HANG_UP, HANG_UP_REQUEST)
         const val ACTION_RETURN_TO_MEETING = "com.bedrud.app.RETURN_TO_MEETING"
         // The ceiling both of the call's wake locks fall back on: no meeting runs this long, so
         // reaching it means the service died without releasing, not that a call is still up.

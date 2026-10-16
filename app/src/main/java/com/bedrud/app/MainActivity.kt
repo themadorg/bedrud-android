@@ -1,14 +1,19 @@
 package com.bedrud.app
 
+import android.app.PendingIntent
 import android.app.PictureInPictureParams
+import android.app.RemoteAction
 import android.content.Context
 import android.content.Intent
 import android.content.res.Configuration
 import android.graphics.Color
+import android.graphics.drawable.Icon
 import android.os.Build
 import android.os.Bundle
 import android.util.Rational
 import androidx.activity.ComponentActivity
+import androidx.annotation.DrawableRes
+import androidx.annotation.StringRes
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -24,6 +29,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.toArgb
 import androidx.lifecycle.compose.dropUnlessResumed
+import androidx.lifecycle.lifecycleScope
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -51,6 +57,7 @@ import com.bedrud.app.ui.theme.BedrudTheme
 import com.bedrud.app.ui.theme.SystemBarDarkScrim
 import com.bedrud.app.ui.theme.SystemBarLightScrim
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.launch
 import org.koin.android.ext.android.inject
 import org.koin.compose.koinInject
 
@@ -68,6 +75,39 @@ class MainActivity : ComponentActivity() {
     /** Holds [roomName] for the server that is active now, the one the request arrived on. */
     private fun holdOnActiveServer(roomName: String) {
         pendingRoom.hold(roomName, instanceManager.store.activeInstanceId.value)
+    }
+
+    /** One of the picture-in-picture window's controls, labelled by [titleResource]. */
+    private fun pipAction(@DrawableRes iconResource: Int, @StringRes titleResource: Int, intent: PendingIntent): RemoteAction {
+        val title = getString(titleResource)
+        return RemoteAction(Icon.createWithResource(this, iconResource), title, title, intent)
+    }
+
+    /**
+     * The picture-in-picture window's shape and its two controls: the microphone, drawn as it is
+     * now and labelled with what a tap does, and hanging up. Both go to [CallService], as the call
+     * notification's controls do.
+     */
+    private fun pictureInPictureParams(isMicEnabled: Boolean): PictureInPictureParams {
+        val muteAction = if (isMicEnabled) {
+            pipAction(R.drawable.ic_pip_mic, R.string.call_action_mute, CallService.toggleMuteIntent(this))
+        } else {
+            pipAction(R.drawable.ic_pip_mic_off, R.string.call_action_unmute, CallService.toggleMuteIntent(this))
+        }
+        val hangUpAction =
+            pipAction(R.drawable.ic_pip_call_end, R.string.call_action_hangUp, CallService.hangUpIntent(this))
+        return PictureInPictureParams.Builder()
+            .setAspectRatio(Rational(VideoAspect.WIDTH, VideoAspect.HEIGHT))
+            .setActions(listOf(muteAction, hangUpAction))
+            .build()
+    }
+
+    /**
+     * Closes the picture-in-picture window once the call it shows has ended, from its own hang-up
+     * control or a removal by a moderator: left open, it went on to show the rooms dashboard.
+     */
+    private fun closePictureInPictureAfterCall() {
+        if (pipStateHolder.isInPipMode.value) moveTaskToBack(false)
     }
 
     override fun attachBaseContext(base: Context) {
@@ -103,6 +143,14 @@ class MainActivity : ComponentActivity() {
 
         // Handle OAuth callback from initial intent (app not running)
         handleOAuthCallback(intent)
+
+        // Kept current while the activity lives, so the window opens with its microphone control
+        // as it is, and a mute from inside the window, or from anywhere else, turns it over.
+        lifecycleScope.launch {
+            pipStateHolder.isMicEnabled.collect { isMicEnabled ->
+                setPictureInPictureParams(pictureInPictureParams(isMicEnabled))
+            }
+        }
 
         setContent {
             val appearance by settingsStore.appearance.collectAsState()
@@ -140,7 +188,8 @@ class MainActivity : ComponentActivity() {
                     BedrudNavHost(
                         instanceManager = instanceManager,
                         pendingRoom = pendingRoom,
-                        oauthToken = _oauthToken
+                        oauthToken = _oauthToken,
+                        onMeetingLeft = ::closePictureInPictureAfterCall,
                     )
                 }
             }
@@ -190,12 +239,7 @@ class MainActivity : ComponentActivity() {
     override fun onUserLeaveHint() {
         super.onUserLeaveHint()
         if (pipStateHolder.isInMeeting.value) {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                val params = PictureInPictureParams.Builder()
-                    .setAspectRatio(Rational(VideoAspect.WIDTH, VideoAspect.HEIGHT))
-                    .build()
-                enterPictureInPictureMode(params)
-            }
+            enterPictureInPictureMode(pictureInPictureParams(pipStateHolder.isMicEnabled.value))
         }
     }
 
@@ -224,7 +268,10 @@ object Routes {
 fun BedrudNavHost(
     instanceManager: InstanceManager,
     pendingRoom: PendingRoom,
-    oauthToken: MutableStateFlow<String?> = MutableStateFlow(null)
+    oauthToken: MutableStateFlow<String?> = MutableStateFlow(null),
+    // Called once a meeting screen has left, for the activity to close its picture-in-picture
+    // window rather than go on showing whatever is under the meeting.
+    onMeetingLeft: () -> Unit = {},
 ) {
     val navController = rememberNavController()
     val instances by instanceManager.store.instances.collectAsState()
@@ -411,6 +458,7 @@ fun BedrudNavHost(
                     // it animates out, must not close it.
                     if (navController.currentBackStackEntry?.id == backStackEntry.id) {
                         navController.popBackStack()
+                        onMeetingLeft()
                     }
                 },
                 // Held like every other way in. The meeting screen switches server before asking,

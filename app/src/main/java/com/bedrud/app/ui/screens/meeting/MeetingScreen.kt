@@ -179,6 +179,8 @@ fun MeetingScreen(
         }
     }
     val isMicEnabled by roomManager.isMicEnabled.collectAsState()
+    // The picture-in-picture window's mute control shows the microphone as it is.
+    LaunchedEffect(isMicEnabled) { pipStateHolder.setMicEnabled(isMicEnabled) }
     val micMediaError by roomManager.micMediaError.collectAsState()
     val isCameraEnabled by roomManager.isCameraEnabled.collectAsState()
     val cameraMediaError by roomManager.cameraMediaError.collectAsState()
