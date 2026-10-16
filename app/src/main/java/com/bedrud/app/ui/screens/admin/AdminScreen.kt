@@ -183,7 +183,7 @@ fun AdminScreen(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun AdminOverviewContent(
+internal fun AdminOverviewContent(
     modifier: Modifier = Modifier,
     adminApi: com.bedrud.app.core.api.AdminApi
 ) {
@@ -364,7 +364,7 @@ private fun AdminLoadingIndicator() {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun AdminUsersContent(
+internal fun AdminUsersContent(
     modifier: Modifier = Modifier,
     adminApi: com.bedrud.app.core.api.AdminApi
 ) {
@@ -515,7 +515,7 @@ private fun AdminUsersContent(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun AdminRoomsContent(
+internal fun AdminRoomsContent(
     modifier: Modifier = Modifier,
     adminApi: com.bedrud.app.core.api.AdminApi
 ) {
@@ -637,7 +637,7 @@ private fun AdminRoomsContent(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun AdminSettingsContent(
+internal fun AdminSettingsContent(
     modifier: Modifier = Modifier,
     adminApi: com.bedrud.app.core.api.AdminApi
 ) {
