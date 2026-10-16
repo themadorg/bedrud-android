@@ -25,10 +25,13 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.boundsInWindow
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.semantics.customActions
@@ -37,6 +40,7 @@ import androidx.compose.ui.text.style.TextDirection
 import androidx.compose.ui.text.style.TextOverflow
 import coil.compose.AsyncImage
 import com.bedrud.app.R
+import com.bedrud.app.core.pip.PipBounds
 import com.bedrud.app.ui.components.InitialsAvatar
 import com.bedrud.app.ui.theme.BedrudShapeTokens
 import com.bedrud.app.ui.theme.Dimens
@@ -44,6 +48,7 @@ import com.bedrud.app.ui.theme.inkCentered
 import com.bedrud.app.ui.theme.typeCentered
 import io.livekit.android.compose.ui.VideoTrackView
 import io.livekit.android.room.Room
+import kotlin.math.roundToInt
 
 /** Most tiles the grid shows at once; beyond this the last slot collapses into a "+N" tile. */
 private const val MAX_GRID_TILES = 6
@@ -83,8 +88,13 @@ fun MeetingVideoGrid(
     onOpenParticipantActions: (String) -> Unit,
     onExpandTile: (String) -> Unit,
     onOverflowClick: () -> Unit,
+    // The person the picture-in-picture window would show, whose tile reports where it sits, and
+    // reports null once the grid goes, so the window never grows from a tile no longer on screen.
+    pipFocusIdentity: String? = null,
+    onPipFocusBounds: (identity: String?, bounds: PipBounds?) -> Unit = { _, _ -> },
     modifier: Modifier = Modifier,
 ) {
+    DisposableEffect(Unit) { onDispose { onPipFocusBounds(null, null) } }
     val visible = if (tiles.size > MAX_GRID_TILES) tiles.take(MAX_GRID_TILES - 1) else tiles
     val overflowCount = tiles.size - visible.size
     val slotCount = visible.size + if (overflowCount > 0) 1 else 0
@@ -109,7 +119,22 @@ fun MeetingVideoGrid(
                     deafenedIdentities = deafenedIdentities,
                     onOpenParticipantActions = onOpenParticipantActions,
                     onExpand = onExpandTile,
-                    modifier = slotModifier,
+                    modifier = if (tile.identity == pipFocusIdentity) {
+                        slotModifier.onGloballyPositioned { coordinates ->
+                            val bounds = coordinates.boundsInWindow()
+                            onPipFocusBounds(
+                                tile.identity,
+                                PipBounds(
+                                    left = bounds.left.roundToInt(),
+                                    top = bounds.top.roundToInt(),
+                                    right = bounds.right.roundToInt(),
+                                    bottom = bounds.bottom.roundToInt(),
+                                ),
+                            )
+                        }
+                    } else {
+                        slotModifier
+                    },
                 )
             } else {
                 OverflowTile(

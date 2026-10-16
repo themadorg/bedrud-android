@@ -15,6 +15,10 @@ class PipStateHolder {
     private val _isMicEnabled = MutableStateFlow(false)
     val isMicEnabled: StateFlow<Boolean> = _isMicEnabled.asStateFlow()
 
+    // The shape of what the window will show, and where on screen it grows from.
+    private val _window = MutableStateFlow(PipWindow(PipAspect.Square, sourceRect = null))
+    val window: StateFlow<PipWindow> = _window.asStateFlow()
+
     fun setInPipMode(value: Boolean) {
         _isInPipMode.value = value
     }
@@ -25,5 +29,9 @@ class PipStateHolder {
 
     fun setMicEnabled(value: Boolean) {
         _isMicEnabled.value = value
+    }
+
+    fun setWindow(value: PipWindow) {
+        _window.value = value
     }
 }

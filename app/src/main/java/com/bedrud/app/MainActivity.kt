@@ -7,6 +7,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.res.Configuration
 import android.graphics.Color
+import android.graphics.Rect
 import android.graphics.drawable.Icon
 import android.os.Build
 import android.os.Bundle
@@ -41,8 +42,9 @@ import com.bedrud.app.core.call.CallService
 import com.bedrud.app.core.createLocaleContext
 import com.bedrud.app.core.deeplink.BedrudURLParser
 import com.bedrud.app.core.instance.InstanceManager
-import com.bedrud.app.core.meeting.VideoAspect
+import com.bedrud.app.core.pip.PipAspect
 import com.bedrud.app.core.pip.PipStateHolder
+import com.bedrud.app.core.pip.PipWindow
 import com.bedrud.app.core.rooms.PendingRoom
 import com.bedrud.app.ui.screens.auth.EmailLoginScreen
 import com.bedrud.app.ui.screens.auth.LoginScreen
@@ -57,6 +59,7 @@ import com.bedrud.app.ui.theme.BedrudTheme
 import com.bedrud.app.ui.theme.SystemBarDarkScrim
 import com.bedrud.app.ui.theme.SystemBarLightScrim
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 import org.koin.android.ext.android.inject
 import org.koin.compose.koinInject
@@ -84,12 +87,13 @@ class MainActivity : ComponentActivity() {
     }
 
     /**
-     * The picture-in-picture window's shape and its two controls: the microphone, drawn as it is
-     * now and labelled with what a tap does, and hanging up. Both go to [CallService], as the call
-     * notification's controls do.
+     * The picture-in-picture window, as [window] shapes it, with its two controls: the microphone,
+     * drawn as it is now and labelled with what a tap does, and hanging up. Both go to
+     * [CallService], as the call notification's controls do. The window grows from the tile it will
+     * show; without that, Android draws the app's icon over it while it opens.
      */
-    private fun pictureInPictureParams(isMicEnabled: Boolean): PictureInPictureParams {
-        val muteAction = if (isMicEnabled) {
+    private fun pictureInPictureParams(window: PipWindow): PictureInPictureParams {
+        val muteAction = if (pipStateHolder.isMicEnabled.value) {
             pipAction(R.drawable.ic_pip_mic, R.string.call_action_mute, CallService.toggleMuteIntent(this))
         } else {
             pipAction(R.drawable.ic_pip_mic_off, R.string.call_action_unmute, CallService.toggleMuteIntent(this))
@@ -97,9 +101,25 @@ class MainActivity : ComponentActivity() {
         val hangUpAction =
             pipAction(R.drawable.ic_pip_call_end, R.string.call_action_hangUp, CallService.hangUpIntent(this))
         return PictureInPictureParams.Builder()
-            .setAspectRatio(Rational(VideoAspect.WIDTH, VideoAspect.HEIGHT))
+            .setAspectRatio(Rational(window.aspect.width, window.aspect.height))
             .setActions(listOf(muteAction, hangUpAction))
+            .apply {
+                window.sourceRect?.let { setSourceRectHint(Rect(it.left, it.top, it.right, it.bottom)) }
+            }
             .build()
+    }
+
+    /**
+     * Hands the window to [apply]. A phone whose maker narrowed the shapes Android allows refuses
+     * one inside Android's own limits, so the window falls back to a square, which every phone
+     * takes, rather than the app crashing.
+     */
+    private fun withPictureInPictureParams(apply: (PictureInPictureParams) -> Unit) {
+        try {
+            apply(pictureInPictureParams(pipStateHolder.window.value))
+        } catch (e: IllegalArgumentException) {
+            apply(pictureInPictureParams(PipWindow(PipAspect.Square, sourceRect = null)))
+        }
     }
 
     /**
@@ -145,11 +165,11 @@ class MainActivity : ComponentActivity() {
         handleOAuthCallback(intent)
 
         // Kept current while the activity lives, so the window opens with its microphone control
-        // as it is, and a mute from inside the window, or from anywhere else, turns it over.
+        // as it is, in the shape of what it shows, and from where that is on screen; a mute from
+        // inside the window, or from anywhere else, turns it over.
         lifecycleScope.launch {
-            pipStateHolder.isMicEnabled.collect { isMicEnabled ->
-                setPictureInPictureParams(pictureInPictureParams(isMicEnabled))
-            }
+            combine(pipStateHolder.isMicEnabled, pipStateHolder.window) { _, _ -> }
+                .collect { withPictureInPictureParams(::setPictureInPictureParams) }
         }
 
         setContent {
@@ -239,7 +259,7 @@ class MainActivity : ComponentActivity() {
     override fun onUserLeaveHint() {
         super.onUserLeaveHint()
         if (pipStateHolder.isInMeeting.value) {
-            enterPictureInPictureMode(pictureInPictureParams(pipStateHolder.isMicEnabled.value))
+            withPictureInPictureParams { enterPictureInPictureMode(it) }
         }
     }
 

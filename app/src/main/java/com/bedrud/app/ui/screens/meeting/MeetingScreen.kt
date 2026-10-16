@@ -84,7 +84,11 @@ import com.bedrud.app.core.livekit.ConnectionState
 import com.bedrud.app.core.livekit.ParticipantMetadata
 import com.bedrud.app.core.livekit.RoomManager
 import com.bedrud.app.core.meeting.VideoAspect
+import com.bedrud.app.core.pip.PipBounds
 import com.bedrud.app.core.pip.PipStateHolder
+import com.bedrud.app.core.pip.PipWindow
+import com.bedrud.app.core.pip.pipAspect
+import com.bedrud.app.core.pip.pipSourceRect
 import com.bedrud.app.ui.screens.settings.SettingsStore
 import com.bedrud.app.models.JoinRoomRequest
 import com.bedrud.app.models.JoinRoomResponse
@@ -212,6 +216,8 @@ fun MeetingScreen(
     var hideAllIncomingVideo by remember { mutableStateOf(false) }
     // Who the picture-in-picture window last showed, so it stays on them through a pause.
     val lastPipFocus = remember { mutableStateOf<String?>(null) }
+    // Where that person's tile sits in the grid, for the window to grow from.
+    var pipFocusTileBounds by remember { mutableStateOf<Pair<String, PipBounds>?>(null) }
     // Pinned participant leads the grid ordering
     var pinnedIdentity by rememberSaveable { mutableStateOf<String?>(null) }
     // Recording banner, behind the dev-gated recording dot. TODO(#107)
@@ -500,20 +506,38 @@ fun MeetingScreen(
                         tileStates.associateBy { it.identity }
                     }
 
-                    if (isInPipMode) {
-                        val remoteIdentities = tileStates
-                            .map { it.identity }
-                            .filter { it != localIdentity }
-                        val pipFocus = pipFocusIdentity(
-                            watchedStreamIdentity = watchedStreamIdentity,
-                            speakingLevels = speakingLevels,
-                            previousFocus = lastPipFocus.value,
-                            remoteIdentities = remoteIdentities,
-                            localIdentity = localIdentity,
+                    // Who the picture-in-picture window shows, worked out before it opens too, so it
+                    // takes the shape of what it will show and grows from that person's tile.
+                    val remoteIdentities = tileStates
+                        .map { it.identity }
+                        .filter { it != localIdentity }
+                    val pipFocus = pipFocusIdentity(
+                        watchedStreamIdentity = watchedStreamIdentity,
+                        speakingLevels = speakingLevels,
+                        previousFocus = lastPipFocus.value,
+                        remoteIdentities = remoteIdentities,
+                        localIdentity = localIdentity,
+                    )
+                    SideEffect { lastPipFocus.value = pipFocus }
+                    val pipFocusState = pipFocus?.let { tileStatesByIdentity[it] }
+                    val pipShowsCamera = pipFocusState?.cameraTrack != null &&
+                        pipFocus !in locallyHiddenVideoIdentities &&
+                        (pipFocus == localIdentity || !hideAllIncomingVideo)
+                    val pipVideoDimensions =
+                        pipFocusState?.screenShare?.takeIf { watchedStreamIdentity != null }?.publication?.dimensions
+                            ?: pipFocusState?.cameraDimensions?.takeIf { pipShowsCamera }
+                    val pipAspect = pipAspect(pipVideoDimensions?.width, pipVideoDimensions?.height)
+                    // Held by identity, so a tile reported before the focus moved is never used for another.
+                    val pipSourceBounds = pipFocusTileBounds?.takeIf { it.first == pipFocus }?.second
+                    LaunchedEffect(pipAspect, pipSourceBounds) {
+                        pipStateHolder.setWindow(
+                            PipWindow(pipAspect, pipSourceBounds?.let { pipSourceRect(it, pipAspect) })
                         )
-                        SideEffect { lastPipFocus.value = pipFocus }
+                    }
+
+                    if (isInPipMode) {
                         MeetingPipView(
-                            state = pipFocus?.let { tileStatesByIdentity[it] },
+                            state = pipFocusState,
                             room = room,
                             showsWatchedStream = watchedStreamIdentity != null,
                             isLocalParticipant = pipFocus == localIdentity,
@@ -636,6 +660,11 @@ fun MeetingScreen(
                                             fullscreenChromeVisible = true
                                         },
                                         onOverflowClick = { showInviteSheet = true },
+                                        pipFocusIdentity = pipFocus,
+                                        onPipFocusBounds = { identity, bounds ->
+                                            pipFocusTileBounds =
+                                                if (identity != null && bounds != null) identity to bounds else null
+                                        },
                                         modifier = Modifier
                                             .weight(1f)
                                             .fillMaxWidth()

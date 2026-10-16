@@ -33,6 +33,8 @@ data class ParticipantTileState(
      */
     val screenShare: ScreenShareTrackRef?,
     val isMicOff: Boolean,
+    /** The camera's size as it is published, for a window that shows it to take its shape. */
+    val cameraDimensions: Track.Dimensions? = null,
 )
 
 /**
@@ -76,5 +78,6 @@ private fun Participant.toTileState(
         } else {
             micPublication == null || micPublication.muted
         },
+        cameraDimensions = cameraPublication?.dimensions,
     )
 }
