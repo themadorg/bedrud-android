@@ -13,7 +13,7 @@ For the server, web app, and other platforms, see the [main Bedrud project](http
 
 ---
 
-## Feature
+## Features
 
 - **Video & audio meetings** — WebRTC rooms powered by the [LiveKit Android SDK](https://github.com/livekit/client-sdk-android)
 - **Connect to multiple servers** — add several Bedrud instances and switch between them; each keeps its own login
@@ -33,8 +33,14 @@ For the server, web app, and other platforms, see the [main Bedrud project](http
 - **Meeting sounds** — a chime when someone joins or leaves and a pop when a message arrives, played
   on the call's own audio route
 - **Push to talk & voice sensitivity** — hold-to-talk input mode, a manual voice gate for voice activity, per-person volume, and device noise suppression
+- **Deafen** — silence the whole call in one tap, which mutes your microphone too and puts it back
+  as it was afterwards; everyone else in the room sees that you are deafened
 - **Admin moderation** — kick and ban controls for room hosts
-- **Flexible sign-in** — email/password, guest access, OAuth, and FIDO2 passkeys
+- **Admin panel** — a server's superadmin gets an Admin tab: counts of users, live rooms and people
+  online with the newest sign-ups, finding and banning users, deleting rooms, and turning sign-up
+  and invite-only on or off, with invite tokens to create and delete
+- **Flexible sign-in** — email/password, guest access, OAuth, and FIDO2 passkeys; creating an
+  account where the server allows sign-up, and a reset email for a forgotten password
 - **Localized** — 10 languages with right-to-left (Arabic, Persian) support
 - **Open-source licenses** — Settings › About lists the main projects the app is built on, with
   every other library it ships one tap further, each opening its full license text
