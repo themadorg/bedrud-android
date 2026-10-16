@@ -55,7 +55,9 @@ import com.bedrud.app.core.instance.PublicSettingsState
 import com.bedrud.app.models.GuestLoginRequest
 import com.bedrud.app.ui.components.BedrudButton
 import com.bedrud.app.ui.components.BedrudButtonVariant
+import com.bedrud.app.ui.components.BedrudSnackbarKind
 import com.bedrud.app.ui.components.BedrudTextField
+import com.bedrud.app.ui.components.showMessage
 import com.bedrud.app.ui.theme.BedrudShapeTokens
 import com.bedrud.app.ui.theme.Alpha
 import com.bedrud.app.ui.theme.Dimens
@@ -238,7 +240,7 @@ fun LoginScreen(
         val notice = signInNotice ?: return@LaunchedEffect
         // Consumed only once it has been read out: clearing it first would change this effect's key
         // mid-message, cancelling the very snackbar it was showing.
-        snackbarHostState.showSnackbar(notice)
+        snackbarHostState.showMessage(notice, BedrudSnackbarKind.INFO)
         signInNoticeRelay.consume()
     }
 

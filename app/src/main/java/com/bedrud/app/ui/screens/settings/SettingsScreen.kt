@@ -32,8 +32,10 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import com.bedrud.app.ui.components.BedrudCompactTopBar
 import com.bedrud.app.ui.components.BedrudSnackbarHost
+import com.bedrud.app.ui.components.BedrudSnackbarKind
 import com.bedrud.app.ui.components.BedrudTabScaffoldContentInsets
 import com.bedrud.app.ui.components.CardSectionHeader
+import com.bedrud.app.ui.components.showMessage
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.LocalTextStyle
@@ -374,14 +376,14 @@ fun SettingsContent(
                             onClick = {
                                 when {
                                     !PasswordPolicy.meetsMinLength(newPassword) -> scope.launch {
-                                        snackbarHostState.showSnackbar(passwordTooShortMessage)
+                                        snackbarHostState.showMessage(passwordTooShortMessage, BedrudSnackbarKind.WARNING)
                                     }
                                     newPassword != confirmPassword -> scope.launch {
-                                        snackbarHostState.showSnackbar(passwordMismatchMessage)
+                                        snackbarHostState.showMessage(passwordMismatchMessage, BedrudSnackbarKind.WARNING)
                                     }
                                     else -> scope.launch {
                                         val api = authApi ?: run {
-                                            snackbarHostState.showSnackbar(passwordSaveFailedMessage)
+                                            snackbarHostState.showMessage(passwordSaveFailedMessage, BedrudSnackbarKind.ERROR)
                                             return@launch
                                         }
                                         // Text typed as a current password before the account was
@@ -389,7 +391,7 @@ fun SettingsContent(
                                         val confirmingPassword = if (settingFirstPassword) "" else currentPassword
                                         val changed = apiAction(
                                             passwordSaveFailedMessage,
-                                            { snackbarHostState.showSnackbar(it) }
+                                            { snackbarHostState.showMessage(it, BedrudSnackbarKind.ERROR) }
                                         ) {
                                             api.changePassword(ChangePasswordRequest(confirmingPassword, newPassword))
                                         }
@@ -411,7 +413,7 @@ fun SettingsContent(
                                                 signInAgainNotice,
                                             )
                                             if (signedBackIn) {
-                                                snackbarHostState.showSnackbar(passwordSavedMessage)
+                                                snackbarHostState.showMessage(passwordSavedMessage, BedrudSnackbarKind.SUCCESS)
                                             }
                                         }
                                     }

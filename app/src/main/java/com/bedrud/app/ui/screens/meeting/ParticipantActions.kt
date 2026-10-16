@@ -1,6 +1,8 @@
 package com.bedrud.app.ui.screens.meeting
 
 import androidx.compose.material3.SnackbarHostState
+import com.bedrud.app.ui.components.BedrudSnackbarKind
+import com.bedrud.app.ui.components.showMessage
 import kotlinx.coroutines.launch
 
 /** Fire-and-forget moderation call; a thrown failure surfaces as a snackbar with [fallbackMessage]. */
@@ -15,7 +17,7 @@ internal fun moderate(
             action()
         } catch (e: Exception) {
             // Show the caller's localized fallback rather than the raw (untranslated) exception text.
-            snackbarHostState?.showSnackbar(fallbackMessage)
+            snackbarHostState?.showMessage(fallbackMessage, BedrudSnackbarKind.ERROR)
         }
     }
 }

@@ -19,11 +19,14 @@ import kotlinx.coroutines.flow.asStateFlow
  * meeting screen leaves just as abruptly, and the call may be running with no screen open at all.
  */
 class JoinFailureRelay {
-    private val _message = MutableStateFlow<String?>(null)
-    val message: StateFlow<String?> = _message.asStateFlow()
+    /** What to say, and whether it is a removal rather than a failure, which reads as a warning. */
+    data class Notice(val message: String, val isRemoval: Boolean)
 
-    fun report(message: String) {
-        _message.value = message
+    private val _message = MutableStateFlow<Notice?>(null)
+    val message: StateFlow<Notice?> = _message.asStateFlow()
+
+    fun report(message: String, isRemoval: Boolean = false) {
+        _message.value = Notice(message, isRemoval)
     }
 
     /** Called once the message has been shown, so it isn't shown again. */

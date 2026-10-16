@@ -31,6 +31,8 @@ import com.bedrud.app.R
 import com.bedrud.app.models.Instance
 import com.bedrud.app.ui.components.BedrudScaffoldContentInsets
 import com.bedrud.app.ui.components.BedrudSnackbarHost
+import com.bedrud.app.ui.components.BedrudSnackbarKind
+import com.bedrud.app.ui.components.showMessage
 import com.bedrud.app.ui.theme.Dimens
 
 /**
@@ -131,7 +133,7 @@ internal fun AuthErrorSnackbar(
 ) {
     LaunchedEffect(errorMessage) {
         val message = errorMessage ?: return@LaunchedEffect
-        snackbarHostState.showSnackbar(message)
+        snackbarHostState.showMessage(message, BedrudSnackbarKind.ERROR)
         onShown()
     }
 }

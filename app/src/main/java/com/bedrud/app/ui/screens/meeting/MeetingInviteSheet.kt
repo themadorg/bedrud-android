@@ -53,7 +53,9 @@ import coil.compose.AsyncImage
 import com.bedrud.app.R
 import com.bedrud.app.ui.components.BedrudBottomSheet
 import com.bedrud.app.ui.components.BedrudSheetTitle
+import com.bedrud.app.ui.components.BedrudSnackbarKind
 import com.bedrud.app.ui.components.InitialsAvatar
+import com.bedrud.app.ui.components.showMessage
 import com.bedrud.app.ui.theme.BedrudShapeTokens
 import com.bedrud.app.ui.theme.Dimens
 import com.bedrud.app.ui.theme.typeCentered
@@ -212,7 +214,7 @@ fun MeetingInviteSheet(
                 label = stringResource(R.string.meeting_invite_email),
                 onClick = {
                     shareTo(context, roomLink, packageName = null, email = true) {
-                        scope.launch { snackbarHostState.showSnackbar(appNotInstalledMessage) }
+                        scope.launch { snackbarHostState.showMessage(appNotInstalledMessage, BedrudSnackbarKind.WARNING) }
                     }
                 },
             )
@@ -223,7 +225,7 @@ fun MeetingInviteSheet(
                 label = stringResource(R.string.meeting_invite_telegram),
                 onClick = {
                     shareTo(context, roomLink, TELEGRAM_PACKAGE) {
-                        scope.launch { snackbarHostState.showSnackbar(appNotInstalledMessage) }
+                        scope.launch { snackbarHostState.showMessage(appNotInstalledMessage, BedrudSnackbarKind.WARNING) }
                     }
                 },
             )
@@ -233,7 +235,7 @@ fun MeetingInviteSheet(
                 label = stringResource(R.string.meeting_invite_whatsapp),
                 onClick = {
                     shareTo(context, roomLink, WHATSAPP_PACKAGE) {
-                        scope.launch { snackbarHostState.showSnackbar(appNotInstalledMessage) }
+                        scope.launch { snackbarHostState.showMessage(appNotInstalledMessage, BedrudSnackbarKind.WARNING) }
                     }
                 },
             )

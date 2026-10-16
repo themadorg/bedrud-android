@@ -323,8 +323,19 @@ than standing at full strength beside a greyed-out one.
   `actions` row. A screen pushed over the tabs (Open-source licenses) passes a `navigationIcon`, the
   auto-mirrored back arrow, placed where Material's small top app bar puts one: 4dp from the start
   edge, the title 4dp after it.
-- **`BedrudSnackbarHost`** — Material 3 snackbar with the rounded shape token; used across the auth
-  screens and the rooms dashboard.
+- **`BedrudSnackbarHost`** — Material 3 snackbar on the inverse surface, with `BedrudShapeTokens.snackbar`
+  corners (16dp, as round as the cards it floats over). Every message is shown through
+  `showMessage(message, kind)`, and its `BedrudSnackbarKind` leads it with an icon: information,
+  success, warning or error. Material's snackbar has no leading icon; this adds one, in this one
+  place, because a failure and a confirmation otherwise look identical. The icon is named for a
+  screen reader ("Error", "Success"…), and drawn in the `inverse*` colours of `bedrudColors`: the
+  other theme's tone of each role, as `inversePrimary` is, since the theme's own tone sits too close
+  to the inverse surface (`ThemeTest` holds each at 3:1 or more against it). An error carries a
+  close button. How long a message stays is Material's own rule, kept on purpose: an error held
+  longer also held the spinner of every screen that waits for its message to be put away. Validation and "can't do that here" messages are warnings, not errors: nothing failed. The
+  Rooms tab shows the main screen's messages (a failed join, a removal from a call) in its own host,
+  above its create button, so they queue with its own instead of two showing at once. Used by the
+  sign-in screens, Add server, the rooms dashboard, the main screen, Settings, Admin and the call.
 - **Selectable cards** (e.g. the server chooser) — a `selectableGroup()` of `Surface`s marked
   `selectable(role = RadioButton)`, selection shown by a radio **and** a primary border. The radio
   keeps to the card's top-end corner, as far from the top as from the side; the title and badge

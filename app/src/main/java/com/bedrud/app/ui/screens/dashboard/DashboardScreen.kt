@@ -146,7 +146,9 @@ import com.bedrud.app.ui.components.BedrudButtonVariant
 import com.bedrud.app.ui.components.BedrudCompactTopBar
 import com.bedrud.app.ui.components.BedrudOutlinedCard
 import com.bedrud.app.ui.components.BedrudSnackbarHost
+import com.bedrud.app.ui.components.BedrudSnackbarKind
 import com.bedrud.app.ui.components.BedrudTextField
+import com.bedrud.app.ui.components.showMessage
 import com.bedrud.app.ui.components.BedrudTabScaffoldContentInsets
 import com.bedrud.app.ui.components.ConfirmDialog
 import com.bedrud.app.ui.screens.instance.InstanceSwitcherSheet
@@ -206,6 +208,9 @@ fun DashboardContent(
     onNavigateToAddInstance: () -> Unit,
     instanceManager: InstanceManager = koinInject(),
     recentRoomsStore: RecentRoomsStore = koinInject(),
+    // The main screen passes its own, so that its messages and this screen's queue one after
+    // another in one place, above the create button, instead of two showing at once.
+    snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
 ) {
     val roomApi = instanceManager.roomApi.collectAsState().value ?: return
     val context = LocalContext.current
@@ -254,7 +259,6 @@ fun DashboardContent(
             CallService.activeInstanceId == activeInstanceId
 
     val scope = rememberCoroutineScope()
-    val snackbarHostState = remember { SnackbarHostState() }
 
     var rooms by remember { mutableStateOf<List<UserRoomResponse>>(emptyList()) }
     var isLoading by remember { mutableStateOf(true) }
@@ -359,7 +363,7 @@ fun DashboardContent(
     fun loadRooms() {
         scope.launch {
             isLoading = true
-            fetchRooms()?.let { snackbarHostState.showSnackbar(it) }
+            fetchRooms()?.let { snackbarHostState.showMessage(it, BedrudSnackbarKind.ERROR) }
             isLoading = false
         }
     }
@@ -368,7 +372,7 @@ fun DashboardContent(
         nowTickMs = System.currentTimeMillis()
         scope.launch {
             isRefreshing = true
-            fetchRooms()?.let { snackbarHostState.showSnackbar(it) }
+            fetchRooms()?.let { snackbarHostState.showMessage(it, BedrudSnackbarKind.ERROR) }
             isRefreshing = false
         }
     }
@@ -481,7 +485,7 @@ fun DashboardContent(
                 scope.launch {
                     val deleted = apiAction(
                         deleteRoomFailedMsg,
-                        { snackbarHostState.showSnackbar(it) },
+                        { snackbarHostState.showMessage(it, BedrudSnackbarKind.ERROR) },
                         classifyError = { it.toUserMessage(context) },
                     ) {
                         roomApi.deleteRoom(deleting.id)
@@ -517,7 +521,7 @@ fun DashboardContent(
                     isSavingSettings = true
                     val saved = apiAction(
                         saveSettingsFailedMsg,
-                        { snackbarHostState.showSnackbar(it) },
+                        { snackbarHostState.showMessage(it, BedrudSnackbarKind.ERROR) },
                         classifyError = { it.toUserMessage(context) },
                     ) {
                         roomApi.updateRoomSettings(
@@ -535,7 +539,7 @@ fun DashboardContent(
                         }
                         roomToEdit = null
                         loadRooms()
-                        snackbarHostState.showSnackbar(settingsSavedMsg)
+                        snackbarHostState.showMessage(settingsSavedMsg, BedrudSnackbarKind.SUCCESS)
                     }
                 }
             }
@@ -730,10 +734,10 @@ fun DashboardContent(
                                     roomName.isNullOrBlank() -> {
                                         // Input didn't resolve to a room (e.g. a URL with no /m/ or /c/):
                                         // tell the user instead of the button appearing to do nothing.
-                                        scope.launch { snackbarHostState.showSnackbar(invalidJoinInputMessage) }
+                                        scope.launch { snackbarHostState.showMessage(invalidJoinInputMessage, BedrudSnackbarKind.WARNING) }
                                     }
                                     parsedUrl != null && targetInstance == null -> {
-                                        scope.launch { snackbarHostState.showSnackbar(unknownServerJoinMessage) }
+                                        scope.launch { snackbarHostState.showMessage(unknownServerJoinMessage, BedrudSnackbarKind.WARNING) }
                                     }
                                     targetInstance != null && targetInstance.id != activeInstanceId -> {
                                         // Switching servers is a bigger context change than a same-server

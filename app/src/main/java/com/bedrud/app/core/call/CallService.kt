@@ -140,7 +140,7 @@ class CallService : Service() {
             // Said where the user lands, as a failed join is: the meeting screen leaves the moment
             // the call ends, and hanging up resets the removal flag this reads.
             if (rm.wasKicked.value) {
-                joinFailureRelay.report(getString(R.string.meeting_state_kickedMessage))
+                joinFailureRelay.report(getString(R.string.meeting_state_kickedMessage), isRemoval = true)
             }
             hangUp()
         }

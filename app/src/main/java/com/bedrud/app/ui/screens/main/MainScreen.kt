@@ -28,7 +28,9 @@ import com.bedrud.app.core.api.refreshCurrentUser
 import com.bedrud.app.core.instance.InstanceManager
 import com.bedrud.app.core.rooms.JoinFailureRelay
 import com.bedrud.app.ui.components.BedrudSnackbarHost
+import com.bedrud.app.ui.components.BedrudSnackbarKind
 import com.bedrud.app.ui.components.BottomNavTab
+import com.bedrud.app.ui.components.showMessage
 import com.bedrud.app.ui.components.BedrudBottomNavigationBar
 import com.bedrud.app.ui.screens.admin.AdminScreen
 import com.bedrud.app.ui.screens.dashboard.DashboardContent
@@ -38,6 +40,7 @@ import com.bedrud.app.ui.screens.settings.SettingsStore
 import org.koin.compose.koinInject
 
 // Bottom-nav tabs are built in a fixed order: Rooms, Profile, Settings, (Admin).
+private const val ROOMS_TAB_INDEX = 0
 private const val PROFILE_TAB_INDEX = 1
 
 @Composable
@@ -110,21 +113,26 @@ fun MainScreen(
     }
 
     // Why a join failed, said here rather than on the meeting screen that discovered it — see
-    // JoinFailureRelay. Hosted by the shell rather than by the Rooms tab because a room opened
+    // JoinFailureRelay. Owned by the shell rather than by the Rooms tab because a room opened
     // from a link can fail while any tab is showing, and the message must not depend on which.
     val snackbarHostState = remember { SnackbarHostState() }
     val joinFailure by joinFailureRelay.message.collectAsState()
     LaunchedEffect(joinFailure) {
-        val message = joinFailure ?: return@LaunchedEffect
+        val notice = joinFailure ?: return@LaunchedEffect
         // Consumed only once it has been read out: clearing it first would change this effect's key
         // mid-message, cancelling the very snackbar it was showing.
-        snackbarHostState.showSnackbar(message)
+        snackbarHostState.showMessage(
+            notice.message,
+            if (notice.isRemoval) BedrudSnackbarKind.WARNING else BedrudSnackbarKind.ERROR,
+        )
         joinFailureRelay.consume()
     }
 
     Scaffold(
         contentWindowInsets = BedrudMainScaffoldContentInsets,
-        snackbarHost = { BedrudSnackbarHost(snackbarHostState) },
+        // The Rooms tab shows these messages itself, in its own host above its create button, so
+        // they queue with its own instead of a second snackbar appearing on top of the first.
+        snackbarHost = { if (selectedTab != ROOMS_TAB_INDEX) BedrudSnackbarHost(snackbarHostState) },
         bottomBar = {
             BedrudBottomNavigationBar(
                 tabs = tabs,
@@ -136,13 +144,14 @@ fun MainScreen(
         // Only reserve space for the bottom nav — each tab's top bar handles the status bar once.
         val contentPadding = PaddingValues(bottom = padding.calculateBottomPadding())
         when (selectedTab) {
-            0 -> DashboardContent(
+            ROOMS_TAB_INDEX -> DashboardContent(
                 modifier = Modifier.padding(contentPadding),
                 onJoinRoom = onJoinRoom,
                 // Rooms=0, Profile=1 — the header avatar is a shortcut to the Profile tab.
                 onOpenProfile = { selectedTab = PROFILE_TAB_INDEX },
                 onNavigateToAddInstance = onNavigateToAddInstance,
                 instanceManager = instanceManager,
+                snackbarHostState = snackbarHostState,
             )
             1 -> ProfileContent(
                 modifier = Modifier.padding(contentPadding),

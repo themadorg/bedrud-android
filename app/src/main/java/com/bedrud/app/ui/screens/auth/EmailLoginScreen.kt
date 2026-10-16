@@ -44,7 +44,9 @@ import com.bedrud.app.ui.components.BedrudBottomSheet
 import com.bedrud.app.ui.components.BedrudButton
 import com.bedrud.app.ui.components.BedrudButtonVariant
 import com.bedrud.app.ui.components.BedrudPasswordField
+import com.bedrud.app.ui.components.BedrudSnackbarKind
 import com.bedrud.app.ui.components.BedrudTextField
+import com.bedrud.app.ui.components.showMessage
 import com.bedrud.app.ui.theme.BedrudShapeTokens
 import com.bedrud.app.ui.theme.Dimens
 import com.bedrud.app.ui.theme.typeCentered
@@ -93,8 +95,9 @@ fun EmailLoginScreen(
     LaunchedEffect(errorMessage) {
         val message = errorMessage ?: return@LaunchedEffect
         val offerReset = message == loginFailedMessage
-        val result = snackbarHostState.showSnackbar(
+        val result = snackbarHostState.showMessage(
             message = message,
+            kind = BedrudSnackbarKind.ERROR,
             actionLabel = if (offerReset) resetActionLabel else null,
             duration = SnackbarDuration.Short
         )
@@ -108,7 +111,7 @@ fun EmailLoginScreen(
     val resetSentMessage = resetSentEmail?.let { stringResource(R.string.auth_forgot_sent, it) }
     LaunchedEffect(resetSentMessage) {
         val message = resetSentMessage ?: return@LaunchedEffect
-        snackbarHostState.showSnackbar(message)
+        snackbarHostState.showMessage(message, BedrudSnackbarKind.SUCCESS)
         resetSentEmail = null
     }
 

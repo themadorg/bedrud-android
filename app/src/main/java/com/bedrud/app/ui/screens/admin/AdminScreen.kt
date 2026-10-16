@@ -35,7 +35,9 @@ import androidx.compose.material3.CircularProgressIndicator
 import com.bedrud.app.ui.components.BedrudButton
 import com.bedrud.app.ui.components.BedrudOutlinedCard
 import com.bedrud.app.ui.components.BedrudSnackbarHost
+import com.bedrud.app.ui.components.BedrudSnackbarKind
 import com.bedrud.app.ui.components.BedrudTextField
+import com.bedrud.app.ui.components.showMessage
 import com.bedrud.app.ui.util.setPlainText
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
@@ -212,7 +214,7 @@ private fun AdminOverviewContent(
         // Reported only once the spinner is gone: showSnackbar suspends until the message is
         // dismissed, so reporting first would hold the tab on its spinner for the message's
         // whole time on screen.
-        failure?.let { snackbarHostState.showSnackbar(it) }
+        failure?.let { snackbarHostState.showMessage(it, BedrudSnackbarKind.ERROR) }
     }
 
     // Keyed on Unit like the sibling tabs — never on the Retrofit client: its dynamic proxy is
@@ -382,7 +384,7 @@ private fun AdminUsersContent(
             adminApi.listUsers()
         }?.users ?: emptyList()
         isLoading = false
-        failure?.let { snackbarHostState.showSnackbar(it) }
+        failure?.let { snackbarHostState.showMessage(it, BedrudSnackbarKind.ERROR) }
     }
 
     val filtered = remember(users, search) {
@@ -396,7 +398,7 @@ private fun AdminUsersContent(
             // server had refused it.
             val updated = apiAction(
                 updateUserFailedMessage,
-                { snackbarHostState.showSnackbar(it) },
+                { snackbarHostState.showMessage(it, BedrudSnackbarKind.ERROR) },
                 { it.toUserMessage(context) },
             ) {
                 adminApi.setUserStatus(user.id, mapOf("active" to isActive))
@@ -532,7 +534,7 @@ private fun AdminRoomsContent(
             adminApi.listRooms()
         }?.rooms ?: emptyList()
         isLoading = false
-        failure?.let { snackbarHostState.showSnackbar(it) }
+        failure?.let { snackbarHostState.showMessage(it, BedrudSnackbarKind.ERROR) }
     }
 
     // The dashboard's own delete dialog: the same room, the same irreversible delete.
@@ -549,7 +551,7 @@ private fun AdminRoomsContent(
                     // is rather than hiding a room that still exists.
                     val deleted = apiAction(
                         deleteRoomFailedMessage,
-                        { snackbarHostState.showSnackbar(it) },
+                        { snackbarHostState.showMessage(it, BedrudSnackbarKind.ERROR) },
                         { it.toUserMessage(context) },
                     ) {
                         adminApi.deleteRoom(room.id)
@@ -666,7 +668,7 @@ private fun AdminSettingsContent(
             adminApi.listInviteTokens()
         }?.tokens ?: emptyList()
         isLoading = false
-        failure?.let { snackbarHostState.showSnackbar(it) }
+        failure?.let { snackbarHostState.showMessage(it, BedrudSnackbarKind.ERROR) }
     }
 
     // A deleted token stops working for whoever it was sent to, so it asks first.
@@ -681,7 +683,7 @@ private fun AdminSettingsContent(
                 scope.launch {
                     val removed = apiAction(
                         deleteTokenFailedMessage,
-                        { snackbarHostState.showSnackbar(it) },
+                        { snackbarHostState.showMessage(it, BedrudSnackbarKind.ERROR) },
                         { it.toUserMessage(context) },
                     ) {
                         adminApi.deleteInviteToken(token.id)
@@ -739,7 +741,7 @@ private fun AdminSettingsContent(
                                             // on screen as though it had been accepted.
                                             val saved = apiAction(
                                                 saveSettingsFailedMessage,
-                                                { snackbarHostState.showSnackbar(it) },
+                                                { snackbarHostState.showMessage(it, BedrudSnackbarKind.ERROR) },
                                                 { it.toUserMessage(context) },
                                             ) {
                                                 adminApi.updateSettings(updated)
@@ -766,7 +768,7 @@ private fun AdminSettingsContent(
                                             val updated = s.copy(tokenRegistrationOnly = newVal)
                                             val saved = apiAction(
                                                 saveSettingsFailedMessage,
-                                                { snackbarHostState.showSnackbar(it) },
+                                                { snackbarHostState.showMessage(it, BedrudSnackbarKind.ERROR) },
                                                 { it.toUserMessage(context) },
                                             ) {
                                                 adminApi.updateSettings(updated)
@@ -842,7 +844,7 @@ private fun AdminSettingsContent(
                                     )
                                     val created = apiBody(
                                         createTokenFailedMessage,
-                                        { snackbarHostState.showSnackbar(it) },
+                                        { snackbarHostState.showMessage(it, BedrudSnackbarKind.ERROR) },
                                         { it.toUserMessage(context) },
                                     ) {
                                         adminApi.createInviteToken(body)

@@ -22,7 +22,9 @@ import com.bedrud.app.ui.components.BedrudBottomSheet
 import com.bedrud.app.ui.components.BedrudButton
 import com.bedrud.app.ui.components.BedrudButtonVariant
 import com.bedrud.app.ui.components.BedrudSheetTitle
+import com.bedrud.app.ui.components.BedrudSnackbarKind
 import com.bedrud.app.ui.components.RoomSettingsForm
+import com.bedrud.app.ui.components.showMessage
 import com.bedrud.app.ui.components.withFormEdits
 import com.bedrud.app.ui.theme.Dimens
 import kotlinx.coroutines.launch
@@ -81,7 +83,7 @@ fun MeetingRoomSettingsSheet(
                     try {
                         val saved = apiAction(
                             saveFailedMessage,
-                            { snackbarHostState.showSnackbar(it) },
+                            { snackbarHostState.showMessage(it, BedrudSnackbarKind.ERROR) },
                             classifyError = { it.toUserMessage(context) },
                         ) {
                             roomApi.updateRoomSettings(

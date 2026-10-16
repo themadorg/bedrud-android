@@ -72,7 +72,9 @@ import com.bedrud.app.ui.components.BedrudButton
 import com.bedrud.app.ui.components.BedrudButtonVariant
 import com.bedrud.app.ui.components.BedrudScaffoldContentInsets
 import com.bedrud.app.ui.components.BedrudSnackbarHost
+import com.bedrud.app.ui.components.BedrudSnackbarKind
 import com.bedrud.app.ui.components.ConfirmDialog
+import com.bedrud.app.ui.components.showMessage
 import com.bedrud.app.ui.theme.BedrudShapeTokens
 import com.bedrud.app.ui.theme.Dimens
 import com.bedrud.app.ui.theme.Motion
@@ -295,7 +297,7 @@ fun MeetingScreen(
                 val started = roomManager.startScreenShare(result.data!!)
                 if (!started) {
                     val message = roomManager.error.value ?: screenShareFailedMessage
-                    snackbarHostState.showSnackbar(message)
+                    snackbarHostState.showMessage(message, BedrudSnackbarKind.ERROR)
                 }
             }
         }
@@ -328,7 +330,7 @@ fun MeetingScreen(
                 pending()
             } else {
                 scope.launch {
-                    snackbarHostState.showSnackbar(permissionsRequiredMessage)
+                    snackbarHostState.showMessage(permissionsRequiredMessage, BedrudSnackbarKind.WARNING)
                 }
             }
             return@rememberLauncherForActivityResult
@@ -340,7 +342,7 @@ fun MeetingScreen(
             startMeetingCall(roomInfo!!)
         } else if (!mediaGranted) {
             scope.launch {
-                snackbarHostState.showSnackbar(permissionsRequiredMessage)
+                snackbarHostState.showMessage(permissionsRequiredMessage, BedrudSnackbarKind.WARNING)
             }
             isJoining = false
         }
@@ -428,7 +430,7 @@ fun MeetingScreen(
     // Show error
     LaunchedEffect(error) {
         error?.let {
-            snackbarHostState.showSnackbar(it)
+            snackbarHostState.showMessage(it, BedrudSnackbarKind.ERROR)
         }
     }
 
@@ -729,7 +731,7 @@ fun MeetingScreen(
                             val copyRoomLink = {
                                 scope.launch {
                                     clipboard.setPlainText(clipLabel, roomLink)
-                                    snackbarHostState.showSnackbar(linkCopiedMessage)
+                                    snackbarHostState.showMessage(linkCopiedMessage, BedrudSnackbarKind.SUCCESS)
                                 }
                                 Unit
                             }
@@ -986,10 +988,10 @@ fun MeetingScreen(
                                             val ended = apiAction(
                                                 endForEveryoneFailedMessage,
                                                 { message ->
-                                                    val choice = snackbarHostState.showSnackbar(
+                                                    val choice = snackbarHostState.showMessage(
                                                         message = message,
+                                                        kind = BedrudSnackbarKind.ERROR,
                                                         actionLabel = leaveAnywayLabel,
-                                                        withDismissAction = true,
                                                     )
                                                     if (choice == SnackbarResult.ActionPerformed) {
                                                         CallService.stop(context)
@@ -1178,7 +1180,7 @@ fun MeetingScreen(
                                     onClick = {
                                         scope.launch {
                                             clipboard.setPlainText(clipLabel, connectionError)
-                                            snackbarHostState.showSnackbar(errorCopiedMessage)
+                                            snackbarHostState.showMessage(errorCopiedMessage, BedrudSnackbarKind.SUCCESS)
                                         }
                                     },
                                 ) {
