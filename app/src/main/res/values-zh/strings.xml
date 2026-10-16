@@ -122,9 +122,7 @@
   <string name="meeting_panel_participants">参与者 (<xliff:g id="count" example="5">%1$d</xliff:g>)</string>
   <string name="meeting_panel_chat">聊天</string>
   <string name="meeting_label_you">你</string>
-  <string name="meeting_state_kickedTitle">您已被移出</string>
   <string name="meeting_state_kickedMessage">管理员已将您移出此会议。</string>
-  <string name="meeting_button_backToDashboard">返回仪表盘</string>
   <string name="meeting_chat_uploading">上传中…</string>
   <string name="meeting_chat_placeholder">输入消息…</string>
   <string name="meeting_chat_sharedImage">分享的图片</string>

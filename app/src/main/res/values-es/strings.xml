@@ -124,9 +124,7 @@
   <string name="meeting_panel_participants">Participantes (<xliff:g id="count" example="5">%1$d</xliff:g>)</string>
   <string name="meeting_panel_chat">Chat</string>
   <string name="meeting_label_you">tú</string>
-  <string name="meeting_state_kickedTitle">Has sido eliminado</string>
   <string name="meeting_state_kickedMessage">Un moderador te ha eliminado de esta reunión.</string>
-  <string name="meeting_button_backToDashboard">Volver al panel</string>
   <string name="meeting_chat_uploading">Subiendo…</string>
   <string name="meeting_chat_placeholder">Escribe un mensaje…</string>
   <string name="meeting_chat_sharedImage">Imagen compartida</string>

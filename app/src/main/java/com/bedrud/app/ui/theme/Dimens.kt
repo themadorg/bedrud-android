@@ -126,9 +126,8 @@ object Dimens {
     val meetingSliderThumb = 20.dp       // compact round slider thumb (in-call sliders)
     val meetingSliderTrack = 4.dp        // compact slider track height
 
-    // ── Meeting: connection-failed and kicked states ──
-    val meetingStateIcon = 72.dp             // the single large icon these full-screen states lead with
-    val meetingStatePadding = 32.dp          // gutter for their centred explanatory text
+    // ── Meeting: connection-failed state ──
+    val meetingStatePadding = 32.dp          // gutter for its centred explanatory text
     val meetingErrorDetailMaxHeight = 140.dp // raw server error scrolls past this rather than growing
 
     // ── Meeting: chat ──

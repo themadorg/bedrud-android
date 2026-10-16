@@ -27,7 +27,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Badge
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
@@ -187,7 +186,6 @@ fun MeetingScreen(
     val isDeafened by roomManager.isDeafened.collectAsState()
     val deafenedIdentities by roomManager.deafenedIdentities.collectAsState()
     val error by roomManager.error.collectAsState()
-    val wasKicked by roomManager.wasKicked.collectAsState()
 
     val participantVersion by roomManager.participantVersion.collectAsState()
     val participantNames by roomManager.participantNames.collectAsState()
@@ -432,15 +430,6 @@ fun MeetingScreen(
         error?.let {
             snackbarHostState.showSnackbar(it)
         }
-    }
-
-    // "You were removed" overlay shown after kick
-    if (wasKicked) {
-        KickedScreen(onBack = {
-            roomManager.disconnect()
-            onLeave()
-        })
-        return
     }
 
     Scaffold(
@@ -1217,47 +1206,6 @@ fun MeetingScreen(
                     }
                 }
             }
-        }
-    }
-}
-
-// ── Kicked screen ─────────────────────────────────────────────────────────────
-
-@Composable
-private fun KickedScreen(onBack: () -> Unit) {
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background),
-        contentAlignment = Alignment.Center
-    ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Icon(
-                Icons.Default.Badge,
-                contentDescription = null,
-                modifier = Modifier.size(Dimens.meetingStateIcon),
-                tint = MaterialTheme.colorScheme.error
-            )
-            Spacer(modifier = Modifier.height(Dimens.space16))
-            Text(
-                text = stringResource(R.string.meeting_state_kickedTitle),
-                style = MaterialTheme.typography.headlineSmall,
-                color = MaterialTheme.colorScheme.onBackground
-            )
-            Spacer(modifier = Modifier.height(Dimens.space8))
-            Text(
-                text = stringResource(R.string.meeting_state_kickedMessage),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.padding(horizontal = Dimens.meetingStatePadding)
-            )
-            Spacer(modifier = Modifier.height(Dimens.space24))
-            BedrudButton(
-                text = stringResource(R.string.meeting_button_backToDashboard),
-                variant = BedrudButtonVariant.TONAL,
-                onClick = onBack,
-            )
         }
     }
 }
