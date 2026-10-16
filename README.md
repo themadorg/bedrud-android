@@ -1,217 +1,107 @@
+<div align="center">
+
+<img src="docs/images/icon.svg" width="88" height="88" alt="">
+
 # Bedrud for Android
 
-The official Android client for **Bedrud** — a self-hostable, LiveKit-powered video meeting platform.
+The Android app for [Bedrud](https://github.com/themadorg/bedrud), the self-hosted video meeting platform.
 
-This app is a pure client. It doesn't run a server; you point it at one or more Bedrud
-server instances (`https://your-server/api`) and it handles auth, rooms, and live meetings.
-For the server, web app, and other platforms, see the [main Bedrud project](https://github.com/themadorg/bedrud).
+[![Download the latest APK](https://img.shields.io/badge/download-APK-E11D48)](https://github.com/themadorg/bedrud-android/releases/latest)
+[![Android 9 or newer](https://img.shields.io/badge/Android-9%2B-3DDC84?logo=android&logoColor=white)](#download)
+[![License: Apache 2.0](https://img.shields.io/badge/license-Apache%202.0-blue)](LICENSE)
 
-[![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
-[![Android](https://img.shields.io/badge/Android-API%2028+-3DDC84?logo=android&logoColor=white)](#requirements)
-[![Kotlin](https://img.shields.io/badge/Kotlin-7F52FF?logo=kotlin&logoColor=white)](https://kotlinlang.org)
-[![Compose](https://img.shields.io/badge/Jetpack%20Compose-Material%203-4285F4?logo=jetpackcompose&logoColor=white)](https://developer.android.com/jetpack/compose)
+[bedrud.org](https://bedrud.org/en/) ·
+[Releases](https://github.com/themadorg/bedrud-android/releases) ·
+[Report a bug](https://github.com/themadorg/bedrud-android/issues)
 
----
+<img src="docs/images/screenshot-rooms.png" width="23%" alt="A server's rooms, each with when it was last used">
+<img src="docs/images/screenshot-call.png" width="23%" alt="A call with four people, two of them on camera">
+<img src="docs/images/screenshot-chat.png" width="23%" alt="The chat in a call, with reactions and a poll">
+<img src="docs/images/screenshot-server.png" width="23%" alt="Choosing a server on first launch">
+
+</div>
+
+Bedrud is a video meeting platform you run on your own server. This app connects to any Bedrud
+server, yours or the official one at bedrud.xyz, and keeps several side by side, each with its own
+sign-in.
 
 ## Features
 
-- **Video & audio meetings** — WebRTC rooms powered by the [LiveKit Android SDK](https://github.com/livekit/client-sdk-android)
-- **Start a room again** — a room ends soon after everyone leaves; opening one of your own ended
-  rooms offers to start it again, with the same link and settings
-- **Connect to multiple servers** — add several Bedrud instances and switch between them; each keeps its own login
-- **Remove a server** — Edit in the server switcher removes a saved server, signing out of it and forgetting its recent rooms
-- **Add a server by QR** — scan a Bedrud server's QR code to fill in its URL instead of typing it
-- **Meetings as real calls** — joining starts a self-managed telecom call, so meetings get proper audio routing, a call notification with mute/hangup, and survive backgrounding
-- **Screen off at your ear** — with the call on the earpiece, covering the proximity sensor blanks
-  the screen and ignores touches, so a cheek cannot press anything
-- **Picture-in-Picture** — keep the meeting visible while using other apps, showing whoever is speaking, with mute and hang-up controls on the window
-- **Screen sharing** — several people can present at once, and watching a stream is opt-in per viewer
-- **In-meeting chat** over the LiveKit data channel — messages grouped by sender, emoji reactions
-  with a breakdown of who reacted, tappable links, copying or sharing a message to any other app,
-  polls to vote in, and image sharing with any received picture savable to the gallery; a room's
-  owner can switch chat off for it from the room's settings, on the dashboard or during the call.
-  A link to a room on any server you have added switches the call to that room, once you confirm
-  leaving this one
-- **Meeting sounds** — a chime when someone joins or leaves and a pop when a message arrives, played
-  on the call's own audio route
-- **Push to talk & voice sensitivity** — hold-to-talk input mode, a manual voice gate for voice activity, per-person volume, and device noise suppression
-- **Deafen** — silence the whole call in one tap, which mutes your microphone too and puts it back
-  as it was afterwards; everyone else in the room sees that you are deafened
-- **Admin moderation** — kick and ban controls for room hosts
-- **Admin panel** — a server's superadmin gets an Admin tab: counts of users, live rooms and people
-  online with the newest sign-ups, finding and banning users, deleting rooms, and turning sign-up
-  and invite-only on or off, with invite tokens to create and delete
-- **Flexible sign-in** — email/password, guest access, OAuth, and FIDO2 passkeys; creating an
-  account where the server allows sign-up, and a reset email for a forgotten password
-- **Localized** — 10 languages with right-to-left (Arabic, Persian) support
-- **Open-source licenses** — Settings › About lists the main projects the app is built on, with
-  every other library it ships one tap further, each opening its full license text
+### Calls
 
-## Requirements
+- Video and audio calls over [LiveKit](https://livekit.io)
+- Calls run as phone calls: they keep going in the background, offer mute and hang-up in the
+  notification, and play through the earpiece, speaker, a wired headset or Bluetooth
+- Picture-in-picture that shows whoever is speaking, with mute and hang-up on the window
+- Screen sharing, with several people presenting at once and each viewer choosing what to watch
+- Push to talk, an adjustable voice gate, per-person volume and noise suppression
+- Deafen, which silences the whole call in one tap
+- On the earpiece, the screen turns off while the phone is at your ear
+- A sound when someone joins or leaves, and when a message arrives
+- Your own rooms can be started again after their call ends, under the same link
 
-- Android 9 (API 28) or newer
-- One or more reachable Bedrud server instances
+### Chat
 
-## Getting started (as a user)
+- Messages, emoji reactions, polls and images, during the call
+- Copy or share any message, and save a received image to the gallery
+- A link to a room on one of your servers takes you there, once you confirm leaving this call
+- A room's owner can turn chat off for it
 
-1. Install the app (build it yourself — see below — or grab a release APK).
-2. On first launch, **choose a server** — continue with the default public server, or enter your own
-   Bedrud server URL. You can add more servers and switch between them later.
-3. Sign in (or join as a guest), then create or join a room.
+### Servers and accounts
 
-## Building from source
+- Add a server by typing its address or scanning its QR code, and switch between servers from the
+  rooms screen
+- Remove a server, along with its saved sign-in and recent rooms
+- Sign in with email and password, a passkey, OAuth, or as a guest; sign up and reset a forgotten
+  password where the server allows it
+- Room hosts can remove or ban people from a call
+- A server's superadmin gets an Admin tab: users, rooms, people online, bans, and the server's
+  sign-up and invite settings
 
-You'll need the **Android SDK** and **JDK 17**. Android Studio (latest stable) is the
-easiest path — open the project and let it sync.
+### Everything else
 
-From the command line:
+- 10 languages, with right-to-left layouts for Arabic and Persian
+- Light, dark, or the system's theme
+- Sign-in tokens are encrypted with a key held in the Android Keystore
+- Settings › About lists every open-source library the app ships, with its license
+
+## Download
+
+Get the APK from the [latest release](https://github.com/themadorg/bedrud-android/releases/latest).
+`bedrud-arm64-v8a.apk` fits most current phones; if you are not sure, take
+`bedrud-universal.apk`, which runs on any. The app needs Android 9 or newer.
+
+On first launch, pick the official server or enter the address of your own.
+
+## Run your own server
+
+The server is a single binary holding the web app, the API and the LiveKit media server. How to
+install it is in the [main Bedrud repository](https://github.com/themadorg/bedrud) and its
+[documentation](https://bedrud.org/en/docs/).
+
+## Build from source
+
+You need JDK 17 and the Android SDK; [Android Studio](https://developer.android.com/studio) brings
+both.
 
 ```bash
-# Debug APK
+git clone https://github.com/themadorg/bedrud-android.git
+cd bedrud-android
 ./gradlew assembleDebug
-
-# Release APK (requires a keystore, see below)
-./gradlew assembleRelease
-
-# Run unit tests
-./gradlew test
 ```
 
-Debug APKs land in `app/build/outputs/apk/`. Builds are split per ABI
-(`arm64-v8a`, `armeabi-v7a`, `x86_64`) with a universal APK also produced.
+[CONTRIBUTING.md](CONTRIBUTING.md) covers the tests, the `make` shortcuts, build options, release
+builds and how a release is cut.
 
-### Make targets
+## Contributing
 
-A root `Makefile` wraps the commands above, plus the device, CI-parity, and release
-steps. It only launches `gradlew`, `adb`, `git` and `gh` — nothing is reimplemented, so
-the Gradle commands stay valid if you prefer them.
+Bug reports and pull requests are welcome. Start with [CONTRIBUTING.md](CONTRIBUTING.md);
+[ARCHITECTURE.md](ARCHITECTURE.md) maps how the app fits together, [DESIGN.md](DESIGN.md) describes
+its design system, and [AGENTS.md](AGENTS.md) holds the conventions in detail.
 
-```bash
-make help      # every target, grouped
-make doctor    # check JDK / SDK / adb / gh, and whether signing is configured
-
-make build           # debug APKs
-make build-dev       # dev APKs — install side by side with the real app
-make build-release   # release APKs
-
-make install         # build + install debug   (also: install-dev, uninstall, run)
-make logcat          # tail logcat for this app only
-
-make check           # lint + unit tests — exactly what CI gates a PR on
-make coverage        # unit tests, then a report of the lines they reached
-make device-test     # instrumented tests on an API 36 emulator Gradle runs itself, as CI does
-make clean
-```
-
-Builds accept `SERVER=<host>` as a shorthand for `-PdefaultServerHost` (see below), e.g.
-`make build-dev SERVER=staging.example.com`.
-
-Releases are cut from git tags — there is no version number stored in the repo (see
-[Versioning](#versioning)):
-
-```bash
-make version                     # current tag, next patch/minor/major, release state
-make tag-patch                   # create the next tag locally (also: tag-minor, tag-major)
-make tag-push                    # push it
-make release-beta   TAG=1.3.1    # dispatch the signed release workflow for that tag
-make release-stable TAG=1.3.1    # …or promote it to stable
-make release-status              # recent release runs
-```
-
-On Windows, run these from Git Bash or WSL. `make` isn't bundled with Git for Windows —
-install it with `winget install ezwinports.make` or `scoop install make`.
-
-### Versioning
-
-`versionName` and `versionCode` are not stored in the repo. `versionCode` comes from the
-CI run number and `versionName` from the tag the release workflow was dispatched against,
-both passed to Gradle as `-P` flags (see `app/build.gradle.kts`). So the git tag is the
-single source of truth, and nothing needs a manual bump — `make tag-patch` and friends
-create tags, they don't edit files.
-
-Building and signing a release happens only in `.github/workflows/release.yml`, which is
-dispatched manually against a tag, gated on lint and unit tests passing for that exact
-commit, and on approval from the `beta-signing` / `production-signing` environments. The
-`make release-*` targets start that run; they never sign anything locally.
-
-### Default server host
-
-The Add Instance screen pre-fills `bedrud.xyz` as the server host. To ship a build that
-defaults to a different instance (for example a staging or self-hosted deployment), pass
-`-PdefaultServerHost` at build time — no code changes needed:
-
-```bash
-./gradlew assembleRelease -PdefaultServerHost=meet.example.com
-```
-
-The value is baked into `BuildConfig.DEFAULT_SERVER_HOST`; when the flag is omitted, builds
-fall back to `bedrud.xyz`. Users can still change the host on the Add Instance screen either way.
-
-### Release signing (optional)
-
-For a signed release build, create a `keystore.properties` file in the project root:
-
-```properties
-storeFile=/path/to/your.keystore
-storePassword=...
-keyAlias=...
-keyPassword=...
-```
-
-If the file is absent, release builds are simply left unsigned.
-
-## Architecture
-
-Single-module Kotlin app (`com.bedrud.app`) built with Jetpack Compose and Material 3.
-There are no ViewModels — screen state lives in `MutableStateFlow` on manager classes and
-is collected with `collectAsState()`.
-
-| Concern        | Choice                                                        |
-|----------------|---------------------------------------------------------------|
-| UI             | Jetpack Compose + Material 3                                  |
-| DI             | Koin                                                          |
-| Networking     | Retrofit + OkHttp (Gson)                                      |
-| Realtime media | LiveKit Android SDK                                           |
-| Calls          | Self-managed telecom `ConnectionService` (foreground service) |
-| Auth storage   | `EncryptedPrefs`, sealed by an Android Keystore AES-GCM key, per instance |
-| Passkeys       | AndroidX Credential Manager + Play Services FIDO              |
-| Images         | Coil                                                          |
-
-**Multi-instance is the spine of the app.** `InstanceManager` rebuilds the auth manager,
-Retrofit APIs, and the LiveKit `RoomManager` for whichever server is active, and the UI
-reacts to the swap. This is why every login, room list, and meeting is scoped to a server.
-
-Source layout (`app/src/main/java/com/bedrud/app/`):
-
-```
-core/
-  api/        Retrofit services + DTOs
-  audio/      voice gate, speech detection, meeting sounds
-  auth/       login, tokens, passkeys
-  call/       telecom ConnectionService (meetings-as-calls)
-  chat/       chat images: upload, decoding, saving
-  deeplink/   /m/ and /c/ link handling
-  di/         Koin modules
-  instance/   multi-server management
-  livekit/    RoomManager — LiveKit lifecycle
-  meeting/    chat and presence wire formats, video aspect
-  pip/        picture-in-picture state
-  prefs/      SharedPreferences helpers
-  recent/     recent rooms
-  rooms/      room activity, rooms waiting to open, join failures
-ui/
-  components/ shared Compose widgets
-  screens/    auth, dashboard, instance, main, meeting, admin, profile, settings
-  theme/      colors, typography
-```
-
-## Project docs
-
-- [AGENTS.md](AGENTS.md) — developer guide and conventions
-- [DESIGN.md](DESIGN.md) — design system notes
-- [CONTRIBUTING.md](CONTRIBUTING.md) — how to contribute
-- [README-OLD.md](README-OLD.md) — the original monorepo README (full-stack Bedrud), kept for reference
+The server, the web app and the other clients live in the
+[main Bedrud repository](https://github.com/themadorg/bedrud), and their issues belong there.
 
 ## License
 
-[Apache-2.0](LICENSE). See [NOTICE](NOTICE) for attributions.
+[Apache 2.0](LICENSE). See [NOTICE](NOTICE) for attributions.
