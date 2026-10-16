@@ -14,6 +14,9 @@ import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performTextInput
 import androidx.test.platform.app.InstrumentationRegistry
 import com.bedrud.app.R
 import com.bedrud.app.core.auth.AuthManager
@@ -44,7 +47,8 @@ private const val SNACKBAR_TIMEOUT_MILLIS = 10_000L
 
 /**
  * The sign-in hub: a sign-in method's button and the guest way in around it, with the server
- * allowing the method and without, and the reason a user was signed out.
+ * allowing the method and without, the reason a user was signed out, and a guest sign-in that
+ * cannot reach the server.
  */
 class LoginScreenTest {
 
@@ -182,6 +186,29 @@ class LoginScreenTest {
         }
         // Consumed once read out, so a later visit to the sign-in screen does not say it again.
         compose.waitUntil(SNACKBAR_TIMEOUT_MILLIS) { relay.message.value == null }
+    }
+
+    /** Not the device's own explanation, which is English and technical. */
+    @Test
+    fun shouldSayTheDeviceIsOfflineWhenGuestSignInCannotFindTheServer() {
+        val instanceManager = signedOut()
+        compose.setThemedContentAt(FontScales.Default) {
+            LoginScreen(
+                onLoginSuccess = {},
+                onNavigateToEmailLogin = {},
+                onNavigateToRegister = {},
+                instanceManager = instanceManager,
+                signInNoticeRelay = SignInNoticeRelay(),
+            )
+        }
+
+        compose.onNodeWithText(context.getString(R.string.auth_label_displayName)).performScrollTo().performTextInput(GuestName)
+        compose.onNode(hasText(context.getString(R.string.auth_button_continueAsGuest)) and hasClickAction())
+            .performScrollTo()
+            .performClick()
+
+        val offline = context.getString(R.string.error_network_unavailable)
+        compose.waitUntil(SNACKBAR_TIMEOUT_MILLIS) { compose.onAllNodes(hasText(offline)).fetchSemanticsNodes().isNotEmpty() }
     }
 
     private companion object {

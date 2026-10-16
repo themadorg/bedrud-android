@@ -1,5 +1,6 @@
 package com.bedrud.app.ui.screens.auth
 
+import android.content.Context
 import androidx.annotation.StringRes
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
@@ -45,6 +46,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
+import androidx.credentials.exceptions.GetCredentialCancellationException
 import com.bedrud.app.R
 import com.bedrud.app.core.DevFlags
 import com.bedrud.app.core.api.apiBody
@@ -52,6 +54,7 @@ import com.bedrud.app.core.auth.OAuthLoginHandler
 import com.bedrud.app.core.auth.SignInNoticeRelay
 import com.bedrud.app.core.instance.InstanceManager
 import com.bedrud.app.core.instance.PublicSettingsState
+import com.bedrud.app.core.toUserMessage
 import com.bedrud.app.models.GuestLoginRequest
 import com.bedrud.app.ui.components.BedrudButton
 import com.bedrud.app.ui.components.BedrudButtonVariant
@@ -94,6 +97,14 @@ private val OAuthOptions = listOf(
 @StringRes
 internal fun hubSubtitle(guestAllowed: Boolean): Int =
     if (guestAllowed) R.string.auth_subtitle_hubChoose else R.string.auth_subtitle_hubSignIn
+
+/**
+ * What the hub says when passkey sign-in fails, or null to say nothing: closing the passkey picker is
+ * the reader's own choice, not a failure. Anything else is named by its type, never by its own text,
+ * which the passkey flow writes in English with a status code, for the log.
+ */
+internal fun passkeyFailureMessage(failure: Throwable, context: Context): String? =
+    if (failure is GetCredentialCancellationException) null else failure.toUserMessage(context)
 
 /**
  * One sign-in method's full-width button. When the server has turned the method off
@@ -209,7 +220,6 @@ fun LoginScreen(
         MinGuestNameLength,
         MinGuestNameLength,
     )
-    val passkeyFailedMessage = stringResource(R.string.auth_error_generic)
     val guestFailedMessage = stringResource(R.string.auth_error_guestFailed)
 
     // Optimistic while loading, permissive on failure: a method is enabled unless the server said off.
@@ -251,7 +261,7 @@ fun LoginScreen(
             val result = passkeyManager.loginWithPasskey(context)
             result.fold(
                 onSuccess = { onLoginSuccess() },
-                onFailure = { errorMessage = it.message ?: passkeyFailedMessage }
+                onFailure = { errorMessage = passkeyFailureMessage(it, context) }
             )
             loadingAction = null
         }
@@ -268,7 +278,7 @@ fun LoginScreen(
         scope.launch {
             loadingAction = HubAction.GUEST
             try {
-                val body = apiBody(guestFailedMessage, { errorMessage = it }) {
+                val body = apiBody(guestFailedMessage, { errorMessage = it }, { it.toUserMessage(context) }) {
                     authApi.guestLogin(GuestLoginRequest(trimmed))
                 }
                 if (body != null) {
