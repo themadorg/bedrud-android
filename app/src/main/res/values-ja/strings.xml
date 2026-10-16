@@ -354,6 +354,7 @@
   <string name="dashboard_error_deleteRoomFailed">ルームを削除できませんでした</string>
   <string name="dashboard_error_saveSettingsFailed">設定を保存できませんでした</string>
   <string name="dashboard_toast_settingsSaved">設定を保存しました</string>
+  <string name="dashboard_guest_notice">ゲストとしてサインインしています。ルーム名またはリンクでルームに参加できます。ルームを作成するには、アカウントにサインインしてください。</string>
   <string name="meeting_contentDescription_invite">招待と参加者</string>
   <string name="meeting_contentDescription_audioOutput">オーディオ出力</string>
   <string name="meeting_contentDescription_recording">録画中</string>

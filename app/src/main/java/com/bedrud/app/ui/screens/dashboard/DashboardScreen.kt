@@ -45,6 +45,7 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.MeetingRoom
 import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -116,6 +117,8 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import coil.compose.AsyncImage
 import com.bedrud.app.R
+import com.bedrud.app.core.auth.SignInMethod
+import com.bedrud.app.core.auth.signInMethodOf
 import com.bedrud.app.core.call.CallService
 import com.bedrud.app.core.deeplink.BedrudURLParser
 import com.bedrud.app.core.instance.InstanceManager
@@ -188,6 +191,10 @@ private sealed interface RoomListEntry {
 /** A quick-join link resolved to a different server than the active one, awaiting confirmation. */
 private data class PendingServerSwitch(val instance: Instance, val roomName: String)
 
+/** Whether [user] continued as a guest, for whom the server lists no rooms and creates none. */
+private fun isGuest(user: User?): Boolean =
+    user != null && signInMethodOf(user.provider, user.passwordChangedAt) == SignInMethod.Guest
+
 // ── Screen entry point ────────────────────────────────────────────────────────
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -209,6 +216,7 @@ fun DashboardContent(
     val settingsSavedMsg = stringResource(R.string.dashboard_toast_settingsSaved)
     val authManager = instanceManager.authManager.collectAsState().value
     val currentUser by (authManager?.currentUser ?: MutableStateFlow(null)).collectAsState()
+    val isGuest = isGuest(currentUser)
     val recentRooms by recentRoomsStore.rooms.collectAsState()
     val instances by instanceManager.store.instances.collectAsState()
     val activeInstanceId by instanceManager.store.activeInstanceId.collectAsState()
@@ -304,6 +312,13 @@ fun DashboardContent(
     // snackbar, and cancellation is rethrown rather than recorded as a network failure (which
     // would put the refresh loop on its fast retry cadence).
     suspend fun fetchRooms(): String? {
+        // A guest has no rooms to list, and the server refuses to list them; asked anyway, that
+        // refusal was shown on every visit. Read live, like the client below, for the refresh loop.
+        if (isGuest(instanceManager.authManager.value?.currentUser?.value)) {
+            rooms = emptyList()
+            lastFetchFailed = false
+            return null
+        }
         val api = instanceManager.roomApi.value ?: return null
         var failure: String? = null
         val body = apiBody(
@@ -591,6 +606,9 @@ fun DashboardContent(
         RoomFilter.ALL -> allTabEntries.isEmpty() && !isLoading
         RoomFilter.MY_ROOMS -> filteredRooms.isEmpty() && !isLoading
     }
+    // A guest's notice already says what to do with no rooms, and the empty state's arrow points at
+    // the create button a guest is not offered.
+    val showsEmptyState = isCurrentTabEmpty && !isGuest
 
     // Anchors (in root/window coordinates) for the sketch arrow pointing from the empty-state
     // phrase to the create-room FAB -- captured from two different Scaffold slots, so they're
@@ -653,16 +671,19 @@ fun DashboardContent(
                 )
             },
             floatingActionButton = {
-                FloatingActionButton(
-                    onClick = { showCreateDialog = true },
-                    // Full/circular per our `pill` token (which the design system already earmarks
-                    // for FABs) so it rhymes with the nav bar's fully-rounded active-indicator pill,
-                    // instead of M3's default 16dp squircle.
-                    shape = BedrudShapeTokens.pill,
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                    modifier = Modifier.onGloballyPositioned { fabAnchor = it.boundsInRoot().center }
-                ) { Icon(Icons.Default.Add, contentDescription = stringResource(R.string.dashboard_contentDescription_createRoom)) }
+                // A guest cannot create a room: the button led only to the server's refusal.
+                if (!isGuest) {
+                    FloatingActionButton(
+                        onClick = { showCreateDialog = true },
+                        // Full/circular per our `pill` token (which the design system already earmarks
+                        // for FABs) so it rhymes with the nav bar's fully-rounded active-indicator pill,
+                        // instead of M3's default 16dp squircle.
+                        shape = BedrudShapeTokens.pill,
+                        containerColor = MaterialTheme.colorScheme.primaryContainer,
+                        contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                        modifier = Modifier.onGloballyPositioned { fabAnchor = it.boundsInRoot().center }
+                    ) { Icon(Icons.Default.Add, contentDescription = stringResource(R.string.dashboard_contentDescription_createRoom)) }
+                }
             },
             snackbarHost = { BedrudSnackbarHost(snackbarHostState) }
         ) { innerPadding ->
@@ -730,17 +751,23 @@ fun DashboardContent(
                                 .onGloballyPositioned { quickJoinHeightPx = it.size.height }
                         )
     
-                        // ── Filter chips ──────────────────────────────────
-                        FilterRow(
-                            activeFilter = activeFilter,
-                            onFilterChange = { activeFilter = it },
-                            modifier = Modifier
-                                .padding(horizontal = Dimens.space16, vertical = Dimens.space4)
-                                .onGloballyPositioned { filterRowHeightPx = it.size.height }
-                        )
-    
+                        // ── Filter chips, or what a guest can do ──────────
+                        if (isGuest) {
+                            GuestNotice(
+                                modifier = Modifier.padding(horizontal = Dimens.space16, vertical = Dimens.space4)
+                            )
+                        } else {
+                            FilterRow(
+                                activeFilter = activeFilter,
+                                onFilterChange = { activeFilter = it },
+                                modifier = Modifier
+                                    .padding(horizontal = Dimens.space16, vertical = Dimens.space4)
+                                    .onGloballyPositioned { filterRowHeightPx = it.size.height }
+                            )
+                        }
+
                         // ── Room list ─────────────────────────────────────
-                        if (isCurrentTabEmpty) {
+                        if (showsEmptyState) {
                             // Centering only within this leftover space (below the header) would pull
                             // the icon+phrase group noticeably above the true center of the screen,
                             // since nothing balances the header's height at the bottom. Nudge the
@@ -834,7 +861,7 @@ fun DashboardContent(
             }
         }
 
-        if (isCurrentTabEmpty) {
+        if (showsEmptyState) {
             val start = emptyPhraseAnchor
             val end = fabAnchor
             if (start != null && end != null) {
@@ -1033,6 +1060,38 @@ private fun FilterRow(
                         )
                     }
                 } else null
+            )
+        }
+    }
+}
+
+// ── Guest notice ──────────────────────────────────────────────────────────────
+
+/**
+ * Takes the filters' place for a guest, and stays there: a guest has no rooms of their own to filter
+ * and cannot create one, so this says what they can do instead. Neutral rather than in the error
+ * colours, since nothing has gone wrong.
+ */
+@Composable
+private fun GuestNotice(modifier: Modifier = Modifier) {
+    BedrudOutlinedCard(modifier = modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier.padding(horizontal = Dimens.space16, vertical = Dimens.space12),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(Dimens.space12),
+        ) {
+            Icon(
+                Icons.Outlined.Info,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(Dimens.iconMd),
+            )
+            val noticeStyle = MaterialTheme.typography.bodyMedium
+            Text(
+                text = stringResource(R.string.dashboard_guest_notice),
+                style = noticeStyle,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.typeCentered(noticeStyle),
             )
         }
     }

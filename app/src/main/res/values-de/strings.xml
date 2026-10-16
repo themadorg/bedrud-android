@@ -357,6 +357,7 @@
   <string name="dashboard_error_deleteRoomFailed">Raum konnte nicht gelöscht werden</string>
   <string name="dashboard_error_saveSettingsFailed">Einstellungen konnten nicht gespeichert werden</string>
   <string name="dashboard_toast_settingsSaved">Einstellungen gespeichert</string>
+  <string name="dashboard_guest_notice">Du bist als Gast angemeldet. Tritt einem Raum über seinen Namen oder Link bei; um Räume zu erstellen, melde dich bei einem Konto an.</string>
   <string name="meeting_contentDescription_invite">Einladen &amp; Teilnehmer</string>
   <string name="meeting_contentDescription_audioOutput">Audioausgabe</string>
   <string name="meeting_contentDescription_recording">Aufnahme aktiv</string>

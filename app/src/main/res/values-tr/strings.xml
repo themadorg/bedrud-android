@@ -357,6 +357,7 @@
   <string name="dashboard_error_deleteRoomFailed">Oda silinemedi</string>
   <string name="dashboard_error_saveSettingsFailed">Ayarlar kaydedilemedi</string>
   <string name="dashboard_toast_settingsSaved">Ayarlar kaydedildi</string>
+  <string name="dashboard_guest_notice">Misafir olarak giriş yaptınız. Bir odaya adı veya bağlantısıyla katılın; oda oluşturmak için bir hesaba giriş yapın.</string>
   <string name="meeting_contentDescription_invite">Davet et ve katılımcılar</string>
   <string name="meeting_contentDescription_audioOutput">Ses çıkışı</string>
   <string name="meeting_contentDescription_recording">Kayıt etkin</string>

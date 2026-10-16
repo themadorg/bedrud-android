@@ -363,6 +363,7 @@
   <string name="dashboard_error_deleteRoomFailed">Failed to delete room</string>
   <string name="dashboard_error_saveSettingsFailed">Failed to save settings</string>
   <string name="dashboard_toast_settingsSaved">Settings saved</string>
+  <string name="dashboard_guest_notice">You\'re signed in as a guest. Join a room by its name or link; to create rooms, sign in to an account.</string>
   <string name="meeting_contentDescription_invite">Invite &amp; participants</string>
   <string name="meeting_contentDescription_audioOutput">Audio output</string>
   <string name="meeting_contentDescription_recording">Recording active</string>

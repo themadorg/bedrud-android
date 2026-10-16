@@ -369,6 +369,7 @@
   <string name="dashboard_error_deleteRoomFailed">تعذّر حذف الغرفة</string>
   <string name="dashboard_error_saveSettingsFailed">تعذّر حفظ الإعدادات</string>
   <string name="dashboard_toast_settingsSaved">تم حفظ الإعدادات</string>
+  <string name="dashboard_guest_notice">أنت مسجّل الدخول كضيف. انضم إلى غرفة باسمها أو رابطها، ولإنشاء غرف سجّل الدخول إلى حساب.</string>
   <string name="meeting_contentDescription_invite">دعوة والمشاركون</string>
   <string name="meeting_contentDescription_audioOutput">مخرج الصوت</string>
   <string name="meeting_contentDescription_recording">التسجيل نشط</string>

@@ -363,6 +363,7 @@
   <string name="dashboard_error_deleteRoomFailed">Не удалось удалить комнату</string>
   <string name="dashboard_error_saveSettingsFailed">Не удалось сохранить настройки</string>
   <string name="dashboard_toast_settingsSaved">Настройки сохранены</string>
+  <string name="dashboard_guest_notice">Вы вошли как гость. Присоединяйтесь к комнате по её названию или ссылке; чтобы создавать комнаты, войдите в учётную запись.</string>
   <string name="meeting_contentDescription_invite">Пригласить и участники</string>
   <string name="meeting_contentDescription_audioOutput">Аудиовыход</string>
   <string name="meeting_contentDescription_recording">Идёт запись</string>

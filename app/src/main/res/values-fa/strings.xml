@@ -354,6 +354,7 @@
   <string name="dashboard_error_deleteRoomFailed">حذف اتاق ممکن نشد</string>
   <string name="dashboard_error_saveSettingsFailed">ذخیره تنظیمات ممکن نشد</string>
   <string name="dashboard_toast_settingsSaved">تنظیمات ذخیره شد</string>
+  <string name="dashboard_guest_notice">شما به‌عنوان مهمان وارد شده‌اید. با نام یا پیوند یک اتاق وارد آن شوید؛ برای ایجاد اتاق، وارد یک حساب شوید.</string>
   <string name="meeting_contentDescription_invite">دعوت و شرکت‌کنندگان</string>
   <string name="meeting_contentDescription_audioOutput">خروجی صدا</string>
   <string name="meeting_contentDescription_recording">ضبط فعال است</string>
