@@ -309,6 +309,16 @@ than standing at full strength beside a greyed-out one.
 - **`BedrudBadge`** — a short label in a `pill` on `tertiaryContainer` beside what it describes:
   "Recommended" on a server choice, "Admin" beside a name. One badge wherever a label like that
   appears.
+- **`BedrudLoadingIndicator`** — the wait of a whole screen or panel for its content: the rooms
+  dashboard's first load, the Admin overview, users and rooms tabs, and the call's "Preparing…" and
+  "Connecting to …" screen. A filled shape in `primary` that springs into the next of six shapes every
+  `Motion.loadingMorphIntervalMs` while slowly turning: Material 3's expressive loading indicator at
+  its own sizes (`Dimens.loadingIndicator`, a 48dp box around a 38dp shape), drawn with
+  `androidx.graphics:graphics-shapes`, since Material's own composable is not in a stable release
+  yet. The six shapes are kept close in area (`BedrudLoadingIndicatorTest`), so it reads as changing
+  shape rather than pulsing. A control waiting on its own action keeps Material's small
+  `CircularProgressIndicator` — a button's `loading` state, a chat upload, the image viewer's save:
+  the shape needs its 48dp and would crowd the label or icon it stands in for.
 - **Menus** — anything that drops open (the chat's two menus, the settings language picker) wears
   the same chrome: `BedrudShapeTokens.card` corners, `surfaceContainerHigh`, `Elevation.level2`
   tonal and `Elevation.level3` shadow. Material's default menu is a 4dp, flatter surface, which
