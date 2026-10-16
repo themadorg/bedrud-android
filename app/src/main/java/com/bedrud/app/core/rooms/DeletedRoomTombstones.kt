@@ -17,14 +17,14 @@ object DeletedRoomTombstones {
 
     private val deletedAtMsByRoomId = mutableMapOf<String, Long>()
 
+    // [now] is a parameter only so a test can stand at either edge of the window.
     @Synchronized
-    fun add(roomId: String) {
-        deletedAtMsByRoomId[roomId] = System.currentTimeMillis()
+    fun add(roomId: String, now: Long = System.currentTimeMillis()) {
+        deletedAtMsByRoomId[roomId] = now
     }
 
     @Synchronized
-    fun isTombstoned(roomId: String): Boolean {
-        val now = System.currentTimeMillis()
+    fun isTombstoned(roomId: String, now: Long = System.currentTimeMillis()): Boolean {
         deletedAtMsByRoomId.entries.removeAll { now - it.value > TTL_MS }
         return roomId in deletedAtMsByRoomId
     }
