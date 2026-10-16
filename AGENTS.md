@@ -172,6 +172,10 @@ clients — `core/meeting/chat/ChatWire.kt` is the only place that speaks it.
   than rendered.
 - The server-side counterpart is upload-only: `POST room/:roomId/chat/upload` (multipart) with the
   file served back from `GET /uploads/chat/*`. Only the resulting URL travels over the channel.
+- That URL is whatever the sender put in the message, so the account's token goes only with an
+  image on the account's own server, reached the way the app reaches it: same scheme, host and port
+  (`ChatImageUtils.isOnServer`). An image anywhere else still loads, without the token. Both paths
+  that fetch one, drawing it in the chat and saving it from the image viewer, ask that one function.
 
 The `presence` topic carries what somebody is *doing* rather than what they said, spoken by
 `core/meeting/presence/PresenceWire.kt`. So far that is **deafen state** (`deafen_state`), and it
