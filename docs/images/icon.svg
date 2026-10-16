@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 72 72" width="72" height="72">
+  <!-- The launcher icon for the README: the glyph is ic_launcher_foreground.xml's path, on
+       ic_launcher_background.xml's color, cropped to the 72dp an adaptive icon shows. -->
+  <rect width="72" height="72" rx="16" fill="#E11D48"/>
+  <path transform="translate(-18 -18)" fill="#FFFFFF" d="M42,38h24c2.2,0 4,1.8 4,4v24c0,2.2 -1.8,4 -4,4h-24c-2.2,0 -4,-1.8 -4,-4v-24c0,-2.2 1.8,-4 4,-4zM44,44v8h8v-8h-8zM56,44v8h8v-8h-8zM44,56v8h8v-8h-8zM56,56v8h8v-8h-8z"/>
+</svg>
