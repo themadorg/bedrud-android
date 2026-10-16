@@ -3,8 +3,10 @@ package com.bedrud.app.core.api
 import com.bedrud.app.BuildConfig
 import com.bedrud.app.core.auth.AuthManager
 import com.bedrud.app.testutil.InMemorySharedPreferences
+import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.mockwebserver.MockResponse
 import org.junit.After
 import org.junit.Assert.assertFalse
@@ -18,7 +20,7 @@ import java.util.logging.Logger
 
 /**
  * Covers what the session-carrying client writes to the log in a debug build: each call's headers,
- * but never the token it is signed with.
+ * but never the token it is signed with, and never a body, where passwords and tokens travel.
  */
 class ApiClientFactoryTest : MockApiTest() {
 
@@ -82,10 +84,31 @@ class ApiClientFactoryTest : MockApiTest() {
         assertFalse("the access token reached the log", capturedLog.contains(ACCESS_TOKEN))
     }
 
+    @Test
+    fun `should never log a request or response body`() {
+        assumeTrue(BuildConfig.DEBUG)
+        server.enqueue(probeResponse(SIGN_IN_RESPONSE_BODY))
+        val signIn = Request.Builder()
+            .url(server.url("/api/auth/login"))
+            .post(SIGN_IN_REQUEST_BODY.toRequestBody(JSON_MEDIA_TYPE.toMediaType()))
+            .build()
+
+        sessionClient().newCall(signIn).execute().close()
+
+        assertTrue("nothing was captured from the log", capturedLog.contains(PROBE_HEADER_VALUE))
+        assertFalse("the request body reached the log", capturedLog.contains(PASSWORD))
+        assertFalse("the response body reached the log", capturedLog.contains(ISSUED_REFRESH_TOKEN))
+    }
+
     private companion object {
         const val ACCESS_TOKEN = "access-token-that-must-stay-out-of-the-log"
         const val REFRESH_TOKEN = "refresh-token-that-must-stay-out-of-the-log"
+        const val PASSWORD = "password-that-must-stay-out-of-the-log"
+        const val ISSUED_REFRESH_TOKEN = "issued-refresh-token-that-must-stay-out-of-the-log"
         const val PROBE_HEADER = "X-Probe"
         const val PROBE_HEADER_VALUE = "probe-header-value"
+        const val JSON_MEDIA_TYPE = "application/json"
+        const val SIGN_IN_REQUEST_BODY = """{"email":"user@example.com","password":"$PASSWORD"}"""
+        const val SIGN_IN_RESPONSE_BODY = """{"tokens":{"refreshToken":"$ISSUED_REFRESH_TOKEN"}}"""
     }
 }

@@ -250,7 +250,9 @@ class ApiClientFactory(private val baseURL: String) {
     ): OkHttpClient {
         return OkHttpClient.Builder()
             .addInterceptor(authInterceptor)
-            .addInterceptor(debugLogging(HttpLoggingInterceptor.Level.BODY))
+            // Headers, never bodies: sign-in, sign-up and password changes send the password, and
+            // sign-ins and room joins answer with tokens.
+            .addInterceptor(debugLogging(HttpLoggingInterceptor.Level.HEADERS))
             .authenticator(tokenAuthenticator)
             .connectTimeout(DEFAULT_TIMEOUT_SECONDS, TimeUnit.SECONDS)
             .readTimeout(DEFAULT_TIMEOUT_SECONDS, TimeUnit.SECONDS)
