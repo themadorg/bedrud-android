@@ -175,6 +175,9 @@ clients — `core/meeting/chat/ChatWire.kt` is the only place that speaks it.
   *encoded packet*, and never lands between the halves of a surrogate pair.
 - Payloads carrying nothing this client can draw — a poll, an empty message — are dropped rather
   than rendered.
+- LiveKit reports a packet it could not send as a failed `Result` from `publishData`, not only by
+  throwing, so `RoomManager.publishData` counts both as a failure. A message, reaction or vote is
+  shown as sent only once it went out; otherwise the error is reported and nothing is shown.
 - The server-side counterpart is upload-only: `POST room/:roomId/chat/upload` (multipart) with the
   file served back from `GET /uploads/chat/*`. Only the resulting URL travels over the channel.
 - That URL is whatever the sender put in the message, so the account's token goes only with an
