@@ -43,6 +43,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -87,9 +88,6 @@ import com.bedrud.app.core.pip.PipStateHolder
 import com.bedrud.app.ui.screens.settings.SettingsStore
 import com.bedrud.app.models.JoinRoomRequest
 import com.bedrud.app.models.JoinRoomResponse
-import com.bedrud.app.ui.theme.inkCentered
-import io.livekit.android.compose.ui.ScaleType
-import io.livekit.android.compose.ui.VideoTrackView
 import io.livekit.android.room.Room
 import io.livekit.android.room.track.Track
 import kotlinx.coroutines.CancellationException
@@ -210,6 +208,8 @@ fun MeetingScreen(
     var streamSheetIdentity by remember { mutableStateOf<String?>(null) }
     // Viewer-side "hide all cameras" (data saver) from the more-options sheet
     var hideAllIncomingVideo by remember { mutableStateOf(false) }
+    // Who the picture-in-picture window last showed, so it stays on them through a pause.
+    val lastPipFocus = remember { mutableStateOf<String?>(null) }
     // Pinned participant leads the grid ordering
     var pinnedIdentity by rememberSaveable { mutableStateOf<String?>(null) }
     // Recording banner, behind the dev-gated recording dot. TODO(#107)
@@ -499,63 +499,28 @@ fun MeetingScreen(
                     }
 
                     if (isInPipMode) {
-                        val pipWatchedIdentity = watchedStreamIdentity
-                        val pipParticipant = if (pipWatchedIdentity != null) {
-                            participants.find { it.identity?.value == pipWatchedIdentity }
-                        } else {
-                            participants.firstOrNull {
-                                it.identity != room.localParticipant.identity
-                            } ?: participants.firstOrNull()
-                        }
-
-                        Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .background(MaterialTheme.colorScheme.surfaceVariant),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            val pipState = pipParticipant?.identity?.value
-                                ?.let { tileStatesByIdentity[it] }
-                            if (pipState != null) {
-                                val isPipVideoLocallyDisabled =
-                                    pipState.identity in locallyHiddenVideoIdentities
-                                val pipScreenShare = pipState.screenShare
-                                    ?.takeIf { pipWatchedIdentity != null }
-                                val pipCameraTrack = pipState.cameraTrack
-                                    ?.takeIf { !isPipVideoLocallyDisabled }
-
-                                when {
-                                    // By trackReference, as the grid and the fullscreen view do.
-                                    // Reading publication.track here instead left PiP on the camera
-                                    // while a share was being watched: subscription can finish
-                                    // without the room reporting a participant change, so the track
-                                    // resolved at that moment was still null.
-                                    pipScreenShare != null -> VideoTrackView(
-                                        trackReference = pipScreenShare.trackReference,
-                                        modifier = Modifier.fillMaxSize(),
-                                        room = room,
-                                        mirror = false,
-                                        scaleType = ScaleType.FitInside,
-                                    )
-                                    pipCameraTrack != null -> VideoTrackView(
-                                        videoTrack = pipCameraTrack,
-                                        modifier = Modifier.fillMaxSize(),
-                                        passedRoom = room,
-                                    )
-                                    // One initial alone in the window, measured as an avatar's is.
-                                    else -> {
-                                        val initial = pipState.name.take(1).uppercase()
-                                        val initialStyle = MaterialTheme.typography.displayLarge
-                                        Text(
-                                            text = initial,
-                                            style = initialStyle,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                            modifier = Modifier.inkCentered(initial, initialStyle),
-                                        )
-                                    }
-                                }
-                            }
-                        }
+                        val remoteIdentities = tileStates
+                            .map { it.identity }
+                            .filter { it != localIdentity }
+                        val pipFocus = pipFocusIdentity(
+                            watchedStreamIdentity = watchedStreamIdentity,
+                            speakingLevels = speakingLevels,
+                            previousFocus = lastPipFocus.value,
+                            remoteIdentities = remoteIdentities,
+                            localIdentity = localIdentity,
+                        )
+                        SideEffect { lastPipFocus.value = pipFocus }
+                        MeetingPipView(
+                            state = pipFocus?.let { tileStatesByIdentity[it] },
+                            room = room,
+                            showsWatchedStream = watchedStreamIdentity != null,
+                            isLocalParticipant = pipFocus == localIdentity,
+                            speakingLevel = speakingLevels[pipFocus] ?: 0f,
+                            isLocalDeafened = isDeafened,
+                            deafenedIdentities = deafenedIdentities,
+                            disabledVideoIdentities = locallyHiddenVideoIdentities,
+                            hideAllIncomingVideo = hideAllIncomingVideo,
+                        )
                     } else {
                         // Normal mode
                         Box(
