@@ -83,41 +83,43 @@ fun MeetingParticipantSheet(
     // even though the backing StateFlow only changes in coarse steps.
     var sliderValue by remember(identity) { mutableFloatStateOf(volume) }
 
-    if (showKickConfirm) {
-        ConfirmDialog(
-            title = stringResource(R.string.meeting_dialog_kickTitle),
-            message = stringResource(R.string.meeting_dialog_kickMessage, name),
-            confirmLabel = stringResource(R.string.meeting_action_kick),
-            onConfirm = {
-                showKickConfirm = false
-                moderate(scope, snackbarHostState, kickFailedMessage) {
-                    roomApi?.kickParticipant(roomId, identity)
-                }
-                onDismiss()
-            },
-            onDismiss = { showKickConfirm = false },
-        )
-    }
-
-    // Banning asks first, as kicking does: it removes the person and keeps them out, and a stray
-    // tap on the row below kick used to do that at once.
-    if (showBanConfirm) {
-        ConfirmDialog(
-            title = stringResource(R.string.meeting_dialog_banTitle),
-            message = stringResource(R.string.meeting_dialog_banMessage, name),
-            confirmLabel = stringResource(R.string.meeting_action_ban),
-            onConfirm = {
-                showBanConfirm = false
-                moderate(scope, snackbarHostState, banFailedMessage) {
-                    roomApi?.banParticipant(roomId, identity)
-                }
-                onDismiss()
-            },
-            onDismiss = { showBanConfirm = false },
-        )
-    }
-
     BedrudBottomSheet(onDismiss = onDismiss) {
+        // The confirmations live inside the sheet's content so that confirming can slide the sheet
+        // away through dismiss(), as every other action here does, instead of dropping it at once.
+        if (showKickConfirm) {
+            ConfirmDialog(
+                title = stringResource(R.string.meeting_dialog_kickTitle),
+                message = stringResource(R.string.meeting_dialog_kickMessage, name),
+                confirmLabel = stringResource(R.string.meeting_action_kick),
+                onConfirm = {
+                    showKickConfirm = false
+                    moderate(scope, snackbarHostState, kickFailedMessage) {
+                        roomApi?.kickParticipant(roomId, identity)
+                    }
+                    dismiss()
+                },
+                onDismiss = { showKickConfirm = false },
+            )
+        }
+
+        // Banning asks first, as kicking does: it removes the person and keeps them out, and a stray
+        // tap on the row below kick used to do that at once.
+        if (showBanConfirm) {
+            ConfirmDialog(
+                title = stringResource(R.string.meeting_dialog_banTitle),
+                message = stringResource(R.string.meeting_dialog_banMessage, name),
+                confirmLabel = stringResource(R.string.meeting_action_ban),
+                onConfirm = {
+                    showBanConfirm = false
+                    moderate(scope, snackbarHostState, banFailedMessage) {
+                        roomApi?.banParticipant(roomId, identity)
+                    }
+                    dismiss()
+                },
+                onDismiss = { showBanConfirm = false },
+            )
+        }
+
         BedrudSheetTitle(text = name, color = colors.onButton)
         // Worth saying here as well as on the tile: this is the sheet you open to change how you
         // hear somebody, and turning their volume up achieves nothing while they cannot hear you.
