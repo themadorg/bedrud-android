@@ -107,8 +107,9 @@ jobs:
           path: app/build/reports/androidTests/managedDevice/
           retention-days: 14
 
+  # Runs alongside Lint & Test rather than after it, so the APK link arrives about five minutes
+  # sooner. A PR that fails lint still gets an APK; the failing check is what stops the merge.
   build-dev:
-    needs: lint-test
     runs-on: ubuntu-24.04
     # GitHub withholds repo secrets from workflow runs triggered by Dependabot (by
     # design, so an unreviewed dependency bump can never reach signing material) - this
