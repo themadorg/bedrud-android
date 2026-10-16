@@ -22,6 +22,7 @@ import com.bedrud.app.core.livekit.ConnectionState
 import com.bedrud.app.core.livekit.RoomManager
 import com.bedrud.app.core.recent.RecentRoomsStore
 import com.bedrud.app.core.registerNotificationChannel
+import com.bedrud.app.core.rooms.JoinFailureRelay
 import com.bedrud.app.ui.screens.settings.SettingsStore
 import com.twilio.audioswitch.AudioDevice
 import com.twilio.audioswitch.AudioDeviceChangeListener
@@ -37,6 +38,7 @@ class CallService : Service() {
 
     private val instanceManager: InstanceManager by inject()
     private val recentRoomsStore: RecentRoomsStore by inject()
+    private val joinFailureRelay: JoinFailureRelay by inject()
     private var roomManager: RoomManager? = null
     private var serviceScope: CoroutineScope? = null
     private var callStartTime: Long = 0L
@@ -135,6 +137,11 @@ class CallService : Service() {
 
         rm.onDisconnected = {
             Log.d(TAG, "Room disconnected by server, stopping service")
+            // Said where the user lands, as a failed join is: the meeting screen leaves the moment
+            // the call ends, and hanging up resets the removal flag this reads.
+            if (rm.wasKicked.value) {
+                joinFailureRelay.report(getString(R.string.meeting_state_kickedMessage))
+            }
             hangUp()
         }
 

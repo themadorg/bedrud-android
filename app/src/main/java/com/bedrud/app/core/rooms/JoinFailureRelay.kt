@@ -14,6 +14,9 @@ import kotlinx.coroutines.flow.asStateFlow
  *
  * Held outside composition (a singleton, like [DeletedRoomTombstones]) because the two ends are
  * never composed together: the meeting screen is being torn down at the moment it reports.
+ *
+ * A call a moderator ends, by kicking or banning, is reported here too, by `CallService`: that
+ * meeting screen leaves just as abruptly, and the call may be running with no screen open at all.
  */
 class JoinFailureRelay {
     private val _message = MutableStateFlow<String?>(null)
