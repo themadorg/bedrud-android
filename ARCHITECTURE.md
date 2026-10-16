@@ -13,11 +13,14 @@ render natively on GitHub.
 |---|---|
 | **Module** | single `:app` |
 | **Language / UI** | Kotlin · Jetpack Compose · Material 3 |
-| **Size** | ~11.3k LOC main · ~2k LOC tests |
-| **SDK** | minSdk 28 · compile/target 36 · JDK 17 |
+| **SDK** | minSdk 28 · compile/target 37 · JDK 17 |
 | **DI** | Koin (`appModule`, the app-wide singletons) — **no ViewModels** |
 | **HTTP** | Retrofit + OkHttp + **Gson** |
-| **Media** | LiveKit Android 2.25 |
+| **Media** | LiveKit Android SDK |
+| **Calls** | Self-managed telecom `ConnectionService` (foreground service) |
+| **Credentials** | `EncryptedPrefs`, sealed by an Android Keystore AES-GCM key, per instance |
+| **Passkeys** | AndroidX Credential Manager + Play Services FIDO |
+| **Images** | Coil |
 | **Package root** | `app/src/main/java/com/bedrud/app/` |
 
 **How to read the diagrams:** a hub/service (orchestrator or long-lived engine) is drawn

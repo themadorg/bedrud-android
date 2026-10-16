@@ -33,15 +33,92 @@ cd bedrud-android
 ```
 
 Debug APKs land in `app/build/outputs/apk/debug/`, split per ABI plus a universal APK.
-See [README.md](README.md#building-from-source) for build flags such as
-`-PdefaultServerHost`, and for release signing.
+
+### Default server host
+
+The add-server screen offers `bedrud.xyz` as its default server. To ship a build that
+defaults to a different one, a staging or self-hosted deployment for example, pass
+`-PdefaultServerHost` at build time; no code changes are needed:
+
+```bash
+./gradlew assembleRelease -PdefaultServerHost=meet.example.com
+```
+
+The value is baked into `BuildConfig.DEFAULT_SERVER_HOST`; without the flag, builds use
+`bedrud.xyz`. Users can still enter any other server either way.
+
+### Release signing
+
+A release build is signed with the key a `keystore.properties` file in the project root
+names:
+
+```properties
+storeFile=/path/to/your.keystore
+storePassword=...
+keyAlias=...
+keyPassword=...
+```
+
+Without that file, `assembleRelease` stops at `validateSigningRelease`. Debug and dev
+builds need no key.
+
+### Make targets
+
+A root `Makefile` wraps the Gradle commands, plus the device, CI-parity and release steps.
+It only launches `gradlew`, `adb`, `git` and `gh`; nothing is reimplemented, so the Gradle
+commands stay valid if you prefer them.
+
+```bash
+make help            # every target, grouped
+make doctor          # check JDK / SDK / adb / gh, and whether signing is configured
+
+make build           # debug APKs
+make build-dev       # dev APKs, which install side by side with the real app
+make build-release   # release APKs
+
+make install         # build + install debug   (also: install-dev, uninstall, run)
+make logcat          # tail logcat for this app only
+
+make check           # lint + unit tests, exactly what CI gates a PR on
+make coverage        # unit tests, then a report of the lines they reached
+make device-test     # instrumented tests on an API 36 emulator Gradle runs itself, as CI does
+make clean
+```
+
+Builds accept `SERVER=<host>` as a shorthand for `-PdefaultServerHost`, e.g.
+`make build-dev SERVER=staging.example.com`.
 
 ## Project structure
 
-Single `:app` module. The source layout is in [README.md](README.md#architecture), and
-the conventions that matter when changing it — design tokens, the multi-instance model,
-navigation, networking — are in [AGENTS.md](AGENTS.md). The design system itself is
-documented in [DESIGN.md](DESIGN.md).
+Single `:app` module, with this source layout under `app/src/main/java/com/bedrud/app/`:
+
+```
+core/
+  api/        Retrofit services + DTOs
+  audio/      voice gate, speech detection, meeting sounds
+  auth/       login, tokens, passkeys
+  call/       telecom ConnectionService (meetings-as-calls)
+  chat/       chat images: upload, decoding, saving
+  deeplink/   /m/ and /c/ link handling
+  di/         Koin modules
+  instance/   multi-server management
+  livekit/    RoomManager — LiveKit lifecycle
+  meeting/    chat and presence wire formats, video aspect
+  pip/        picture-in-picture state
+  prefs/      SharedPreferences helpers
+  recent/     recent rooms
+  rooms/      room activity, rooms waiting to open, join failures
+ui/
+  components/ shared Compose widgets
+  screens/    auth, dashboard, instance, main, meeting, admin, profile, settings
+  theme/      design tokens: colors, type, shapes, sizes, elevation, motion
+  util/       opening chat links, the clipboard, sharing
+```
+
+[ARCHITECTURE.md](ARCHITECTURE.md) maps how those parts connect, and the conventions that
+matter when changing them — design tokens, the multi-instance model, navigation,
+networking — are in [AGENTS.md](AGENTS.md). The design system itself is documented in
+[DESIGN.md](DESIGN.md).
 
 ## Code style
 
@@ -72,6 +149,7 @@ Every PR runs [`pr-build.yml`](.github/workflows/pr-build.yml):
 | Job         | What it does                                                              |
 |-------------|---------------------------------------------------------------------------|
 | Lint & Test | `./gradlew lint` and `./gradlew testDebugUnitTest`                         |
+| Instrumented tests | The instrumented tests on an API 36 emulator, split across three runners; not a required check yet |
 | Dev build   | Builds a signed **dev** APK and comments install links on the PR           |
 
 The dev APK has its own application ID (`com.bedrud.app.dev`) and app name, so reviewers
@@ -117,9 +195,12 @@ One limit worth knowing: `adb`'s `input text` is ASCII-only, and no shell-reacha
 substitute exists on current images. Persian, Arabic and emoji have to enter the app some
 other way — a second participant sending them, or a fixture in a test.
 
-Tests are JUnit 4 with MockK, OkHttp MockWebServer, and kotlinx-coroutines-test. There is
-no instrumented test directory. `InMemorySharedPreferences` in `testutil/` lets you inject
-into anything taking `SharedPreferences` without pulling in the Android framework.
+Tests are JUnit 4 with MockK, OkHttp MockWebServer, and kotlinx-coroutines-test.
+`InMemorySharedPreferences` in `testutil/` lets you inject into anything taking
+`SharedPreferences` without pulling in the Android framework. The instrumented Compose
+tests live in `app/src/androidTest/`; `make device-test` runs them all on an emulator
+Gradle starts itself, and [AGENTS.md](AGENTS.md#build--test) shows how to run one class
+while iterating.
 
 ## Releases
 
@@ -130,7 +211,17 @@ Gradle as `-P` flags — so a release is cut by tagging, never by editing a buil
 Building and signing happens only in [`release.yml`](.github/workflows/release.yml), which
 is dispatched manually against a tag, gated on lint and unit tests passing for that exact
 commit, and on approval from the `beta-signing` / `production-signing` environments. The
-same tag can be released as `beta` first and promoted to `stable` later.
+same tag can be released as `beta` first and promoted to `stable` later. The `make`
+targets start that run; they never sign anything locally:
+
+```bash
+make version                     # current tag, next patch/minor/major, release state
+make tag-patch                   # create the next tag locally (also: tag-minor, tag-major)
+make tag-push                    # push it
+make release-beta   TAG=1.3.1    # dispatch the signed release workflow for that tag
+make release-stable TAG=1.3.1    # …or promote it to stable
+make release-status              # recent release runs
+```
 
 ## Reporting issues
 
