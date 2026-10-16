@@ -90,6 +90,8 @@ make install         # build + install debug   (also: install-dev, uninstall, ru
 make logcat          # tail logcat for this app only
 
 make check           # lint + unit tests — exactly what CI gates a PR on
+make coverage        # unit tests, then a report of the lines they reached
+make device-test     # instrumented tests on an API 36 emulator Gradle runs itself, as CI does
 make clean
 ```
 

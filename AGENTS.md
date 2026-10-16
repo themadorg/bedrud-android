@@ -10,9 +10,18 @@ Kotlin + Jetpack Compose + Material 3. Single `:app` module. minSdk 28, compileS
 ./gradlew test                   # Unit tests only (src/test/)
 ```
 
-Instrumented Compose tests live in `app/src/androidTest/` and run against a running emulator or
-device. CI does not run them, so run them yourself when a change touches what they cover — one
-class at a time while iterating:
+Instrumented Compose tests live in `app/src/androidTest/`. CI runs the whole suite on every PR
+that touches the app, as the "Instrumented tests" job in `pr-build.yml`, on an API 36 emulator the
+Android Gradle plugin creates, boots and shuts down itself: the `pixel6Api36` managed device in
+`app/build.gradle.kts`. API 36 because the Compose test rule cannot run on 37 yet (#270). The job is
+not a required check yet. The same run works locally; its first run downloads the API 36 Google
+APIs system image:
+
+```bash
+make device-test                 # ./gradlew pixel6Api36DebugAndroidTest
+```
+
+While iterating, run one class at a time on an emulator or device that is already running:
 
 ```bash
 ./gradlew connectedDebugAndroidTest
