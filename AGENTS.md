@@ -34,6 +34,11 @@ make check                       # lint + testDebugUnitTest — exactly what CI 
 make doctor                      # why won't it build here: JDK / SDK / adb / gh / signing
 ```
 
+To see which lines the unit tests reach, `make coverage` runs them and writes a report to
+`app/build/reports/coverage/test/debug/index.html`. It is the Android Gradle plugin's own JaCoCo
+support (`enableUnitTestCoverage` on the debug build type), so it counts unit tests only: code the
+instrumented tests exercise reads as unreached there.
+
 For the single command to run before every commit, see **Verify command** under
 [Working Agreement](#working-agreement) — it folds install into the same invocation so the
 on-device pass doesn't pay Gradle's startup cost a second time.

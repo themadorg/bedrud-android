@@ -92,6 +92,9 @@ android {
         // inherits this value from debug via initWith below, so setting it here covers both.
         getByName("debug") {
             buildConfigField("boolean", "DEV_HINTS", "true")
+            // Unit tests record which lines they ran; `createDebugUnitTestCoverageReport` (or
+            // `make coverage`) turns that into a report. Built into the Android Gradle plugin.
+            enableUnitTestCoverage = true
         }
         release {
             buildConfigField("boolean", "DEV_HINTS", "false")

@@ -46,7 +46,7 @@ TAG_GLOB := [0-9]*.[0-9]*.[0-9]*
 
 .DEFAULT_GOAL := help
 .PHONY: help doctor build build-dev build-release install install-dev run \
-        drive screen shot uninstall uninstall-dev logcat lint test check clean version \
+        drive screen shot uninstall uninstall-dev logcat lint test check coverage clean version \
         tag-patch tag-minor tag-major tag-push release-beta release-stable \
         release-status bump dispatch
 
@@ -163,6 +163,9 @@ test: ## Unit tests - the task CI runs
 	$(GRADLEW) testDebugUnitTest
 
 check: lint test ## lint + test: everything pr-build.yml gates a PR on
+
+coverage: ## Unit tests, then which lines they ran, in app/build/reports/coverage/test/debug/index.html
+	$(GRADLEW) createDebugUnitTestCoverageReport
 
 clean: ## Delete build outputs
 	$(GRADLEW) clean
