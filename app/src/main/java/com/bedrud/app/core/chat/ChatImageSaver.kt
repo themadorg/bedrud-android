@@ -29,7 +29,8 @@ sealed interface ChatSaveResult {
  * Puts a received chat image in the device gallery.
  *
  * It has to read both forms an attachment can take: this server answers an upload by inlining the
- * image in the message, while a plain URL has to be fetched back with the sender's own credentials.
+ * image in the message, while a plain URL has to be fetched back, with the account's token when it is
+ * on the account's own server and without it anywhere else.
  * [ChatImageDecoder] and [ChatImageUtils] already draw that line, so this follows it rather than
  * inventing a third path.
  *
@@ -62,7 +63,7 @@ class ChatImageSaver(
         val request = Request.Builder()
             .url(ChatImageUtils.resolveChatImageUrl(serverURL, url))
             .apply {
-                if (!accessToken.isNullOrBlank()) {
+                if (!accessToken.isNullOrBlank() && ChatImageUtils.isOnServer(serverURL, url)) {
                     header(ApiHeaders.AUTHORIZATION, ApiHeaders.bearer(accessToken))
                 }
             }

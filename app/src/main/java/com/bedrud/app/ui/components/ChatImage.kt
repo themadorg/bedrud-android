@@ -15,7 +15,8 @@ import com.bedrud.app.core.chat.ChatImageUtils
  *
  * The server answers a chat upload with the image inlined as a `data:` URI, and older clients sent
  * their attachments the same way — but the image loader has no fetcher for that scheme, so those
- * have to be decoded here. Everything else is an ordinary URL, fetched with the caller's token.
+ * have to be decoded here. Everything else is an ordinary URL, fetched with the caller's token only
+ * when it is on the caller's own server ([ChatImageUtils.isOnServer]).
  *
  * Both forms go through this one composable so a caller cannot accidentally support only the one it
  * happened to be tested with. The lightbox used to hand `data:` URIs straight to the loader and drew
