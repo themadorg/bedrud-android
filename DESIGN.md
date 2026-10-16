@@ -438,7 +438,11 @@ the signature and force `@OptIn` onto every screen that shows a sheet. Outside t
 then calls `onDismiss` — M3's documented hide-then-dismiss order. Calling `onDismiss` from inside
 removes the sheet from composition in one frame, so a picker vanished the moment something was
 picked instead of sliding away the way a drag or the scrim puts it away. A sheet that sends
-something on its way out ignores a second tap during the slide, since it is still on screen.
+something on its way out ignores a second tap during the slide, since it is still on screen. A
+confirmation a sheet asks for is composed inside the sheet's content, where confirming can reach
+`dismiss()`, as the server switcher's Remove server and the participant sheet's kick and ban are;
+composed outside it, confirming could only call `onDismiss`, and the sheet vanished behind the
+closing dialog.
 
 **Actions inside a sheet are a list, not a stack of cards.** `BedrudSheetActionRow` follows the M3
 list-item spec — 56dp one-line, 72dp when it carries a supporting line, `iconMd` leading icon — and
