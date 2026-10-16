@@ -84,12 +84,24 @@ class ApiCallTest {
     }
 
     @Test
-    fun `apiBody reports the exception message, or the fallback when it has none`() = runBlocking {
+    fun `apiBody reports what the classifier makes of an exception`() = runBlocking {
+        var reported: String? = null
+        assertNull(apiBody<String>("fallback", { reported = it }, { "classified" }) { throw IOException("boom") })
+        assertEquals("classified", reported)
+    }
+
+    /** An exception's own text is English and technical, so it never reaches the screen. */
+    @Test
+    fun `apiBody reports the fallback, never the exception's own text, when nothing classifies it`() = runBlocking {
         var reported: String? = null
         assertNull(apiBody<String>("fallback", { reported = it }) { throw IOException("boom") })
-        assertEquals("boom", reported)
+        assertEquals("fallback", reported)
+    }
 
-        assertNull(apiBody<String>("fallback", { reported = it }) { throw IOException() })
+    @Test
+    fun `apiAction reports the fallback, never the exception's own text, when nothing classifies it`() = runBlocking {
+        var reported: String? = null
+        assertFalse(apiAction("fallback", { reported = it }) { throw IOException("boom") })
         assertEquals("fallback", reported)
     }
 

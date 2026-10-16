@@ -10,8 +10,9 @@ import retrofit2.Response
  * own explanation when it sent one — a 403 saying "Not available for guest accounts" is far more
  * use than a generic "couldn't do that" — and [fallbackMessage] when it didn't, or when a 2xx
  * response has no body. For a thrown exception it is the localized message from [classifyError]
- * when it returns one, else the exception's own message, else [fallbackMessage]; pass a
- * [classifyError] (e.g. `Throwable::toUserMessage`) to keep raw exception text out of the UI.
+ * when it returns one, else [fallbackMessage] — never the exception's own message, which is English
+ * and technical ("Unable to resolve host …"). Pass `{ it.toUserMessage(context) }` as
+ * [classifyError] so a failure the device can name, such as no connection, says so.
  * Cancellation always rethrows — the hand-rolled try/catch blocks this replaces silently swallowed
  * coroutine cancellation.
  *
@@ -37,7 +38,7 @@ suspend fun <T : Any> apiBody(
     } catch (e: CancellationException) {
         throw e
     } catch (e: Exception) {
-        onError(classifyError(e) ?: e.message ?: fallbackMessage)
+        onError(classifyError(e) ?: fallbackMessage)
         null
     }
 }
@@ -64,7 +65,7 @@ suspend fun apiAction(
     } catch (e: CancellationException) {
         throw e
     } catch (e: Exception) {
-        onError(classifyError(e) ?: e.message ?: fallbackMessage)
+        onError(classifyError(e) ?: fallbackMessage)
         false
     }
 }
