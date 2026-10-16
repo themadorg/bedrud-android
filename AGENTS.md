@@ -188,6 +188,10 @@ call's own scope, one toggle at a time in tap order. Sending can stall for secon
 outgoing connection is not up, and when the announcement came first, the tap seemed to do nothing
 and was lost if the screen went away in the meantime.
 
+Opening the microphone while deafened, with its toggle or with push-to-talk, ends deafen too, as
+most call apps do. That goes through the same queue, so the room hears it just as it hears a
+toggle; without it, everyone else kept seeing the deafened badge after the mic came back on.
+
 ## Call Audio Routing
 
 Which output a meeting is heard on is decided by Telecom, not by `AudioManager`. `CallAudioSwitch`

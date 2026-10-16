@@ -947,12 +947,19 @@ class RoomManager(
         }
     }
 
-    /** Ends deafen because the microphone opened. */
+    /**
+     * Ends deafen because the microphone opened, and tells the room through the same queue as
+     * [toggleDeafen]. Without the announcement, everyone else kept seeing the deafened badge until
+     * this participant toggled deafen again or rejoined. The announcement is queued rather than
+     * awaited: [followDeafen] can itself open the microphone while holding [deafenFollowUp], and
+     * waiting for the lock from there would never end.
+     */
     private fun endDeafenForMicrophone() {
         _isDeafened.value = false
         settingsStore.setDeafened(false)
         reapplyAllVolumes()
         micFollowsDeafen = false
+        eventScope?.launch { deafenFollowUp.withLock { followDeafen() } }
     }
 
     suspend fun setMicrophoneEnabled(enabled: Boolean) {
