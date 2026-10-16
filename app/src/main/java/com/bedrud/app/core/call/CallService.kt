@@ -18,7 +18,6 @@ import com.bedrud.app.MainActivity
 import com.bedrud.app.R
 import com.bedrud.app.core.createLocaleContext
 import com.bedrud.app.core.instance.InstanceManager
-import com.bedrud.app.core.livekit.ConnectionState
 import com.bedrud.app.core.livekit.RoomManager
 import com.bedrud.app.core.recent.RecentRoomsStore
 import com.bedrud.app.core.registerNotificationChannel
@@ -30,8 +29,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
-import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.launch
 import org.koin.android.ext.android.inject
 
 class CallService : Service() {
@@ -40,11 +37,37 @@ class CallService : Service() {
     private val recentRoomsStore: RecentRoomsStore by inject()
     private val joinFailureRelay: JoinFailureRelay by inject()
     private var roomManager: RoomManager? = null
+    private var session: CallSession? = null
     private var serviceScope: CoroutineScope? = null
     private var callStartTime: Long = 0L
     private var wakeLock: PowerManager.WakeLock? = null
     private var proximityScreenLock: ProximityScreenLock? = null
     private var audioRouteListener: AudioDeviceChangeListener? = null
+
+    // Carries out what the call's session decides, with the parts only a service can do.
+    private val sessionHost = object : CallSession.Host {
+        override fun stop() {
+            Log.d(TAG, "Connection failed; stopping foreground service")
+            stopSelf()
+        }
+
+        override fun hangUp() {
+            Log.d(TAG, "Room disconnected by server, stopping service")
+            this@CallService.hangUp()
+        }
+
+        override fun showMuted(isMuted: Boolean) {
+            updateForegroundNotification(isMuted = isMuted)
+        }
+
+        override fun reportRemoval() {
+            joinFailureRelay.report(getString(R.string.meeting_state_kickedMessage), isRemoval = true)
+        }
+
+        override fun onConnected() {
+            roomManager?.let(::bindProximityBlanking)
+        }
+    }
 
     // The system hands a service its own context in the device's language, not the one picked in
     // the app, so the call notification needs the same wrapping MainActivity applies to itself.
@@ -61,9 +84,7 @@ class CallService : Service() {
                 return START_NOT_STICKY
             }
             ACTION_TOGGLE_MUTE -> {
-                serviceScope?.launch {
-                    roomManager?.toggleMicrophone()
-                }
+                session?.toggleMute()
                 return START_STICKY
             }
             ACTION_RETURN_TO_MEETING -> {
@@ -103,6 +124,14 @@ class CallService : Service() {
         isRunning = true
         callStartTime = SystemClock.elapsedRealtime()
 
+        // Made with the room manager, so the two are always set together and onDestroy can leave
+        // the room through the session whichever way the call ended.
+        serviceScope?.cancel()
+        val scope = CoroutineScope(Dispatchers.Main + SupervisorJob())
+        serviceScope = scope
+        val callSession = CallSession(rm, scope, sessionHost)
+        session = callSession
+
         createNotificationChannel()
         CallTelecom.registerPhoneAccount(this)
         val callPlaced = CallConnectionService.placeCall(this, roomName)
@@ -115,64 +144,8 @@ class CallService : Service() {
 
         acquireWakeLock()
 
-        serviceScope?.cancel()
-        serviceScope = CoroutineScope(Dispatchers.Main + SupervisorJob())
-        serviceScope?.launch {
-            rm.connectIfNeeded(url, token, roomName, avatarUrl)
-        }
-
-        // Tear the foreground service + ongoing-call notification down the moment the connection
-        // fails (e.g. the media server's TLS certificate is untrusted), instead of leaving it up
-        // for a call that never connected. stopSelf() here deliberately does NOT flag a user
-        // hang-up, so RoomManager stays FAILED and the meeting screen keeps showing the error
-        // until the user leaves.
-        serviceScope?.launch {
-            rm.connectionState.collectLatest { state ->
-                if (state == ConnectionState.FAILED) {
-                    Log.d(TAG, "Connection failed; stopping foreground service")
-                    stopSelf()
-                }
-            }
-        }
-
-        rm.onDisconnected = {
-            Log.d(TAG, "Room disconnected by server, stopping service")
-            // Said where the user lands, as a failed join is: the meeting screen leaves the moment
-            // the call ends, and hanging up resets the removal flag this reads.
-            if (rm.wasKicked.value) {
-                joinFailureRelay.report(getString(R.string.meeting_state_kickedMessage), isRemoval = true)
-            }
-            hangUp()
-        }
-
-        CallConnectionService.muteListener = { muted ->
-            serviceScope?.launch {
-                // Telecom fires an initial onMuteStateChanged(false) while the room is still
-                // connecting; RoomManager's own connect flow already enables the mic by default,
-                // so forwarding this early callback would race the LiveKit engine and surface a
-                // spurious "failed to enable microphone" error. Only forward real mute changes
-                // once we're actually connected.
-                if (roomManager?.connectionState?.value == ConnectionState.CONNECTED) {
-                    roomManager?.setMicrophoneEnabled(!muted)
-                }
-                updateForegroundNotification(isMuted = muted)
-            }
-        }
-
-        serviceScope?.launch {
-            rm.isMicEnabled.collectLatest { micEnabled ->
-                updateForegroundNotification(isMuted = !micEnabled)
-            }
-        }
-
-        // Proximity blanking follows the audio route, and the route lives on the audio handler the
-        // room only builds once it connects — so it binds on connection rather than here. Binding
-        // is idempotent, which matters because a reconnect reports CONNECTED again.
-        serviceScope?.launch {
-            rm.connectionState.collectLatest { state ->
-                if (state == ConnectionState.CONNECTED) bindProximityBlanking(rm)
-            }
-        }
+        callSession.start(url, token, roomName, avatarUrl)
+        CallConnectionService.muteListener = callSession::onTelecomMute
 
         return START_STICKY
     }
@@ -193,10 +166,8 @@ class CallService : Service() {
         // Before roomManager is dropped: the listener is unregistered from its audio handler.
         releaseProximityBlanking()
 
-        roomManager?.onDisconnected = null
-        if (userInitiatedHangUp) {
-            roomManager?.disconnect()
-        }
+        session?.end(userHungUp = userInitiatedHangUp)
+        session = null
         roomManager = null
         userInitiatedHangUp = false
 
