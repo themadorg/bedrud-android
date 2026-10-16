@@ -742,6 +742,15 @@ reconnecting ring — one state, one colour. Hairlines inside the call's menus a
   controls bar) auto-hides after `meetingChromeAutoHideDelayMs` of inactivity; any tap toggles it
   back; while hidden the system bars hide too (immersive). The hardware back key collapses
   fullscreen instead of leaving the meeting.
+- **Picture-in-picture** (`MeetingPipView`): leaving the app during a call shrinks it to a window
+  that draws the grid's own `ParticipantTile` for one person, so a voice call shows their avatar,
+  name, mute and deafen badges and speaking ring rather than a lone letter; a watched screen share
+  is shown as it is. Who it shows is `pipFocusIdentity`: the watched stream, else whoever among
+  the others is speaking loudest, else the last person shown (a pause must not send it back to
+  whoever joined first), else the first other participant, and you only when alone. The window
+  carries two controls, the microphone (drawn as it is, labelled with what a tap does) and hang
+  up, sent to `CallService` exactly as the call notification's are; ending the call closes the
+  window instead of leaving it on the dashboard.
 - **Audio input** (`MeetingAudioSettingsSheet`): output device + output volume (the voice-call
   stream the hardware keys drive), and the input mode. **Push to talk** turns the mic slot into a
   hold-to-talk pill — outlined idle, filled while transmitting — enabling the mic only while held
