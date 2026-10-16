@@ -266,7 +266,10 @@ Two migrations run, and neither may be broken by the other:
   part-way just happens again on the next open.
 - `MigrationHelper` still seeds the per-instance layout from the single-server file that predates
   it. That file was written by `EncryptedSharedPreferences`, so it is read through
-  `legacySecurePrefs` — the deprecated reader, kept for exactly these two paths.
+  `legacySecurePrefs` — the deprecated reader, kept for exactly these two paths. It copies through
+  the same `SecurePrefsMigration`, and deletes the old file only once the credentials have read back
+  and the new server entry is on disk too (`InstanceStore.persist`): the store saves with `apply()`,
+  and a process killed before that landed would have left credentials no server entry points to.
 
 `androidx.security:security-crypto` therefore stays a dependency until the old files can be
 assumed gone; removing it earlier signs out everyone who has not upgraded through this version.
