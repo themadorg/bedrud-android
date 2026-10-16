@@ -66,6 +66,7 @@ import com.bedrud.app.R
 import com.bedrud.app.core.auth.SignInMethod
 import com.bedrud.app.core.auth.signInMethodOf
 import com.bedrud.app.core.instance.InstanceManager
+import com.bedrud.app.core.toUserMessage
 import com.bedrud.app.ui.theme.BedrudShapeTokens
 import com.bedrud.app.ui.theme.Dimens
 import com.bedrud.app.ui.theme.Elevation
@@ -391,7 +392,8 @@ fun SettingsContent(
                                         val confirmingPassword = if (settingFirstPassword) "" else currentPassword
                                         val changed = apiAction(
                                             passwordSaveFailedMessage,
-                                            { snackbarHostState.showMessage(it, BedrudSnackbarKind.ERROR) }
+                                            { snackbarHostState.showMessage(it, BedrudSnackbarKind.ERROR) },
+                                            { it.toUserMessage(context) },
                                         ) {
                                             api.changePassword(ChangePasswordRequest(confirmingPassword, newPassword))
                                         }

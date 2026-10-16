@@ -6,7 +6,9 @@ import androidx.annotation.StringRes
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextInput
 import androidx.test.platform.app.InstrumentationRegistry
@@ -43,6 +45,9 @@ private const val TEST_RECENTS_PREFS = "settings_screen_test_recents"
 
 /** How far apart two widths may be and still count as equal, in pixels. */
 private const val WIDTH_TOLERANCE_PX = 0.5f
+
+/** Long enough for the device to give up on the server and the message to appear. */
+private const val MESSAGE_TIMEOUT_MILLIS = 10_000L
 
 class SettingsScreenTest {
 
@@ -167,5 +172,18 @@ class SettingsScreenTest {
         compose.onNodeWithText(context.getString(R.string.settings_button_changePassword)).assertIsNotEnabled()
         typeInto(R.string.settings_label_currentPassword, CURRENT_PASSWORD)
         compose.onNodeWithText(context.getString(R.string.settings_button_changePassword)).assertIsEnabled()
+    }
+
+    /** Not the device's own explanation, which is English and technical. */
+    @Test
+    fun shouldSayTheDeviceIsOfflineWhenAPasswordCannotBeSaved() {
+        showSettings(signedInPasskeyAccount(passwordChangedAt = null))
+        typeInto(R.string.settings_label_newPassword, NEW_PASSWORD)
+        typeInto(R.string.settings_label_confirmNewPassword, NEW_PASSWORD)
+
+        compose.onNodeWithText(context.getString(R.string.settings_button_setPassword)).performScrollTo().performClick()
+
+        val offline = context.getString(R.string.error_network_unavailable)
+        compose.waitUntil(MESSAGE_TIMEOUT_MILLIS) { compose.onAllNodesWithText(offline).fetchSemanticsNodes().isNotEmpty() }
     }
 }
