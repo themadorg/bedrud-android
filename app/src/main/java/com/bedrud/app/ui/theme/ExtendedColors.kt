@@ -16,6 +16,11 @@ import androidx.compose.ui.graphics.Color
  * than because anything failed, so the dot has its own color instead of borrowing `error`: it is
  * the same red today, and stays put if the error role moves again.
  *
+ * `inverseError`, `inverseWarning` and `inverseSuccess` are for status icons on the inverse surface
+ * a snackbar uses, which is dark in the light theme and light in the dark one. Each takes the other
+ * theme's tone of its role, as Material's own `inversePrimary` does; the theme's own tone sits too
+ * close to that surface to be seen. Success is the teal tertiary, since Material has no success role.
+ *
  * Provided via [LocalBedrudColors] in [BedrudTheme]; read through `MaterialTheme.bedrudColors`.
  */
 data class BedrudExtendedColors(
@@ -25,6 +30,9 @@ data class BedrudExtendedColors(
     val onWarningContainer: Color,
     val onScrim: Color,
     val recording: Color,
+    val inverseError: Color,
+    val inverseWarning: Color,
+    val inverseSuccess: Color,
 )
 
 val LightExtendedColors = BedrudExtendedColors(
@@ -34,6 +42,9 @@ val LightExtendedColors = BedrudExtendedColors(
     onWarningContainer = Amber900,
     onScrim = Neutral0,
     recording = Red700,
+    inverseError = Red500,
+    inverseWarning = Amber400,
+    inverseSuccess = Teal300,
 )
 
 val DarkExtendedColors = BedrudExtendedColors(
@@ -43,6 +54,9 @@ val DarkExtendedColors = BedrudExtendedColors(
     onWarningContainer = Amber100,
     onScrim = Neutral0,
     recording = Red500,
+    inverseError = Red700,
+    inverseWarning = Amber700,
+    inverseSuccess = Teal600,
 )
 
 val LocalBedrudColors = staticCompositionLocalOf { LightExtendedColors }

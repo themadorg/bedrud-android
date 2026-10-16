@@ -12,6 +12,11 @@ import kotlin.math.pow
 private const val CONTRAST_AA = 4.5
 
 /**
+ * The floor WCAG sets for an icon or other graphic that carries meaning, against what it sits on.
+ */
+private const val CONTRAST_GRAPHIC = 3.0
+
+/**
  * CIE76 distance below which two colors read as the same color rather than as two.
  *
  * Rose and red share a hue family, so lightness carries most of this distance — the light scheme
@@ -122,6 +127,31 @@ class ThemeTest {
                 "$name: onError on error is $ratio, under the AA floor of $CONTRAST_AA",
                 ratio >= CONTRAST_AA
             )
+        }
+    }
+
+    /**
+     * A snackbar sits on the inverse surface, dark in the light theme and light in the dark one, so
+     * the icon that says what kind of message it is takes an inverse color, which has to stand out
+     * from that surface as clearly as any meaningful graphic.
+     */
+    @Test
+    fun `should keep each snackbar status icon visible on the inverse surface`() {
+        listOf(
+            Triple("light", LightColorScheme, LightExtendedColors),
+            Triple("dark", DarkColorScheme, DarkExtendedColors),
+        ).forEach { (name, scheme, extended) ->
+            listOf(
+                "error" to extended.inverseError,
+                "warning" to extended.inverseWarning,
+                "success" to extended.inverseSuccess,
+            ).forEach { (role, color) ->
+                val ratio = contrastRatio(color, scheme.inverseSurface)
+                assertTrue(
+                    "$name: $role on inverseSurface is $ratio, under the graphics floor of $CONTRAST_GRAPHIC",
+                    ratio >= CONTRAST_GRAPHIC
+                )
+            }
         }
     }
 }
