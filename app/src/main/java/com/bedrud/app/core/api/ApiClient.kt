@@ -47,10 +47,17 @@ private fun lenientGson(): Gson = GsonBuilder()
     .setStrictness(Strictness.LENIENT)
     .create()
 
-/** Logs a client's traffic at [level] in a debug build, and not at all in a release one. */
+/**
+ * Logs a client's traffic at [level] in a debug build, and not at all in a release one.
+ *
+ * The Authorization header is redacted at every level, because it carries the account's access
+ * token and a debug build includes the `dev` APK handed to reviewers, whose logcat can end up in a
+ * bug report.
+ */
 private fun debugLogging(level: HttpLoggingInterceptor.Level): HttpLoggingInterceptor =
     HttpLoggingInterceptor().apply {
         this.level = if (BuildConfig.DEBUG) level else HttpLoggingInterceptor.Level.NONE
+        redactHeader(ApiHeaders.AUTHORIZATION)
     }
 
 /**
