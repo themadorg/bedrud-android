@@ -3,6 +3,7 @@ package com.bedrud.app.core.instance
 import android.content.Context
 import android.content.SharedPreferences
 import com.bedrud.app.core.auth.AuthPrefsKeys
+import com.bedrud.app.core.auth.SecurePrefsMigration
 import com.bedrud.app.core.auth.legacySecurePrefs
 import com.bedrud.app.core.auth.secureInstancePrefs
 import com.bedrud.app.core.prefs.editBlocking
@@ -43,14 +44,12 @@ object MigrationHelper {
         store.addInstance(instance)
         store.setActive(instance.id)
 
-        // Copy tokens to new per-instance prefs file
+        // Copy tokens to new per-instance prefs file, and have them and the server they belong to
+        // on disk before anything is deleted: until then the old file is the only copy of this
+        // session.
         val newPrefs: SharedPreferences = secureInstancePrefs(context, instance.id)
-
-        newPrefs.edit()
-            .putString(AuthPrefsKeys.ACCESS_TOKEN, accessToken)
-            .putString(AuthPrefsKeys.REFRESH_TOKEN, oldPrefs.getString(AuthPrefsKeys.REFRESH_TOKEN, null))
-            .putString(AuthPrefsKeys.USER, oldPrefs.getString(AuthPrefsKeys.USER, null))
-            .apply()
+        if (!SecurePrefsMigration.migrate(from = oldPrefs, to = newPrefs)) return
+        if (!store.persist()) return
 
         // Clear old prefs, and wait for that to land before the file itself goes.
         oldPrefs.editBlocking { clear() }

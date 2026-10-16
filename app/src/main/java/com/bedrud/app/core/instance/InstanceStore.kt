@@ -2,6 +2,7 @@ package com.bedrud.app.core.instance
 
 import android.content.Context
 import android.content.SharedPreferences
+import com.bedrud.app.core.prefs.editBlocking
 import com.bedrud.app.core.prefs.getJsonList
 import com.bedrud.app.core.prefs.putJsonList
 import com.bedrud.app.models.Instance
@@ -71,6 +72,13 @@ class InstanceStore(private val prefs: SharedPreferences) {
             saveInstances(updated)
         }
     }
+
+    /**
+     * Returns once every change made so far is on disk, and whether it got there. The store saves
+     * with apply(), which reaches the disk later; this is for a caller about to delete the copy
+     * those changes replace. An empty blocking commit waits for the saves queued before it.
+     */
+    fun persist(): Boolean = prefs.editBlocking {}
 
     private fun saveInstances(instances: List<Instance>) {
         prefs.putJsonList(KEY_INSTANCES, instances)
