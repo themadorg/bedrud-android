@@ -66,6 +66,21 @@ class RoomApiTest : MockApiTest() {
         assertEquals("wss://lk.example.com", response.body()!!.livekitHost)
     }
 
+    /** The server's own answer to its owner joining a room that has ended, as it sends it. */
+    @Test
+    fun `joinRoom parses the status of a room that has ended for its owner`() = runBlocking {
+        server.enqueue(
+            MockResponse()
+                .setBody("""{"status":"archived_owned","name":"weekly-sync","mode":"meeting","settings":{"allowChat":false}}""")
+                .setResponseCode(200)
+        )
+
+        val response = roomApi.joinRoom(JoinRoomRequest(roomName = "weekly-sync"))
+
+        assertEquals("archived_owned", response.body()!!.status)
+        assertNull(response.body()!!.token)
+    }
+
     @Test
     fun `kickParticipant sends POST to correct path`() = runBlocking {
         server.enqueue(MockResponse().setResponseCode(200))

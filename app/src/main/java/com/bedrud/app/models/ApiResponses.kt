@@ -123,7 +123,11 @@ data class JoinRoomResponse(
     val settings: RoomSettings,
     val mode: String,
     @SerializedName("sessionStartedAt")
-    val sessionStartedAt: Long = 0L
+    val sessionStartedAt: Long = 0L,
+    // Set only when the join was refused in a way the app can act on. An owner joining a room that
+    // has ended gets "archived_owned" with a 200, carrying only the room's name, mode and settings:
+    // every other field above is absent then, whatever its type says.
+    val status: String? = null,
 )
 
 data class UserRoomResponse(
