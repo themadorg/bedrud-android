@@ -258,24 +258,24 @@ dependencies {
     implementation("androidx.activity:activity-compose:1.13.0")
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.11.0")
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.11.0")
-    implementation("androidx.navigation:navigation-compose:2.10.1")
+    implementation("androidx.navigation:navigation-compose:2.10.2")
     // Polygon morphing for BedrudLoadingIndicator. The same library Material 3's own morphing
     // indicator is drawn with; that indicator itself is not in a stable Material 3 release yet.
     implementation("androidx.graphics:graphics-shapes:1.1.0")
 
     // Kotlin
-    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.11.0")
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.11.0")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.12.0")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.12.0")
 
     // LiveKit
-    implementation("io.livekit:livekit-android:2.28.2")
+    implementation("io.livekit:livekit-android:2.29.2")
     implementation("io.livekit:livekit-android-compose-components:2.4.2")
 
     // Retrofit + OkHttp
     implementation("com.squareup.retrofit2:retrofit:3.0.0")
     implementation("com.squareup.retrofit2:converter-gson:3.0.0")
-    implementation("com.squareup.okhttp3:okhttp:5.5.0")
-    implementation("com.squareup.okhttp3:logging-interceptor:5.5.0")
+    implementation("com.squareup.okhttp3:okhttp:5.5.1")
+    implementation("com.squareup.okhttp3:logging-interceptor:5.5.1")
 
     // Koin
     val koinVersion = "4.2.2"
@@ -302,12 +302,12 @@ dependencies {
     implementation("com.journeyapps:zxing-android-embedded:4.3.0")
 
     // Licenses screen -- draws the list the AboutLibraries plugin above generates
-    implementation("com.mikepenz:aboutlibraries-compose-m3:15.2.0")
+    implementation("com.mikepenz:aboutlibraries-compose-m3:15.3.0")
 
     // Testing
     testImplementation("junit:junit:4.13.2")
-    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.11.0")
-    testImplementation("com.squareup.okhttp3:mockwebserver:5.5.0")
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.12.0")
+    testImplementation("com.squareup.okhttp3:mockwebserver:5.5.1")
     testImplementation("io.mockk:mockk:1.14.11")
     // The platform's org.json is stubbed out in local unit tests, so the chat wire format -- which
     // is JSON end to end -- could not be round-tripped without a real implementation on the test
